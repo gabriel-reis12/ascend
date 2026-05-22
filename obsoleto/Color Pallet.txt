@@ -1,0 +1,12 @@
+Paleta Premium Dark (recomendada)
+Primárias
+Obsidian Black #0B0B0F → fundo principal
+Graphite #1A1C22 → cards / menus / blocos
+Silver Steel #C9CED6 → textos claros / detalhes premium
+Destaque / Energia
+Ascend Blue #3B82F6 → progresso, foco, performance
+Royal Purple #7C3AED → evolução, poder, mentalidade
+Suporte
+Success Green #22C55E → metas concluídas
+Warning Orange #F59E0B → atenção / pendências
+Danger Red #EF4444 → falhas / atrasos

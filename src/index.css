@@ -1,0 +1,334 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── Design Tokens ── */
+@theme {
+  --color-obsidian: #0B0B0F;
+  --color-graphite: #1A1C22;
+  --color-silver: #C9CED6;
+  --color-ascend-blue: #3B82F6;
+  --color-royal-purple: #7C3AED;
+}
+
+:root {
+  --bg-obsidian: #0B0B0F;
+  --bg-graphite: #1A1C22;
+  --text-silver: #C9CED6;
+  --ascend-blue: #3B82F6;
+  --royal-purple: #7C3AED;
+  --font-orbitron: 'Orbitron', sans-serif;
+  --font-inter: 'Inter', sans-serif;
+}
+
+/*
+  CRÍTICO: Resets dentro de @layer base para que utilidades Tailwind
+  (dentro de @layer utilities) SEMPRE tenham prioridade sobre resets globais.
+  Sem isso, "* { padding: 0 }" destrói pl-*, px-*, pt-* etc.
+*/
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg-obsidian);
+    color: var(--text-silver);
+    font-family: var(--font-inter);
+    overflow-x: hidden;
+  }
+
+  /*
+    APENAS .font-orbitron aplica Orbitron.
+    h1/h2/h3 NÃO herdam mais — assim Tailwind controla fonte e tracking normalmente.
+  */
+  .font-orbitron {
+    font-family: var(--font-orbitron);
+    letter-spacing: 0.1em;
+  }
+}
+
+/* ── Scrollbar Custom ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-obsidian); }
+::-webkit-scrollbar-thumb { background: var(--bg-graphite); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ascend-blue); }
+
+/* ── Glow Utilities ── */
+.glow-blue  { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+.glow-purple { box-shadow: 0 0 15px rgba(124, 58, 237, 0.5); }
+.text-glow-blue   { text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); }
+.text-glow-purple { text-shadow: 0 0 10px rgba(124, 58, 237, 0.8); }
+
+/* ── Glass Panels ── */
+.glass-panel {
+  background: rgba(26, 28, 34, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(201, 206, 214, 0.1);
+  border-radius: 12px;
+}
+
+.glass-panel-heavy {
+  background: rgba(11, 11, 15, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* ── Animações Custom ── */
+@keyframes pulse-blue {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+.animate-pulse-blue { animation: pulse-blue 3s infinite ease-in-out; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float { animation: float 5s infinite ease-in-out; }
+
+/* ── Rank Badges (Solo Leveling) ── */
+.rank-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+.rank-e { background: #6B7280; color: white; }
+.rank-d { background: #10B981; color: white; }
+.rank-c { background: #3B82F6; color: white; }
+.rank-b { background: #7C3AED; color: white; }
+.rank-a { background: #EF4444; color: white; }
+.rank-s { background: #F59E0B; color: white; box-shadow: 0 0 10px #F59E0B; }
+
+/* ── Matrix Loader Styles ── */
+.matrix-container {
+  width: 120px;
+  height: 160px;
+  margin: 30px auto;
+  position: relative;
+  perspective: 800px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.matrix-digit {
+  color: #A78BFA; /* purple-400 */
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
+  animation:
+    matrix-fall 2s infinite,
+    matrix-flicker 0.5s infinite;
+  opacity: 0;
+}
+
+.matrix-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.15) 0%,
+    transparent 70%
+  );
+  animation: matrix-pulse 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes matrix-fall {
+  0% {
+    transform: translateY(-40px) rotateX(90deg);
+    opacity: 0;
+  }
+  20%,
+  80% {
+    transform: translateY(0) rotateX(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(40px) rotateX(-90deg);
+    opacity: 0;
+  }
+}
+
+@keyframes matrix-flicker {
+  0%, 19%, 21%, 100% { opacity: 0.9; }
+  20% { opacity: 0.3; }
+}
+
+@keyframes matrix-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+
+@keyframes fadeSlideIn {
+  to { opacity: 1; filter: blur(0px); transform: translateY(0px); }
+}
+
+@keyframes slideRightIn {
+  to { opacity: 1; filter: blur(0px); transform: translateX(0px); }
+}
+
+/* ── Custom Next Button ── */
+.btn-next-step {
+  --color: 124, 58, 237; /* Royal Purple */
+  border-radius: .5em;
+  transition: .3s;
+  background-color: rgba(var(--color), .2);
+  color: rgb(var(--color));
+  fill: rgb(var(--color));
+  font-family: monospace;
+  font-weight: bolder;
+  font-size: x-large;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  border: 2px solid rgb(var(--color));
+  box-shadow: 0 0 10px rgba(var(--color), .4);
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5em 1em;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-next-step:hover {
+  box-shadow: 0 0 0 5px rgba(var(--color), .5);
+}
+
+.btn-next-step span {
+  transform: scale(.8);
+  transition: .3s;
+}
+
+.btn-next-step:hover span {
+  transform: scale(1);
+}
+
+.btn-next-step svg {
+  width: 20px;
+  height: 20px;
+  transform: scale(0.5) translateX(0%) rotate(-180deg);
+  transition: .3s;
+}
+
+.btn-next-step:hover svg {
+  transform: scale(1) translateX(20%) rotate(0deg);
+}
+
+.btn-next-step:active {
+  transition: 0s;
+  transform: scale(0.98);
+}
+
+.btn-next-step::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--color), 0.2),
+    transparent
+  );
+  transition: 0.5s;
+}
+
+.btn-next-step:hover::before {
+  left: 100%;
+}
+
+/* ── Awakening Loader ── */
+.awakening-container {
+  position: relative;
+  height: 96px;
+  width: 96px;
+  animation: rotate_3922 1.2s linear infinite;
+  background-color: #7C3AED;
+  background-image: linear-gradient(#7C3AED, #3B82F6, #10B981);
+  border-radius: 50%;
+}
+
+.awakening-container span {
+  position: absolute;
+  border-radius: 50%;
+  height: 100%;
+  width: 100%;
+  background-color: #7C3AED;
+  background-image: linear-gradient(#7C3AED, #3B82F6, #10B981);
+}
+
+.awakening-container span:nth-of-type(1) {
+  filter: blur(5px);
+}
+
+.awakening-container span:nth-of-type(2) {
+  filter: blur(10px);
+}
+
+.awakening-container span:nth-of-type(3) {
+  filter: blur(25px);
+}
+
+.awakening-container span:nth-of-type(4) {
+  filter: blur(50px);
+}
+
+.awakening-container::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  background-color: #0B0B0F;
+  border: solid 5px #0B0B0F;
+  border-radius: 50%;
+}
+
+@keyframes rotate_3922 {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Utilidades Extras de Performance e Responsividade ── */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.will-change-gpu {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Neon Glows reativos para as Classes do Sistema */
+.glow-mage { box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); border-color: rgba(139, 92, 246, 0.3) !important; }
+.glow-assassin { box-shadow: 0 0 15px rgba(236, 72, 153, 0.4); border-color: rgba(236, 72, 153, 0.3) !important; }
+.glow-warrior { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.3) !important; }
+.glow-tank { box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); border-color: rgba(245, 158, 11, 0.3) !important; }
+.glow-healer { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); border-color: rgba(16, 185, 129, 0.3) !important; }

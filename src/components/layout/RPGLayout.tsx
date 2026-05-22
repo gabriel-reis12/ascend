@@ -1,0 +1,168 @@
+import { useState } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, Menu } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { useHunterStore } from '@/stores/useHunterStore';
+import { useAuth } from '@/contexts/AuthContext';
+import { MobileMenu } from './MobileMenu';
+
+const navItems = [
+  { path: '/', label: 'Status', icon: LayoutDashboard },
+  { path: '/quests', label: 'Missões', icon: CheckSquare },
+  { path: '/workouts', label: 'Treinamento', icon: Dumbbell },
+  { path: '/nutrition', label: 'Recuperação', icon: Apple },
+  { path: '/settings', label: 'Ajustes', icon: Settings },
+];
+
+export function RPGLayout() {
+  const location = useLocation();
+  const state = useHunterStore();
+  const { signOut } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Se o username não estiver preenchido, talvez o profile ainda esteja carregando
+  // Mas vamos deixar renderizar com fallback se necessário.
+  const xpPct = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
+  const initials = (state.username || 'H').slice(0, 2).toUpperCase();
+
+  return (
+    <div className="flex h-screen bg-[#0B0B0F] text-[#C9CED6] overflow-hidden">
+
+      {/* ── Desktop Sidebar ─────────────────────────────── */}
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-white/5 bg-[#0B0B0F]">
+
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-6 py-8">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.4)]">
+            <img
+              src="/Icon 2.png"
+              alt="ASCEND"
+              className="size-10 object-cover"
+            />
+          </div>
+          <span
+            className="text-xl font-black italic tracking-tighter text-white"
+            style={{ fontFamily: 'Orbitron, sans-serif' }}
+          >
+            ASCEND
+          </span>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 space-y-2">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'group flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold tracking-wide transition-all duration-200',
+                  isActive
+                    ? 'bg-blue-500/10 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)]'
+                    : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                )}
+              >
+                <Icon
+                  size={20}
+                  className={cn(
+                    'shrink-0 transition-colors',
+                    isActive ? 'text-blue-500' : 'text-gray-600 group-hover:text-gray-300'
+                  )}
+                />
+                <span className="uppercase tracking-widest text-[11px]">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Hunter profile footer */}
+        <div className="border-t border-white/5 p-4 space-y-4">
+          {/* Avatar + info */}
+          <div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
+              {state.rank}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</p>
+              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Level {state.level}</p>
+            </div>
+          </div>
+
+          {/* XP Bar */}
+          <div className="px-1">
+            <div className="mb-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
+              <span>System XP</span>
+              <span>{xpPct.toFixed(0)}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${xpPct}%` }}
+                transition={{ duration: 1, ease: 'easeOut' }}
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+              />
+            </div>
+          </div>
+
+          {/* Sign out */}
+          <button
+            onClick={() => void signOut()}
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
+          >
+            <LogOut size={16} />
+            Desconectar
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Mobile Menu ──────────────────────────────────── */}
+      <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
+
+      {/* ── Main ─────────────────────────────────────────── */}
+      <main className="flex flex-1 flex-col overflow-hidden bg-[#0B0B0F]">
+
+        {/* Mobile top bar */}
+        <header className="md:hidden flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#0B0B0F] shrink-0">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="rounded-xl p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <Menu size={24} />
+          </button>
+          <img
+            src="/Icon 2.png"
+            alt="ASCEND"
+            className="h-9 w-9 object-cover rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.5)]"
+          />
+          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
+            {state.rank}
+          </div>
+        </header>
+
+        {/* Desktop top bar */}
+        <div className="hidden md:flex items-center justify-between border-b border-white/5 bg-[#0B0B0F] px-8 py-4 shrink-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">
+            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Status: Ativo</span>
+              <span className="text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</span>
+            </div>
+            <div className="size-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,1)] animate-pulse" />
+          </div>
+        </div>
+
+        {/* Page content */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 py-5 sm:py-8">
+            <Outlet />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

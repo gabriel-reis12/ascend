@@ -1,0 +1,37 @@
+🚀 Estrutura ideal do Ascend
+Tela inicial
+
+Dashboard do dia:
+
+Treino concluído?
+Água tomada?
+Dieta ok?
+Leitura feita?
+Estudos feitos?
+Sono ok?
+Streak atual
+Sistemas viciantes
+XP / Evolução
+
+Cada tarefa gera XP.
+
+Ex:
+
+Treino = +50 XP
+Leitura = +20 XP
+Água = +10 XP
+Níveis
+
+Level 1 → 100
+
+Classes
+Warrior (treino)
+Scholar (estudo)
+Monk (disciplina)
+Titan (geral)
+Gamificação forte
+Ranking semanal
+Missões diárias
+Boss da semana
+Conquistas
+Avatar evoluindo

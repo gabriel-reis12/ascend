@@ -1,0 +1,11 @@
+- Aplicativo no estilo progressão de jogos RPG. Ganha Status por task feita durante o dia (atividades reais, tipo musculação, alimentação, leitura, água, hobbys, trabalhos, etc...)
+
+- O usuário coloca as tasks e sua categoria, o status varia de acordo com cada tarefa feita
+
+- Sistema de progressão de level: ao atingir "x" de experiência ele sobe de nível e ganha "títulos" (iniciante, recruta, soldado, mestre, etc...) - detalhe que os títulos tem que ser bem legais e remeter a um RPG.
+
+- Musculação: A parte do aplicativo que tem os treinos (o usuário pode criar quantas fichas de treino quiser e ter um contador de quantas vezes ele já fez aquele treino) - o Treino deve mostrar o exercício, a carga utilizada e a quantidade de repetições, porém, deve ter uma coluna ao lado para comparar qual minha carga na proxima semana e mostrar se houve progresso em repetições ou em carga.
+
+- Alimentação: Seria legal adicionar as calorias aproximadas de cada refeição: Meu café da manhã são 4 ovos e 2 pães franceses - são 500 calorias aproximadamente - algo assim.
+
+- Sistema de Login para mais de um usuário conseguir entrar

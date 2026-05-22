@@ -1,0 +1,30 @@
+Com base na classe escolhida:
+
+1 - Gerar missões aleatórias no sistema para avançar mais no que você quer se dedicar.
+
+
+
+Utilize a IA do Groq Llama para gerar a task diária bônus:
+
+from groq import Groq
+
+client = Groq()
+completion = client.chat.completions.create(
+    model="llama-3.1-8b-instant",
+    messages=[
+      {
+        "role": "user",
+        "content": ""
+      }
+    ],
+    temperature=1,
+    max_completion_tokens=1024,
+    top_p=1,
+    stream=True,
+    stop=None
+)
+
+for chunk in completion:
+    print(chunk.choices[0].delta.content or "", end="")
+
+api_key: SUA_GROQ_API_KEY_AQUI
