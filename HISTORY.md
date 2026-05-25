@@ -14,7 +14,12 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
-### 2026-05-22 (Sessão Atual)
+### 2026-05-25 (Sessão Atual)
+- **Correção de Roteamento SPA no Vercel (F5 / 404)**:
+  - **Identificação do Bug**: Ao realizar o deploy no Vercel, o recarregamento da página (F5) ou acesso direto a rotas secundárias (como `/workouts`, `/settings`, `/onboarding`) resultava em erro 404 (página em branco/sumindo). Esse comportamento ocorre porque servidores estáticos tentam mapear fisicamente as URLs de rotas do lado do cliente (React Router).
+  - **Solução Aplicada**: Criado o arquivo de configuração `vercel.json` na raiz do projeto contendo regras de `rewrites` para redirecionar todas as rotas de volta ao `index.html` principal. Isso permite que o React Router capture e processe as rotas no cliente de forma consistente e sem falhas após recarregar a página.
+
+### 2026-05-22
 - **Avatares Dinâmicos por Rank e Classe**:
   - **Requisito do Usuário**: Atualização do sistema para suportar a nova estrutura de pastas de assets em `public/Classes/`, onde cada classe possui imagens exclusivas separadas por Rank físico (`Rank E.jpeg` até `Rank S.jpeg`), atualizando o avatar na interface do usuário automaticamente em tempo real sempre que o usuário sobe de Rank.
   - **Onboarding RPG Imersivo**: Substituídas as imagens estáticas genéricas antigas no quiz de onboarding (`src/pages/Onboarding.tsx`) pelos novos caminhos dinâmicos correspondentes ao `Rank E` inicial de cada classe (`/Classes/Warrior/Rank E.jpeg`, `/Classes/Scholar/Rank E.jpeg`, `/Classes/Monk/Rank E.jpeg`, `/Classes/Titan/Rank E.jpeg`), garantindo que o caçador veja seu avatar inicial exato ao selecionar a classe no quiz.
