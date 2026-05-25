@@ -37,8 +37,6 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  if (!state.username) return null;
-
   const xpPct = Math.min(100, (state.xp / Math.max(state.xpRequired, 1)) * 100);
 
   const classGlowMap: Record<string, string> = {
@@ -129,7 +127,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                   {state.rank}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-black text-white uppercase tracking-tight">{state.username}</p>
+                  <p className="truncate text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</p>
                   <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Level {state.level}</p>
                 </div>
               </div>

@@ -18,6 +18,9 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Correção de Roteamento SPA no Vercel (F5 / 404)**:
   - **Identificação do Bug**: Ao realizar o deploy no Vercel, o recarregamento da página (F5) ou acesso direto a rotas secundárias (como `/workouts`, `/settings`, `/onboarding`) resultava em erro 404 (página em branco/sumindo). Esse comportamento ocorre porque servidores estáticos tentam mapear fisicamente as URLs de rotas do lado do cliente (React Router).
   - **Solução Aplicada**: Criado o arquivo de configuração `vercel.json` na raiz do projeto contendo regras de `rewrites` para redirecionar todas as rotas de volta ao `index.html` principal. Isso permite que o React Router capture e processe as rotas no cliente de forma consistente e sem falhas após recarregar a página.
+- **Correção de Abertura do Menu Lateral Mobile (MobileMenu)**:
+  - **Identificação do Bug**: No celular, o botão de menu lateral não exibia nada ao ser clicado. A causa raiz era uma verificação restritiva `if (!state.username) return null;` no componente `MobileMenu.tsx`. Se o perfil do caçador ainda não estivesse totalmente sincronizado (com `username` vazio) ou estivesse vazio no banco, o menu inteiro retornava nulo e falhava ao abrir.
+  - **Solução Aplicada**: Removida a barreira condicional restritiva em `src/components/layout/MobileMenu.tsx`, alinhando seu comportamento com o layout de desktop. Adicionado também o fallback `{state.username || 'Hunter'}` no rodapé do menu para garantir que o nome de exibição do caçador nunca fique vazio.
 
 ### 2026-05-22
 - **Avatares Dinâmicos por Rank e Classe**:
