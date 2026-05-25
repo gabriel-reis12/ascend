@@ -39,6 +39,12 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - **Solução Aplicada**: 
     - Adicionada a propriedade CSS `imageRendering: 'pixelated'` no avatar do cabeçalho e na ampliação, o que restaura a nitidez cristalina dos pixels da arte retro-RPG oficial de Solo Leveling, eliminando o desfoque bicúbico do navegador.
     - Implementado um modal **Lightbox interativo** e responsivo usando `AnimatePresence` e `motion` do Framer Motion em `Dashboard.tsx`. O usuário pode clicar no seu avatar para abri-lo em tela cheia com desfoque de fundo (`backdrop-blur-md`), exibindo também o nome do Caçador, Classe e Rank, fechando com facilidade ao clicar fora ou no botão de ação.
+- **Codex do Caçador Totalmente Responsivo no Mobile**:
+  - **Requisito do Usuário**: A tabela do Codex do Caçador era muito larga no celular, gerando uma rolagem horizontal desconfortável. O usuário desejava que a tabela coubesse por completo e se adaptasse.
+  - **Solução Aplicada**: Criada uma renderização alternativa condicional e responsiva em `src/pages/Quests.tsx`. O componente agora exibe a tabela clássica completa apenas em desktops (`hidden md:block`), e no celular (`block md:hidden`), renderiza uma lista elegante de cards verticais em estilo Cyberpunk, contendo o ícone, título da atividade, atributos associados, badge de recompensa XP e botão de ação empilhados de forma harmoniosa, eliminando 100% o transbordamento horizontal.
+- **Correção Crítica na Inserção de Quests pelo Codex**:
+  - **Identificação do Bug**: Ao clicar em "Despertar Quest" no Codex e salvar o modal, os novos hábitos criados não apareciam na aba de "Missões Diárias". A causa raiz era que a coluna `active` não estava sendo setada no payload da função de criação do frontend (`createHabit`), fazendo com que o Supabase inserisse as tarefas desativadas (`active = false`) por padrão.
+  - **Solução Aplicada**: Atualizado o payload de inserção na função `createHabit` em `src/hooks/useHabits.ts` para declarar explicitamente `active: true`. Os hábitos gerados pelo Codex agora nascem ativados no banco de dados e entram na rotina de fendas ativas de hoje de forma instantânea.
 
 ### 2026-05-22
 - **Avatares Dinâmicos por Rank e Classe**:

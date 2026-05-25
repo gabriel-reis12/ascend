@@ -286,6 +286,7 @@ export function useHabits() {
     const payload = {
       ...input,
       user_id: user.id,
+      active: true,
       scheduled_days: input.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
     };
     const { data, error } = await supabase

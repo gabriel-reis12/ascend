@@ -973,14 +973,15 @@ export function Quests() {
                   </div>
 
                   <div className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13]">
-                    <div className="overflow-x-auto">
+                    {/* ── Visualização em Tabela para Desktop (Oculta no mobile) ── */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-[#1E1E26] bg-white/5">
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Atividade / Hábito</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Atributo RPG</th>
                             <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-gray-400">Recompensa</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 hidden md:table-cell">Efeito Lore</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 hidden lg:table-cell">Efeito Lore</th>
                             <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-gray-400 w-[160px]">Ações</th>
                           </tr>
                         </thead>
@@ -1185,7 +1186,7 @@ export function Quests() {
                                     {row.xp}
                                   </span>
                                 </td>
-                                <td className="px-6 py-4 hidden md:table-cell">
+                                <td className="px-6 py-4 hidden lg:table-cell">
                                   <span className="text-xs text-gray-400 font-medium">
                                     {row.lore}
                                   </span>
@@ -1196,7 +1197,7 @@ export function Quests() {
                                       whileHover={{ scale: 1.05 }}
                                       whileTap={{ scale: 0.95 }}
                                       onClick={() => navigate(row.route!)}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-400 transition-colors hover:border-blue-500/60 hover:text-white"
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-400 transition-colors hover:border-blue-500/60 hover:text-white cursor-pointer"
                                     >
                                       <span>Ir para Módulo</span>
                                       <Sword size={12} />
@@ -1209,7 +1210,7 @@ export function Quests() {
                                         setPresetHabitData(row.preset!);
                                         setModalOpen(true);
                                       }}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400 transition-colors hover:border-emerald-500/60 hover:text-white"
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400 transition-colors hover:border-emerald-500/60 hover:text-white cursor-pointer"
                                     >
                                       <span>Despertar Quest</span>
                                       <Plus size={12} strokeWidth={3} />
@@ -1221,6 +1222,253 @@ export function Quests() {
                           })}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* ── Visualização em Cards para Mobile (Exclusiva no celular) ── */}
+                    <div className="block md:hidden p-4 space-y-4">
+                      {[
+                        {
+                          activity: 'Refeições Saudáveis',
+                          icon: UtensilsCrossed,
+                          iconColor: '#F97316',
+                          stat: 'Vitalidade (VIT)',
+                          statColor: 'text-orange-400',
+                          xp: '+15 XP',
+                          lore: 'Acelera a regeneração celular e a imunidade biológica.',
+                          statBonus: '+1 VIT',
+                          isModule: true,
+                          route: '/nutrition'
+                        },
+                        {
+                          activity: 'Treino de Força',
+                          icon: Dumbbell,
+                          iconColor: '#A855F7',
+                          stat: 'Força (FOR)',
+                          statColor: 'text-red-400',
+                          xp: '+50 XP',
+                          lore: 'Eleva o dano físico bruto e a densidade miofibrilar.',
+                          statBonus: '+2 FOR',
+                          isModule: true,
+                          route: '/workouts'
+                        },
+                        {
+                          activity: 'Cardio',
+                          icon: Heart,
+                          iconColor: '#EF4444',
+                          stat: 'Resistência (RES)',
+                          statColor: 'text-green-400',
+                          xp: '+40 XP',
+                          lore: 'Otimiza o fluxo de oxigênio e a capacidade cardiovascular.',
+                          statBonus: '+2 RES',
+                          isModule: true,
+                          route: '/workouts'
+                        },
+                        {
+                          activity: 'Trabalhar (Foco Diário)',
+                          icon: Briefcase,
+                          iconColor: '#06B6D4',
+                          stat: 'Disciplina (DIS)',
+                          statColor: 'text-purple-400',
+                          xp: '+25 XP',
+                          lore: 'Fortalece a constância profissional e a entrega sob pressão.',
+                          statBonus: '+1 DIS',
+                          isModule: false,
+                          preset: {
+                            title: 'Trabalhar (Foco Máximo)',
+                            category: 'Trabalho',
+                            category_color: '#06B6D4',
+                            xp_reward: 25,
+                            stat_target: 'discipline' as const,
+                            stat_reward: 1
+                          }
+                        },
+                        {
+                          activity: 'Trabalho Extra / Freelance',
+                          icon: Briefcase,
+                          iconColor: '#FBBF24',
+                          stat: 'Disciplina (DIS)',
+                          statColor: 'text-purple-400',
+                          xp: '+40 XP',
+                          lore: 'Esforço adicional que eleva sua autonomia financeira e resiliência.',
+                          statBonus: '+2 DIS',
+                          isModule: false,
+                          preset: {
+                            title: 'Trabalho Extra / Freelance',
+                            category: 'Trabalho',
+                            category_color: '#FBBF24',
+                            xp_reward: 40,
+                            stat_target: 'discipline' as const,
+                            stat_reward: 2
+                          }
+                        },
+                        {
+                          activity: 'Aprender Idiomas',
+                          icon: Languages,
+                          iconColor: '#3B82F6',
+                          stat: 'Inteligência (INT)',
+                          statColor: 'text-cyan-400',
+                          xp: '+25 XP',
+                          lore: 'Quebra barreiras linguísticas e expande a plasticidade cerebral.',
+                          statBonus: '+2 INT',
+                          isModule: false,
+                          preset: {
+                            title: 'Estudar Novo Idioma',
+                            category: 'Estudo',
+                            category_color: '#3B82F6',
+                            xp_reward: 25,
+                            stat_target: 'intelligence' as const,
+                            stat_reward: 2
+                          }
+                        },
+                        {
+                          activity: 'Leitura',
+                          icon: BookOpen,
+                          iconColor: '#3B82F6',
+                          stat: 'Inteligência (INT)',
+                          statColor: 'text-cyan-400',
+                          xp: '+25 XP',
+                          lore: 'Amplia a capacidade cognitiva e a velocidade de foco.',
+                          statBonus: '+2 INT',
+                          isModule: false,
+                          preset: {
+                            title: 'Ler 30 minutos',
+                            category: 'Estudo',
+                            category_color: '#3B82F6',
+                            xp_reward: 25,
+                            stat_target: 'intelligence' as const,
+                            stat_reward: 2
+                          }
+                        },
+                        {
+                          activity: 'Programação & Tech',
+                          icon: Code,
+                          iconColor: '#10B981',
+                          stat: 'Inteligência (INT)',
+                          statColor: 'text-cyan-400',
+                          xp: '+30 XP',
+                          lore: 'Fortalece o raciocínio sistêmico e solução de problemas.',
+                          statBonus: '+2 INT',
+                          isModule: false,
+                          preset: {
+                            title: 'Programação & Tech',
+                            category: 'Estudo',
+                            category_color: '#10B981',
+                            xp_reward: 30,
+                            stat_target: 'intelligence' as const,
+                            stat_reward: 2
+                          }
+                        },
+                        {
+                          activity: 'Tocar Instrumentos',
+                          icon: Music,
+                          iconColor: '#EC4899',
+                          stat: 'Vitalidade (VIT)',
+                          statColor: 'text-orange-400',
+                          xp: '+20 XP',
+                          lore: 'Expressão artística e reequilíbrio da harmonia mental do caçador.',
+                          statBonus: '+2 VIT',
+                          isModule: false,
+                          preset: {
+                            title: 'Tocar Instrumento / Música',
+                            category: 'Hobbies',
+                            category_color: '#EC4899',
+                            xp_reward: 20,
+                            stat_target: 'vitality' as const,
+                            stat_reward: 2
+                          }
+                        },
+                        {
+                          activity: 'Deveres Gerais (Tasks)',
+                          icon: Award,
+                          iconColor: '#F59E0B',
+                          stat: 'Disciplina (DIS)',
+                          statColor: 'text-purple-400',
+                          xp: '+15 a +30 XP',
+                          lore: 'Reforça a constância diária e a fortitude mental.',
+                          statBonus: '+1 DIS',
+                          isModule: false,
+                          preset: {
+                            title: 'Deveres Gerais',
+                            category: 'Rotina',
+                            category_color: '#F59E0B',
+                            xp_reward: 15,
+                            stat_target: 'discipline' as const,
+                            stat_reward: 1
+                          }
+                        }
+                      ].map((row, idx) => {
+                        const RowIcon = row.icon;
+                        return (
+                          <div 
+                            key={idx} 
+                            className="group relative flex flex-col gap-3 rounded-xl border border-[#1E1E26]/60 bg-[#0B0B0F]/45 p-4 transition-all hover:border-blue-500/20"
+                          >
+                            {/* Cabeçalho do Card */}
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 transition-colors" 
+                                style={{ color: row.iconColor }}
+                              >
+                                <RowIcon size={16} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="font-bold text-white uppercase text-xs tracking-wider font-orbitron block truncate" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                  {row.activity}
+                                </span>
+                                <span className="text-[10px] text-gray-500 font-semibold block mt-0.5 leading-normal">
+                                  {row.lore}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Informações Centrais (Atributo e Recompensa) */}
+                            <div className="grid grid-cols-2 gap-3 border-t border-b border-[#1E1E26]/40 py-2.5 my-1">
+                              <div>
+                                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block">Atributo RPG</span>
+                                <span className={`text-[11px] font-black uppercase tracking-wider block mt-0.5 ${row.statColor}`}>
+                                  {row.stat}
+                                </span>
+                                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider block">
+                                  {row.statBonus}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block">Recompensa</span>
+                                <span className="inline-flex items-center gap-1 rounded bg-yellow-500/10 px-2 py-0.5 text-[10px] font-bold text-yellow-500 uppercase tracking-widest border border-yellow-500/20 mt-1">
+                                  <Zap size={10} fill="currentColor" />
+                                  {row.xp}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Botão de Ação */}
+                            <div className="w-full mt-1">
+                              {row.isModule ? (
+                                <motion.button
+                                  whileTap={{ scale: 0.97 }}
+                                  onClick={() => navigate(row.route!)}
+                                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/5 py-2.5 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:bg-blue-500/10 cursor-pointer"
+                                >
+                                  <span>Ir para Módulo</span>
+                                  <Sword size={12} />
+                                </motion.button>
+                              ) : (
+                                <motion.button
+                                  whileTap={{ scale: 0.97 }}
+                                  onClick={() => {
+                                    setPresetHabitData(row.preset!);
+                                    setModalOpen(true);
+                                  }}
+                                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 py-2.5 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
+                                >
+                                  <span>Despertar Quest</span>
+                                  <Plus size={12} strokeWidth={3} />
+                                </motion.button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </motion.div>
