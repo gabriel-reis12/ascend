@@ -21,6 +21,9 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Correção de Abertura do Menu Lateral Mobile (MobileMenu)**:
   - **Identificação do Bug**: No celular, o botão de menu lateral não exibia nada ao ser clicado. A causa raiz era uma verificação restritiva `if (!state.username) return null;` no componente `MobileMenu.tsx`. Se o perfil do caçador ainda não estivesse totalmente sincronizado (com `username` vazio) ou estivesse vazio no banco, o menu inteiro retornava nulo e falhava ao abrir.
   - **Solução Aplicada**: Removida a barreira condicional restritiva em `src/components/layout/MobileMenu.tsx`, alinhando seu comportamento com o layout de desktop. Adicionado também o fallback `{state.username || 'Hunter'}` no rodapé do menu para garantir que o nome de exibição do caçador nunca fique vazio.
+- **Atualização de Branding (Favicon e Título da Guia)**:
+  - **Requisito do Usuário**: Alterar o título da guia do navegador para exibir apenas "Ascend" e atualizar o ícone da guia (favicon) para a logo oficial do projeto.
+  - **Solução Aplicada**: Atualizado o arquivo `index.html` para alterar a propriedade `<title>` para "Ascend". O link do favicon foi ajustado de `/favicon.svg` (inexistente) para `/Icon 2.png` (a logo oficial armazenada no diretório público do projeto), garantindo a renderização perfeita do ícone no navegador.
 
 ### 2026-05-22
 - **Avatares Dinâmicos por Rank e Classe**:
