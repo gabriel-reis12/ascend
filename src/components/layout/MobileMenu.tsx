@@ -73,7 +73,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/5 bg-[#0B0B0F]/90 backdrop-blur-xl shadow-2xl transition-all duration-300",
+              "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/5 bg-[#0B0B0F]/90 backdrop-blur-xl shadow-2xl",
               activeGlow
             )}
           >

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Trophy, 
@@ -42,6 +42,7 @@ export function Dashboard() {
   const [todayVolume, setTodayVolume] = React.useState<number>(0);
   const [loadingVolume, setLoadingVolume] = React.useState<boolean>(true);
   const [chartSize, setChartSize] = React.useState<number>(340);
+  const [isAvatarOpen, setIsAvatarOpen] = React.useState(false);
 
   React.useEffect(() => {
     function handleResize() {
@@ -228,13 +229,15 @@ export function Dashboard() {
             {/* Avatar de Classe Dinâmico */}
             <motion.div
               whileHover={{ scale: 1.05 }}
+              onClick={() => setIsAvatarOpen(true)}
               transition={{ duration: 0.2 }}
-              className={`relative size-24 sm:size-32 rounded-2xl sm:rounded-3xl overflow-hidden border bg-black/40 group ${themeColors.border} ${themeColors.glow}`}
+              className={`relative size-24 sm:size-32 rounded-2xl sm:rounded-3xl overflow-hidden border bg-black/40 group cursor-pointer ${themeColors.border} ${themeColors.glow}`}
             >
               <img 
                 src={characterAvatar} 
                 alt="Avatar do Caçador" 
                 className="w-full h-full object-cover transition-all duration-700 group-hover:scale-115"
+                style={{ imageRendering: 'pixelated' }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
             </motion.div>
@@ -690,6 +693,55 @@ export function Dashboard() {
         </motion.div>
         
       </div>
+
+      {/* ── Lightbox do Avatar ─────────────────────────────── */}
+      <AnimatePresence>
+        {isAvatarOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop escuro com blur */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAvatarOpen(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            
+            {/* Imagem Ampliada */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative max-w-[90vw] max-h-[85vh] sm:max-w-md w-full aspect-square rounded-3xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl z-10"
+            >
+              <img
+                src={characterAvatar}
+                alt="Avatar do Caçador Ampliado"
+                className="w-full h-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black uppercase text-white font-orbitron tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                    {state.username || 'Hunter'}
+                  </h3>
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                    Rank {state.rank} • {state.hunterClass || 'Monarch'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsAvatarOpen(false)}
+                  className="rounded-xl bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-all cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

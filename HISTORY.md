@@ -31,6 +31,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Aprimoramento de Layout (Redimensionamento do Ícone Principal)**:
   - **Requisito do Usuário**: Aumentar o tamanho do ícone oficial da marca em 30% em todas as exibições do aplicativo.
   - **Solução Aplicada**: Redimensionado o ícone `Icon 2.png` em 30% na barra lateral desktop (de `size-10` para `size-[52px]`), na barra superior do cabeçalho mobile (de `h-9 w-9` para `h-[47px] w-[47px]`), e no cabeçalho do menu lateral mobile (de `size-9` para `size-[47px]`), otimizando o peso visual e a legibilidade da marca ASCEND nas diferentes telas de exibição.
+- **Polimento da Animação do Menu Lateral (MobileMenu)**:
+  - **Identificação do Bug**: A animação de deslize lateral (entrar e sair) do menu mobile parecia "esquisita", travada ou lenta. Isso acontecia por um conflito entre o Framer Motion (que anima o transform fisicamente) e a classe de transição do Tailwind (`transition-all duration-300`) no mesmo elemento.
+  - **Solução Aplicada**: Removida a classe utilitária do Tailwind do `motion.aside`, permitindo que o motor de física ultra-suave de spring do Framer Motion faça o deslize do menu de forma nativa e acelerada por hardware, tornando a animação extremamente limpa, fluida e nítida.
+- **Nitidez de Avatar & Lightbox do Caçador (Dashboard)**:
+  - **Requisito do Usuário**: Corrigir a pixelização/embaçamento no avatar do Caçador no Dashboard e permitir ampliar/fechar o avatar em tamanho grande para inspeção de alta qualidade.
+  - **Solução Aplicada**: 
+    - Adicionada a propriedade CSS `imageRendering: 'pixelated'` no avatar do cabeçalho e na ampliação, o que restaura a nitidez cristalina dos pixels da arte retro-RPG oficial de Solo Leveling, eliminando o desfoque bicúbico do navegador.
+    - Implementado um modal **Lightbox interativo** e responsivo usando `AnimatePresence` e `motion` do Framer Motion em `Dashboard.tsx`. O usuário pode clicar no seu avatar para abri-lo em tela cheia com desfoque de fundo (`backdrop-blur-md`), exibindo também o nome do Caçador, Classe e Rank, fechando com facilidade ao clicar fora ou no botão de ação.
 
 ### 2026-05-22
 - **Avatares Dinâmicos por Rank e Classe**:
