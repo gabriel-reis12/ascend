@@ -24,6 +24,9 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Atualização de Branding (Favicon e Título da Guia)**:
   - **Requisito do Usuário**: Alterar o título da guia do navegador para exibir apenas "Ascend" e atualizar o ícone da guia (favicon) para a logo oficial do projeto.
   - **Solução Aplicada**: Atualizado o arquivo `index.html` para alterar a propriedade `<title>` para "Ascend". O link do favicon foi ajustado de `/favicon.svg` (inexistente) para `/Icon 2.png` (a logo oficial armazenada no diretório público do projeto), garantindo a renderização perfeita do ícone no navegador.
+- **Aprimoramento de Layout (Redimensionamento do Ícone Principal)**:
+  - **Requisito do Usuário**: Aumentar o tamanho do ícone oficial da marca em 30% em todas as exibições do aplicativo.
+  - **Solução Aplicada**: Redimensionado o ícone `Icon 2.png` em 30% na barra lateral desktop (de `size-10` para `size-[52px]`), na barra superior do cabeçalho mobile (de `h-9 w-9` para `h-[47px] w-[47px]`), e no cabeçalho do menu lateral mobile (de `size-9` para `size-[47px]`), otimizando o peso visual e a legibilidade da marca ASCEND nas diferentes telas de exibição.
 
 ### 2026-05-22
 - **Avatares Dinâmicos por Rank e Classe**:

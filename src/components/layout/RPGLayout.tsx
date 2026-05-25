@@ -34,11 +34,11 @@ export function RPGLayout() {
 
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-8">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.4)]">
+          <div className="flex size-[52px] shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.4)]">
             <img
               src="/Icon 2.png"
               alt="ASCEND"
-              className="size-10 object-cover"
+              className="size-[52px] object-cover"
             />
           </div>
           <span
@@ -135,7 +135,7 @@ export function RPGLayout() {
           <img
             src="/Icon 2.png"
             alt="ASCEND"
-            className="h-9 w-9 object-cover rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.5)]"
+            className="h-[47px] w-[47px] object-cover rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.5)]"
           />
           <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
             {state.rank}
