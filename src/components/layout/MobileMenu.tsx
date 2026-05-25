@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, X } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +24,14 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const state = useHunterStore();
   const { signOut } = useAuth();
 
-  useEffect(() => { onClose(); }, [location.pathname, onClose]);
+  const lastPath = useRef(location.pathname);
+
+  useEffect(() => {
+    if (lastPath.current !== location.pathname) {
+      onClose();
+      lastPath.current = location.pathname;
+    }
+  }, [location.pathname, onClose]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
