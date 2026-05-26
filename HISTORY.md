@@ -15,6 +15,9 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ## 🕒 Histórico de Mudanças Recentes
 
 ### 2026-05-26 (Sessão Atual)
+- **Tratamento de Exceções no AuthContext contra Loading Infinito ("Despertando...")**:
+  - **Causa Raiz**: Se a chamada ao Supabase (`loadProfile`) falhasse (devido a timeout de rede, oscilação de conexão no Vercel ou cold start do banco), a exceção não era capturada. O fluxo do React `useEffect` que inicializa o app quebrava silenciosamente e nunca chamava `setLoading(false)`. Isso deixava o usuário travado eternamente no loader preto "Despertando..." (como enviado na captura de tela).
+  - **Solução Aplicada**: Envolvemos os blocos assíncronos do `initAuth` e `onAuthStateChange` em blocos robustos de `try/catch/finally` em `src/contexts/AuthContext.tsx`. Mesmo que ocorra um erro de rede temporário na conexão com o banco de dados Supabase, o erro é capturado, exibido no console e a função executa o bloco `finally` para desligar o loading de forma 100% segura, permitindo que a aplicação renderize ou recupere o controle normalmente sem congelar a tela do caçador.
 - **Nova Mecânica de Recompensa de Refeições Consolidadas (Abordagem A)**:
   - **Requisito do Usuário**: Se o caçador realizar todas as refeições do dia, ele ganha os pontos de XP e Vitalidade de forma consolidada, em vez de ganhar recompensas individuais por refeição.
   - **Solução Aplicada**: 

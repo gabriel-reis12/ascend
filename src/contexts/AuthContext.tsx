@@ -25,31 +25,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let active = true;
 
     async function initAuth() {
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!active) return;
 
-      const currentSession = data.session;
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+        const currentSession = data.session;
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-      if (currentSession?.user) {
-        await loadProfile(currentSession.user.id);
+        if (currentSession?.user) {
+          await loadProfile(currentSession.user.id);
+        }
+      } catch (err) {
+        console.error("Erro na inicialização de autenticação:", err);
+      } finally {
+        if (active) setLoading(false);
       }
-      if (active) setLoading(false);
     }
 
     void initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!active) return;
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      if (newSession?.user) {
-        setLoading(true);
-        await loadProfile(newSession.user.id);
-        if (active) setLoading(false);
-      } else {
-        reset();
+      try {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        if (newSession?.user) {
+          setLoading(true);
+          await loadProfile(newSession.user.id);
+        } else {
+          reset();
+        }
+      } catch (err) {
+        console.error("Erro na mudança de autenticação:", err);
+      } finally {
         if (active) setLoading(false);
       }
     });
