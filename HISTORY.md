@@ -15,6 +15,12 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ## 🕒 Histórico de Mudanças Recentes
 
 ### 2026-05-25 (Sessão Atual)
+- **Acesso Universal e Fácil ao Tutorial (Botão de Interrogação nos Ajustes)**:
+  - **Requisito do Usuário**: Colocar para todos os usuários (inclusive os antigos que já concluíram o primeiro acesso) um ícone de interrogação na tela de Ajustes para invocar e rever o tutorial interativo a qualquer momento.
+  - **Solução Aplicada**:
+    1. Importado o componente de ícone `HelpCircle` do `lucide-react` em `src/pages/Settings.tsx`.
+    2. Desenvolvido um **botão de atalho holográfico premium roxo neon** posicionado diretamente no cabeçalho superior da tela de Ajustes (ao lado do título "Ajustes de Sistema"). O botão conta com o ícone de interrogação animado e pulsante, bordas roxas e sombras de brilho sci-fi.
+    3. Conectado o gatilho de clique para apagar a chave de conclusão `ascend_tour_completed` no `localStorage` e redirecionar instantaneamente o caçador à Dashboard (`/`), iniciando de imediato o tutorial interativo.
 - **Refinamento e Enriquecimento do Onboarding Tour (Menu Lateral & Responsividade Celular)**:
   - **Requisito do Usuário**: Mostrar detalhadamente as funções do menu lateral de Treinamento e Recuperação (Dieta) e garantir pleno funcionamento, usabilidade e ergonomia no celular.
   - **Soluções Aplicadas**:
