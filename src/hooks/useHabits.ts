@@ -91,6 +91,17 @@ export function useHabits() {
     if (!user?.id) return;
     setLoading(true);
 
+    let active = true;
+
+    // Safety timeout de 4 segundos: garante que o visual de skeletons saia da tela
+    // caso as queries paralelas do Supabase demorem ou travem temporariamente (ex: cold starts)
+    const safetyTimeout = setTimeout(() => {
+      if (active) {
+        setLoading(false);
+        console.warn('Safety timeout de useHabits disparado. Forçando loading = false.');
+      }
+    }, 4000);
+
     try {
       const today = todayStr();
       const dayOfWeek = todayDayOfWeek();
@@ -155,6 +166,8 @@ export function useHabits() {
           .eq('completed_at', today),
       ]);
 
+      if (!active) return;
+
       setHabits(habitsData ?? []);
       setCompletedToday(new Set((completionsData ?? []).map((c) => c.habit_id)));
 
@@ -211,7 +224,10 @@ export function useHabits() {
     } catch (err) {
       console.error('Erro ao buscar dados de hábitos e missões:', err);
     } finally {
-      setLoading(false);
+      if (active) {
+        setLoading(false);
+        clearTimeout(safetyTimeout);
+      }
     }
   }, [user?.id]);
 

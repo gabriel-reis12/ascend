@@ -37,17 +37,34 @@ export function useTasks() {
   const fetchTasks = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+
+    let active = true;
+
+    // Safety timeout de 4 segundos: garante que o visual de skeletons saia da tela
+    // caso as queries do Supabase demorem ou travem temporariamente (ex: cold starts)
+    const safetyTimeout = setTimeout(() => {
+      if (active) {
+        setLoading(false);
+        console.warn('Safety timeout de useTasks disparado. Forçando loading = false.');
+      }
+    }, 4000);
+
     try {
       const { data } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+        
+      if (!active) return;
       setTasks(data ?? []);
     } catch (err) {
       console.error('Erro ao buscar tarefas:', err);
     } finally {
-      setLoading(false);
+      if (active) {
+        setLoading(false);
+        clearTimeout(safetyTimeout);
+      }
     }
   }, [user?.id]);
 

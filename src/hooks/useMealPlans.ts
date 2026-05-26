@@ -71,6 +71,17 @@ export function useMealPlans() {
     if (!user?.id) return;
     setLoading(true);
 
+    let active = true;
+
+    // Safety timeout de 4 segundos: garante que o visual de skeletons saia da tela
+    // caso as queries paralelas do Supabase demorem ou travem temporariamente (ex: cold starts)
+    const safetyTimeout = setTimeout(() => {
+      if (active) {
+        setLoading(false);
+        console.warn('Safety timeout de useMealPlans disparado. Forçando loading = false.');
+      }
+    }, 4000);
+
     try {
       const today = todayStr();
 
@@ -95,12 +106,17 @@ export function useMealPlans() {
             .eq('completed_at', today),
         ]);
 
+      if (!active) return;
+
       setMealPlans((plansData as MealPlan[]) ?? []);
       setCompletedToday(new Set((completionsData ?? []).map((c) => c.meal_plan_id)));
     } catch (err) {
       console.error('Erro ao buscar planos alimentares:', err);
     } finally {
-      setLoading(false);
+      if (active) {
+        setLoading(false);
+        clearTimeout(safetyTimeout);
+      }
     }
   }, [user?.id]);
 
