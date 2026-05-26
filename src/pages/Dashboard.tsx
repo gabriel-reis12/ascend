@@ -206,7 +206,7 @@ export function Dashboard() {
       progressPct: progress,
       totalCaloriesToday: kcalToday,
       energyLevel: energy,
-      dashboardMissions: missions.slice(0, 6)
+      dashboardMissions: missions.slice(0, 10)
     };
   }, [state.xp, state.xpRequired, state.stats, activeHabits, completedToday, workoutMissions, mealMissions]);
 

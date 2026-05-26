@@ -15,6 +15,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ## 🕒 Histórico de Mudanças Recentes
 
 ### 2026-05-25 (Sessão Atual)
+- **Correção da Criação Silenciosa e Exibição de Missões Diárias (Hábitos)**:
+  - **Identificação do Bug**: Ao tentar criar novos hábitos a partir do Codex ou do botão "Nova Quest", a inserção de dados falhava silenciosamente no Supabase devido ao envio de campos opcionais (`scheduled_time`, `scheduled_end_time`) com o valor Javascript `undefined`. O banco de dados rejeitava esse payload inválido, porém o modal `NewHabitModal.tsx` fechava e limpava o formulário sem conferir a resposta, ocultando a falha do usuário. Além disso, o Dashboard limitava a exibição das missões em no máximo 6 itens, correndo o risco de ocultar novas tarefas se o caçador já possuísse múltiplas refeições e treinos agendados para o mesmo dia.
+  - **Soluções Aplicadas**:
+    1. **Sanitização de Payload (`useHabits.ts`)**: Refatorada a função `createHabit` para estruturar e sanitizar o payload explicitamente, convertendo strings vazias ou valores `undefined` dos campos de horários em `null` antes de disparar o comando ao Supabase.
+    2. **Log de Erros em Desenvolvimento (`useHabits.ts`)**: Adicionado `console.error` detalhado no hook para facilitar a depuração no console em caso de falha de conexão ou restrições (RLS).
+    3. **Tratamento e Feedback Visual de Erros (`NewHabitModal.tsx`)**: Introduzido estado local de erro (`error`) no modal de criação. O formulário agora valida a resposta de `createHabit`: caso ocorra um erro do Supabase, o modal permanece aberto e exibe uma caixa de erro estilizada Cyberpunk com a mensagem explicativa da falha. Em caso de sucesso, o formulário limpa e fecha normalmente.
+    4. **Ampliação do Limite no Dashboard (`Dashboard.tsx`)**: Aumentado o truncamento de missões diárias exibidas no painel de atalhos rápidos de 6 para 10, permitindo que caçadores avancem em múltiplas missões e hábitos consolidados sem perdas de visibilidade na interface.
 - **Correção de Roteamento SPA no Vercel (F5 / 404)**:
   - **Identificação do Bug**: Ao realizar o deploy no Vercel, o recarregamento da página (F5) ou acesso direto a rotas secundárias (como `/workouts`, `/settings`, `/onboarding`) resultava em erro 404 (página em branco/sumindo). Esse comportamento ocorre porque servidores estáticos tentam mapear fisicamente as URLs de rotas do lado do cliente (React Router).
   - **Solução Aplicada**: Criado o arquivo de configuração `vercel.json` na raiz do projeto contendo regras de `rewrites` para redirecionar todas as rotas de volta ao `index.html` principal. Isso permite que o React Router capture e processe as rotas no cliente de forma consistente e sem falhas após recarregar a página.

@@ -283,19 +283,38 @@ export function useHabits() {
 
   const createHabit = async (input: CreateHabitInput) => {
     if (!user) return { error: 'Not authenticated' };
-    const payload = {
-      ...input,
+    
+    // Sanitização completa do payload para evitar propriedades 'undefined' indesejadas no Supabase
+    const payload: any = {
+      title: input.title,
+      category: input.category,
+      category_color: input.category_color,
+      xp_reward: input.xp_reward,
+      stat_target: input.stat_target,
+      stat_reward: input.stat_reward,
       user_id: user.id,
       active: true,
+      is_optional: input.is_optional ?? false,
+      scheduled_time: input.scheduled_time && input.scheduled_time.trim() !== "" ? input.scheduled_time : null,
+      scheduled_end_time: input.scheduled_end_time && input.scheduled_end_time.trim() !== "" ? input.scheduled_end_time : null,
       scheduled_days: input.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
     };
+
     const { data, error } = await supabase
       .from('habits')
       .insert(payload)
       .select()
       .single();
-    if (!error && data) setHabits((prev) => [...prev, data]);
-    return { error: error?.message ?? null };
+
+    if (error) {
+      console.error('Erro ao criar hábito no Supabase:', error);
+      return { error: error.message };
+    }
+
+    if (data) {
+      setHabits((prev) => [...prev, data]);
+    }
+    return { error: null };
   };
 
   const deleteHabit = async (habitId: string) => {

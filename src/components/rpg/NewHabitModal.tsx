@@ -38,9 +38,11 @@ const DEFAULTS: CreateHabitInput = {
 export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabitModalProps) {
   const [form, setForm] = useState<CreateHabitInput>(DEFAULTS);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
+      setError(null);
       setForm({
         title: initialData?.title ?? DEFAULTS.title,
         category: initialData?.category ?? DEFAULTS.category,
@@ -55,6 +57,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
       });
     } else {
       setForm(DEFAULTS);
+      setError(null);
     }
   }, [open, initialData]);
 
@@ -62,10 +65,22 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
     e.preventDefault();
     if (!form.title.trim() || !form.category.trim()) return;
     setLoading(true);
-    await onSubmit({ ...form, title: form.title.trim(), category: form.category.trim() });
+    setError(null);
+    
+    const res = await onSubmit({ 
+      ...form, 
+      title: form.title.trim(), 
+      category: form.category.trim() 
+    });
+    
     setLoading(false);
-    setForm(DEFAULTS);
-    onClose();
+    
+    if (res && res.error) {
+      setError(res.error);
+    } else {
+      setForm(DEFAULTS);
+      onClose();
+    }
   };
 
   const set = <K extends keyof CreateHabitInput>(key: K, value: CreateHabitInput[K]) =>
@@ -276,6 +291,18 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                   </p>
                 </div>
               </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-center shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                >
+                  <p className="text-xs font-black uppercase tracking-wider text-red-400">
+                    ⚠️ Erro de Calibração: {error}
+                  </p>
+                </motion.div>
+              )}
 
               <motion.button
                 type="submit"
