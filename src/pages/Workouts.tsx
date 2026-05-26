@@ -97,11 +97,53 @@ export function Workouts() {
     routineName: ''
   });
   
-  // Routine Session State
-  const [isRoutineSessionOpen, setIsRoutineSessionOpen] = useState(false);
-  const [sessionExercises, setSessionExercises] = useState<RoutineExercise[]>([]);
-  const [completedSessionExs, setCompletedSessionExs] = useState<string[]>([]);
-  const [sessionRoutineId, setSessionRoutineId] = useState<string | null>(null);
+  // Routine Session State (carregados do localStorage para persistir em caso de refresh/bloqueio)
+  const [isRoutineSessionOpen, setIsRoutineSessionOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('ascend_active_workout_open') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [sessionExercises, setSessionExercises] = useState<RoutineExercise[]>(() => {
+    try {
+      const stored = localStorage.getItem('ascend_active_workout_exercises');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [completedSessionExs, setCompletedSessionExs] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('ascend_active_workout_completed');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [sessionRoutineId, setSessionRoutineId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('ascend_active_workout_routine_id');
+    } catch {
+      return null;
+    }
+  });
+
+  // Sincroniza estado de treino ativo com o localStorage para suportar recarregamento de aba/bloqueio de tela
+  useEffect(() => {
+    try {
+      localStorage.setItem('ascend_active_workout_open', String(isRoutineSessionOpen));
+      localStorage.setItem('ascend_active_workout_exercises', JSON.stringify(sessionExercises));
+      localStorage.setItem('ascend_active_workout_completed', JSON.stringify(completedSessionExs));
+      if (sessionRoutineId) {
+        localStorage.setItem('ascend_active_workout_routine_id', sessionRoutineId);
+      } else {
+        localStorage.removeItem('ascend_active_workout_routine_id');
+      }
+    } catch (err) {
+      console.error('Erro ao salvar sessão de treino no localStorage:', err);
+    }
+  }, [isRoutineSessionOpen, sessionExercises, completedSessionExs, sessionRoutineId]);
   
   // Log Form State
   const [sets, setSets] = useState(3);
@@ -329,6 +371,7 @@ export function Workouts() {
       setIsRoutineSessionOpen(false);
       setSessionRoutineId(null);
       setCompletedSessionExs([]);
+      setSessionExercises([]);
       fetchData();
     } catch (err) {
       console.error('Error finishing routine:', err);
@@ -739,7 +782,11 @@ export function Workouts() {
                       </div>
 
                       <button 
-                        onClick={() => handleStartRoutine(routine)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleStartRoutine(routine);
+                        }}
                         className="w-full rounded-xl bg-purple-600/10 py-3 text-[10px] font-black uppercase tracking-[0.3em] text-purple-500 transition-all hover:bg-purple-600 hover:text-white border border-purple-600/20"
                         style={{ fontFamily: 'Orbitron, sans-serif' }}
                       >
@@ -1277,7 +1324,14 @@ export function Workouts() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => setIsRoutineSessionOpen(false)}
+                    onClick={() => {
+                      if (window.confirm("Deseja mesmo abandonar o treino atual? Seu progresso nesta sessão será perdido.")) {
+                        setIsRoutineSessionOpen(false);
+                        setSessionExercises([]);
+                        setCompletedSessionExs([]);
+                        setSessionRoutineId(null);
+                      }
+                    }}
                     className="size-10 flex items-center justify-center rounded-full bg-white/5 text-gray-500 hover:text-white transition-colors"
                   >
                     <X size={20} />

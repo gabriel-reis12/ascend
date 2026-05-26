@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useHunterStore } from '../stores/useHunterStore';
@@ -20,9 +20,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const loadProfile = useHunterStore((s) => s.loadProfile);
   const reset = useHunterStore((s) => s.reset);
+  const currentUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
+
+    // Safety timeout: Garante que o loading nunca passe de 5 segundos
+    // Evita travamentos eternos ("Despertando...") por problemas de rede ou cold starts
+    const safetyTimeout = setTimeout(() => {
+      if (active) {
+        setLoading(false);
+        console.warn("Safety timeout do AuthContext disparado. Forçando loading = false.");
+      }
+    }, 5000);
 
     async function initAuth() {
       try {
@@ -34,12 +44,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
+          currentUserRef.current = currentSession.user.id;
           await loadProfile(currentSession.user.id);
+        } else {
+          currentUserRef.current = null;
+          reset();
         }
       } catch (err) {
         console.error("Erro na inicialização de autenticação:", err);
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          clearTimeout(safetyTimeout);
+        }
       }
     }
 
@@ -48,23 +65,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       if (!active) return;
       try {
+        const newUserId = newSession?.user?.id ?? null;
         setSession(newSession);
         setUser(newSession?.user ?? null);
-        if (newSession?.user) {
-          setLoading(true);
-          await loadProfile(newSession.user.id);
+
+        if (newUserId) {
+          // Só exibe tela de carregamento bloqueante se o usuário mudou (login novo)
+          if (newUserId !== currentUserRef.current) {
+            currentUserRef.current = newUserId;
+            setLoading(true);
+            await loadProfile(newUserId);
+          } else {
+            // Se for o mesmo usuário (ex: token refreshed), atualiza dados em background silenciosamente
+            void loadProfile(newUserId);
+          }
         } else {
+          currentUserRef.current = null;
           reset();
         }
       } catch (err) {
         console.error("Erro na mudança de autenticação:", err);
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          clearTimeout(safetyTimeout);
+        }
       }
     });
 
     return () => {
       active = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [loadProfile, reset]);
