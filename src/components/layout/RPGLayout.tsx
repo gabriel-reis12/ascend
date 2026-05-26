@@ -54,10 +54,15 @@ export function RPGLayout() {
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
+            const navTourIds: Record<string, string> = {
+              '/workouts': 'tour-nav-workouts',
+              '/nutrition': 'tour-nav-nutrition',
+            };
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                id={navTourIds[item.path]}
                 className={cn(
                   'group flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold tracking-wide transition-all duration-200',
                   isActive

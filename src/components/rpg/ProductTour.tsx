@@ -46,6 +46,18 @@ const TOUR_STEPS: TourStep[] = [
     position: 'top',
   },
   {
+    title: 'MÓDULO DE TREINAMENTO',
+    lore: 'Sua academia de guerra pessoal! Ative este módulo no menu lateral ou atalhos rápidos para gerenciar suas rotinas de treino, iniciar sessões de exercício com temporizador de descanso ativo, consultar a biblioteca de movimentos oficiais e acompanhar gráficos detalhados de evolução de carga e recordes pessoais (PRs). Cada treino finalizado concede XP e aprimora seus atributos de Força e Resistência!',
+    target: 'tour-nav-workouts',
+    position: 'bottom',
+  },
+  {
+    title: 'RECOVERY: MANA & DIETAS',
+    lore: 'O laboratório de alquimia e nutrição do caçador! Acesse no menu lateral ou atalhos para desenvolver cardápios e planos alimentares eficientes, cadastrar novos mantimentos na biblioteca e registrar suas refeições diárias. Acompanhe a ingestão calórica (sua Mana) e macronutrientes em tempo real para maximizar a sua consistência e recuperação!',
+    target: 'tour-nav-nutrition',
+    position: 'bottom',
+  },
+  {
     title: 'EVOLUÇÃO LIBERADA',
     lore: 'A calibração do sistema está completa. O portal do Rank E ao Rank S está livre de barreiras. Mostre sua determinação, enfrente seus deveres diários e alcance o ápice do seu poder. Ascenda!',
     position: 'center',
@@ -86,7 +98,22 @@ export function ProductTour() {
     if (!open) return;
     const step = TOUR_STEPS[currentStep];
     if (step && step.target) {
-      const element = document.getElementById(step.target);
+      let targetId = step.target;
+
+      // Fallback dinâmico para mobile caso o botão da barra lateral (sidebar) não esteja visível no DOM
+      if (targetId === 'tour-nav-workouts') {
+        const desktopEl = document.getElementById('tour-nav-workouts');
+        if (!desktopEl || desktopEl.offsetWidth === 0) {
+          targetId = 'tour-shortcut-workouts';
+        }
+      } else if (targetId === 'tour-nav-nutrition') {
+        const desktopEl = document.getElementById('tour-nav-nutrition');
+        if (!desktopEl || desktopEl.offsetWidth === 0) {
+          targetId = 'tour-shortcut-nutrition';
+        }
+      }
+
+      const element = document.getElementById(targetId);
       if (element) {
         // Rola suavemente até o elemento se necessário
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -140,11 +167,12 @@ export function ProductTour() {
 
   const step = TOUR_STEPS[currentStep];
 
-  // Cálculo de Posição do Card (Apenas em Desktop, em Mobile fica fixo na base)
+  // Cálculo de Posição do Card (Desktop e Mobile com posicionamento anti-sobreposição inteligente)
   const getCardStyle = () => {
-    if (isMobile || !highlightRect) {
+    if (isMobile) {
       if (step.position === 'center' || !highlightRect) {
         return {
+          position: 'fixed' as const,
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
@@ -152,7 +180,44 @@ export function ProductTour() {
           maxWidth: '440px',
         };
       }
-      return {}; // No mobile fica fixo na base via classes Tailwind
+
+      // Evita sobreposição do card explicativo no celular com o elemento sob foco
+      const isElementInBottomHalf = highlightRect.top + highlightRect.height / 2 > window.innerHeight / 2;
+      if (isElementInBottomHalf) {
+        // Elemento está na metade inferior da tela: colocamos o card explicativo no topo
+        return {
+          position: 'fixed' as const,
+          top: '16px',
+          left: '16px',
+          right: '16px',
+          width: 'calc(100% - 32px)',
+          maxWidth: 'none',
+        };
+      } else {
+        // Elemento está na metade superior da tela: colocamos o card explicativo na base
+        return {
+          position: 'fixed' as const,
+          bottom: '16px',
+          left: '16px',
+          right: '16px',
+          width: 'calc(100% - 32px)',
+          maxWidth: 'none',
+        };
+      }
+    }
+
+    if (!highlightRect) {
+      if (step.position === 'center') {
+        return {
+          position: 'absolute' as const,
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'calc(100% - 32px)',
+          maxWidth: '440px',
+        };
+      }
+      return {};
     }
 
     const spacing = 18;
@@ -161,6 +226,7 @@ export function ProductTour() {
 
     if (step.position === 'top') {
       return {
+        position: 'absolute' as const,
         top: `${Math.max(20, highlightRect.top - spacing)}px`,
         left: `${leftPos}px`,
         transform: 'translateY(-100%)',
@@ -170,6 +236,7 @@ export function ProductTour() {
 
     // Default: bottom
     return {
+      position: 'absolute' as const,
       top: `${highlightRect.bottom + spacing}px`,
       left: `${leftPos}px`,
       width: `${cardWidth}px`,
@@ -211,16 +278,14 @@ export function ProductTour() {
       </AnimatePresence>
 
       {/* ── Card Explicativo Cyberpunk do Tour ───────────────────── */}
-      <div className="absolute inset-0 z-[1001] flex items-center justify-center p-4">
+      <div className="absolute inset-0 z-[1001] flex items-center justify-center p-4 pointer-events-none">
         <motion.div
           key={currentStep}
           initial={{ opacity: 0, y: isMobile ? 40 : 15, scale: isMobile ? 1 : 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: 'spring', damping: 26, stiffness: 210 }}
           style={getCardStyle()}
-          className={`w-full max-w-md pointer-events-auto rounded-2xl border-2 border-purple-500 bg-[#0F0F13] p-5 sm:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)] flex flex-col justify-between ${
-            isMobile && highlightRect ? 'fixed bottom-4 left-4 right-4 max-w-none' : ''
-          }`}
+          className="w-full max-w-md pointer-events-auto rounded-2xl border-2 border-purple-500 bg-[#0F0F13] p-5 sm:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)] flex flex-col justify-between relative"
         >
           {/* Glowing matrix lines inside card */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-transparent pointer-events-none rounded-2xl" />

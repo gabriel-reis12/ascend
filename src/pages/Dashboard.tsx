@@ -333,6 +333,7 @@ export function Dashboard() {
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
         <motion.button
+          id="tour-shortcut-workouts"
           whileHover={{ scale: 1.02, translateY: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/workouts')}
@@ -348,6 +349,7 @@ export function Dashboard() {
         </motion.button>
 
         <motion.button
+          id="tour-shortcut-nutrition"
           whileHover={{ scale: 1.02, translateY: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/nutrition')}
