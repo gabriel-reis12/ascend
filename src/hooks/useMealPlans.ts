@@ -44,12 +44,15 @@ export function calcMealMacros(items: MealPlanItem[]) {
   return items.reduce(
     (acc, item) => {
       if (!item.food) return acc;
+      const foodObj = Array.isArray(item.food) ? (item.food as any)[0] : item.food;
+      if (!foodObj) return acc;
+
       const ratio = item.quantity_grams / 100;
       return {
-        kcal: acc.kcal + item.food.calories_per_100g * ratio,
-        protein: acc.protein + item.food.protein_per_100g * ratio,
-        carbs: acc.carbs + item.food.carbs_per_100g * ratio,
-        fat: acc.fat + item.food.fat_per_100g * ratio,
+        kcal: acc.kcal + (foodObj.calories_per_100g ?? 0) * ratio,
+        protein: acc.protein + (foodObj.protein_per_100g ?? 0) * ratio,
+        carbs: acc.carbs + (foodObj.carbs_per_100g ?? 0) * ratio,
+        fat: acc.fat + (foodObj.fat_per_100g ?? 0) * ratio,
       };
     },
     { kcal: 0, protein: 0, carbs: 0, fat: 0 }
@@ -65,36 +68,41 @@ export function useMealPlans() {
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setLoading(true);
 
-    const today = todayStr();
+    try {
+      const today = todayStr();
 
-    const [{ data: plansData }, { data: completionsData }] =
-      await Promise.all([
-        supabase
-          .from('meal_plans')
-          .select(`
-            *,
-            items:meal_plan_items(
+      const [{ data: plansData }, { data: completionsData }] =
+        await Promise.all([
+          supabase
+            .from('meal_plans')
+            .select(`
               *,
-              food:foods(id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, serving_size, serving_unit)
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('order_index', { ascending: true })
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('meal_completions')
-          .select('meal_plan_id')
-          .eq('user_id', user.id)
-          .eq('completed_at', today),
-      ]);
+              items:meal_plan_items(
+                *,
+                food:foods(id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, serving_size, serving_unit)
+              )
+            `)
+            .eq('user_id', user.id)
+            .order('order_index', { ascending: true })
+            .order('created_at', { ascending: true }),
+          supabase
+            .from('meal_completions')
+            .select('meal_plan_id')
+            .eq('user_id', user.id)
+            .eq('completed_at', today),
+        ]);
 
-    setMealPlans((plansData as MealPlan[]) ?? []);
-    setCompletedToday(new Set((completionsData ?? []).map((c) => c.meal_plan_id)));
-    setLoading(false);
-  }, [user]);
+      setMealPlans((plansData as MealPlan[]) ?? []);
+      setCompletedToday(new Set((completionsData ?? []).map((c) => c.meal_plan_id)));
+    } catch (err) {
+      console.error('Erro ao buscar planos alimentares:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     void fetchAll();

@@ -66,22 +66,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!active) return;
       try {
         const newUserId = newSession?.user?.id ?? null;
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
 
-        if (newUserId) {
-          // Só exibe tela de carregamento bloqueante se o usuário mudou (login novo)
-          if (newUserId !== currentUserRef.current) {
-            currentUserRef.current = newUserId;
+        if (newUserId !== currentUserRef.current) {
+          currentUserRef.current = newUserId;
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+
+          if (newUserId) {
             setLoading(true);
             await loadProfile(newUserId);
           } else {
-            // Se for o mesmo usuário (ex: token refreshed), atualiza dados em background silenciosamente
-            void loadProfile(newUserId);
+            reset();
           }
         } else {
-          currentUserRef.current = null;
-          reset();
+          // Se for o mesmo usuário (ex: token refreshed silenciosamente no background),
+          // atualiza os dados no Zustand sem recriar referências do objeto user no React (evitando loops).
+          if (newUserId) {
+            void loadProfile(newUserId);
+          }
         }
       } catch (err) {
         console.error("Erro na mudança de autenticação:", err);

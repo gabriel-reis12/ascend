@@ -88,128 +88,132 @@ export function useHabits() {
   const [mealMissions, setMealMissions] = useState<MealMission[]>([]);
 
   const fetchAll = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setLoading(true);
 
-    const today = todayStr();
-    const dayOfWeek = todayDayOfWeek();
+    try {
+      const today = todayStr();
+      const dayOfWeek = todayDayOfWeek();
 
-    const [
-      { data: habitsData },
-      { data: completionsData },
-      { data: routinesData },
-      { data: routineCompletionsData },
-      { data: mealPlansData },
-      { data: mealCompletionsData },
-    ] = await Promise.all([
-      supabase
-        .from('habits')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('habit_completions')
-        .select('habit_id')
-        .eq('user_id', user.id)
-        .eq('completed_date', today),
-      supabase
-        .from('workout_routines')
-        .select(`
-          id, 
-          name, 
-          scheduled_days, 
-          scheduled_time, 
-          scheduled_end_time,
-          exercises:routine_exercises(
-            exercise:exercises(category)
-          )
-        `)
-        .eq('user_id', user.id),
-      supabase
-        .from('routine_completions')
-        .select('routine_id')
-        .eq('user_id', user.id)
-        .eq('completed_date', today),
-      supabase
-        .from('meal_plans')
-        .select(`
-          id, 
-          name, 
-          xp_reward, 
-          is_active, 
-          scheduled_time, 
-          scheduled_end_time,
-          items:meal_plan_items(
-            quantity_grams,
-            food:foods(calories_per_100g)
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('order_index', { ascending: true }),
-      supabase
-        .from('meal_completions')
-        .select('meal_plan_id')
-        .eq('user_id', user.id)
-        .eq('completed_at', today),
-    ]);
+      const [
+        { data: habitsData },
+        { data: completionsData },
+        { data: routinesData },
+        { data: routineCompletionsData },
+        { data: mealPlansData },
+        { data: mealCompletionsData },
+      ] = await Promise.all([
+        supabase
+          .from('habits')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('habit_completions')
+          .select('habit_id')
+          .eq('user_id', user.id)
+          .eq('completed_date', today),
+        supabase
+          .from('workout_routines')
+          .select(`
+            id, 
+            name, 
+            scheduled_days, 
+            scheduled_time, 
+            scheduled_end_time,
+            exercises:routine_exercises(
+              exercise:exercises(category)
+            )
+          `)
+          .eq('user_id', user.id),
+        supabase
+          .from('routine_completions')
+          .select('routine_id')
+          .eq('user_id', user.id)
+          .eq('completed_date', today),
+        supabase
+          .from('meal_plans')
+          .select(`
+            id, 
+            name, 
+            xp_reward, 
+            is_active, 
+            scheduled_time, 
+            scheduled_end_time,
+            items:meal_plan_items(
+              quantity_grams,
+              food:foods(calories_per_100g)
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('order_index', { ascending: true }),
+        supabase
+          .from('meal_completions')
+          .select('meal_plan_id')
+          .eq('user_id', user.id)
+          .eq('completed_at', today),
+      ]);
 
-    setHabits(habitsData ?? []);
-    setCompletedToday(new Set((completionsData ?? []).map((c) => c.habit_id)));
+      setHabits(habitsData ?? []);
+      setCompletedToday(new Set((completionsData ?? []).map((c) => c.habit_id)));
 
-    // Injeta as rotinas de treino agendadas para hoje como missões
-    const completedRoutineIds = new Set((routineCompletionsData ?? []).map((rc) => rc.routine_id));
-    const todayRoutines = (routinesData ?? []).filter(
-      (r) => Array.isArray(r.scheduled_days) && r.scheduled_days.includes(dayOfWeek)
-    );
+      // Injeta as rotinas de treino agendadas para hoje como missões
+      const completedRoutineIds = new Set((routineCompletionsData ?? []).map((rc) => rc.routine_id));
+      const todayRoutines = (routinesData ?? []).filter(
+        (r) => Array.isArray(r.scheduled_days) && r.scheduled_days.includes(dayOfWeek)
+      );
 
-    setWorkoutMissions(
-      todayRoutines.map((r: any) => {
-        const isCardio = r.name.toLowerCase().includes('cardio') || 
-          (r.exercises && r.exercises.some((re: any) => re.exercise?.category?.toLowerCase() === 'cardio'));
-        
-        return {
-          id: `workout_mission_${r.id}`,
-          routine_id: r.id,
-          title: r.name,
-          type: 'workout' as const,
-          isCompleted: completedRoutineIds.has(r.id),
-          scheduled_time: r.scheduled_time ? r.scheduled_time.slice(0, 5) : null,
-          scheduled_end_time: r.scheduled_end_time ? r.scheduled_end_time.slice(0, 5) : null,
-          xp_reward: isCardio ? 40 : 50,
-          stat_target: isCardio ? 'endurance' as const : 'strength' as const,
-          stat_reward: 2,
-        };
-      })
-    );
+      setWorkoutMissions(
+        todayRoutines.map((r: any) => {
+          const isCardio = r.name.toLowerCase().includes('cardio') || 
+            (r.exercises && r.exercises.some((re: any) => re.exercise?.category?.toLowerCase() === 'cardio'));
+          
+          return {
+            id: `workout_mission_${r.id}`,
+            routine_id: r.id,
+            title: r.name,
+            type: 'workout' as const,
+            isCompleted: completedRoutineIds.has(r.id),
+            scheduled_time: r.scheduled_time ? r.scheduled_time.slice(0, 5) : null,
+            scheduled_end_time: r.scheduled_end_time ? r.scheduled_end_time.slice(0, 5) : null,
+            xp_reward: isCardio ? 40 : 50,
+            stat_target: isCardio ? 'endurance' as const : 'strength' as const,
+            stat_reward: 2,
+          };
+        })
+      );
 
-    // Injeta cardápios ativos como missões de refeição (todos os dias)
-    const completedMealIds = new Set((mealCompletionsData ?? []).map((mc: { meal_plan_id: string }) => mc.meal_plan_id));
+      // Injeta cardápios ativos como missões de refeição (todos os dias)
+      const completedMealIds = new Set((mealCompletionsData ?? []).map((mc: { meal_plan_id: string }) => mc.meal_plan_id));
 
-    setMealMissions(
-      (mealPlansData ?? []).map((plan: any) => {
-        const totalKcal = (plan.items ?? []).reduce((sum: number, item: any) => {
-          const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
-          const kcal = ((foodObj?.calories_per_100g ?? 0) * (item.quantity_grams ?? 0)) / 100;
-          return sum + kcal;
-        }, 0);
+      setMealMissions(
+        (mealPlansData ?? []).map((plan: any) => {
+          const totalKcal = (plan.items ?? []).reduce((sum: number, item: any) => {
+            const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
+            const kcal = ((foodObj?.calories_per_100g ?? 0) * (item.quantity_grams ?? 0)) / 100;
+            return sum + kcal;
+          }, 0);
 
-        return {
-          id: `meal_mission_${plan.id}`,
-          meal_plan_id: plan.id,
-          title: plan.name,
-          totalKcal: Math.round(totalKcal),
-          xp_reward: plan.xp_reward,
-          type: 'meal' as const,
-          isCompleted: completedMealIds.has(plan.id),
-          scheduled_time: plan.scheduled_time ? plan.scheduled_time.slice(0, 5) : null,
-          scheduled_end_time: plan.scheduled_end_time ? plan.scheduled_end_time.slice(0, 5) : null,
-        };
-      })
-    );
-
-    setLoading(false);
-  }, [user]);
+          return {
+            id: `meal_mission_${plan.id}`,
+            meal_plan_id: plan.id,
+            title: plan.name,
+            totalKcal: Math.round(totalKcal),
+            xp_reward: plan.xp_reward,
+            type: 'meal' as const,
+            isCompleted: completedMealIds.has(plan.id),
+            scheduled_time: plan.scheduled_time ? plan.scheduled_time.slice(0, 5) : null,
+            scheduled_end_time: plan.scheduled_end_time ? plan.scheduled_end_time.slice(0, 5) : null,
+          };
+        })
+      );
+    } catch (err) {
+      console.error('Erro ao buscar dados de hábitos e missões:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     void fetchAll();

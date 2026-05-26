@@ -35,16 +35,21 @@ export function useTasks() {
   const [loading, setLoading] = useState(true);
 
   const fetchTasks = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    setTasks(data ?? []);
-    setLoading(false);
-  }, [user]);
+    try {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      setTasks(data ?? []);
+    } catch (err) {
+      console.error('Erro ao buscar tarefas:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     void fetchTasks();
