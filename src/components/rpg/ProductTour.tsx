@@ -192,6 +192,7 @@ export function ProductTour() {
           right: '16px',
           width: 'calc(100% - 32px)',
           maxWidth: 'none',
+          transform: 'none',
         };
       } else {
         // Elemento está na metade superior da tela: colocamos o card explicativo na base
@@ -202,6 +203,7 @@ export function ProductTour() {
           right: '16px',
           width: 'calc(100% - 32px)',
           maxWidth: 'none',
+          transform: 'none',
         };
       }
     }
@@ -240,6 +242,7 @@ export function ProductTour() {
       top: `${highlightRect.bottom + spacing}px`,
       left: `${leftPos}px`,
       width: `${cardWidth}px`,
+      transform: 'none',
     };
   };
 
@@ -278,95 +281,100 @@ export function ProductTour() {
       </AnimatePresence>
 
       {/* ── Card Explicativo Cyberpunk do Tour ───────────────────── */}
-      <div className="absolute inset-0 z-[1001] flex items-center justify-center p-4 pointer-events-none">
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, y: isMobile ? 40 : 15, scale: isMobile ? 1 : 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', damping: 26, stiffness: 210 }}
+      <div className="absolute inset-0 z-[1001] pointer-events-none">
+        <div
           style={getCardStyle()}
-          className="w-full max-w-md pointer-events-auto rounded-2xl border-2 border-purple-500 bg-[#0F0F13] p-5 sm:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)] flex flex-col justify-between relative"
+          className="pointer-events-auto transition-all duration-300 ease-out"
         >
-          {/* Glowing matrix lines inside card */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 210 }}
+            className="w-full rounded-2xl border-2 border-purple-500 bg-[#0F0F13] p-5 sm:p-6 shadow-[0_0_30px_rgba(168,85,247,0.3)] flex flex-col justify-between relative"
+          >
+            {/* Glowing matrix lines inside card */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/10 via-transparent to-transparent pointer-events-none rounded-2xl" />
 
-          {/* Header */}
-          <div className="relative mb-4 flex items-center justify-between border-b border-purple-500/20 pb-3">
-            <div className="flex items-center gap-2">
-              <Zap size={14} className="text-purple-400 fill-purple-400 animate-pulse" />
-              <h4 
-                className="text-xs sm:text-sm font-black uppercase tracking-wider text-purple-400 font-orbitron"
-                style={{ fontFamily: 'Orbitron, sans-serif' }}
+            {/* Header */}
+            <div className="relative mb-4 flex items-center justify-between border-b border-purple-500/20 pb-3">
+              <div className="flex items-center gap-2">
+                <Zap size={14} className="text-purple-400 fill-purple-400 animate-pulse" />
+                <h4 
+                  className="text-xs sm:text-sm font-black uppercase tracking-wider text-purple-400 font-orbitron"
+                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                >
+                  {step.title}
+                </h4>
+              </div>
+              <button 
+                onClick={handleClose}
+                className="rounded-lg p-1 text-gray-500 hover:bg-white/5 hover:text-white transition-colors"
               >
-                {step.title}
-              </h4>
+                <X size={16} />
+              </button>
             </div>
-            <button 
-              onClick={handleClose}
-              className="rounded-lg p-1 text-gray-500 hover:bg-white/5 hover:text-white transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
 
-          {/* Lore/Descricao */}
-          <div className="relative mb-5 flex-1">
-            <p className="text-xs sm:text-sm leading-relaxed text-gray-300 font-medium italic">
-              "{step.lore}"
-            </p>
-          </div>
+            {/* Lore/Descricao */}
+            <div className="relative mb-5 flex-1">
+              <p className="text-xs sm:text-sm leading-relaxed text-gray-300 font-medium italic">
+                "{step.lore}"
+              </p>
+            </div>
 
-          {/* Footer Controls */}
-          <div className="relative border-t border-purple-500/20 pt-4 flex items-center justify-between">
-            {/* Step Counter */}
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 font-orbitron">
-              Sistema <span className="text-purple-500">{currentStep + 1}</span> / {TOUR_STEPS.length}
-            </span>
+            {/* Footer Controls */}
+            <div className="relative border-t border-purple-500/20 pt-4 flex items-center justify-between">
+              {/* Step Counter */}
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 font-orbitron">
+                Sistema <span className="text-purple-500">{currentStep + 1}</span> / {TOUR_STEPS.length}
+              </span>
 
-            {/* Controls */}
-            <div className="flex items-center gap-2">
-              {/* Skip Button */}
-              {currentStep < TOUR_STEPS.length - 1 && (
-                <button
-                  onClick={handleClose}
-                  className="rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  Pular
-                </button>
-              )}
-
-              {/* Prev Button */}
-              {currentStep > 0 && (
-                <button
-                  onClick={handlePrev}
-                  className="flex size-8 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/5 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500/50 transition-all shrink-0"
-                >
-                  <ChevronLeft size={16} strokeWidth={3} />
-                </button>
-              )}
-
-              {/* Next/Done Button */}
-              <motion.button
-                whileHover={{ scale: 1.03, boxShadow: '0 0 15px rgba(168,85,247,0.4)' }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleNext}
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-[10px] font-black uppercase italic tracking-widest text-white hover:bg-purple-500 transition-all shadow-md"
-              >
-                {currentStep === TOUR_STEPS.length - 1 ? (
-                  <>
-                    <span>Despertar</span>
-                    <Play size={10} className="fill-current" />
-                  </>
-                ) : (
-                  <>
-                    <span>Avançar</span>
-                    <ChevronRight size={10} strokeWidth={3} />
-                  </>
+              {/* Controls */}
+              <div className="flex items-center gap-2">
+                {/* Skip Button */}
+                {currentStep < TOUR_STEPS.length - 1 && (
+                  <button
+                    onClick={handleClose}
+                    className="rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    Pular
+                  </button>
                 )}
-              </motion.button>
+
+                {/* Prev Button */}
+                {currentStep > 0 && (
+                  <button
+                    onClick={handlePrev}
+                    className="flex size-8 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/5 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500/50 transition-all shrink-0"
+                  >
+                    <ChevronLeft size={16} strokeWidth={3} />
+                  </button>
+                )}
+
+                {/* Next/Done Button */}
+                <motion.button
+                  whileHover={{ scale: 1.03, boxShadow: '0 0 15px rgba(168,85,247,0.4)' }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleNext}
+                  className="flex items-center justify-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-[10px] font-black uppercase italic tracking-widest text-white hover:bg-purple-500 transition-all shadow-md"
+                >
+                  {currentStep === TOUR_STEPS.length - 1 ? (
+                    <>
+                      <span>Despertar</span>
+                      <Play size={10} className="fill-current" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Avançar</span>
+                      <ChevronRight size={10} strokeWidth={3} />
+                    </>
+                  )}
+                </motion.button>
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
