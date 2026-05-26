@@ -15,7 +15,8 @@ import {
   Shield, 
   Check, 
   AlertTriangle,
-  Loader2
+  Loader2,
+  HelpCircle
 } from 'lucide-react';
 import { useHunterStore, type HunterClass } from '../stores/useHunterStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -336,13 +337,30 @@ export function Settings() {
     <div className="space-y-8 pb-16 text-silver">
       
       {/* ── TÍTULO DA PÁGINA ── */}
-      <div className="flex flex-col gap-1.5 border-l-2 border-blue-500 pl-4 py-1">
-        <h1 className="text-2xl sm:text-3xl font-black uppercase italic tracking-wider text-white font-orbitron text-glow-blue">
-          Ajustes de <span className="text-blue-500">Sistema</span>
-        </h1>
-        <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-500">
-          Modificação e Controle Central da Fenda do Caçador
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-l-2 border-blue-500 pl-4 py-1">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-black uppercase italic tracking-wider text-white font-orbitron text-glow-blue">
+            Ajustes de <span className="text-blue-500">Sistema</span>
+          </h1>
+          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Modificação e Controle Central da Fenda do Caçador
+          </p>
+        </div>
+
+        {/* Botão Holográfico do Tutorial */}
+        <motion.button
+          whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(168,85,247,0.4)', borderColor: 'rgba(168,85,247,0.6)' }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            localStorage.removeItem('ascend_tour_completed');
+            navigate('/');
+          }}
+          className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/5 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-purple-400 transition-all cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.1)] self-start sm:self-auto"
+          title="Ver Tutorial Interativo"
+        >
+          <HelpCircle size={16} className="animate-pulse" />
+          <span>Ver Tutorial</span>
+        </motion.button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
