@@ -15,6 +15,12 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ## 🕒 Histórico de Mudanças Recentes
 
 ### 2026-05-26 (Sessão Atual)
+- **Nova Mecânica de Recompensa de Refeições Consolidadas (Abordagem A)**:
+  - **Requisito do Usuário**: Se o caçador realizar todas as refeições do dia, ele ganha os pontos de XP e Vitalidade de forma consolidada, em vez de ganhar recompensas individuais por refeição.
+  - **Solução Aplicada**: 
+    1. Introduzidas as constantes `ALL_MEALS_XP_BONUS = 50` e `ALL_MEALS_VITALITY_BONUS = 2` no topo dos hooks de dados.
+    2. Removidos os ganhos individuais de XP (`plan.xp_reward`) e Vitalidade (`+1 VIT`) por refeição ao marcar refeições individuais nos hooks [useHabits.ts](file:///d:/Área de Trabalho/App/src/hooks/useHabits.ts) e [useMealPlans.ts](file:///d:/Área de Trabalho/App/src/hooks/useMealPlans.ts).
+    3. Implementada lógica de transição de estado inteligente: ao marcar uma refeição, se todas as refeições ativas passarem a estar concluídas, o caçador recebe instantaneamente os **+50 XP** e **+2 Vitalidade** de forma unificada. Se desmarcar qualquer uma delas, a recompensa consolidada é inteiramente deduzida (**-50 XP** e **-2 Vitalidade**).
 - **Correção Definitiva do Fluxo do Tutorial/Onboarding no Login**:
   - **Identificação do Bug**: Toda vez que o caçador realizava o login ou recarregava a página (F5), ele era temporariamente redirecionado para a tela de Onboarding (`/onboarding`), tendo que visualizar a animação do Matrix Loader mesmo já possuindo uma classe. Isso ocorria porque o estado de carregamento de autenticação (`loading`) mudava para `false` logo após validar a sessão básica do Supabase, antes do carregamento assíncrono do perfil do caçador terminar. Logo, o guardião de classe (`HunterGuard`) lia temporariamente `hunterClass` como `null`, forçando o redirecionamento imediato.
   - **Solução Aplicada**: Refatorada a inicialização e escuta do estado em `src/contexts/AuthContext.tsx`. O estado `loading` agora só passa a ser `false` **após** a conclusão bem-sucedida de `loadProfile`, mantendo a barreira do ProtectedRoute/Awakening Loader ativa até que todos os dados do jogador estejam carregados do banco de dados de forma segura.

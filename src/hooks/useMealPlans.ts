@@ -3,6 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 
+const ALL_MEALS_XP_BONUS = 50;
+const ALL_MEALS_VITALITY_BONUS = 2;
+
+
 export interface MealPlanItem {
   id: string;
   meal_plan_id: string;
@@ -117,8 +121,13 @@ export function useMealPlans() {
           next.delete(mealPlanId);
           return next;
         });
-        addXp(-plan.xp_reward, user.id);
-        updateStat('vitality', -1);
+
+        // Se todas as refeições estavam completas antes, remove o bônus consolidado
+        const allCompletedBefore = completedToday.size === activeMealPlans.length;
+        if (allCompletedBefore && activeMealPlans.length > 0) {
+          addXp(-ALL_MEALS_XP_BONUS, user.id);
+          updateStat('vitality', -ALL_MEALS_VITALITY_BONUS);
+        }
       }
     } else {
       const { error } = await supabase.from('meal_completions').insert({
@@ -129,8 +138,13 @@ export function useMealPlans() {
 
       if (!error) {
         setCompletedToday((prev) => new Set([...prev, mealPlanId]));
-        addXp(plan.xp_reward, user.id);
-        updateStat('vitality', 1);
+
+        // Se agora todas as refeições estão completas, concede o bônus consolidado
+        const allCompletedAfter = completedToday.size + 1 === activeMealPlans.length;
+        if (allCompletedAfter && activeMealPlans.length > 0) {
+          addXp(ALL_MEALS_XP_BONUS, user.id);
+          updateStat('vitality', ALL_MEALS_VITALITY_BONUS);
+        }
       }
     }
   };

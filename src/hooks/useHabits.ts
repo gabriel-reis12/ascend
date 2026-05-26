@@ -3,6 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 
+const ALL_MEALS_XP_BONUS = 50;
+const ALL_MEALS_VITALITY_BONUS = 2;
+
+
 export interface Habit {
   id: string;
   user_id: string;
@@ -256,6 +260,7 @@ export function useHabits() {
     if (!mission) return;
 
     const done = mission.isCompleted;
+    const completedCount = mealMissions.filter((m) => m.isCompleted).length;
 
     if (done) {
       const { error } = await supabase
@@ -267,8 +272,13 @@ export function useHabits() {
 
       if (!error) {
         setMealMissions((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: false } : m));
-        updateStat('vitality', -1);
-        addXp(-mission.xp_reward, user.id);
+        
+        // Se todas as refeições estavam completas antes, remove o bônus consolidado
+        const allCompletedBefore = completedCount === mealMissions.length;
+        if (allCompletedBefore && mealMissions.length > 0) {
+          await addXp(-ALL_MEALS_XP_BONUS, user.id);
+          updateStat('vitality', -ALL_MEALS_VITALITY_BONUS);
+        }
       }
     } else {
       const { error } = await supabase.from('meal_completions').insert({
@@ -279,8 +289,13 @@ export function useHabits() {
 
       if (!error) {
         setMealMissions((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: true } : m));
-        updateStat('vitality', 1);
-        addXp(mission.xp_reward, user.id);
+        
+        // Se agora todas as refeições estão completas, concede o bônus consolidado
+        const allCompletedAfter = completedCount + 1 === mealMissions.length;
+        if (allCompletedAfter && mealMissions.length > 0) {
+          await addXp(ALL_MEALS_XP_BONUS, user.id);
+          updateStat('vitality', ALL_MEALS_VITALITY_BONUS);
+        }
       }
     }
   };
