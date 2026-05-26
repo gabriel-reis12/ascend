@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { RadarChart } from '@/components/ui/RadarChart';
+import { ProductTour } from '@/components/rpg/ProductTour';
 import { useHabits } from '@/hooks/useHabits';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -214,6 +215,7 @@ export function Dashboard() {
     <div className="space-y-6 pb-12">
       {/* ── Hunter Status Header ──────────────────────────── */}
       <motion.div
+        id="tour-hud"
         initial={{ opacity: 0, y: -15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -324,6 +326,7 @@ export function Dashboard() {
 
       {/* ── Atalhos Rápidos de Sistema (Acesso Fácil) ───────────────── */}
       <motion.div
+        id="tour-shortcuts"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.05 }}
@@ -396,6 +399,7 @@ export function Dashboard() {
         {/* 📜 ── Missões Diárias (Quests Ativas - Fenda do Dia) ── */}
         {/* Ocupa 7 colunas no Desktop e sobe no mobile para usabilidade snapper */}
         <motion.div
+          id="tour-quests"
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
@@ -601,6 +605,7 @@ export function Dashboard() {
         {/* ⚔️ ── Janela de Status & Recursos Físicos Unificados ── */}
         {/* Ocupa 5 colunas no Desktop e fica embaixo no mobile para visualização consolidada */}
         <motion.div
+          id="tour-status"
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
@@ -635,7 +640,7 @@ export function Dashboard() {
           </div>
 
           {/* ── Storytelling: Registros Biométricos e Recursos Físicos de Caçador (Cards Unificados) ── */}
-          <div className="border-t border-[#1E1E26] border-dashed pt-6 mt-8 space-y-4">
+          <div id="tour-biometrics" className="border-t border-[#1E1E26] border-dashed pt-6 mt-8 space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
               Registros Físicos & Recursos
             </h3>
@@ -742,6 +747,8 @@ export function Dashboard() {
         )}
       </AnimatePresence>
 
+      {/* Sistema de Onboarding Tour Cyberpunk */}
+      <ProductTour />
     </div>
   );
 }

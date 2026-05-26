@@ -578,6 +578,50 @@ export function Settings() {
             </form>
           </motion.div>
 
+          {/* PAINEL 2.5: DIRETRIZES DE SISTEMA (TUTORIAL) */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.25 }}
+            className="rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 sm:p-8 shadow-xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="mb-5 sm:mb-6 flex items-center justify-between">
+              <div className="space-y-1">
+                <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
+                  Diretrizes de <span className="text-purple-400">Sistema</span>
+                </h2>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
+                  Calibração de Interface e Guias Virtuais
+                </p>
+              </div>
+              <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
+                <Zap className="w-4 h-4 text-purple-400 fill-purple-400 animate-pulse" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed font-semibold italic">
+                "Se você deseja recalibrar seus sensores cognitivos e rever a apresentação holográfica das seções e módulos vitais do aplicativo, re-inicie o protocolo de guia do caçador."
+              </p>
+              
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('ascend_tour_completed');
+                    navigate('/');
+                  }}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl border border-purple-500/30 bg-purple-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-purple-400 transition-all hover:bg-purple-500/20 hover:border-purple-500 active:scale-95 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Reiniciar Guia do Caçador
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
           {/* PAINEL 3: ZONA DE PERIGO (REDEFINIÇÕES) */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
