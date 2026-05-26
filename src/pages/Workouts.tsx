@@ -171,37 +171,41 @@ export function Workouts() {
     setLoading(true);
     
     try {
-      const { data: exData, error: exError } = await supabase
-        .from('exercises')
-        .select('*')
-        .order('name');
+      const [
+        { data: exData, error: exError },
+        { data: routineData, error: routineError },
+        { data: logData, error: logError }
+      ] = await Promise.all([
+        supabase
+          .from('exercises')
+          .select('*')
+          .order('name'),
+        supabase
+          .from('workout_routines')
+          .select(`
+            *,
+            exercises:routine_exercises(
+              *,
+              exercise:exercises(*)
+            )
+          `)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('workout_logs')
+          .select(`
+            *,
+            exercise:exercises(*)
+          `)
+          .order('logged_at', { ascending: false })
+          .limit(100)
+      ]);
       
       if (exError) throw exError;
       setExercises(exData || []);
-
-      const { data: routineData, error: routineError } = await supabase
-        .from('workout_routines')
-        .select(`
-          *,
-          exercises:routine_exercises(
-            *,
-            exercise:exercises(*)
-          )
-        `)
-        .order('created_at', { ascending: false });
-
+ 
       if (routineError) throw routineError;
       setRoutines(routineData || []);
-
-      const { data: logData, error: logError } = await supabase
-        .from('workout_logs')
-        .select(`
-          *,
-          exercise:exercises(*)
-        `)
-        .order('logged_at', { ascending: false })
-        .limit(100);
-
+ 
       if (logError) throw logError;
       setLogs(logData || []);
     } catch (err) {

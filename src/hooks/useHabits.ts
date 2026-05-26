@@ -128,7 +128,18 @@ export function useHabits() {
         .eq('completed_date', today),
       supabase
         .from('meal_plans')
-        .select('id, name, xp_reward, is_active, scheduled_time, scheduled_end_time')
+        .select(`
+          id, 
+          name, 
+          xp_reward, 
+          is_active, 
+          scheduled_time, 
+          scheduled_end_time,
+          items:meal_plan_items(
+            quantity_grams,
+            food:foods(calories_per_100g)
+          )
+        `)
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('order_index', { ascending: true }),
@@ -138,15 +149,6 @@ export function useHabits() {
         .eq('user_id', user.id)
         .eq('completed_at', today),
     ]);
-
-    // Busca os itens dos cardápios (depende dos IDs acima)
-    const mealPlanIds = (mealPlansData ?? []).map((p: { id: string }) => p.id);
-    const { data: mealItemsData } = mealPlanIds.length > 0
-      ? await supabase
-          .from('meal_plan_items')
-          .select('meal_plan_id, quantity_grams, food:foods(calories_per_100g)')
-          .in('meal_plan_id', mealPlanIds)
-      : { data: [] };
 
     setHabits(habitsData ?? []);
     setCompletedToday(new Set((completionsData ?? []).map((c) => c.habit_id)));
@@ -179,25 +181,27 @@ export function useHabits() {
 
     // Injeta cardápios ativos como missões de refeição (todos os dias)
     const completedMealIds = new Set((mealCompletionsData ?? []).map((mc: { meal_plan_id: string }) => mc.meal_plan_id));
-    const mealKcalMap: Record<string, number> = {};
-    ((mealItemsData as any) ?? []).forEach((item: any) => {
-      const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
-      const kcal = ((foodObj?.calories_per_100g ?? 0) * (item.quantity_grams ?? 0)) / 100;
-      mealKcalMap[item.meal_plan_id] = (mealKcalMap[item.meal_plan_id] ?? 0) + kcal;
-    });
 
     setMealMissions(
-      (mealPlansData ?? []).map((plan: { id: string; name: string; xp_reward: number; scheduled_time: string | null; scheduled_end_time: string | null }) => ({
-        id: `meal_mission_${plan.id}`,
-        meal_plan_id: plan.id,
-        title: plan.name,
-        totalKcal: Math.round(mealKcalMap[plan.id] ?? 0),
-        xp_reward: plan.xp_reward,
-        type: 'meal' as const,
-        isCompleted: completedMealIds.has(plan.id),
-        scheduled_time: plan.scheduled_time ? plan.scheduled_time.slice(0, 5) : null,
-        scheduled_end_time: plan.scheduled_end_time ? plan.scheduled_end_time.slice(0, 5) : null,
-      }))
+      (mealPlansData ?? []).map((plan: any) => {
+        const totalKcal = (plan.items ?? []).reduce((sum: number, item: any) => {
+          const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
+          const kcal = ((foodObj?.calories_per_100g ?? 0) * (item.quantity_grams ?? 0)) / 100;
+          return sum + kcal;
+        }, 0);
+
+        return {
+          id: `meal_mission_${plan.id}`,
+          meal_plan_id: plan.id,
+          title: plan.name,
+          totalKcal: Math.round(totalKcal),
+          xp_reward: plan.xp_reward,
+          type: 'meal' as const,
+          isCompleted: completedMealIds.has(plan.id),
+          scheduled_time: plan.scheduled_time ? plan.scheduled_time.slice(0, 5) : null,
+          scheduled_end_time: plan.scheduled_end_time ? plan.scheduled_end_time.slice(0, 5) : null,
+        };
+      })
     );
 
     setLoading(false);

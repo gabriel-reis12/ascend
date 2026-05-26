@@ -22,24 +22,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const reset = useHunterStore((s) => s.reset);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      if (data.session?.user) void loadProfile(data.session.user.id);
-      setLoading(false);
-    });
+    let active = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    async function initAuth() {
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
+
+      const currentSession = data.session;
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (currentSession?.user) {
+        await loadProfile(currentSession.user.id);
+      }
+      if (active) setLoading(false);
+    }
+
+    void initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!active) return;
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
-        void loadProfile(newSession.user.id);
+        setLoading(true);
+        await loadProfile(newSession.user.id);
+        if (active) setLoading(false);
       } else {
         reset();
+        if (active) setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [loadProfile, reset]);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {

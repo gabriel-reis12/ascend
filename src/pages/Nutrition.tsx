@@ -66,24 +66,28 @@ export function Nutrition() {
     setLoading(true);
     
     try {
-      const { data: foodData, error: foodError } = await supabase
-        .from('foods')
-        .select('*')
-        .order('name');
+      const today = new Date().toISOString().split('T')[0];
+      const [
+        { data: foodData, error: foodError },
+        { data: logData, error: logError }
+      ] = await Promise.all([
+        supabase
+          .from('foods')
+          .select('*')
+          .order('name'),
+        supabase
+          .from('food_logs')
+          .select(`
+            *,
+            food:foods(*)
+          `)
+          .gte('logged_at', `${today}T00:00:00Z`)
+          .order('logged_at', { ascending: false })
+      ]);
       
       if (foodError) throw foodError;
       setFoods(foodData || []);
-
-      const today = new Date().toISOString().split('T')[0];
-      const { data: logData, error: logError } = await supabase
-        .from('food_logs')
-        .select(`
-          *,
-          food:foods(*)
-        `)
-        .gte('logged_at', `${today}T00:00:00Z`)
-        .order('logged_at', { ascending: false });
-
+ 
       if (logError) throw logError;
       setLogs(logData || []);
     } catch (err) {

@@ -66,21 +66,20 @@ export function useMealPlans() {
 
     const today = todayStr();
 
-    const [{ data: plansData }, { data: itemsData }, { data: completionsData }] =
+    const [{ data: plansData }, { data: completionsData }] =
       await Promise.all([
         supabase
           .from('meal_plans')
-          .select('*')
+          .select(`
+            *,
+            items:meal_plan_items(
+              *,
+              food:foods(id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, serving_size, serving_unit)
+            )
+          `)
           .eq('user_id', user.id)
           .order('order_index', { ascending: true })
           .order('created_at', { ascending: true }),
-        supabase
-          .from('meal_plan_items')
-          .select('*, food:foods(id, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, category, serving_size, serving_unit)')
-          .in(
-            'meal_plan_id',
-            (await supabase.from('meal_plans').select('id').eq('user_id', user.id)).data?.map((p) => p.id) ?? []
-          ),
         supabase
           .from('meal_completions')
           .select('meal_plan_id')
@@ -88,12 +87,7 @@ export function useMealPlans() {
           .eq('completed_at', today),
       ]);
 
-    const plans = (plansData ?? []).map((plan) => ({
-      ...plan,
-      items: (itemsData ?? []).filter((item) => item.meal_plan_id === plan.id),
-    }));
-
-    setMealPlans(plans);
+    setMealPlans((plansData as MealPlan[]) ?? []);
     setCompletedToday(new Set((completionsData ?? []).map((c) => c.meal_plan_id)));
     setLoading(false);
   }, [user]);
