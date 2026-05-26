@@ -61,7 +61,7 @@ export interface MealMission {
 }
 
 function todayStr() {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toLocaleDateString('en-CA');
 }
 
 // Retorna o índice do dia da semana (0 = Domingo, 1 = Segunda, ..., 6 = Sábado)
@@ -383,7 +383,9 @@ export function useHabits() {
     const dayOfWeek = todayDayOfWeek();
     // Se scheduled_days for nulo ou vazio, é ativo em todos os dias
     if (!h.scheduled_days || h.scheduled_days.length === 0) return true;
-    return h.scheduled_days.includes(dayOfWeek);
+    
+    // Comparação resiliente convertendo os tipos para evitar conflito string vs number
+    return h.scheduled_days.map(Number).includes(Number(dayOfWeek));
   });
   const completedCount = activeHabits.filter((h) => completedToday.has(h.id)).length;
   const totalActive = activeHabits.filter((h) => !h.is_optional || completedToday.has(h.id)).length;
