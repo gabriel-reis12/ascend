@@ -31,7 +31,7 @@ export interface HunterState {
   
   // Actions
   addXp: (amount: number, userId?: string) => Promise<void>;
-  updateStat: (stat: keyof HunterStats, amount: number) => void;
+  updateStat: (stat: keyof HunterStats, amount: number, userId?: string) => Promise<void>;
   setHunterClass: (hClass: HunterClass, userId?: string) => Promise<void>;
   loadProfile: (userId: string) => Promise<void>;
   saveProfile: (userId: string) => Promise<void>;
@@ -119,10 +119,14 @@ export const useHunterStore = create<HunterState>()(
 
       clearLevelUp: () => set({ pendingLevelUp: null }),
 
-      updateStat: (stat, amount) =>
+      updateStat: async (stat, amount, userId) => {
         set((state) => ({
           stats: { ...state.stats, [stat]: state.stats[stat] + amount },
-        })),
+        }));
+        if (userId) {
+          await get().saveProfile(userId);
+        }
+      },
 
       setHunterClass: async (hClass, userId) => {
         set({ hunterClass: hClass });

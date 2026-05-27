@@ -112,8 +112,8 @@ export function useTasks() {
           t.id === taskId ? { ...t, completed: true, completed_at: new Date().toISOString() } : t
         )
       );
-      addXp(task.xp_reward, user.id);
-      if (task.stat_target) updateStat(task.stat_target, task.stat_reward);
+      await addXp(task.xp_reward, user.id);
+      if (task.stat_target) await updateStat(task.stat_target, task.stat_reward, user.id);
     }
   };
 
@@ -131,8 +131,8 @@ export function useTasks() {
       setTasks((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, completed: false, completed_at: null } : t))
       );
-      addXp(-task.xp_reward, user.id);
-      if (task.stat_target) updateStat(task.stat_target, -task.stat_reward);
+      await addXp(-task.xp_reward, user.id);
+      if (task.stat_target) await updateStat(task.stat_target, -task.stat_reward, user.id);
     }
   };
 

@@ -276,8 +276,8 @@ export function useHabits() {
           next.delete(habitId);
           return next;
         });
-        addXp(-habit.xp_reward, user.id);
-        if (habit.stat_target) updateStat(habit.stat_target, -habit.stat_reward);
+        await addXp(-habit.xp_reward, user.id);
+        if (habit.stat_target) await updateStat(habit.stat_target, -habit.stat_reward, user.id);
       }
     } else {
       const { error } = await supabase.from('habit_completions').insert({
@@ -288,8 +288,8 @@ export function useHabits() {
 
       if (!error) {
         setCompletedToday((prev) => new Set([...prev, habitId]));
-        addXp(habit.xp_reward, user.id);
-        if (habit.stat_target) updateStat(habit.stat_target, habit.stat_reward);
+        await addXp(habit.xp_reward, user.id);
+        if (habit.stat_target) await updateStat(habit.stat_target, habit.stat_reward, user.id);
       }
     }
   };
@@ -317,7 +317,7 @@ export function useHabits() {
         const allCompletedBefore = completedCount === mealMissions.length;
         if (allCompletedBefore && mealMissions.length > 0) {
           await addXp(-ALL_MEALS_XP_BONUS, user.id);
-          updateStat('vitality', -ALL_MEALS_VITALITY_BONUS);
+          await updateStat('vitality', -ALL_MEALS_VITALITY_BONUS, user.id);
         }
       }
     } else {
@@ -334,7 +334,7 @@ export function useHabits() {
         const allCompletedAfter = completedCount + 1 === mealMissions.length;
         if (allCompletedAfter && mealMissions.length > 0) {
           await addXp(ALL_MEALS_XP_BONUS, user.id);
-          updateStat('vitality', ALL_MEALS_VITALITY_BONUS);
+          await updateStat('vitality', ALL_MEALS_VITALITY_BONUS, user.id);
         }
       }
     }

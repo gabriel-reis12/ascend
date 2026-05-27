@@ -25,6 +25,11 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - **Sincronização de Variáveis de Ambiente no Vercel (Token de Produção)**:
     - Utilizando o novo token de acesso de produção pessoal (`vcp_...`), sincronizamos as variáveis de ambiente do projeto `ascend` no Vercel (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_GROQ_API_KEY`) para corresponderem exatamente aos valores locais de `.env.local`.
     - Disparamos e acompanhamos um **Redeploy de Produção** real (`target: "production"`) que concluiu com sucesso absoluto (`READY`), promovendo o código com as credenciais corrigidas para o ar e restabelecendo o fluxo de quests e login no F5 sem problemas silenciosos.
+  - **Correção da Persistência de Autenticação (Fatores de Cache Inconsistente)**:
+    - **Identificação da causa raiz do bug**: Quando o usuário fechava o navegador e o reabria no link do Vercel, o Supabase tentava ler e restaurar a sessão antiga do `localStorage` localmente, deixando o usuário tecnicamente "logado". Contudo, se a conexão inicial falhasse na primeira tentativa por oscilações ou chaves desatualizadas, o `loadProfile` falhava silenciosamente e deixava a store (`useHunterStore`) vazia, gerando uma interface inteiramente em branco (sem pedir login de novo e sem carregar os dados).
+    - **Implementação do sessionStorage**: Alterada a configuração do cliente Supabase (`src/lib/supabase.ts`) para usar `storage: window.sessionStorage` em vez de `localStorage`. Isso garante que o login seja perfeitamente mantido ao dar refresh na página (F5) na mesma aba, mas seja inteiramente limpo ao fechar a aba/navegador, forçando a re-autenticação limpa ao acessar o link novamente.
+    - **Limpeza Ativa do localStorage**: Adicionamos um script no topo de `src/lib/supabase.ts` para varrer e remover quaisquer tokens órfãos e antigos do Supabase persistidos no `localStorage` do navegador do usuário, garantindo uma transição limpa e perfeita.
+
 
 ### 2026-05-26 (Sessão Anterior)
 - **Implementação do Portal de Diagnóstico Cyberpunk & Cura de Estados Vazios (Supabase)**:

@@ -381,7 +381,7 @@ export function Workouts() {
       }, { onConflict: 'user_id,routine_id,completed_date' });
 
       await addXp(xpReward, user.id);
-      updateStat(statTarget, 2);
+      await updateStat(statTarget, 2, user.id);
       
       setIsRoutineSessionOpen(false);
       setSessionRoutineId(null);

@@ -163,8 +163,8 @@ export function useMealPlans() {
         // Se todas as refeições estavam completas antes, remove o bônus consolidado
         const allCompletedBefore = completedToday.size === activeMealPlans.length;
         if (allCompletedBefore && activeMealPlans.length > 0) {
-          addXp(-ALL_MEALS_XP_BONUS, user.id);
-          updateStat('vitality', -ALL_MEALS_VITALITY_BONUS);
+          await addXp(-ALL_MEALS_XP_BONUS, user.id);
+          await updateStat('vitality', -ALL_MEALS_VITALITY_BONUS, user.id);
         }
       }
     } else {
@@ -180,8 +180,8 @@ export function useMealPlans() {
         // Se agora todas as refeições estão completas, concede o bônus consolidado
         const allCompletedAfter = completedToday.size + 1 === activeMealPlans.length;
         if (allCompletedAfter && activeMealPlans.length > 0) {
-          addXp(ALL_MEALS_XP_BONUS, user.id);
-          updateStat('vitality', ALL_MEALS_VITALITY_BONUS);
+          await addXp(ALL_MEALS_XP_BONUS, user.id);
+          await updateStat('vitality', ALL_MEALS_VITALITY_BONUS, user.id);
         }
       }
     }
