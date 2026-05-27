@@ -22,8 +22,9 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - **Filtro de user_id corrigido**: `Workouts.tsx` e `Nutrition.tsx` não tinham `.eq('user_id', user.id)` nas queries de `workout_routines`, `workout_logs` e `food_logs`, dependendo apenas do RLS. Adicionados os filtros explícitos.
   - **AuthContext melhorado**: Eventos `TOKEN_REFRESHED` do mesmo usuário agora são ignorados (apenas atualiza a sessão silenciosamente), evitando re-renders desnecessários que causavam flicker de tela.
   - **Supabase client melhorado**: Adicionadas opções explícitas de `persistSession: true`, `autoRefreshToken: true` e `detectSessionInUrl: true` no cliente Supabase. Adicionado aviso de erro de desenvolvimento quando as variáveis de ambiente estão faltando.
-  - **Variáveis de ambiente configuradas no Vercel**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GROQ_API_KEY` e `VITE_SUPABASE_SERVICE_ROLE` configuradas no painel do Vercel.
-  - **Redeploy forçado**: Push de commit vazio para garantir que o Vercel redeployou com as novas variáveis de ambiente.
+  - **Sincronização de Variáveis de Ambiente no Vercel (Token de Produção)**:
+    - Utilizando o novo token de acesso de produção pessoal (`vcp_...`), sincronizamos as variáveis de ambiente do projeto `ascend` no Vercel (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_GROQ_API_KEY`) para corresponderem exatamente aos valores locais de `.env.local`.
+    - Disparamos e acompanhamos um **Redeploy de Produção** real (`target: "production"`) que concluiu com sucesso absoluto (`READY`), promovendo o código com as credenciais corrigidas para o ar e restabelecendo o fluxo de quests e login no F5 sem problemas silenciosos.
 
 ### 2026-05-26 (Sessão Anterior)
 - **Implementação do Portal de Diagnóstico Cyberpunk & Cura de Estados Vazios (Supabase)**:
