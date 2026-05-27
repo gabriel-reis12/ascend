@@ -209,8 +209,20 @@ export function Workouts() {
   };
 
   async function fetchData() {
-    if (!user) return;
+    // Se não há usuário, reseta o loading imediatamente (evita skeleton eterno)
+    if (!user) {
+      setLoading(false);
+      setRoutines([]);
+      setLogs([]);
+      return;
+    }
     setLoading(true);
+
+    // Safety timeout de 5s para evitar skeleton eterno em caso de lentidão
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+      console.warn('[Workouts] Safety timeout disparado.');
+    }, 5000);
     
     try {
       const [
@@ -231,6 +243,7 @@ export function Workouts() {
               exercise:exercises(*)
             )
           `)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false }),
         supabase
           .from('workout_logs')
@@ -238,6 +251,7 @@ export function Workouts() {
             *,
             exercise:exercises(*)
           `)
+          .eq('user_id', user.id)
           .order('logged_at', { ascending: false })
           .limit(100)
       ]);
@@ -253,6 +267,7 @@ export function Workouts() {
     } catch (err) {
       console.error('Error fetching workout data:', err);
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
     }
   }

@@ -36,20 +36,25 @@ export function useTasks() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
-    if (!user?.id) return;
+    // Se não há usuário, reseta o loading imediatamente (evita skeleton eterno)
+    if (!user?.id) {
+      setLoading(false);
+      setTasks([]);
+      return;
+    }
     setLoading(true);
     setError(null);
 
     let active = true;
 
-    // Safety timeout de 4 segundos: garante que o visual de skeletons saia da tela
+    // Safety timeout de 5 segundos: garante que o visual de skeletons saia da tela
     // caso as queries do Supabase demorem ou travem temporariamente (ex: cold starts)
     const safetyTimeout = setTimeout(() => {
       if (active) {
         setLoading(false);
         console.warn('Safety timeout de useTasks disparado. Forçando loading = false.');
       }
-    }, 4000);
+    }, 5000);
 
     try {
       const { data, error: dbError } = await supabase

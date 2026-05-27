@@ -62,8 +62,20 @@ export function Nutrition() {
   }, [user]);
 
   async function fetchData() {
-    if (!user) return;
+    // Se não há usuário, reseta o loading imediatamente (evita skeleton eterno)
+    if (!user) {
+      setLoading(false);
+      setFoods([]);
+      setLogs([]);
+      return;
+    }
     setLoading(true);
+
+    // Safety timeout de 5s para evitar skeleton eterno em caso de lentidão
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+      console.warn('[Nutrition] Safety timeout disparado.');
+    }, 5000);
     
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -81,6 +93,7 @@ export function Nutrition() {
             *,
             food:foods(*)
           `)
+          .eq('user_id', user.id)
           .gte('logged_at', `${today}T00:00:00Z`)
           .order('logged_at', { ascending: false })
       ]);
@@ -93,6 +106,7 @@ export function Nutrition() {
     } catch (err) {
       console.error('Error fetching nutrition data:', err);
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
     }
   }
