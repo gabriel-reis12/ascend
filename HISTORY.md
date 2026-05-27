@@ -15,6 +15,20 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ## 🕒 Histórico de Mudanças Recentes
 
 ### 2026-05-26 (Sessão Atual)
+- **Implementação do Portal de Diagnóstico Cyberpunk & Cura de Estados Vazios (Supabase)**:
+  - **Identificação da Falha Silenciosa**: O cliente Javascript do Supabase não lança exceções no caso de falhas de banco de dados ou Row Level Security (RLS) bloqueados, simplesmente resolvendo as queries com `{ data: null, error }`. Nossos hooks anteriores tratavam isso de forma passiva, o que mascarava erros de conexão ou chaves inválidas em produção, resultando em listas de treinos e cardápios completamente em branco (`[]`) e frustrando o usuário sem dar feedbacks visuais sobre a saúde do servidor.
+  - **Tratamento Ativo de Exceções nos Hooks**:
+    - Refatorados os hooks `useMealPlans.ts`, `useHabits.ts` e `useTasks.ts` para verificar ativamente se as respostas do Supabase contêm a propriedade `.error`. Se houver um erro de banco de dados, o erro é explicitamente **lançado** como uma exceção no Javascript, forçando a execução do bloco `catch` e registrando a anomalia em um estado `error` interno.
+  - **Painel de Telemetria e Diagnóstico Holográfico (Settings.tsx)**:
+    - Desenvolvida a seção premium **"Telemetria & Diagnóstico"** na tela de Ajustes do Caçador com estética retro-cyberpunk.
+    - Exibe o status da fenda Supabase (Conectado / Falhou com o erro exato em tempo real).
+    - Mostra o UUID (`user.id`) do Caçador Ativo e o e-mail cadastrado.
+    - Realiza consultas assíncronas otimizadas de telemetria (`head: true` sem transferir payloads grandes de linhas) para contar e exibir a quantidade exata de Cardápios, Rotinas, Hábitos e Tarefas salvas na nuvem para aquele UUID, garantindo que o caçador saiba se os seus dados realmente existem no servidor.
+    - Inclui o botão de **Sincronização Forçada** para recalibrar e re-sincronizar de forma forçada os sensores do app com o banco de dados.
+  - **Banner de Anomalia de Fenda (RPGLayout.tsx)**:
+    - Adicionado um detector global de saúde do banco de dados no layout de RPG. Se uma consulta simples à tabela de exercícios falhar ou expirar por falha de credenciais, exibe um banner holográfico de aviso vermelho neon no topo de todas as telas contendo a descrição exata do erro e um link "Diagnosticar" para navegar instantaneamente até a telemetria nos Ajustes.
+  - **Upgrade da Chave Anon no Ambiente (.env.local)**:
+    - Substituída a chave opaca antiga do Supabase pela chave anon JWT oficial e clássica do projeto (`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`). Isso garante conformidade estrita e 100% de compatibilidade com as políticas de RLS baseadas em `auth.uid() = user_id` no Postgres, corrigindo as telas vazias no ambiente local.
 - **Safety Timeout nos Hooks de Dados (useHabits, useMealPlans, useTasks) contra Carregamento Infinito (Skeletons)**:
   - **Identificação do Bug**: O app exibia esqueletos de carregamento (skeleton loaders) infinitamente quando ocorriam problemas de lentidão extrema na API do Supabase ou cold starts longos do banco de dados remoto no Vercel. Embora tivéssemos implementado `try/catch/finally` nas requisições, se as promessas do `Promise.all` ficassem pendentes por longos segundos (devido a lentidão ou atrasos de conexão), o estado `loading` permanecia `true`, deixando o Quadro de Missões inacessível.
   - **Solução Aplicada**: Adicionamos um **Safety Timeout de 4 segundos** na inicialização das funções de fetch de todos os três hooks de dados principais ([useHabits.ts](file:///d:/Área de Trabalho/App/src/hooks/useHabits.ts), [useMealPlans.ts](file:///d:/Área de Trabalho/App/src/hooks/useMealPlans.ts), [useTasks.ts](file:///d:/Área de Trabalho/App/src/hooks/useTasks.ts)). Caso a resposta do banco de dados do Supabase atrase ou a conexão fique offline, o timeout força `loading = false`, fazendo os skeletons sumirem da tela e exibindo a interface do app normalmente para uso. Se a API finalmente responder em background depois do timeout, as informações são renderizadas na tela de forma silenciosa e transparente.

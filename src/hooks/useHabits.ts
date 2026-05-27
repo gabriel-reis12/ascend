@@ -81,6 +81,7 @@ export function useHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [completedToday, setCompletedToday] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Missões de treino dinâmicas (rotinas agendadas para hoje)
   const [workoutMissions, setWorkoutMissions] = useState<WorkoutMission[]>([]);
@@ -90,6 +91,7 @@ export function useHabits() {
   const fetchAll = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setError(null);
 
     let active = true;
 
@@ -107,12 +109,12 @@ export function useHabits() {
       const dayOfWeek = todayDayOfWeek();
 
       const [
-        { data: habitsData },
-        { data: completionsData },
-        { data: routinesData },
-        { data: routineCompletionsData },
-        { data: mealPlansData },
-        { data: mealCompletionsData },
+        habitsRes,
+        completionsRes,
+        routinesRes,
+        routineCompletionsRes,
+        mealPlansRes,
+        mealCompletionsRes,
       ] = await Promise.all([
         supabase
           .from('habits')
@@ -166,15 +168,22 @@ export function useHabits() {
           .eq('completed_at', today),
       ]);
 
+      if (habitsRes.error) throw habitsRes.error;
+      if (completionsRes.error) throw completionsRes.error;
+      if (routinesRes.error) throw routinesRes.error;
+      if (routineCompletionsRes.error) throw routineCompletionsRes.error;
+      if (mealPlansRes.error) throw mealPlansRes.error;
+      if (mealCompletionsRes.error) throw mealCompletionsRes.error;
+
       if (!active) return;
 
-      setHabits(habitsData ?? []);
-      setCompletedToday(new Set((completionsData ?? []).map((c) => c.habit_id)));
+      setHabits(habitsRes.data ?? []);
+      setCompletedToday(new Set((completionsRes.data ?? []).map((c) => c.habit_id)));
 
       // Injeta as rotinas de treino agendadas para hoje como missões
-      const completedRoutineIds = new Set((routineCompletionsData ?? []).map((rc) => rc.routine_id));
-      const todayRoutines = (routinesData ?? []).filter(
-        (r) => Array.isArray(r.scheduled_days) && r.scheduled_days.includes(dayOfWeek)
+      const completedRoutineIds = new Set((routineCompletionsRes.data ?? []).map((rc: any) => rc.routine_id));
+      const todayRoutines = (routinesRes.data ?? []).filter(
+        (r: any) => Array.isArray(r.scheduled_days) && r.scheduled_days.includes(dayOfWeek)
       );
 
       setWorkoutMissions(
@@ -198,10 +207,10 @@ export function useHabits() {
       );
 
       // Injeta cardápios ativos como missões de refeição (todos os dias)
-      const completedMealIds = new Set((mealCompletionsData ?? []).map((mc: { meal_plan_id: string }) => mc.meal_plan_id));
+      const completedMealIds = new Set((mealCompletionsRes.data ?? []).map((mc: any) => mc.meal_plan_id));
 
       setMealMissions(
-        (mealPlansData ?? []).map((plan: any) => {
+        (mealPlansRes.data ?? []).map((plan: any) => {
           const totalKcal = (plan.items ?? []).reduce((sum: number, item: any) => {
             const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
             const kcal = ((foodObj?.calories_per_100g ?? 0) * (item.quantity_grams ?? 0)) / 100;
@@ -221,8 +230,11 @@ export function useHabits() {
           };
         })
       );
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar dados de hábitos e missões:', err);
+      if (active) {
+        setError(err.message || String(err));
+      }
     } finally {
       if (active) {
         setLoading(false);
@@ -440,6 +452,7 @@ export function useHabits() {
     totalActive,
     xpEarnedToday,
     loading,
+    error,
     workoutMissions,
     mealMissions,
     toggleCompletion,

@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, Menu } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, Menu, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileMenu } from './MobileMenu';
+import { supabase } from '@/lib/supabase';
 
 const navItems = [
   { path: '/', label: 'Status', icon: LayoutDashboard },
@@ -20,6 +21,25 @@ export function RPGLayout() {
   const state = useHunterStore();
   const { signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [supabaseError, setSupabaseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkConnection() {
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        setSupabaseError('Chaves de API do Supabase ausentes no ambiente (.env).');
+        return;
+      }
+      try {
+        const { error } = await supabase.from('exercises').select('id').limit(1);
+        if (error) {
+          setSupabaseError(error.message);
+        }
+      } catch (err: any) {
+        setSupabaseError(err.message || String(err));
+      }
+    }
+    void checkConnection();
+  }, []);
 
   // Se o username não estiver preenchido, talvez o profile ainda esteja carregando
   // Mas vamos deixar renderizar com fallback se necessário.
@@ -163,6 +183,19 @@ export function RPGLayout() {
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {supabaseError && (
+            <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
+              <div className="flex items-center gap-3 p-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 text-rose-400 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+                <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0" />
+                <span className="flex-1 font-orbitron text-[11px] leading-relaxed">
+                  Aviso: Falha de conexão com a fenda Supabase ({supabaseError}). Os seus dados dinâmicos podem não ser exibidos.
+                </span>
+                <Link to="/settings" className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 font-black transition-all active:scale-95 text-[10px] uppercase tracking-wider border border-rose-500/20 shrink-0">
+                  Diagnosticar
+                </Link>
+              </div>
+            </div>
+          )}
           <div className="mx-auto max-w-5xl px-4 sm:px-6 py-5 sm:py-8">
             <Outlet />
           </div>

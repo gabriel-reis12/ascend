@@ -33,10 +33,12 @@ export function useTasks() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setError(null);
 
     let active = true;
 
@@ -50,16 +52,20 @@ export function useTasks() {
     }, 4000);
 
     try {
-      const { data } = await supabase
+      const { data, error: dbError } = await supabase
         .from('tasks')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
         
+      if (dbError) throw dbError;
       if (!active) return;
       setTasks(data ?? []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar tarefas:', err);
+      if (active) {
+        setError(err.message || String(err));
+      }
     } finally {
       if (active) {
         setLoading(false);
@@ -141,6 +147,7 @@ export function useTasks() {
     pendingTasks,
     completedTasks,
     loading,
+    error,
     createTask,
     completeTask,
     uncompleteTask,

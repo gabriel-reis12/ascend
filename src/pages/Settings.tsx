@@ -49,6 +49,65 @@ export function Settings() {
   const [showResetAllModal, setShowResetAllModal] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState('');
 
+  // Estado de telemetria
+  const [telemetry, setTelemetry] = useState<{
+    routines: number;
+    meals: number;
+    habits: number;
+    tasks: number;
+    loading: boolean;
+    error: string | null;
+  }>({
+    routines: 0,
+    meals: 0,
+    habits: 0,
+    tasks: 0,
+    loading: true,
+    error: null
+  });
+
+  useEffect(() => {
+    async function fetchTelemetry() {
+      if (!user?.id) return;
+      try {
+        setTelemetry(prev => ({ ...prev, loading: true, error: null }));
+        const [
+          { count: routinesCount, error: rErr },
+          { count: mealsCount, error: mErr },
+          { count: habitsCount, error: hErr },
+          { count: tasksCount, error: tErr }
+        ] = await Promise.all([
+          supabase.from('workout_routines').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('meal_plans').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('habits').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        ]);
+
+        if (rErr) throw rErr;
+        if (mErr) throw mErr;
+        if (hErr) throw hErr;
+        if (tErr) throw tErr;
+
+        setTelemetry({
+          routines: routinesCount || 0,
+          meals: mealsCount || 0,
+          habits: habitsCount || 0,
+          tasks: tasksCount || 0,
+          loading: false,
+          error: null
+        });
+      } catch (err: any) {
+        console.error('Erro de telemetria:', err);
+        setTelemetry(prev => ({
+          ...prev,
+          loading: false,
+          error: err.message || String(err)
+        }));
+      }
+    }
+    void fetchTelemetry();
+  }, [user?.id]);
+
   useEffect(() => {
     if (user) {
       void hunterStore.loadProfile(user.id);
@@ -635,6 +694,127 @@ export function Settings() {
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   Reiniciar Guia do Caçador
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* PAINEL 2.8: PORTAL DE TELEMETRIA E DIAGNÓSTICO */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.28 }}
+            className="rounded-3xl border border-blue-500/20 bg-[#0F0F13] p-5 sm:p-8 shadow-xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="mb-5 sm:mb-6 flex items-center justify-between">
+              <div className="space-y-1">
+                <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
+                  Telemetria & <span className="text-blue-400">Diagnóstico</span>
+                </h2>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
+                  Status de Conectividade do Caçador com a Fenda
+                </p>
+              </div>
+              <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                <Shield className="w-4 h-4 text-blue-400 fill-blue-500/20 animate-pulse" />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Status de Conexão */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl border border-[#1e1e26] bg-black/40 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">
+                      Conexão Supabase
+                    </p>
+                    <p className="text-xs font-black uppercase tracking-widest font-orbitron text-white">
+                      {telemetry.loading ? (
+                        <span className="text-gray-400 animate-pulse">Consultando...</span>
+                      ) : telemetry.error ? (
+                        <span className="text-rose-500">Falhou</span>
+                      ) : (
+                        <span className="text-emerald-400 text-glow-emerald">Conectado</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className={`size-3 rounded-full ${
+                    telemetry.loading 
+                      ? 'bg-yellow-500 animate-ping' 
+                      : telemetry.error 
+                        ? 'bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' 
+                        : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                  }`} />
+                </div>
+
+                <div className="p-4 rounded-2xl border border-[#1e1e26] bg-black/40 space-y-1 md:col-span-2">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">
+                    ID do Caçador Ativo
+                  </p>
+                  <p className="text-[10px] font-semibold text-gray-400 font-mono break-all leading-none py-1 selection:bg-blue-500/30 selection:text-white">
+                    {user?.id || 'Desconectado'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Erros Detectados */}
+              {telemetry.error && (
+                <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/5 text-xs text-rose-400 space-y-1 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-black uppercase tracking-wider text-rose-500">Anomalia de Conexão Detectada</p>
+                    <p className="font-semibold font-mono text-[11px] leading-relaxed break-all bg-black/40 p-2 rounded-lg border border-rose-950/40">
+                      {telemetry.error}
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                      * Dica: Verifique se suas chaves do Supabase no Vercel/Ambiente de Produção estão preenchidas corretamente e possuem permissão nas tabelas.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Contagem de Linhas */}
+              <div className="p-5 rounded-2xl border border-[#1e1e26] bg-black/20">
+                <h4 className="text-xs font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
+                  Registros na Nuvem (Sincronização)
+                </h4>
+                {telemetry.loading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Cardápios</p>
+                      <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.meals}</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Rotinas</p>
+                      <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.routines}</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Hábitos</p>
+                      <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.habits}</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Tarefas</p>
+                      <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.tasks}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl border border-blue-500/30 bg-blue-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-400 transition-all hover:bg-blue-500/20 hover:border-blue-500 active:scale-95 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Sincronização Forçada
                 </button>
               </div>
             </div>

@@ -66,10 +66,12 @@ export function useMealPlans() {
   const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
   const [completedToday, setCompletedToday] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setError(null);
 
     let active = true;
 
@@ -85,7 +87,7 @@ export function useMealPlans() {
     try {
       const today = todayStr();
 
-      const [{ data: plansData }, { data: completionsData }] =
+      const [plansRes, completionsRes] =
         await Promise.all([
           supabase
             .from('meal_plans')
@@ -106,12 +108,18 @@ export function useMealPlans() {
             .eq('completed_at', today),
         ]);
 
+      if (plansRes.error) throw plansRes.error;
+      if (completionsRes.error) throw completionsRes.error;
+
       if (!active) return;
 
-      setMealPlans((plansData as MealPlan[]) ?? []);
-      setCompletedToday(new Set((completionsData ?? []).map((c) => c.meal_plan_id)));
-    } catch (err) {
+      setMealPlans((plansRes.data as MealPlan[]) ?? []);
+      setCompletedToday(new Set((completionsRes.data ?? []).map((c) => c.meal_plan_id)));
+    } catch (err: any) {
       console.error('Erro ao buscar planos alimentares:', err);
+      if (active) {
+        setError(err.message || String(err));
+      }
     } finally {
       if (active) {
         setLoading(false);
@@ -239,6 +247,7 @@ export function useMealPlans() {
     activeMealPlans,
     completedToday,
     loading,
+    error,
     totalKcalToday,
     toggleCompletion,
     createMealPlan,
