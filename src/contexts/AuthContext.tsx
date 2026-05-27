@@ -20,38 +20,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const loadProfile = useHunterStore((s) => s.loadProfile);
   const reset = useHunterStore((s) => s.reset);
+  // Ref para rastrear o ID do usuário atual, evitando re-cargas desnecessárias
   const currentUserRef = useRef<string | null>(null);
+  // Ref para evitar chamadas concorrentes ao loadProfile
+  const loadingProfileRef = useRef(false);
 
   useEffect(() => {
     let active = true;
 
-    // Safety timeout: Garante que o loading nunca passe de 5 segundos
-    // Evita travamentos eternos ("Despertando...") por problemas de rede ou cold starts
+    // Safety timeout: nunca mais de 6 segundos no loading inicial
     const safetyTimeout = setTimeout(() => {
-      if (active) {
+      if (active && loading) {
         setLoading(false);
-        console.warn("Safety timeout do AuthContext disparado. Forçando loading = false.");
+        console.warn('[AuthContext] Safety timeout disparado. Forçando loading = false.');
       }
-    }, 5000);
+    }, 6000);
 
     async function initAuth() {
       try {
-        const { data } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
         if (!active) return;
+
+        if (error) {
+          console.error('[AuthContext] Erro ao obter sessão:', error);
+          setLoading(false);
+          return;
+        }
 
         const currentSession = data.session;
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          currentUserRef.current = currentSession.user.id;
-          await loadProfile(currentSession.user.id);
+          const userId = currentSession.user.id;
+          currentUserRef.current = userId;
+          // Carrega o perfil apenas se ainda não foi carregado (evita chamadas duplas)
+          if (!loadingProfileRef.current) {
+            loadingProfileRef.current = true;
+            try {
+              await loadProfile(userId);
+            } finally {
+              loadingProfileRef.current = false;
+            }
+          }
         } else {
           currentUserRef.current = null;
           reset();
         }
       } catch (err) {
-        console.error("Erro na inicialização de autenticação:", err);
+        console.error('[AuthContext] Erro na inicialização de autenticação:', err);
       } finally {
         if (active) {
           setLoading(false);
@@ -62,35 +79,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!active) return;
-      try {
-        const newUserId = newSession?.user?.id ?? null;
 
-        if (newUserId !== currentUserRef.current) {
-          currentUserRef.current = newUserId;
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
+      const newUserId = newSession?.user?.id ?? null;
 
-          if (newUserId) {
-            setLoading(true);
-            await loadProfile(newUserId);
-          } else {
-            reset();
+      // Ignora eventos que não mudam o usuário (ex: TOKEN_REFRESHED com mesmo ID)
+      // para evitar loops de re-render e re-carregamento de dados
+      if (event === 'TOKEN_REFRESHED' && newUserId === currentUserRef.current) {
+        // Apenas atualiza a sessão silenciosamente (o token mudou, mas o usuário não)
+        setSession(newSession);
+        return;
+      }
+
+      if (newUserId !== currentUserRef.current) {
+        currentUserRef.current = newUserId;
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newUserId) {
+          setLoading(true);
+          if (!loadingProfileRef.current) {
+            loadingProfileRef.current = true;
+            try {
+              await loadProfile(newUserId);
+            } catch (err) {
+              console.error('[AuthContext] Erro ao carregar perfil:', err);
+            } finally {
+              loadingProfileRef.current = false;
+            }
           }
+          if (active) setLoading(false);
         } else {
-          // Se for o mesmo usuário (ex: token refreshed silenciosamente no background),
-          // atualiza os dados no Zustand sem recriar referências do objeto user no React (evitando loops).
-          if (newUserId) {
-            void loadProfile(newUserId);
-          }
-        }
-      } catch (err) {
-        console.error("Erro na mudança de autenticação:", err);
-      } finally {
-        if (active) {
-          setLoading(false);
-          clearTimeout(safetyTimeout);
+          reset();
+          if (active) setLoading(false);
         }
       }
     });
@@ -121,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    currentUserRef.current = null;
     await supabase.auth.signOut();
   };
 
