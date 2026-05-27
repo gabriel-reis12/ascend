@@ -14,7 +14,18 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
-### 2026-05-26 (Sessão Atual)
+### 2026-05-27 (Sessão Atual)
+- **Correção Crítica: Loading Eterno em Produção (Vercel)**:
+  - **Causa raiz identificada**: Todos os hooks (`useHabits`, `useMealPlans`, `useTasks`) e as páginas `Workouts.tsx` e `Nutrition.tsx` tinham `if (!user) return` sem setar `loading = false`. Isso causava loading eterno (skeletons infinitos) quando o usuário estava deslogado no Vercel.
+  - **Correção nos hooks**: Adicionado reset imediato do `loading = false` quando `user` é null, limpando todos os estados de dados para arrays vazios.
+  - **Correção nas páginas**: `Workouts.tsx` e `Nutrition.tsx` agora setam `loading = false` quando `user` é null e têm safety timeout de 5s.
+  - **Filtro de user_id corrigido**: `Workouts.tsx` e `Nutrition.tsx` não tinham `.eq('user_id', user.id)` nas queries de `workout_routines`, `workout_logs` e `food_logs`, dependendo apenas do RLS. Adicionados os filtros explícitos.
+  - **AuthContext melhorado**: Eventos `TOKEN_REFRESHED` do mesmo usuário agora são ignorados (apenas atualiza a sessão silenciosamente), evitando re-renders desnecessários que causavam flicker de tela.
+  - **Supabase client melhorado**: Adicionadas opções explícitas de `persistSession: true`, `autoRefreshToken: true` e `detectSessionInUrl: true` no cliente Supabase. Adicionado aviso de erro de desenvolvimento quando as variáveis de ambiente estão faltando.
+  - **Variáveis de ambiente configuradas no Vercel**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GROQ_API_KEY` e `VITE_SUPABASE_SERVICE_ROLE` configuradas no painel do Vercel.
+  - **Redeploy forçado**: Push de commit vazio para garantir que o Vercel redeployou com as novas variáveis de ambiente.
+
+### 2026-05-26 (Sessão Anterior)
 - **Implementação do Portal de Diagnóstico Cyberpunk & Cura de Estados Vazios (Supabase)**:
   - **Identificação da Falha Silenciosa**: O cliente Javascript do Supabase não lança exceções no caso de falhas de banco de dados ou Row Level Security (RLS) bloqueados, simplesmente resolvendo as queries com `{ data: null, error }`. Nossos hooks anteriores tratavam isso de forma passiva, o que mascarava erros de conexão ou chaves inválidas em produção, resultando em listas de treinos e cardápios completamente em branco (`[]`) e frustrando o usuário sem dar feedbacks visuais sobre a saúde do servidor.
   - **Tratamento Ativo de Exceções nos Hooks**:
