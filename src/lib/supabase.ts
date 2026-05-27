@@ -3,6 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
+// Limpa tokens antigos persistidos no localStorage para forçar a transição limpa e segura para o sessionStorage
+if (typeof window !== 'undefined') {
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+      localStorage.removeItem(key);
+    }
+  });
+}
+
+
 // Aviso de desenvolvimento: ajuda a debugar configurações faltando
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error(
@@ -15,8 +25,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Persiste a sessão no localStorage para evitar logout ao recarregar a página
+    // Usa sessionStorage para persistir sessão durante o refresh (F5), mas limpa ao fechar a aba/navegador
     persistSession: true,
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
     // Detecta sessão na URL (necessário para OAuth e links mágicos)
     detectSessionInUrl: true,
     // Auto-refresh do token antes de expirar
