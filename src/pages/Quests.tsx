@@ -627,6 +627,44 @@ export function Quests() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-4"
                 >
+                  {/* BANNER DO PROTOCOLO DE NUTRIÇÃO CONSOLIDADA */}
+                  {mealMissions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_0_20px_rgba(249,115,22,0.08)]"
+                    >
+                      {/* Efeito Glow Laranja Cyberpunk */}
+                      <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-2xl" />
+                      
+                      <div className="relative flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+                          <UtensilsCrossed size={20} className="animate-pulse" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-white tracking-[0.15em] font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Protocolo de Nutrição Consolidada
+                          </h4>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                            Conclua todas as refeições do dia para receber <span className="text-yellow-500 font-black">+50 XP</span> e <span className="text-orange-400 font-black">+2 Vitalidade</span>.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="relative flex items-center gap-3 bg-black/40 border border-[#1E1E26] rounded-xl px-4 py-2 shrink-0 justify-between sm:w-auto w-full">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Refeições:</span>
+                        <span className="text-xs font-black text-orange-500 font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                          {mealMissions.filter(m => m.isCompleted).length} <span className="text-gray-600">/</span> {mealMissions.length}
+                        </span>
+                        {mealMissions.filter(m => m.isCompleted).length === mealMissions.length ? (
+                          <span className="text-[9px] font-black uppercase tracking-widest text-green-400 border border-green-500/30 bg-green-500/10 px-2 py-0.5 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.15)]">ATIVADO</span>
+                        ) : (
+                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 bg-white/5 px-2 py-0.5 rounded-lg">PENDENTE</span>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
                   {/* FENDA DE ANOMALIA DA IA (WIDGET PREMIUM) */}
                   <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#0F0F13] p-6 shadow-[0_0_25px_rgba(6,182,212,0.05)]">
                     {/* Glowing effect inside the card */}
@@ -841,8 +879,8 @@ export function Quests() {
                               title={m.title}
                               category={m.totalKcal > 0 ? `${m.totalKcal} KCAL` : 'ALIMENTAÇÃO'}
                               categoryColor="#F97316" // orange-500
-                              xpReward={m.xp_reward}
-                              statLabel="+1 VITALIDADE"
+                              xpReward={0}
+                              statLabel={undefined}
                               done={m.isCompleted}
                               startTime={mission.time}
                               endTime={mission.endTime}

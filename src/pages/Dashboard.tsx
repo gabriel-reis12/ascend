@@ -520,7 +520,7 @@ export function Dashboard() {
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">
-                              +{m.xp_reward} XP • {m.totalKcal > 0 ? `${m.totalKcal} kcal` : 'Alimentação'}
+                              {m.totalKcal > 0 ? `${m.totalKcal} kcal` : 'Alimentação'} • Recompensa Consolidada
                             </span>
                           </div>
                         </div>
