@@ -19,6 +19,9 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - Sexo / Gênero (botões interativos de seleção rápida Masculino ♂ e Feminino ♀).
   - Altura (cm), Peso Atual (kg) e Peso Meta (kg) em grid compacto biométrico.
   - Seletores customizados para Foco de Treino, Objetivo Principal de Evolução e Nível de Experiência/Rank.
+- **Responsividade Aprimorada**:
+  - Ajustado o layout biométrico para usar um grid de `lg:grid-cols-3` em vez de `md:grid-cols-2`, dividindo o espaço em 1/3 para o Sexo e 2/3 para as informações biométricas. Isso evita o estrangulamento lateral em telas médias e grandes.
+  - Adicionado `whitespace-nowrap` nas labels biométricas ("Altura (cm)", "Peso (kg)", "Meta (kg)") para evitar quebras de linhas desalinhadas.
 - **Sincronização de Estados**: Atualizado o hook `useEffect` de monitoramento de estado local para garantir que quaisquer mudanças na store `useHunterStore` se reflitam em tempo real nos inputs locais.
 - **Persistência Remota**: Modificada a função `handleSaveProfile` para atualizar no Supabase todas as novas propriedades biométricas e de metas antes de re-sincronizar os dados da store local, mantendo 100% de coesão nos dados.
 

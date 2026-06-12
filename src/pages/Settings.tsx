@@ -603,9 +603,9 @@ export function Settings() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Sexo */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 lg:col-span-1">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
                     Sexo (Gênero)
                   </label>
@@ -638,9 +638,9 @@ export function Settings() {
                 </div>
 
                 {/* Registro Biométrico (Altura, Peso, Peso Meta) */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="lg:col-span-2 grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
                       <Ruler className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Altura (cm)
                     </label>
                     <input
@@ -652,7 +652,7 @@ export function Settings() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
                       <Weight className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Peso (kg)
                     </label>
                     <input
@@ -664,7 +664,7 @@ export function Settings() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
                       <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Meta (kg)
                     </label>
                     <input
