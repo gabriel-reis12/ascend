@@ -14,7 +14,8 @@ export interface Habit {
   category: string;
   category_color: string;
   xp_reward: number;
-  stat_target: 'strength' | 'intelligence' | 'endurance' | 'vitality' | 'discipline' | null;
+  stat_target: 'strength' | 'intelligence' | 'endurance' | 'vitality' | 'discipline' | 'wisdom' | 'balance' | null;
+
   stat_reward: number;
   active: boolean;
   is_optional: boolean;

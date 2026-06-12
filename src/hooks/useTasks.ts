@@ -10,7 +10,8 @@ export interface Task {
   category: string;
   category_color: string;
   xp_reward: number;
-  stat_target: 'strength' | 'intelligence' | 'endurance' | 'vitality' | 'discipline' | null;
+  stat_target: 'strength' | 'intelligence' | 'endurance' | 'vitality' | 'discipline' | 'wisdom' | 'balance' | null;
+
   stat_reward: number;
   completed: boolean;
   completed_at: string | null;

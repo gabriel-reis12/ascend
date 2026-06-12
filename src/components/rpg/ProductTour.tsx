@@ -70,14 +70,18 @@ export function ProductTour() {
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Inicialização do Tour se não concluído
+  // Inicialização do Tour se não concluído e explicitamente solicitado (pelo Onboarding ou pelas Configurações)
   useEffect(() => {
+    const justFinishedOnboarding = localStorage.getItem('ascend_just_finished_onboarding');
     const completed = localStorage.getItem('ascend_tour_completed');
-    if (!completed) {
+    
+    if (justFinishedOnboarding && !completed) {
       // Pequeno delay para garantir que a página renderizou completamente antes de calcular as posições das âncoras
       const timer = setTimeout(() => {
         setOpen(true);
         setCurrentStep(0);
+        // Limpa o indicador temporário imediatamente para não re-exibir em recarregamentos futuros (F5)
+        localStorage.removeItem('ascend_just_finished_onboarding');
       }, 800);
       return () => clearTimeout(timer);
     }

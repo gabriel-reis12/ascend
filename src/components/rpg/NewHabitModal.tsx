@@ -10,12 +10,15 @@ const PRESET_COLORS = [
 
 const STAT_OPTIONS: { value: Habit['stat_target']; label: string }[] = [
   { value: null,           label: 'Nenhum' },
-  { value: 'strength',     label: 'Força' },
-  { value: 'intelligence', label: 'Inteligência' },
-  { value: 'endurance',    label: 'Resistência' },
-  { value: 'vitality',     label: 'Vitalidade' },
-  { value: 'discipline',   label: 'Disciplina' },
+  { value: 'strength',     label: '⚔️ Força' },
+  { value: 'intelligence', label: '🧠 Inteligência' },
+  { value: 'endurance',    label: '🛡️ Resistência' },
+  { value: 'vitality',     label: '💚 Vitalidade' },
+  { value: 'discipline',   label: '🔥 Disciplina' },
+  { value: 'wisdom',       label: '📖 Sabedoria' },
+  { value: 'balance',      label: '☯️ Equilíbrio' },
 ];
+
 
 interface NewHabitModalProps {
   open: boolean;

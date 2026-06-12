@@ -99,7 +99,6 @@ export function Dashboard() {
     void fetchTodayVolume();
   }, [user?.id, workoutStatusKey]);
 
-  // Cores neon dinâmicas baseadas na classe atual do caçador para o painel de atalhos rápidos e elementos visuais
   const themeColors = React.useMemo(() => {
     const classColorMap: Record<string, { border: string; text: string; bg: string; glow: string; shadowColor: string }> = {
       warrior: { 
@@ -116,6 +115,13 @@ export function Dashboard() {
         glow: 'shadow-[0_0_15px_rgba(124,58,237,0.15)]',
         shadowColor: 'rgba(124, 58, 237, 0.4)'
       },
+      creator: { 
+        border: 'border-amber-500/30 hover:border-amber-500/60', 
+        text: 'text-amber-400', 
+        bg: 'bg-amber-500/5 hover:bg-amber-500/10',
+        glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]',
+        shadowColor: 'rgba(251, 191, 36, 0.4)'
+      },
       monk: { 
         border: 'border-cyan-500/30 hover:border-cyan-500/60', 
         text: 'text-cyan-400', 
@@ -123,12 +129,12 @@ export function Dashboard() {
         glow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]',
         shadowColor: 'rgba(6, 182, 212, 0.4)'
       },
-      titan: { 
-        border: 'border-red-500/30 hover:border-red-500/60', 
-        text: 'text-red-400', 
-        bg: 'bg-red-500/5 hover:bg-red-500/10',
-        glow: 'shadow-[0_0_15px_rgba(239,68,68,0.15)]',
-        shadowColor: 'rgba(239, 68, 68, 0.4)'
+      leader: { 
+        border: 'border-rose-500/30 hover:border-rose-500/60', 
+        text: 'text-rose-400', 
+        bg: 'bg-rose-500/5 hover:bg-rose-500/10',
+        glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]',
+        shadowColor: 'rgba(244, 63, 94, 0.4)'
       },
     };
     const currentClass = (state.hunterClass || 'warrior').toLowerCase();
@@ -153,7 +159,7 @@ export function Dashboard() {
     
     const rankName = getRankImageName(rank);
     const classFolder = hClass.charAt(0).toUpperCase() + hClass.slice(1).toLowerCase();
-    const validClasses = ['Warrior', 'Scholar', 'Monk', 'Titan'];
+    const validClasses = ['Warrior', 'Scholar', 'Creator', 'Monk', 'Leader'];
     const finalClass = validClasses.includes(classFolder) ? classFolder : 'Warrior';
     
     return `/Classes/${finalClass}/${rankName}.jpeg`;
@@ -169,6 +175,8 @@ export function Dashboard() {
       { label: 'RES', value: state.stats.endurance, max: 100 },
       { label: 'VIT', value: state.stats.vitality, max: 100 },
       { label: 'DIS', value: state.stats.discipline, max: 100 },
+      { label: 'SAB', value: state.stats.wisdom, max: 100 },
+      { label: 'EQU', value: state.stats.balance, max: 100 },
     ];
 
     const total = activeHabits.length + workoutMissions.length + mealMissions.length;
@@ -630,7 +638,7 @@ export function Dashboard() {
               <RadarChart stats={statsData} size={chartSize} />
               
               {/* Atributos Básicos Alinhados */}
-              <div className="mt-6 grid w-full grid-cols-5 gap-1.5 sm:gap-2">
+              <div className="mt-6 grid w-full grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
                 {statsData.map((stat) => (
                   <div key={stat.label} className="group flex flex-col items-center gap-1 sm:gap-1.5 rounded-xl border border-[#1E1E26] bg-black/40 py-2 transition-all hover:border-blue-500/30">
                     <span className="text-[8px] sm:text-[9px] font-black text-gray-500 group-hover:text-blue-400 transition-colors uppercase tracking-widest">{stat.label}</span>

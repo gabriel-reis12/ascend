@@ -14,7 +14,34 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-12 — Épico 1: A Fundação & O Despertar
+- **Migração do Banco de Dados (Supabase)**: Adicionadas colunas `wisdom`, `balance`, `gender`, `height`, `weight_current`, `weight_target`, `training_focus`, `main_goal`, `experience_level` à tabela `profiles`.
+- **useHunterStore.ts**: Refatoração completa da store:
+  - `HunterClass`: Titan removido, `Creator` e `Leader` adicionados.
+  - `HunterStats`: Adicionados `wisdom` (SAB) e `balance` (EQU) — agora 7 atributos no total.
+  - `HunterState`: Campos de perfil físico e gênero adicionados (`gender`, `height`, `weightCurrent`, `weightTarget`, `trainingFocus`, `mainGoal`, `experienceLevel`).
+  - `loadProfile` e `saveProfile` atualizados para persistir todos os novos campos.
+- **Onboarding.tsx**: Reescrito completamente com 6 etapas sequenciais:
+  1. Informações Básicas (nome, data nascimento, gênero ♂/♀)
+  2. Perfil Físico (altura, peso atual/meta, foco de treino)
+  3. Objetivo Principal (4 categorias)
+  4. Nível de Experiência (Iniciante / Intermediário / Avançado)
+  5. Introdução do Arquiteto (narrativa de Solo Leveling com referência a Sung Jin-Woo) + Questionário de Classes (5 questões para 5 classes)
+  6. Animação de Despertar (loading sci-fi com frases progressivas e citações do Arquiteto) + Seleção de Classe (cards com placeholders para Creator e Leader)
+- **Dashboard.tsx**: Radar e grid de atributos expandidos para 7 stats (SAB e EQU). themeColors e validClasses atualizados para Creator e Leader.
+- **Settings.tsx**: Cases `Creator` e `Leader` adicionados (Titan removido).
+- **NewQuestModal.tsx / NewHabitModal.tsx**: `wisdom` e `balance` adicionados às opções de atributo alvo.
+- **useTasks.ts / useHabits.ts**: Tipo `stat_target` expandido para incluir `'wisdom' | 'balance'`.
+- **Build validado**: `npm run build` — ✅ 2206 módulos, zero erros TypeScript.
+
+
+
 ### 2026-05-27 (Sessão Atual)
+- **Ajustes de Calibração e Correções de Bugs (RPG Matrix)**:
+  - **Soma de Atributos Segura (Sem Concatenação)**: Adicionamos coações de tipo numéricas explícitas (`Number()`) in `updateStat` e `loadProfile` na store `useHunterStore.ts`. Isso impede que valores de atributos (inclusive **INT/Inteligência**) sofram bugs de concatenação de string em JavaScript (ex: `10 + "2" = "102"`) ao lidar com dados assíncronos ou retornos do Supabase.
+  - **Exibição Inteligente do Tutorial (ProductTour)**: Introduzimos a flag temporária `ascend_just_finished_onboarding` no `localStorage`. Agora o tutorial interativo do Dashboard é disparado de forma automática **apenas** quando o usuário conclui o Onboarding pela primeira vez ou quando aciona o botão de reativação manual em Ajustes, mantendo a experiência do Dashboard limpa nos acessos diários recorrentes.
+  - **Ativação e Algoritmo de Streak Diário**: Desenvolvemos um algoritmo resiliente baseado em fusos locais no `loadProfile` da store do Zustand. Ele compara o dia do último acesso do usuário com o dia de hoje (formato `YYYY-MM-DD` local). Se o acesso foi ontem, incrementa a streak atual e recorde (`streak_current` e `streak_best`). Se foi hoje, mantém intacto. Se foi antes de ontem (quebra de sequência), reseta a streak para 1, atualizando e salvando de forma automática os dados no perfil do Supabase.
+  
 - **Correção Crítica: Loading Eterno em Produção (Vercel)**:
   - **Causa raiz identificada**: Todos os hooks (`useHabits`, `useMealPlans`, `useTasks`) e as páginas `Workouts.tsx` e `Nutrition.tsx` tinham `if (!user) return` sem setar `loading = false`. Isso causava loading eterno (skeletons infinitos) quando o usuário estava deslogado no Vercel.
   - **Correção nos hooks**: Adicionado reset imediato do `loading = false` quando `user` é null, limpando todos os estados de dados para arrays vazios.

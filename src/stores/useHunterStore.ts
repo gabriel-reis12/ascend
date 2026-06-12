@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
 
 export type HunterRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'National' | 'Monarch';
-export type HunterClass = 'Warrior' | 'Scholar' | 'Monk' | 'Titan';
+export type HunterClass = 'Warrior' | 'Scholar' | 'Creator' | 'Monk' | 'Leader';
+export type HunterGender = 'male' | 'female';
 
 export interface HunterStats {
   strength: number;
@@ -11,6 +12,8 @@ export interface HunterStats {
   endurance: number;
   vitality: number;
   discipline: number;
+  wisdom: number;
+  balance: number;
 }
 
 export interface HunterState {
@@ -22,13 +25,20 @@ export interface HunterState {
   username: string;
   fullName: string;
   birthday: string;
+  gender: HunterGender | null;
+  height: number | null;
+  weightCurrent: number | null;
+  weightTarget: number | null;
+  trainingFocus: string | null;
+  mainGoal: string | null;
+  experienceLevel: string | null;
   stats: HunterStats;
   streak: {
     current: number;
     best: number;
   };
   pendingLevelUp: number | null;
-  
+
   // Actions
   addXp: (amount: number, userId?: string) => Promise<void>;
   updateStat: (stat: keyof HunterStats, amount: number, userId?: string) => Promise<void>;
@@ -45,6 +55,8 @@ const INITIAL_STATS: HunterStats = {
   endurance: 10,
   vitality: 10,
   discipline: 10,
+  wisdom: 10,
+  balance: 10,
 };
 
 const INITIAL_STATE = {
@@ -56,6 +68,13 @@ const INITIAL_STATE = {
   username: '',
   fullName: '',
   birthday: '',
+  gender: null as HunterGender | null,
+  height: null as number | null,
+  weightCurrent: null as number | null,
+  weightTarget: null as number | null,
+  trainingFocus: null as string | null,
+  mainGoal: null as string | null,
+  experienceLevel: null as string | null,
   stats: INITIAL_STATS,
   streak: { current: 0, best: 0 },
   pendingLevelUp: null as number | null,
@@ -89,11 +108,11 @@ export const useHunterStore = create<HunterState>()(
 
       addXp: async (amount, userId) => {
         const state = get();
-        
+
         // Bônus de Streak: +2% por dia de streak, limitado a +100%
         const streakBonus = Math.min(state.streak.current * 0.02, 1.0);
         const finalAmount = Math.floor(amount * (1 + streakBonus));
-        
+
         let newXp = state.xp + finalAmount;
         let newLevel = state.level;
         let newXpReq = state.xpRequired;
@@ -120,9 +139,16 @@ export const useHunterStore = create<HunterState>()(
       clearLevelUp: () => set({ pendingLevelUp: null }),
 
       updateStat: async (stat, amount, userId) => {
-        set((state) => ({
-          stats: { ...state.stats, [stat]: state.stats[stat] + amount },
-        }));
+        set((state) => {
+          const currentValue = Number(state.stats[stat]) || 0;
+          const increment = Number(amount) || 0;
+          return {
+            stats: {
+              ...state.stats,
+              [stat]: currentValue + increment,
+            },
+          };
+        });
         if (userId) {
           await get().saveProfile(userId);
         }
@@ -147,8 +173,47 @@ export const useHunterStore = create<HunterState>()(
 
         if (data && !error) {
           const level = data.level || 1;
+
+          // Lógica robusta e resiliente de cálculo e atualização de Streak diária
+          let newStreakCurrent = data.streak_current || 0;
+          let newStreakBest = data.streak_best || 0;
+          let shouldUpdateProfileInDb = false;
+
+          const now = new Date();
+          const todayStr = now.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD local
+
+          if (data.last_check_in) {
+            const lastCheckInDate = new Date(data.last_check_in);
+            const lastCheckInStr = lastCheckInDate.toLocaleDateString('en-CA');
+
+            if (lastCheckInStr !== todayStr) {
+              const yesterday = new Date(now);
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = yesterday.toLocaleDateString('en-CA');
+
+              if (lastCheckInStr === yesterdayStr) {
+                // Caçador consistente: streak mantido e incrementado
+                newStreakCurrent += 1;
+                if (newStreakCurrent > newStreakBest) {
+                  newStreakBest = newStreakCurrent;
+                }
+              } else {
+                // Caçador falhou no ciclo anterior: streak resetada
+                newStreakCurrent = 1;
+              }
+              shouldUpdateProfileInDb = true;
+            }
+          } else {
+            // Primeiro check-in da história do caçador
+            newStreakCurrent = 1;
+            if (newStreakCurrent > newStreakBest) {
+              newStreakBest = newStreakCurrent;
+            }
+            shouldUpdateProfileInDb = true;
+          }
+
           set({
-            level: level,
+            level,
             xp: data.xp || 0,
             xpRequired: data.xp_to_next_level || getXpRequiredForLevel(level),
             rank: (data.rank as HunterRank) || getRankForLevel(level),
@@ -156,18 +221,38 @@ export const useHunterStore = create<HunterState>()(
             username: data.username || '',
             fullName: data.full_name || '',
             birthday: data.birthday || '',
+            gender: (data.gender as HunterGender) || null,
+            height: data.height || null,
+            weightCurrent: data.weight_current || null,
+            weightTarget: data.weight_target || null,
+            trainingFocus: data.training_focus || null,
+            mainGoal: data.main_goal || null,
+            experienceLevel: data.experience_level || null,
             stats: {
-              strength: data.strength || 10,
-              intelligence: data.intelligence || 10,
-              endurance: data.endurance || 10,
-              vitality: data.vitality || 10,
-              discipline: data.discipline || 10,
+              strength: Number(data.strength) || 10,
+              intelligence: Number(data.intelligence) || 10,
+              endurance: Number(data.endurance) || 10,
+              vitality: Number(data.vitality) || 10,
+              discipline: Number(data.discipline) || 10,
+              wisdom: Number(data.wisdom) || 10,
+              balance: Number(data.balance) || 10,
             },
             streak: {
-              current: data.streak_current || 0,
-              best: data.streak_best || 0,
+              current: newStreakCurrent,
+              best: newStreakBest,
             },
           });
+
+          if (shouldUpdateProfileInDb) {
+            await supabase
+              .from('profiles')
+              .update({
+                streak_current: newStreakCurrent,
+                streak_best: newStreakBest,
+                last_check_in: now.toISOString(),
+              })
+              .eq('id', userId);
+          }
         }
       },
 
@@ -183,11 +268,20 @@ export const useHunterStore = create<HunterState>()(
             class: state.hunterClass,
             full_name: state.fullName,
             birthday: state.birthday || null,
+            gender: state.gender || null,
+            height: state.height || null,
+            weight_current: state.weightCurrent || null,
+            weight_target: state.weightTarget || null,
+            training_focus: state.trainingFocus || null,
+            main_goal: state.mainGoal || null,
+            experience_level: state.experienceLevel || null,
             strength: state.stats.strength,
             intelligence: state.stats.intelligence,
             endurance: state.stats.endurance,
             vitality: state.stats.vitality,
             discipline: state.stats.discipline,
+            wisdom: state.stats.wisdom,
+            balance: state.stats.balance,
             streak_current: state.streak.current,
             streak_best: state.streak.best,
           })

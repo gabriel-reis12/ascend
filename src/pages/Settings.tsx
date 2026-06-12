@@ -167,16 +167,27 @@ export function Settings() {
           icon: <Zap className="w-6 h-6 text-cyan-400" />,
           image: `/Classes/Monk/${rankName}.jpeg`
         };
-      case 'Titan':
+      case 'Creator':
         return {
-          title: 'TITAN',
-          glow: 'shadow-[0_0_35px_rgba(239,68,68,0.35)]',
-          border: 'border-red-500/40',
-          bgGlow: 'bg-red-500/5',
-          text: 'text-red-400',
-          icon: <Shield className="w-6 h-6 text-red-400" />,
-          image: `/Classes/Titan/${rankName}.jpeg`
+          title: 'CREATOR',
+          glow: 'shadow-[0_0_35px_rgba(251,191,36,0.35)]',
+          border: 'border-amber-500/40',
+          bgGlow: 'bg-amber-500/5',
+          text: 'text-amber-400',
+          icon: <Zap className="w-6 h-6 text-amber-400" />,
+          image: `/Classes/Creator/${rankName}.jpeg`
         };
+      case 'Leader':
+        return {
+          title: 'LEADER',
+          glow: 'shadow-[0_0_35px_rgba(244,63,94,0.35)]',
+          border: 'border-rose-500/40',
+          bgGlow: 'bg-rose-500/5',
+          text: 'text-rose-400',
+          icon: <Shield className="w-6 h-6 text-rose-400" />,
+          image: `/Classes/Leader/${rankName}.jpeg`
+        };
+
       default:
         return {
           title: 'CAÇADOR DESPERTO',
@@ -412,6 +423,7 @@ export function Settings() {
           whileTap={{ scale: 0.95 }}
           onClick={() => {
             localStorage.removeItem('ascend_tour_completed');
+            localStorage.setItem('ascend_just_finished_onboarding', 'true');
             navigate('/');
           }}
           className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/5 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-purple-400 transition-all cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.1)] self-start sm:self-auto"
@@ -688,6 +700,7 @@ export function Settings() {
                   type="button"
                   onClick={() => {
                     localStorage.removeItem('ascend_tour_completed');
+                    localStorage.setItem('ascend_just_finished_onboarding', 'true');
                     navigate('/');
                   }}
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl border border-purple-500/30 bg-purple-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-purple-400 transition-all hover:bg-purple-500/20 hover:border-purple-500 active:scale-95 cursor-pointer"

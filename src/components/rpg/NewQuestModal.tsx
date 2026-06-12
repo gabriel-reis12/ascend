@@ -10,11 +10,15 @@ const PRESET_COLORS = [
 
 const STAT_OPTIONS: { value: Task['stat_target']; label: string }[] = [
   { value: null,          label: 'Nenhum' },
-  { value: 'strength',    label: 'Força' },
-  { value: 'intelligence', label: 'Inteligência' },
-  { value: 'endurance',  label: 'Resistência' },
-  { value: 'vitality',   label: 'Vitalidade' },
+  { value: 'strength',    label: '⚔️ Força' },
+  { value: 'intelligence', label: '🧠 Inteligência' },
+  { value: 'endurance',  label: '🛡️ Resistência' },
+  { value: 'vitality',   label: '💚 Vitalidade' },
+  { value: 'discipline', label: '🔥 Disciplina' },
+  { value: 'wisdom',     label: '📖 Sabedoria' },
+  { value: 'balance',    label: '☯️ Equilíbrio' },
 ];
+
 
 interface NewQuestModalProps {
   open: boolean;
