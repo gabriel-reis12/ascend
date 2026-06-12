@@ -686,13 +686,14 @@ export function Onboarding() {
         {/* ── QUESTIONÁRIO DE CLASSES ── */}
         {step === 'class-quiz' && (
           <motion.div
-            key={`quiz-${currentQuestionIndex}`}
+            key="class-quiz"
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.35 }}
             className="max-w-2xl w-full flex flex-col items-center gap-8"
           >
+
             {/* Progresso */}
             <div className="w-full space-y-3 text-center">
               <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">
