@@ -16,9 +16,14 @@ import {
   Check, 
   AlertTriangle,
   Loader2,
-  HelpCircle
+  HelpCircle,
+  Ruler,
+  Weight,
+  Target,
+  Dumbbell,
+  Brain
 } from 'lucide-react';
-import { useHunterStore, type HunterClass } from '../stores/useHunterStore';
+import { useHunterStore, type HunterClass, type HunterGender } from '../stores/useHunterStore';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -30,6 +35,13 @@ export function Settings() {
   // Estado local dos formulários
   const [fullName, setFullName] = useState(hunterStore.fullName || '');
   const [birthday, setBirthday] = useState(hunterStore.birthday || '');
+  const [gender, setGender] = useState<HunterGender | ''>(hunterStore.gender || '');
+  const [height, setHeight] = useState(hunterStore.height ? String(hunterStore.height) : '');
+  const [weightCurrent, setWeightCurrent] = useState(hunterStore.weightCurrent ? String(hunterStore.weightCurrent) : '');
+  const [weightTarget, setWeightTarget] = useState(hunterStore.weightTarget ? String(hunterStore.weightTarget) : '');
+  const [trainingFocus, setTrainingFocus] = useState(hunterStore.trainingFocus || '');
+  const [mainGoal, setMainGoal] = useState(hunterStore.mainGoal || '');
+  const [experienceLevel, setExperienceLevel] = useState(hunterStore.experienceLevel || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -118,7 +130,24 @@ export function Settings() {
   useEffect(() => {
     setFullName(hunterStore.fullName || '');
     setBirthday(hunterStore.birthday || '');
-  }, [hunterStore.fullName, hunterStore.birthday]);
+    setGender(hunterStore.gender || '');
+    setHeight(hunterStore.height ? String(hunterStore.height) : '');
+    setWeightCurrent(hunterStore.weightCurrent ? String(hunterStore.weightCurrent) : '');
+    setWeightTarget(hunterStore.weightTarget ? String(hunterStore.weightTarget) : '');
+    setTrainingFocus(hunterStore.trainingFocus || '');
+    setMainGoal(hunterStore.mainGoal || '');
+    setExperienceLevel(hunterStore.experienceLevel || '');
+  }, [
+    hunterStore.fullName,
+    hunterStore.birthday,
+    hunterStore.gender,
+    hunterStore.height,
+    hunterStore.weightCurrent,
+    hunterStore.weightTarget,
+    hunterStore.trainingFocus,
+    hunterStore.mainGoal,
+    hunterStore.experienceLevel
+  ]);
 
   // Configuração visual por classe
   const getClassConfig = (hClass: HunterClass | null, rank: string | null | undefined) => {
@@ -216,7 +245,14 @@ export function Settings() {
         .from('profiles')
         .update({
           full_name: fullName,
-          birthday: birthday || null
+          birthday: birthday || null,
+          gender: gender || null,
+          height: height ? parseFloat(height) : null,
+          weight_current: weightCurrent ? parseFloat(weightCurrent) : null,
+          weight_target: weightTarget ? parseFloat(weightTarget) : null,
+          training_focus: trainingFocus || null,
+          main_goal: mainGoal || null,
+          experience_level: experienceLevel || null,
         })
         .eq('id', user.id);
         
@@ -554,7 +590,165 @@ export function Settings() {
 
               </div>
 
-              <div className="flex justify-end">
+              {/* Divisor */}
+              <div className="border-t border-[#1e1e26] my-6" />
+
+              {/* Subtítulo Seção 2: Biometria */}
+              <div className="space-y-1 mb-4">
+                <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 font-orbitron">
+                  Parâmetros Biométricos & Gênero
+                </h3>
+                <p className="text-[8px] font-bold uppercase tracking-widest text-gray-600">
+                  Calibração de Atributos Físicos e Imagem no Perfil do Caçador
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Sexo */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
+                    Sexo (Gênero)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3 h-[42px] sm:h-[46px]">
+                    <button
+                      type="button"
+                      onClick={() => setGender('male')}
+                      className={`flex items-center justify-center gap-2 rounded-xl border text-xs font-bold font-orbitron transition-all cursor-pointer ${
+                        gender === 'male'
+                          ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                          : 'bg-black/40 border-[#1e1e26] text-gray-500 hover:border-gray-700'
+                      }`}
+                    >
+                      <span>♂</span>
+                      <span>Masculino</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender('female')}
+                      className={`flex items-center justify-center gap-2 rounded-xl border text-xs font-bold font-orbitron transition-all cursor-pointer ${
+                        gender === 'female'
+                          ? 'bg-purple-500/10 border-purple-500/50 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                          : 'bg-black/40 border-[#1e1e26] text-gray-500 hover:border-gray-700'
+                      }`}
+                    >
+                      <span>♀</span>
+                      <span>Feminino</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Registro Biométrico (Altura, Peso, Peso Meta) */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                      <Ruler className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Altura (cm)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 175"
+                      value={height}
+                      onChange={(e) => setHeight(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                      <Weight className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Peso (kg)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 80"
+                      value={weightCurrent}
+                      onChange={(e) => setWeightCurrent(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1">
+                      <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Meta (kg)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 75"
+                      value={weightTarget}
+                      onChange={(e) => setWeightTarget(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Divisor */}
+              <div className="border-t border-[#1e1e26] my-6" />
+
+              {/* Subtítulo Seção 3: Objetivos */}
+              <div className="space-y-1 mb-4">
+                <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 font-orbitron">
+                  Diretrizes & Foco de Evolução
+                </h3>
+                <p className="text-[8px] font-bold uppercase tracking-widest text-gray-600">
+                  Definições de Metas de Treino, Carreira e Nível de Experiência
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Foco de Treino */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                    <Dumbbell className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Foco de Treino
+                  </label>
+                  <select
+                    value={trainingFocus}
+                    onChange={(e) => setTrainingFocus(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none [color-scheme:dark]"
+                  >
+                    <option value="">Selecione um foco...</option>
+                    <option value="Musculação">Musculação</option>
+                    <option value="Funcional">Funcional</option>
+                    <option value="Cardio / Endurance">Cardio / Endurance</option>
+                    <option value="Esportes de Combate">Esportes de Combate</option>
+                    <option value="Calistenia">Calistenia</option>
+                    <option value="Flexibilidade / Yoga">Flexibilidade / Yoga</option>
+                  </select>
+                </div>
+
+                {/* Objetivo Principal */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                    <Brain className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Objetivo Principal
+                  </label>
+                  <select
+                    value={mainGoal}
+                    onChange={(e) => setMainGoal(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none [color-scheme:dark]"
+                  >
+                    <option value="">Selecione um objetivo...</option>
+                    <option value="general">Evolução Geral</option>
+                    <option value="health">Performance & Saúde</option>
+                    <option value="finance">Independência Financeira</option>
+                    <option value="career">Carreira & Habilidades</option>
+                  </select>
+                </div>
+
+                {/* Nível de Experiência */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Experiência (Rank)
+                  </label>
+                  <select
+                    value={experienceLevel}
+                    onChange={(e) => setExperienceLevel(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none [color-scheme:dark]"
+                  >
+                    <option value="">Selecione a experiência...</option>
+                    <option value="beginner">Iniciante [Rank E]</option>
+                    <option value="intermediate">Intermediário [Rank C]</option>
+                    <option value="advanced">Avançado [Rank S]</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
                 <button
                   type="submit"
                   disabled={profileLoading}

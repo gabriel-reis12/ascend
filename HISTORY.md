@@ -14,6 +14,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-12 — Ajustes do Perfil Físico no Painel de Configurações
+- **Edição Completa de Perfil**: Adicionados os novos campos de perfil físico e metas à página de Ajustes (`Settings.tsx`):
+  - Sexo / Gênero (botões interativos de seleção rápida Masculino ♂ e Feminino ♀).
+  - Altura (cm), Peso Atual (kg) e Peso Meta (kg) em grid compacto biométrico.
+  - Seletores customizados para Foco de Treino, Objetivo Principal de Evolução e Nível de Experiência/Rank.
+- **Sincronização de Estados**: Atualizado o hook `useEffect` de monitoramento de estado local para garantir que quaisquer mudanças na store `useHunterStore` se reflitam em tempo real nos inputs locais.
+- **Persistência Remota**: Modificada a função `handleSaveProfile` para atualizar no Supabase todas as novas propriedades biométricas e de metas antes de re-sincronizar os dados da store local, mantendo 100% de coesão nos dados.
+
 ### 2026-06-12 — Épico 1: A Fundação & O Despertar
 - **Migração do Banco de Dados (Supabase)**: Adicionadas colunas `wisdom`, `balance`, `gender`, `height`, `weight_current`, `weight_target`, `training_focus`, `main_goal`, `experience_level` à tabela `profiles`.
 - **useHunterStore.ts**: Refatoração completa da store:
