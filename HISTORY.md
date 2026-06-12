@@ -16,12 +16,16 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ### 2026-06-12 — Ajustes do Perfil Físico no Painel de Configurações
 - **Edição Completa de Perfil**: Adicionados os novos campos de perfil físico e metas à página de Ajustes (`Settings.tsx`):
-  - Sexo / Gênero (botões interativos de seleção rápida Masculino ♂ e Feminino ♀).
-  - Altura (cm), Peso Atual (kg) e Peso Meta (kg) em grid compacto biométrico.
+  - Sexo / Gênero (padronizado em um `<select>` com as opções Masculino e Feminino).
+  - Altura (cm), Peso Atual (kg) e Peso Meta (kg) em grid de 4 colunas em telas maiores (alinhado horizontalmente com o Sexo).
   - Seletores customizados para Foco de Treino, Objetivo Principal de Evolução e Nível de Experiência/Rank.
+- **Setas Customizadas com Borda & Textos Alinhados**:
+  - Removido o visual do chevron nativo de todos os `<select>` (`appearance-none`).
+  - Implementado um wrapper absoluto contendo um ícone de `ChevronDown` e uma **borda divisória à esquerda (`border-l`)**, separando a seta de expansão do campo de texto de forma 100% visível, padronizada e imersiva.
+  - Adicionado padding-right (`pr-10`) em todos os selects, garantindo que o texto selecionado nunca se sobreponha à setinha de expansão e fique sempre 100% legível e contido dentro da caixa.
 - **Responsividade Aprimorada**:
-  - Ajustado o layout biométrico para usar um grid de `lg:grid-cols-3` em vez de `md:grid-cols-2`, dividindo o espaço em 1/3 para o Sexo e 2/3 para as informações biométricas. Isso evita o estrangulamento lateral em telas médias e grandes.
-  - Adicionado `whitespace-nowrap` nas labels biométricas ("Altura (cm)", "Peso (kg)", "Meta (kg)") para evitar quebras de linhas desalinhadas.
+  - Ajustado o layout biométrico para usar um grid dinâmico (`grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6`) unificando Sexo, Altura, Peso e Meta em 4 colunas idênticas na mesma linha horizontal em telas grandes, o que elimina o esmagamento lateral e garante harmonia visual absoluta.
+  - Adicionado `whitespace-nowrap` nas labels biométricas para evitar quebras desnecessárias de texto.
 - **Sincronização de Estados**: Atualizado o hook `useEffect` de monitoramento de estado local para garantir que quaisquer mudanças na store `useHunterStore` se reflitam em tempo real nos inputs locais.
 - **Persistência Remota**: Modificada a função `handleSaveProfile` para atualizar no Supabase todas as novas propriedades biométricas e de metas antes de re-sincronizar os dados da store local, mantendo 100% de coesão nos dados.
 

@@ -21,7 +21,8 @@ import {
   Weight,
   Target,
   Dumbbell,
-  Brain
+  Brain,
+  ChevronDown
 } from 'lucide-react';
 import { useHunterStore, type HunterClass, type HunterGender } from '../stores/useHunterStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -603,78 +604,66 @@ export function Settings() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Sexo */}
-                <div className="space-y-1.5 lg:col-span-1">
+                <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
                     Sexo (Gênero)
                   </label>
-                  <div className="grid grid-cols-2 gap-3 h-[42px] sm:h-[46px]">
-                    <button
-                      type="button"
-                      onClick={() => setGender('male')}
-                      className={`flex items-center justify-center gap-2 rounded-xl border text-xs font-bold font-orbitron transition-all cursor-pointer ${
-                        gender === 'male'
-                          ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                          : 'bg-black/40 border-[#1e1e26] text-gray-500 hover:border-gray-700'
-                      }`}
+                  <div className="relative">
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value as HunterGender)}
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
                     >
-                      <span>♂</span>
-                      <span>Masculino</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGender('female')}
-                      className={`flex items-center justify-center gap-2 rounded-xl border text-xs font-bold font-orbitron transition-all cursor-pointer ${
-                        gender === 'female'
-                          ? 'bg-purple-500/10 border-purple-500/50 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-                          : 'bg-black/40 border-[#1e1e26] text-gray-500 hover:border-gray-700'
-                      }`}
-                    >
-                      <span>♀</span>
-                      <span>Feminino</span>
-                    </button>
+                      <option value="">Selecione...</option>
+                      <option value="male">Masculino</option>
+                      <option value="female">Feminino</option>
+                    </select>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
+                      <ChevronDown size={14} className="text-gray-500" />
+                    </div>
                   </div>
                 </div>
 
                 {/* Registro Biométrico (Altura, Peso, Peso Meta) */}
-                <div className="lg:col-span-2 grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
-                      <Ruler className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Altura (cm)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 175"
-                      value={height}
-                      onChange={(e) => setHeight(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
-                      <Weight className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Peso (kg)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 80"
-                      value={weightCurrent}
-                      onChange={(e) => setWeightCurrent(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
-                      <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Meta (kg)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 75"
-                      value={weightTarget}
-                      onChange={(e) => setWeightTarget(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
+                    <Ruler className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Altura (cm)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 175"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    className="w-full px-3 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
+                    <Weight className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Peso (kg)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 80"
+                    value={weightCurrent}
+                    onChange={(e) => setWeightCurrent(e.target.value)}
+                    className="w-full px-3 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
+                    <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Meta (kg)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 75"
+                    value={weightTarget}
+                    onChange={(e) => setWeightTarget(e.target.value)}
+                    className="w-full px-3 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-bold font-orbitron text-white text-center transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none"
+                  />
                 </div>
               </div>
 
@@ -697,19 +686,24 @@ export function Settings() {
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
                     <Dumbbell className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Foco de Treino
                   </label>
-                  <select
-                    value={trainingFocus}
-                    onChange={(e) => setTrainingFocus(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none [color-scheme:dark]"
-                  >
-                    <option value="">Selecione um foco...</option>
-                    <option value="Musculação">Musculação</option>
-                    <option value="Funcional">Funcional</option>
-                    <option value="Cardio / Endurance">Cardio / Endurance</option>
-                    <option value="Esportes de Combate">Esportes de Combate</option>
-                    <option value="Calistenia">Calistenia</option>
-                    <option value="Flexibilidade / Yoga">Flexibilidade / Yoga</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={trainingFocus}
+                      onChange={(e) => setTrainingFocus(e.target.value)}
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                    >
+                      <option value="">Selecione um foco...</option>
+                      <option value="Musculação">Musculação</option>
+                      <option value="Funcional">Funcional</option>
+                      <option value="Cardio / Endurance">Cardio / Endurance</option>
+                      <option value="Esportes de Combate">Esportes de Combate</option>
+                      <option value="Calistenia">Calistenia</option>
+                      <option value="Flexibilidade / Yoga">Flexibilidade / Yoga</option>
+                    </select>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
+                      <ChevronDown size={14} className="text-gray-500" />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Objetivo Principal */}
@@ -717,17 +711,22 @@ export function Settings() {
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
                     <Brain className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Objetivo Principal
                   </label>
-                  <select
-                    value={mainGoal}
-                    onChange={(e) => setMainGoal(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none [color-scheme:dark]"
-                  >
-                    <option value="">Selecione um objetivo...</option>
-                    <option value="general">Evolução Geral</option>
-                    <option value="health">Performance & Saúde</option>
-                    <option value="finance">Independência Financeira</option>
-                    <option value="career">Carreira & Habilidades</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={mainGoal}
+                      onChange={(e) => setMainGoal(e.target.value)}
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                    >
+                      <option value="">Selecione um objetivo...</option>
+                      <option value="general">Evolução Geral</option>
+                      <option value="health">Performance & Saúde</option>
+                      <option value="finance">Independência Financeira</option>
+                      <option value="career">Carreira & Habilidades</option>
+                    </select>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
+                      <ChevronDown size={14} className="text-gray-500" />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Nível de Experiência */}
@@ -735,16 +734,21 @@ export function Settings() {
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Experiência (Rank)
                   </label>
-                  <select
-                    value={experienceLevel}
-                    onChange={(e) => setExperienceLevel(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none [color-scheme:dark]"
-                  >
-                    <option value="">Selecione a experiência...</option>
-                    <option value="beginner">Iniciante [Rank E]</option>
-                    <option value="intermediate">Intermediário [Rank C]</option>
-                    <option value="advanced">Avançado [Rank S]</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={experienceLevel}
+                      onChange={(e) => setExperienceLevel(e.target.value)}
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                    >
+                      <option value="">Selecione a experiência...</option>
+                      <option value="beginner">Iniciante [Rank E]</option>
+                      <option value="intermediate">Intermediário [Rank C]</option>
+                      <option value="advanced">Avançado [Rank S]</option>
+                    </select>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
+                      <ChevronDown size={14} className="text-gray-500" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
