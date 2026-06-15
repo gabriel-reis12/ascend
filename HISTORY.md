@@ -24,7 +24,8 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - Adicionadas ações automáticas de checagem: `checkStreakMilestones` para bônus e medalhas de consistência consecutiva (3d, 7d, 15d, 30d) e `checkAchievements` para conquistas de atributos (>= 20 em FOR, INT, RES, VIT, DIS, SAB, EQU).
   - Adicionada ação `equipTitle` para gravar e equipar títulos de prestígio no banco de dados.
 - **Interface do Dashboard (Dashboard.tsx)**:
-  - Desenvolvido o HUD interativo **Missões Principais do Dia (Daily Main Quests)**, acompanhando 4 objetivos diários integrados (Superação Física, Ciclo de Nutrição, Foco do Desperto, Desafio de Classe) com um botão holográfico de resgate de bônus (+100 XP) limitado a 1x ao dia.
+  - Desenvolvido o HUD interativo **Missões Principais do Dia (Daily Main Quests)**, contendo 4 objetivos integrados (Superação Física, Ciclo de Nutrição, Foco do Desperto, Desafio de Classe) que atuam como links diretos e fluidos para as respectivas abas (`/workouts`, `/nutrition`, `/quests`), melhorando drasticamente a navegação entre os menus.
+  - Corrigida a legibilidade do HUD substituindo a nomenclatura antiga "Ativo/Inativo" por status semânticos reais: **"Concluído" (em verde)** para quests já completadas e **"Pendente" (em laranja com efeito de pulso)** para quests incompletas.
   - Implementada a barra visual neon **Domínios de Evolução** logo abaixo dos atributos, mapeando a evolução das dimensões de vida baseadas no nível dos atributos agregados (Corpo, Mente, Fortuna, Carreira e Equilíbrio).
   - Adicionado alerta dinâmico de XP flutuante (`xpAlerts` com `framer-motion`) que exibe de forma reativa os pontos de XP ganhos na hora sobre a barra de nível.
   - Adicionada a exibição do título de prestígio ativo equipado logo abaixo do nome do caçador.

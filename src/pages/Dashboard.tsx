@@ -271,21 +271,24 @@ export function Dashboard() {
         title: 'Superação Física',
         desc: workoutMissions.length > 0 ? "Execute pelo menos 1 treino ativo hoje" : "Nenhum treino agendado hoje (Livre)",
         isCompleted: workoutMissions.length > 0 ? workoutMissions.some(m => m.isCompleted) : true,
-        icon: Dumbbell
+        icon: Dumbbell,
+        path: '/workouts'
       },
       {
         id: 'meal',
         title: 'Ciclo de Nutrição',
         desc: mealMissions.length > 0 ? "Registre todas as refeições do seu cardápio" : "Nenhum cardápio ativo hoje (Livre)",
         isCompleted: mealMissions.length > 0 ? mealMissions.every(m => m.isCompleted) : true,
-        icon: UtensilsCrossed
+        icon: UtensilsCrossed,
+        path: '/nutrition'
       },
       {
         id: 'habits',
         title: 'Foco do Desperto',
         desc: `Conclua 2 hábitos ou tarefas hoje (${completedToday.size + tasksCompletedToday}/2)`,
         isCompleted: (completedToday.size + tasksCompletedToday) >= 2,
-        icon: CheckCircle2
+        icon: CheckCircle2,
+        path: '/quests'
       },
       {
         id: 'class',
@@ -294,7 +297,8 @@ export function Dashboard() {
           ? `Realize 1 hábito/tarefa de classe [${classKeyStats.map(s => s.slice(0, 3).toUpperCase()).join('/')}]`
           : 'Nenhum desafio de classe agendado hoje (Livre)',
         isCompleted: activeHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target)) ? completedClassQuest : true,
-        icon: Zap
+        icon: Zap,
+        path: '/quests'
       }
     ];
   }, [workoutMissions, mealMissions, completedToday, tasksCompletedToday, activeHabits, classKeyStats, completedClassQuest]);
@@ -529,12 +533,20 @@ export function Dashboard() {
               {dailyQuestsList.map((q) => {
                 const IconComponent = q.icon;
                 return (
-                  <div 
+                  <motion.button 
                     key={q.id}
-                    className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                    onClick={() => navigate(q.path)}
+                    whileHover={{ 
+                      scale: 1.02, 
+                      x: 2, 
+                      borderColor: q.isCompleted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.4)',
+                      boxShadow: q.isCompleted ? '0 0 15px rgba(16, 185, 129, 0.1)' : '0 0 15px rgba(59, 130, 246, 0.1)'
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`flex items-center gap-3 rounded-xl border p-3 transition-all text-left cursor-pointer ${
                       q.isCompleted 
                         ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400' 
-                        : 'border-[#1E1E26] bg-black/20 text-gray-400'
+                        : 'border-[#1E1E26] bg-black/20 text-gray-400 hover:border-blue-500/30'
                     }`}
                   >
                     <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
@@ -553,11 +565,11 @@ export function Dashboard() {
                       </p>
                     </div>
                     {q.isCompleted ? (
-                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 shrink-0">Ativo</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 shrink-0 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">Concluído</span>
                     ) : (
-                      <span className="text-[9px] font-black uppercase tracking-widest text-gray-600 shrink-0">Inativo</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-orange-400 shrink-0 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20 animate-pulse">Pendente</span>
                     )}
-                  </div>
+                  </motion.button>
                 );
               })}
             </div>
