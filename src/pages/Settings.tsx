@@ -22,11 +22,49 @@ import {
   Target,
   Dumbbell,
   Brain,
-  ChevronDown
+  ChevronDown,
+  Award,
+  Flame,
+  Crown,
+  Heart,
+  Compass,
+  Scale
 } from 'lucide-react';
 import { useHunterStore, type HunterClass, type HunterGender } from '../stores/useHunterStore';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+
+const ALL_POSSIBLE_ACHIEVEMENTS = [
+  // Streak
+  { key: '3d', title: 'Iniciante da Consistência', desc: 'Mantenha uma streak de 3 dias seguidos', icon: 'Flame', titleReward: 'Constante', xp: 50 },
+  { key: '7d', title: 'Guerreiro Diário', desc: 'Mantenha uma streak de 7 dias seguidos', icon: 'Calendar', titleReward: 'Persistente', xp: 150 },
+  { key: '15d', title: 'Mestre da Rotina', desc: 'Mantenha uma streak de 15 dias seguidos', icon: 'Shield', titleReward: 'Inabalável', xp: 300 },
+  { key: '30d', title: 'Lenda Ativa', desc: 'Mantenha uma streak de 30 dias seguidos', icon: 'Crown', titleReward: 'Monarca da Rotina', xp: 600 },
+  // Atributos
+  { key: 'strength', title: 'Força Absoluta', desc: 'Alcance 20 pontos de Força', icon: 'Sword', titleReward: 'Colosso', xp: 100 },
+  { key: 'intelligence', title: 'Mente Brilhante', desc: 'Alcance 20 pontos de Inteligência', icon: 'Book', titleReward: 'Arquimago', xp: 100 },
+  { key: 'endurance', title: 'Inquebrável', desc: 'Alcance 20 pontos de Resistência', icon: 'Shield', titleReward: 'Bastião', xp: 100 },
+  { key: 'vitality', title: 'Vigor Eterno', desc: 'Alcance 20 pontos de Vitalidade', icon: 'Heart', titleReward: 'Imortal', xp: 100 },
+  { key: 'discipline', title: 'Mente de Ferro', desc: 'Alcance 20 pontos de Disciplina', icon: 'Brain', titleReward: 'Focado', xp: 100 },
+  { key: 'wisdom', title: 'Olhar Aguçado', desc: 'Alcance 20 pontos de Sabedoria', icon: 'Compass', titleReward: 'Eremita', xp: 100 },
+  { key: 'balance', title: 'Zenith', desc: 'Alcance 20 pontos de Equilíbrio', icon: 'Scale', titleReward: 'Harmônico', xp: 100 },
+];
+
+const getAchievementIcon = (iconName: string, size = 20, className = '') => {
+  switch (iconName) {
+    case 'Flame': return <Flame size={size} className={className} />;
+    case 'Calendar': return <Calendar size={size} className={className} />;
+    case 'Shield': return <Shield size={size} className={className} />;
+    case 'Crown': return <Crown size={size} className={className} />;
+    case 'Sword': return <Sword size={size} className={className} />;
+    case 'Book': return <Book size={size} className={className} />;
+    case 'Heart': return <Heart size={size} className={className} />;
+    case 'Brain': return <Brain size={size} className={className} />;
+    case 'Compass': return <Compass size={size} className={className} />;
+    case 'Scale': return <Scale size={size} className={className} />;
+    default: return <Award size={size} className={className} />;
+  }
+};
 
 export function Settings() {
   const navigate = useNavigate();
@@ -46,6 +84,34 @@ export function Settings() {
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Codex de Conquistas e Títulos
+  const [achievements, setAchievements] = useState<{ title: string; description: string; icon: string; unlocked_at: string }[]>([]);
+  const [loadingAchievements, setLoadingAchievements] = useState(true);
+
+  const fetchAchievements = async () => {
+    if (!user?.id) return;
+    try {
+      setLoadingAchievements(true);
+      const { data, error } = await supabase
+        .from('achievements')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('unlocked_at', { ascending: false });
+
+      if (!error && data) {
+        setAchievements(data);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar conquistas:', err);
+    } finally {
+      setLoadingAchievements(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchAchievements();
+  }, [user?.id]);
   
   // Loadings
   const [profileLoading, setProfileLoading] = useState(false);
@@ -232,6 +298,19 @@ export function Settings() {
   };
 
   const classConfig = getClassConfig(hunterStore.hunterClass, hunterStore.rank);
+
+  const handleEquipTitle = async (titleName: string) => {
+    if (!user?.id) return;
+    try {
+      await hunterStore.equipTitle(titleName, user.id);
+      setProfileMsg({
+        text: `TÍTULO EQUIPADO: "${titleName.toUpperCase()}" agora é o seu título oficial de prestígio.`,
+        type: 'success'
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // 1. Atualizar Perfil Opcional
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -506,7 +585,10 @@ export function Settings() {
                   {classConfig.title}
                 </h3>
               </div>
-              <p className="text-sm font-bold text-gray-400 uppercase tracking-wide">
+              <p className="text-[10px] font-black text-amber-400 uppercase tracking-[0.25em] font-orbitron animate-pulse">
+                🏆 Título: {hunterStore.activeTitle || 'Iniciante'}
+              </p>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-wide mt-1">
                 Nível {hunterStore.level} Caçador
               </p>
               <div className="h-px w-2/3 mx-auto bg-gray-800/80 my-4" />
@@ -763,6 +845,139 @@ export function Settings() {
                 </button>
               </div>
             </form>
+          </motion.div>
+
+          {/* PAINEL 1.5: CODEX DE CONQUISTAS E TÍTULOS EQUIPÁVEIS */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15 }}
+            className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 sm:p-8 shadow-xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="mb-5 sm:mb-6 flex items-center justify-between">
+              <div className="space-y-1">
+                <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
+                  Codex de <span className="text-amber-400">Títulos & Conquistas</span>
+                </h2>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
+                  Desbloqueie Desafios e Equipe Títulos de Prestígio
+                </p>
+              </div>
+              <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+                <Award size={16} />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Seção 1: Títulos Equipáveis */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 font-orbitron flex items-center gap-1.5">
+                  <Crown size={14} /> Títulos Desbloqueados
+                </h3>
+                <p className="text-[9px] text-gray-500 uppercase tracking-widest leading-relaxed">
+                  Títulos liberados ao conquistar marcos importantes. Escolha um para exibir no seu perfil.
+                </p>
+
+                {/* Grid de títulos obtidos */}
+                <div className="flex flex-wrap gap-2.5 pt-1">
+                  {(() => {
+                    const unlockedList = ['Iniciante'];
+                    achievements.forEach(a => {
+                      const match = ALL_POSSIBLE_ACHIEVEMENTS.find(p => p.title === a.title);
+                      if (match && match.titleReward && !unlockedList.includes(match.titleReward)) {
+                        unlockedList.push(match.titleReward);
+                      }
+                    });
+
+                    return unlockedList.map((titleName) => {
+                      const isEquipped = hunterStore.activeTitle === titleName;
+                      return (
+                        <button
+                          key={titleName}
+                          type="button"
+                          onClick={() => handleEquipTitle(titleName)}
+                          className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                            isEquipped
+                              ? 'bg-amber-500/20 border border-amber-500/50 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                              : 'bg-black/30 border border-[#1e1e26] text-gray-400 hover:border-gray-500/40 hover:text-white'
+                          }`}
+                        >
+                          {titleName} {isEquipped && '✓'}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Divisor */}
+              <div className="border-t border-[#1e1e26] border-dashed" />
+
+              {/* Seção 2: Medalhas/Badges de Conquistas */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 font-orbitron flex items-center gap-1.5">
+                  <Award size={14} /> Medalhas da Fenda
+                </h3>
+
+                {loadingAchievements ? (
+                  <div className="py-6 flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                    <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">Acessando Codex...</span>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {ALL_POSSIBLE_ACHIEVEMENTS.map((item) => {
+                      const matchingUnlock = achievements.find(a => a.title === item.title);
+                      const isUnlocked = !!matchingUnlock;
+                      
+                      return (
+                        <div
+                          key={item.title}
+                          className={`relative flex items-center gap-3.5 rounded-2xl border p-3.5 transition-all ${
+                            isUnlocked
+                              ? 'border-amber-500/30 bg-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.05)] text-amber-400 animate-glow-amber'
+                              : 'border-[#1E1E26] bg-black/20 text-gray-600 opacity-60'
+                          }`}
+                        >
+                          <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${
+                            isUnlocked 
+                              ? 'border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
+                              : 'border-[#1E1E26] bg-white/5 text-gray-700'
+                          }`}>
+                            {getAchievementIcon(item.icon, 18, isUnlocked ? 'animate-pulse' : '')}
+                          </div>
+                          
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className={`text-[10px] font-black uppercase tracking-wider font-orbitron truncate ${
+                                isUnlocked ? 'text-amber-300' : 'text-gray-500'
+                              }`}>
+                                {item.title}
+                              </p>
+                              {isUnlocked && (
+                                <span className="text-[8px] font-black text-amber-500 tracking-widest shrink-0 font-orbitron">
+                                  +{item.xp} XP
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-normal">
+                              {item.desc}
+                            </p>
+                            {isUnlocked && matchingUnlock.unlocked_at && (
+                              <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">
+                                Desbloqueado: {new Date(matchingUnlock.unlocked_at).toLocaleDateString('pt-BR')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </motion.div>
 
           {/* PAINEL 2: CREDENCIAIS DE ACESSO (SEGURANÇA) */}

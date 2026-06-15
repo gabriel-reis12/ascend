@@ -14,6 +14,24 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-15 — Épico 2: Motor de Jogo & Gamificação (Core Mechanics)
+- **Banco de Dados (Supabase)**:
+  - Aplicada a migração `20260615_epic2_gamification.sql` adicionando colunas de controle anti-farm (`xp_gained_today`) e de conquistas obtidas (`streak_milestones_claimed`) em `profiles`.
+  - Habilitada segurança em nível de linha (RLS) com políticas de leitura/escrita e deleção robustas para a tabela de conquistas (`achievements`).
+- **Core State & Store (useHunterStore.ts)**:
+  - Implementado o **Sistema Anti-Farm** na ação `addXp` limitando ganhos diários de XP: 100% de ganho até 200 XP, 50% de ganho (Soft Cap) entre 200 e 400 XP, e 10% de ganho (Hard Cap) a partir de 400 XP diários.
+  - Sincronização e reinicialização robusta do XP diário a cada novo ciclo solar detectado no `loadProfile`.
+  - Adicionadas ações automáticas de checagem: `checkStreakMilestones` para bônus e medalhas de consistência consecutiva (3d, 7d, 15d, 30d) e `checkAchievements` para conquistas de atributos (>= 20 em FOR, INT, RES, VIT, DIS, SAB, EQU).
+  - Adicionada ação `equipTitle` para gravar e equipar títulos de prestígio no banco de dados.
+- **Interface do Dashboard (Dashboard.tsx)**:
+  - Desenvolvido o HUD interativo **Missões Principais do Dia (Daily Main Quests)**, acompanhando 4 objetivos diários integrados (Superação Física, Ciclo de Nutrição, Foco do Desperto, Desafio de Classe) com um botão holográfico de resgate de bônus (+100 XP) limitado a 1x ao dia.
+  - Implementada a barra visual neon **Domínios de Evolução** logo abaixo dos atributos, mapeando a evolução das dimensões de vida baseadas no nível dos atributos agregados (Corpo, Mente, Fortuna, Carreira e Equilíbrio).
+  - Adicionado alerta dinâmico de XP flutuante (`xpAlerts` com `framer-motion`) que exibe de forma reativa os pontos de XP ganhos na hora sobre a barra de nível.
+  - Adicionada a exibição do título de prestígio ativo equipado logo abaixo do nome do caçador.
+- **Configurações & Codex (Settings.tsx)**:
+  - Implementado o painel **Codex de Títulos & Conquistas** exibindo títulos equipáveis e medalhas glassmorphic da fenda (bloqueadas em cinza opaco com dicas de meta e desbloqueadas em dourado brilhante com data).
+  - Sincronização imediata de título ativo na Ficha de Classe e no Codex ao clicar em equipar.
+
 ### 2026-06-15 — Integração de Imagens e Padronização das Classes Creator e Leader
 - **Integração de Assets**:
   - Padronização das imagens da classe `Leader`. Os arquivos foram renomeados de `Classe *.jpeg` para `Rank *.jpeg` (ex: `Classe E.jpeg` -> `Rank E.jpeg`), seguindo a convenção estrita do sistema e garantindo que o carregamento por Ranks ocorra sem erros de link quebrado (404) no Dashboard e Configurações.

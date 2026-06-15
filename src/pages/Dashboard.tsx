@@ -42,6 +42,7 @@ export function Dashboard() {
 
   const [todayVolume, setTodayVolume] = React.useState<number>(0);
   const [loadingVolume, setLoadingVolume] = React.useState<boolean>(true);
+  const [tasksCompletedToday, setTasksCompletedToday] = React.useState<number>(0);
   const [chartSize, setChartSize] = React.useState<number>(340);
   const [isAvatarOpen, setIsAvatarOpen] = React.useState(false);
 
@@ -66,22 +67,24 @@ export function Dashboard() {
   }, [workoutMissions]);
 
   React.useEffect(() => {
-    async function fetchTodayVolume() {
+    async function fetchDailyData() {
       const uid = user?.id;
       if (!uid) return;
       try {
         setLoadingVolume(true);
         const todayStr = new Date().toISOString().split('T')[0];
-        const { data, error } = await supabase
+        
+        // 1. Volume de Treino
+        const { data: workoutData, error: workoutError } = await supabase
           .from('workout_logs')
           .select('sets, reps, weight_kg')
           .eq('user_id', uid)
           .gte('logged_at', `${todayStr}T00:00:00.000Z`)
           .lte('logged_at', `${todayStr}T23:59:59.999Z`);
 
-        if (error) throw error;
+        if (workoutError) throw workoutError;
 
-        const volume = (data || []).reduce((sum, log) => {
+        const volume = (workoutData || []).reduce((sum, log) => {
           const sets = log.sets || 0;
           const reps = log.reps || 0;
           const weight = log.weight_kg || 0;
@@ -89,15 +92,28 @@ export function Dashboard() {
         }, 0);
 
         setTodayVolume(volume);
+
+        // 2. Tarefas Concluídas
+        const { count, error: tasksError } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', uid)
+          .eq('completed', true)
+          .gte('completed_at', `${todayStr}T00:00:00.000Z`)
+          .lte('completed_at', `${todayStr}T23:59:59.999Z`);
+
+        if (!tasksError && count !== null) {
+          setTasksCompletedToday(count);
+        }
       } catch (err) {
-        console.error('Erro ao buscar volume de treino de hoje:', err);
+        console.error('Erro ao buscar dados diários do caçador:', err);
       } finally {
         setLoadingVolume(false);
       }
     }
 
-    void fetchTodayVolume();
-  }, [user?.id, workoutStatusKey]);
+    void fetchDailyData();
+  }, [user?.id, workoutStatusKey, completedToday]);
 
   const themeColors = React.useMemo(() => {
     const classColorMap: Record<string, { border: string; text: string; bg: string; glow: string; shadowColor: string }> = {
@@ -219,6 +235,141 @@ export function Dashboard() {
     };
   }, [state.xp, state.xpRequired, state.stats, activeHabits, completedToday, workoutMissions, mealMissions]);
 
+  // Atributos chaves por classe
+  const classKeyStats = React.useMemo(() => {
+    const hClass = (state.hunterClass || 'Warrior').toLowerCase();
+    if (hClass === 'warrior') return ['strength', 'endurance'];
+    if (hClass === 'scholar') return ['intelligence', 'wisdom'];
+    if (hClass === 'creator') return ['discipline', 'balance'];
+    if (hClass === 'monk') return ['vitality', 'balance'];
+    if (hClass === 'leader') return ['discipline', 'wisdom'];
+    return ['strength', 'endurance'];
+  }, [state.hunterClass]);
+
+  // Se completou a quest da classe
+  const completedClassQuest = React.useMemo(() => {
+    const finishedHabits = activeHabits.filter(h => completedToday.has(h.id));
+    return finishedHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target));
+  }, [activeHabits, completedToday, classKeyStats]);
+
+  // Lista de Daily Main Quests
+  const todayStr = React.useMemo(() => new Date().toLocaleDateString('en-CA'), []);
+  const claimKey = React.useMemo(() => `daily_bonus_claimed_${user?.id}_${todayStr}`, [user?.id, todayStr]);
+  const [bonusClaimed, setBonusClaimed] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (user?.id) {
+      const claimed = localStorage.getItem(claimKey) === 'true';
+      setBonusClaimed(claimed);
+    }
+  }, [user?.id, claimKey]);
+
+  const dailyQuestsList = React.useMemo(() => {
+    return [
+      {
+        id: 'workout',
+        title: 'Superação Física',
+        desc: workoutMissions.length > 0 ? "Execute pelo menos 1 treino ativo hoje" : "Nenhum treino agendado hoje (Livre)",
+        isCompleted: workoutMissions.length > 0 ? workoutMissions.some(m => m.isCompleted) : true,
+        icon: Dumbbell
+      },
+      {
+        id: 'meal',
+        title: 'Ciclo de Nutrição',
+        desc: mealMissions.length > 0 ? "Registre todas as refeições do seu cardápio" : "Nenhum cardápio ativo hoje (Livre)",
+        isCompleted: mealMissions.length > 0 ? mealMissions.every(m => m.isCompleted) : true,
+        icon: UtensilsCrossed
+      },
+      {
+        id: 'habits',
+        title: 'Foco do Desperto',
+        desc: `Conclua 2 hábitos ou tarefas hoje (${completedToday.size + tasksCompletedToday}/2)`,
+        isCompleted: (completedToday.size + tasksCompletedToday) >= 2,
+        icon: CheckCircle2
+      },
+      {
+        id: 'class',
+        title: 'Desafio de Classe',
+        desc: activeHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target))
+          ? `Realize 1 hábito/tarefa de classe [${classKeyStats.map(s => s.slice(0, 3).toUpperCase()).join('/')}]`
+          : 'Nenhum desafio de classe agendado hoje (Livre)',
+        isCompleted: activeHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target)) ? completedClassQuest : true,
+        icon: Zap
+      }
+    ];
+  }, [workoutMissions, mealMissions, completedToday, tasksCompletedToday, activeHabits, classKeyStats, completedClassQuest]);
+
+  const completedQuestsCount = React.useMemo(() => dailyQuestsList.filter(q => q.isCompleted).length, [dailyQuestsList]);
+  const allQuestsCompleted = completedQuestsCount === 4;
+
+  const handleClaimDailyBonus = async () => {
+    if (!user?.id || bonusClaimed || !allQuestsCompleted) return;
+    localStorage.setItem(claimKey, 'true');
+    setBonusClaimed(true);
+    await state.addXp(100, user.id);
+  };
+
+  // Domínios da Evolução
+  const domains = React.useMemo(() => {
+    const strength = state.stats.strength || 10;
+    const endurance = state.stats.endurance || 10;
+    const vitality = state.stats.vitality || 10;
+    const intelligence = state.stats.intelligence || 10;
+    const wisdom = state.stats.wisdom || 10;
+    const discipline = state.stats.discipline || 10;
+    const balance = state.stats.balance || 10;
+
+    const corpoSum = Math.round((strength + endurance + vitality) / 3);
+    const menteSum = Math.round((intelligence + wisdom) / 2);
+    const fortunaSum = balance;
+    const carreiraSum = discipline;
+    const equilibrioSum = Math.round((strength + endurance + vitality + intelligence + wisdom + discipline + balance) / 7);
+
+    const list = [
+      { name: 'Corpo', value: corpoSum, desc: 'Força, Resistência & Vitalidade', color: 'from-red-500 to-orange-500' },
+      { name: 'Mente', value: menteSum, desc: 'Inteligência & Sabedoria', color: 'from-purple-500 to-indigo-500' },
+      { name: 'Fortuna', value: fortunaSum, desc: 'Equilíbrio Financeiro & Vida', color: 'from-emerald-500 to-teal-500' },
+      { name: 'Carreira', value: carreiraSum, desc: 'Disciplina & Produtividade', color: 'from-blue-500 to-cyan-500' },
+      { name: 'Equilíbrio', value: equilibrioSum, desc: 'Média de Harmonia Geral', color: 'from-pink-500 to-rose-500' },
+    ];
+
+    return list.map(d => {
+      const level = Math.floor(d.value / 10);
+      const progress = (d.value % 10) * 10;
+      return {
+        ...d,
+        level: level === 0 ? 1 : level,
+        progress
+      };
+    });
+  }, [state.stats]);
+
+  // Alerta de XP flutuante
+  const [xpAlerts, setXpAlerts] = React.useState<{ id: number; amount: number }[]>([]);
+  const prevXp = React.useRef(state.xp);
+  const prevLevel = React.useRef(state.level);
+
+  React.useEffect(() => {
+    if (state.xp !== prevXp.current && prevXp.current !== undefined) {
+      let diff = 0;
+      if (state.level === prevLevel.current) {
+        diff = state.xp - prevXp.current;
+      } else if (state.level > prevLevel.current) {
+        diff = state.xp;
+      }
+      
+      if (diff > 0) {
+        const id = Date.now();
+        setXpAlerts(prev => [...prev, { id, amount: diff }]);
+        setTimeout(() => {
+          setXpAlerts(prev => prev.filter(alert => alert.id !== id));
+        }, 1500);
+      }
+    }
+    prevXp.current = state.xp;
+    prevLevel.current = state.level;
+  }, [state.xp, state.level]);
+
   return (
     <div className="space-y-6 pb-12">
       {/* ── Hunter Status Header ──────────────────────────── */}
@@ -284,7 +435,11 @@ export function Dashboard() {
                     {state.hunterClass || 'Shadow Monarch'}
                   </div>
                 </div>
-                <p className="mt-2 flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-widest italic">
+                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest font-orbitron mt-1.5 flex items-center gap-1">
+                  <span>🏆 Título Equipado:</span>
+                  <span className="text-glow-amber">{state.activeTitle || 'Iniciante'}</span>
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-widest italic">
                   Level {state.level} Hunter <span className="text-gray-700">•</span> O {state.hunterClass || 'Desperto'}
                 </p>
               </div>
@@ -302,8 +457,24 @@ export function Dashboard() {
             {/* XP Bar Progress */}
             <div className="space-y-3">
               <div className="flex items-end justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 relative">
                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Experience Points</span>
+                  
+                  {/* Floating XP Alerts */}
+                  <AnimatePresence>
+                    {xpAlerts.map(alert => (
+                      <motion.span
+                        key={alert.id}
+                        initial={{ opacity: 0, y: 5, scale: 0.8 }}
+                        animate={{ opacity: 1, y: -15, scale: 1.1 }}
+                        exit={{ opacity: 0, y: -25, scale: 0.9 }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className="absolute left-full ml-4 text-[10px] font-black text-cyan-400 tracking-widest font-orbitron drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] whitespace-nowrap"
+                      >
+                        +{alert.amount} XP
+                      </motion.span>
+                    ))}
+                  </AnimatePresence>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-[10px] font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
@@ -328,6 +499,98 @@ export function Dashboard() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* 🏆 ── Missões Principais do Dia (Daily Main Quests HUD) ────── */}
+      <motion.div
+        id="daily-main-quests"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.02 }}
+        className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] border border-[#1E1E26] bg-[#0F0F13] p-5 sm:p-7 shadow-2xl"
+      >
+        <div className="absolute -right-20 -top-20 size-60 rounded-full bg-amber-500/5 blur-[80px]" />
+        
+        <div className="relative flex flex-col md:flex-row gap-6 justify-between items-stretch">
+          <div className="flex-1 space-y-4">
+            <div>
+              <h2 className="text-lg font-black uppercase tracking-tight text-white italic font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                Missões Principais <span className="text-amber-400">do Dia</span>
+              </h2>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">
+                Protocolo Diário de Sobrevivência • Progresso: {completedQuestsCount}/4 Quests
+              </p>
+            </div>
+            
+            {/* Grid de Quests */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {dailyQuestsList.map((q) => {
+                const IconComponent = q.icon;
+                return (
+                  <div 
+                    key={q.id}
+                    className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                      q.isCompleted 
+                        ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400' 
+                        : 'border-[#1E1E26] bg-black/20 text-gray-400'
+                    }`}
+                  >
+                    <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                      q.isCompleted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-gray-500'
+                    }`}>
+                      <IconComponent size={15} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-[10px] font-black uppercase tracking-wider font-orbitron truncate ${
+                        q.isCompleted ? 'text-emerald-400' : 'text-white'
+                      }`}>
+                        {q.title}
+                      </p>
+                      <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate mt-0.5">
+                        {q.desc}
+                      </p>
+                    </div>
+                    {q.isCompleted ? (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 shrink-0">Ativo</span>
+                    ) : (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-gray-600 shrink-0">Inativo</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Botão de Resgate de Bônus Diário */}
+          <div className="flex shrink-0 items-center justify-center md:border-l md:border-[#1E1E26] md:pl-6">
+            <motion.button
+              whileHover={allQuestsCompleted && !bonusClaimed ? { scale: 1.05 } : {}}
+              whileTap={allQuestsCompleted && !bonusClaimed ? { scale: 0.95 } : {}}
+              disabled={!allQuestsCompleted || bonusClaimed}
+              onClick={handleClaimDailyBonus}
+              className={`relative flex flex-col items-center justify-center rounded-xl p-5 w-full md:w-48 text-center border transition-all cursor-pointer select-none ${
+                bonusClaimed
+                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                  : allQuestsCompleted
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.15)] animate-pulse-amber'
+                    : 'border-[#1E1E26] bg-black/40 text-gray-600 cursor-not-allowed'
+              }`}
+            >
+              <Trophy size={28} className={allQuestsCompleted && !bonusClaimed ? 'text-amber-400 animate-bounce' : 'text-gray-600'} />
+              <span className="text-xs font-black uppercase tracking-widest font-orbitron mt-2">
+                {bonusClaimed ? 'Resgatado' : 'Bônus Diário'}
+              </span>
+              <span className="text-[9px] font-bold uppercase tracking-widest mt-1">
+                {bonusClaimed 
+                  ? 'BÔNUS COLETADO' 
+                  : allQuestsCompleted 
+                    ? 'REIVINDICAR +100 XP' 
+                    : `${completedQuestsCount}/4 COMPLETAS`
+                }
+              </span>
+            </motion.button>
           </div>
         </div>
       </motion.div>
@@ -643,6 +906,40 @@ export function Dashboard() {
                   <div key={stat.label} className="group flex flex-col items-center gap-1 sm:gap-1.5 rounded-xl border border-[#1E1E26] bg-black/40 py-2 transition-all hover:border-blue-500/30">
                     <span className="text-[8px] sm:text-[9px] font-black text-gray-500 group-hover:text-blue-400 transition-colors uppercase tracking-widest">{stat.label}</span>
                     <span className="text-xs sm:text-base font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>{stat.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Domínios da Evolução */}
+            <div className="border-t border-[#1E1E26] border-dashed pt-6 mt-8 space-y-4 w-full">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
+                  Domínios de Evolução
+                </h3>
+                <span className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">Dimensões da Vida</span>
+              </div>
+
+              <div className="space-y-3">
+                {domains.map((dom) => (
+                  <div key={dom.name} className="space-y-1.5">
+                    <div className="flex justify-between items-end">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase text-white font-orbitron">{dom.name}</span>
+                        <span className="text-[8px] font-bold text-blue-400 uppercase">LVL {dom.level}</span>
+                      </div>
+                      <span className="text-[9px] font-black text-gray-500 font-orbitron">
+                        {dom.progress}%
+                      </span>
+                    </div>
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/40 p-0.5 border border-[#1E1E26]">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${dom.progress}%` }}
+                        transition={{ duration: 0.5, ease: 'circOut' }}
+                        className={`h-full rounded-full bg-gradient-to-r ${dom.color} shadow-[0_0_8px_rgba(255,255,255,0.05)]`}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
