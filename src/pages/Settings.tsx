@@ -101,7 +101,7 @@ export function Settings() {
       setLoadingAchievements(false);
       setAchievementsError('A sincronização do Codex expirou. O banco de dados pode estar lento ou inacessível.');
       console.warn('[Settings] Safety timeout disparado para conquistas.');
-    }, 5000);
+    }, 15000); // Aumentado para 15 segundos para cold starts do Supabase
 
     try {
       setLoadingAchievements(true);
@@ -171,46 +171,91 @@ export function Settings() {
         return;
       }
 
+      let active = true;
       const safetyTimer = setTimeout(() => {
-        setTelemetry(prev => ({ ...prev, loading: false, error: 'A conexão de telemetria expirou. O banco de dados pode estar lento ou inacessível.' }));
-        console.warn('[Settings] Safety timeout disparado para telemetria.');
-      }, 5000);
+        if (active) {
+          setTelemetry(prev => ({ ...prev, loading: false, error: 'A conexão de telemetria expirou. O banco de dados pode estar lento ou inacessível.' }));
+          console.warn('[Settings] Safety timeout disparado para telemetria.');
+        }
+      }, 15000); // Aumentado para 15 segundos para cold starts do Supabase
 
       try {
         setTelemetry(prev => ({ ...prev, loading: true, error: null }));
-        const [
-          { count: routinesCount, error: rErr },
-          { count: mealsCount, error: mErr },
-          { count: habitsCount, error: hErr },
-          { count: tasksCount, error: tErr }
-        ] = await Promise.all([
-          supabase.from('workout_routines').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('meal_plans').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('habits').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        
+        // Consultas isoladas com tratamento de erros para que falhas de RLS ou tabela vazia
+        // em um módulo específico não derrubem as demais contagens ou a telemetria inteira
+        const fetchRoutinesCount = async () => {
+          try {
+            const { count, error } = await supabase.from('workout_routines').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+            if (error) throw error;
+            return count || 0;
+          } catch (e) {
+            console.warn('[Settings Telemetry] Falha ao contar rotinas:', e);
+            return 0;
+          }
+        };
+
+        const fetchMealsCount = async () => {
+          try {
+            const { count, error } = await supabase.from('meal_plans').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+            if (error) throw error;
+            return count || 0;
+          } catch (e) {
+            console.warn('[Settings Telemetry] Falha ao contar refeições:', e);
+            return 0;
+          }
+        };
+
+        const fetchHabitsCount = async () => {
+          try {
+            const { count, error } = await supabase.from('habits').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+            if (error) throw error;
+            return count || 0;
+          } catch (e) {
+            console.warn('[Settings Telemetry] Falha ao contar hábitos:', e);
+            return 0;
+          }
+        };
+
+        const fetchTasksCount = async () => {
+          try {
+            const { count, error } = await supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
+            if (error) throw error;
+            return count || 0;
+          } catch (e) {
+            console.warn('[Settings Telemetry] Falha ao contar tarefas:', e);
+            return 0;
+          }
+        };
+
+        const [routinesCount, mealsCount, habitsCount, tasksCount] = await Promise.all([
+          fetchRoutinesCount(),
+          fetchMealsCount(),
+          fetchHabitsCount(),
+          fetchTasksCount()
         ]);
 
-        if (rErr) throw rErr;
-        if (mErr) throw mErr;
-        if (hErr) throw hErr;
-        if (tErr) throw tErr;
-
-        setTelemetry({
-          routines: routinesCount || 0,
-          meals: mealsCount || 0,
-          habits: habitsCount || 0,
-          tasks: tasksCount || 0,
-          loading: false,
-          error: null
-        });
+        if (active) {
+          setTelemetry({
+            routines: routinesCount,
+            meals: mealsCount,
+            habits: habitsCount,
+            tasks: tasksCount,
+            loading: false,
+            error: null
+          });
+        }
       } catch (err: any) {
         console.error('Erro de telemetria:', err);
-        setTelemetry(prev => ({
-          ...prev,
-          loading: false,
-          error: err.message || String(err)
-        }));
+        if (active) {
+          setTelemetry(prev => ({
+            ...prev,
+            loading: false,
+            error: err.message || String(err)
+          }));
+        }
       } finally {
+        active = false;
         clearTimeout(safetyTimer);
       }
     }

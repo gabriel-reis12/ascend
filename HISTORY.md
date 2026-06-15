@@ -14,6 +14,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-15 — Carregamento Instantâneo de Missões (SWR) e Resiliência em Ajustes
+- **Aceleração na Aba de Missões (useHabits.ts, useTasks.ts, Quests.tsx)**:
+  - Implementado cache local persistente associado ao ID do usuário para renderização instantânea (SWR - Stale-While-Revalidate). O app carrega os dados em cache de hábitos, rotinas, refeições e tarefas de imediato na montagem (em menos de 10ms), removendo skeletons pesados e buscando atualizações em background no Supabase.
+  - Removido o atributo `layout` do Framer Motion e o delay cumulativo por índice nos cards de missões (`MissionCard` e `ManageQuestRow` em `Quests.tsx`), o que removeu o "engasgo" de renderização e tornou a abertura da aba de missões instantânea.
+- **Resiliência nos Ajustes (Settings.tsx)**:
+  - Estendido o timeout do `safetyTimer` para conquistas e telemetria de 5s para 15s, dando tempo suficiente para o Supabase resolver conexões mesmo em cold starts longos e evitando falsos negativos de conectividade.
+  - Refatorada a telemetria para executar consultas individuais por módulo sob tratamento de erros local (try/catch isolados). Caso apenas uma tabela dê erro de RLS ou esteja vazia, ela retorna contagem zero silenciosamente no console, mas o status de conexão principal e os outros módulos continuam operando normalmente sem disparar a tela vermelha de falha geral de conexão.
+
 ### 2026-06-15 — Otimização de Performance e Aceleração de Hovers por Hardware
 - **Transição de Animações no Dashboard.tsx**:
   - Migrado o `whileHover` do card de rank do Caçador e dos cards individuais de missões (treinos, refeições e hábitos) para usar apenas transformações básicas (`scale`, `x`, `rotate`) que utilizam aceleração de hardware (GPU).

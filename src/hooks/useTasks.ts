@@ -36,6 +36,20 @@ export function useTasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Carrega do cache local associado ao id do usuário para renderização instantânea
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const tasksCache = localStorage.getItem(`ascend_tasks_${user.id}`);
+      if (tasksCache) {
+        setTasks(JSON.parse(tasksCache));
+        setLoading(false); // Remove skeleton visual imediatamente caso tenhamos dados locais
+      }
+    } catch (err) {
+      console.warn('[useTasks] Erro ao carregar cache de tarefas:', err);
+    }
+  }, [user?.id]);
+
   const fetchTasks = useCallback(async () => {
     // Se não há usuário, reseta o loading imediatamente (evita skeleton eterno)
     if (!user?.id) {
@@ -43,19 +57,23 @@ export function useTasks() {
       setTasks([]);
       return;
     }
-    setLoading(true);
+
+    // Se não temos cache carregado, mostramos o loading (skeleton)
+    const hasCache = localStorage.getItem(`ascend_tasks_${user.id}`) !== null;
+    if (!hasCache) {
+      setLoading(true);
+    }
     setError(null);
 
     let active = true;
 
-    // Safety timeout de 5 segundos: garante que o visual de skeletons saia da tela
-    // caso as queries do Supabase demorem ou travem temporariamente (ex: cold starts)
+    // Safety timeout de 10 segundos para dar tempo ao Supabase de acordar do cold start
     const safetyTimeout = setTimeout(() => {
       if (active) {
         setLoading(false);
         console.warn('Safety timeout de useTasks disparado. Forçando loading = false.');
       }
-    }, 5000);
+    }, 10000);
 
     try {
       const { data, error: dbError } = await supabase
@@ -67,6 +85,9 @@ export function useTasks() {
       if (dbError) throw dbError;
       if (!active) return;
       setTasks(data ?? []);
+
+      // Persiste no localStorage
+      localStorage.setItem(`ascend_tasks_${user.id}`, JSON.stringify(data ?? []));
     } catch (err: any) {
       console.error('Erro ao buscar tarefas:', err);
       if (active) {

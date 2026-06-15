@@ -113,11 +113,10 @@ function MissionCard({
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      className={`group relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 transition-all ${
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
+      className={`group relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 transition-all duration-150 ${
         done
           ? `${theme.border} ${theme.bgDone}`
           : `border-[#1E1E26] bg-[#0F0F13] ${theme.bgHover} hover:bg-[#16161D]`
@@ -246,10 +245,10 @@ function ManageQuestRow({
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex flex-col gap-3 rounded-xl border border-[#1E1E26] bg-[#0F0F13] p-4 transition-opacity ${
+      transition={{ duration: 0.15, ease: 'easeOut' }}
+      className={`flex flex-col gap-3 rounded-xl border border-[#1E1E26] bg-[#0F0F13] p-4 transition-opacity duration-150 ${
         habit.active ? 'opacity-100' : 'opacity-40'
       }`}
     >

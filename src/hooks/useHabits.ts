@@ -89,6 +89,27 @@ export function useHabits() {
   // Missões de refeição (cardápios ativos — todos os dias)
   const [mealMissions, setMealMissions] = useState<MealMission[]>([]);
 
+  // Carrega do cache local associado ao id do usuário para carregamento instantâneo
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const habitsCache = localStorage.getItem(`ascend_habits_${user.id}`);
+      const completedCache = localStorage.getItem(`ascend_completed_${user.id}`);
+      const workoutsCache = localStorage.getItem(`ascend_workouts_${user.id}`);
+      const mealsCache = localStorage.getItem(`ascend_meals_${user.id}`);
+
+      if (habitsCache || completedCache || workoutsCache || mealsCache) {
+        if (habitsCache) setHabits(JSON.parse(habitsCache));
+        if (completedCache) setCompletedToday(new Set(JSON.parse(completedCache)));
+        if (workoutsCache) setWorkoutMissions(JSON.parse(workoutsCache));
+        if (mealsCache) setMealMissions(JSON.parse(mealsCache));
+        setLoading(false); // Remove skeleton visual imediatamente caso tenhamos dados locais
+      }
+    } catch (err) {
+      console.warn('[useHabits] Erro ao carregar cache local:', err);
+    }
+  }, [user?.id]);
+
   const fetchAll = useCallback(async () => {
     // Se não há usuário, reseta o loading imediatamente (evita skeleton eterno)
     if (!user?.id) {
@@ -99,19 +120,23 @@ export function useHabits() {
       setMealMissions([]);
       return;
     }
-    setLoading(true);
+    
+    // Se não temos cache carregado, mostramos o loading (skeleton)
+    const hasCache = localStorage.getItem(`ascend_habits_${user.id}`) !== null;
+    if (!hasCache) {
+      setLoading(true);
+    }
     setError(null);
 
     let active = true;
 
-    // Safety timeout de 5 segundos: garante que o visual de skeletons saia da tela
-    // caso as queries paralelas do Supabase demorem ou travem temporariamente (ex: cold starts)
+    // Safety timeout de 10 segundos para dar tempo ao Supabase de acordar do cold start
     const safetyTimeout = setTimeout(() => {
       if (active) {
         setLoading(false);
         console.warn('Safety timeout de useHabits disparado. Forçando loading = false.');
       }
-    }, 5000);
+    }, 10000);
 
     try {
       const today = todayStr();
@@ -186,59 +211,62 @@ export function useHabits() {
 
       if (!active) return;
 
-      setHabits(habitsRes.data ?? []);
-      setCompletedToday(new Set((completionsRes.data ?? []).map((c) => c.habit_id)));
-
-      // Injeta as rotinas de treino agendadas para hoje como missões
       const completedRoutineIds = new Set((routineCompletionsRes.data ?? []).map((rc: any) => rc.routine_id));
       const todayRoutines = (routinesRes.data ?? []).filter(
         (r: any) => Array.isArray(r.scheduled_days) && r.scheduled_days.includes(dayOfWeek)
       );
 
-      setWorkoutMissions(
-        todayRoutines.map((r: any) => {
-          const isCardio = r.name.toLowerCase().includes('cardio') || 
-            (r.exercises && r.exercises.some((re: any) => re.exercise?.category?.toLowerCase() === 'cardio'));
-          
-          return {
-            id: `workout_mission_${r.id}`,
-            routine_id: r.id,
-            title: r.name,
-            type: 'workout' as const,
-            isCompleted: completedRoutineIds.has(r.id),
-            scheduled_time: r.scheduled_time ? r.scheduled_time.slice(0, 5) : null,
-            scheduled_end_time: r.scheduled_end_time ? r.scheduled_end_time.slice(0, 5) : null,
-            xp_reward: isCardio ? 40 : 50,
-            stat_target: isCardio ? 'endurance' as const : 'strength' as const,
-            stat_reward: 2,
-          };
-        })
-      );
+      const computedWorkouts = todayRoutines.map((r: any) => {
+        const isCardio = r.name.toLowerCase().includes('cardio') || 
+          (r.exercises && r.exercises.some((re: any) => re.exercise?.category?.toLowerCase() === 'cardio'));
+        
+        return {
+          id: `workout_mission_${r.id}`,
+          routine_id: r.id,
+          title: r.name,
+          type: 'workout' as const,
+          isCompleted: completedRoutineIds.has(r.id),
+          scheduled_time: r.scheduled_time ? r.scheduled_time.slice(0, 5) : null,
+          scheduled_end_time: r.scheduled_end_time ? r.scheduled_end_time.slice(0, 5) : null,
+          xp_reward: isCardio ? 40 : 50,
+          stat_target: isCardio ? 'endurance' as const : 'strength' as const,
+          stat_reward: 2,
+        };
+      });
 
-      // Injeta cardápios ativos como missões de refeição (todos os dias)
       const completedMealIds = new Set((mealCompletionsRes.data ?? []).map((mc: any) => mc.meal_plan_id));
+      const computedMeals = (mealPlansRes.data ?? []).map((plan: any) => {
+        const totalKcal = (plan.items ?? []).reduce((sum: number, item: any) => {
+          const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
+          const kcal = ((foodObj?.calories_per_100g ?? 0) * (item.quantity_grams ?? 0)) / 100;
+          return sum + kcal;
+        }, 0);
 
-      setMealMissions(
-        (mealPlansRes.data ?? []).map((plan: any) => {
-          const totalKcal = (plan.items ?? []).reduce((sum: number, item: any) => {
-            const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
-            const kcal = ((foodObj?.calories_per_100g ?? 0) * (item.quantity_grams ?? 0)) / 100;
-            return sum + kcal;
-          }, 0);
+        return {
+          id: `meal_mission_${plan.id}`,
+          meal_plan_id: plan.id,
+          title: plan.name,
+          totalKcal: Math.round(totalKcal),
+          xp_reward: plan.xp_reward,
+          type: 'meal' as const,
+          isCompleted: completedMealIds.has(plan.id),
+          scheduled_time: plan.scheduled_time ? plan.scheduled_time.slice(0, 5) : null,
+          scheduled_end_time: plan.scheduled_end_time ? plan.scheduled_end_time.slice(0, 5) : null,
+        };
+      });
 
-          return {
-            id: `meal_mission_${plan.id}`,
-            meal_plan_id: plan.id,
-            title: plan.name,
-            totalKcal: Math.round(totalKcal),
-            xp_reward: plan.xp_reward,
-            type: 'meal' as const,
-            isCompleted: completedMealIds.has(plan.id),
-            scheduled_time: plan.scheduled_time ? plan.scheduled_time.slice(0, 5) : null,
-            scheduled_end_time: plan.scheduled_end_time ? plan.scheduled_end_time.slice(0, 5) : null,
-          };
-        })
-      );
+      const completedHabitIds = (completionsRes.data ?? []).map((c) => c.habit_id);
+
+      setHabits(habitsRes.data ?? []);
+      setCompletedToday(new Set(completedHabitIds));
+      setWorkoutMissions(computedWorkouts);
+      setMealMissions(computedMeals);
+
+      // Persiste no localStorage do usuário
+      localStorage.setItem(`ascend_habits_${user.id}`, JSON.stringify(habitsRes.data ?? []));
+      localStorage.setItem(`ascend_completed_${user.id}`, JSON.stringify(completedHabitIds));
+      localStorage.setItem(`ascend_workouts_${user.id}`, JSON.stringify(computedWorkouts));
+      localStorage.setItem(`ascend_meals_${user.id}`, JSON.stringify(computedMeals));
     } catch (err: any) {
       console.error('Erro ao buscar dados de hábitos e missões:', err);
       if (active) {
