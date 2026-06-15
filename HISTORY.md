@@ -14,6 +14,11 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-15 — Integração de Imagens e Padronização das Classes Creator e Leader
+- **Integração de Assets**:
+  - Padronização das imagens da classe `Leader`. Os arquivos foram renomeados de `Classe *.jpeg` para `Rank *.jpeg` (ex: `Classe E.jpeg` -> `Rank E.jpeg`), seguindo a convenção estrita do sistema e garantindo que o carregamento por Ranks ocorra sem erros de link quebrado (404) no Dashboard e Configurações.
+  - As imagens reais da classe `Creator` e `Leader` para o Rank inicial (`Rank E.jpeg`) foram mapeadas no arquivo `Onboarding.tsx` no lugar dos antigos placeholders nulos.
+
 ### 2026-06-12 — Ajustes do Perfil Físico no Painel de Configurações
 - **Edição Completa de Perfil**: Adicionados os novos campos de perfil físico e metas à página de Ajustes (`Settings.tsx`):
   - Sexo / Gênero (padronizado em um `<select>` com as opções Masculino e Feminino).

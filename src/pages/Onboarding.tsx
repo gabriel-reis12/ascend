@@ -129,7 +129,7 @@ const CLASSES = [
     color: 'border-amber-500/50 hover:border-amber-400',
     accent: 'text-amber-400',
     glow: 'shadow-[0_0_30px_rgba(251,191,36,0.3)]',
-    image: null, // placeholder — imagem será adicionada pelo usuário
+    image: '/Classes/Creator/Rank E.jpeg',
     stats: 'INT ▲▲  DIS ▲▲  SAB ▲',
   },
   {
@@ -153,7 +153,7 @@ const CLASSES = [
     color: 'border-rose-500/50 hover:border-rose-400',
     accent: 'text-rose-400',
     glow: 'shadow-[0_0_30px_rgba(244,63,94,0.3)]',
-    image: null, // placeholder — imagem será adicionada pelo usuário
+    image: '/Classes/Leader/Rank E.jpeg',
     stats: 'DIS ▲▲▲  SAB ▲▲  EQU ▲',
   },
 ];
