@@ -641,14 +641,13 @@ export function Workouts() {
                 ) : viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredExercises.map((ex) => (
-                      <motion.button
+                      <button
                         key={ex.id}
-                        whileHover={{ y: -4, borderColor: 'rgba(59,130,246,0.5)' }}
                         onClick={() => {
                           setSelectedExercise(ex);
                           setIsModalOpen(true);
                         }}
-                        className="flex flex-col gap-3 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all hover:bg-[#16161D]"
+                        className="flex flex-col gap-3 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all duration-150 ease-out hover:bg-[#16161D] hover:border-blue-500/50 hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(59,130,246,0.15)] cursor-pointer"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
@@ -662,7 +661,7 @@ export function Workouts() {
                             {ex.muscle_group} • {ex.category}
                           </p>
                         </div>
-                      </motion.button>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -717,10 +716,9 @@ export function Workouts() {
                   const splitLetter = splitMatch ? splitMatch[0].toUpperCase() : null;
 
                   return (
-                    <motion.div
+                    <div
                       key={routine.id}
-                      whileHover={{ scale: 1.01 }}
-                      className="group relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-all hover:border-purple-500/50 cursor-pointer"
+                      className="group relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-all duration-150 ease-out hover:border-purple-500/50 hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(147,51,234,0.15)] cursor-pointer"
                       onClick={() => {
                         setSelectedRoutine(routine);
                         setIsEditRoutineModalOpen(true);
@@ -807,7 +805,7 @@ export function Workouts() {
                       >
                         Iniciar Protocolo
                       </button>
-                    </motion.div>
+                    </div>
                   );
                 })}
 

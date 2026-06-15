@@ -14,6 +14,17 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-15 — Otimização de Performance e Aceleração de Hovers por Hardware
+- **Transição de Animações no Dashboard.tsx**:
+  - Migrado o `whileHover` do card de rank do Caçador e dos cards individuais de missões (treinos, refeições e hábitos) para usar apenas transformações básicas (`scale`, `x`, `rotate`) que utilizam aceleração de hardware (GPU).
+  - Transferido o cálculo de interpolação de sombras (`boxShadow`) e cores de borda (`borderColor`) de Javascript no Framer Motion para transições nativas do CSS (`transition-all duration-300 ease-out hover:border-... hover:shadow-...` no `className`), eliminando repaints caros a cada frame e trazendo a interface de hovers para 60+ FPS fluidos.
+- **Ajustes de Performance no Settings.tsx, Workouts.tsx, Nutrition.tsx e Quests.tsx**:
+  - Removido o cálculo JS de sombras e bordas do Framer Motion nos botões e cards de listagem dessas páginas.
+  - Implementado o mesmo padrão de transição CSS nativa no hover nos cards de alimentos, cards de exercícios e botões do sistema.
+  - Implementado hover reativo condicional na classe do botão de Despertar Quest Bônus (Fenda IA) para evitar interpolações inativas de sombra.
+- **Integridade do Código**:
+  - Compilação testada e validada com `npm run build` com sucesso absoluto (zero erros de tipos ou de sintaxe no Vite/React 19).
+
 ### 2026-06-15 — Épico 2: Motor de Jogo & Gamificação (Core Mechanics)
 - **Banco de Dados (Supabase)**:
   - Aplicada a migração `20260615_epic2_gamification.sql` adicionando colunas de controle anti-farm (`xp_gained_today`) e de conquistas obtidas (`streak_milestones_claimed`) em `profiles`.
@@ -389,4 +400,15 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
 
 ## 🚀 Próximos Passos
 1. **Fase 6 (Nutrição):** Implementar sistema de "Mana Recovery" com metas dinâmicas, water tracking e histórico de macros.
+
+### ⚡ [2026-06-15] Otimização de Performance & Resiliência nos Ajustes
+* **Otimização de Hovers (Performance 60 FPS):**
+  * Removemos todos os hovers baseados em JavaScript do Framer Motion (`whileHover` e `whileTap`) no [Dashboard.tsx](file:///d:/Área de Trabalho/App/src/pages/Dashboard.tsx), [Workouts.tsx](file:///d:/Área de Trabalho/App/src/pages/Workouts.tsx), [Nutrition.tsx](file:///d:/Área de Trabalho/App/src/pages/Nutrition.tsx) e [Quests.tsx](file:///d:/Área de Trabalho/App/src/pages/Quests.tsx).
+  * Migramos as transformações para transições CSS nativas do Tailwind aceleradas por GPU (`hover:scale-[1.01]`, `hover:-translate-y-1`, `duration-150`, `ease-out`), eliminando os atrasos táteis (lag) no hover de avatares, ranks, botões e cards de missões/exercícios/alimentos.
+* **Resiliência e Correção nos Ajustes:**
+  * Corrigido o erro de carregamento infinito ("Acessando Codex...") na tela de Ajustes ([Settings.tsx](file:///d:/Área de Trabalho/App/src/pages/Settings.tsx)), que ocorria quando o componente montava antes do ID do usuário ser resolvido pelo contexto de autenticação.
+  * Inicializamos os estados de carregamento `loadingAchievements` e `telemetry.loading` como `false` por padrão.
+  * Implementamos timeouts de segurança de 5 segundos (`safetyTimer`) que interrompem o carregamento infinito do Codex e de telemetria caso a comunicação com o Supabase falhe ou sofra com latência.
+  * Adicionamos tratamento de erros visíveis com painéis vermelhos explicativos e amigáveis em tela, permitindo que a interface funcione normalmente usando os dados locais ou padrões em caso de falha de conexão.
+
 

@@ -116,41 +116,46 @@ export function Dashboard() {
   }, [user?.id, workoutStatusKey, completedToday]);
 
   const themeColors = React.useMemo(() => {
-    const classColorMap: Record<string, { border: string; text: string; bg: string; glow: string; shadowColor: string }> = {
+    const classColorMap: Record<string, { border: string; text: string; bg: string; glow: string; shadowColor: string; rankHover: string }> = {
       warrior: { 
         border: 'border-blue-500/30 hover:border-blue-500/60', 
         text: 'text-blue-400', 
         bg: 'bg-blue-500/5 hover:bg-blue-500/10',
         glow: 'shadow-[0_0_15px_rgba(59,130,246,0.15)]',
-        shadowColor: 'rgba(59, 130, 246, 0.4)'
+        shadowColor: 'rgba(59, 130, 246, 0.4)',
+        rankHover: 'hover:border-blue-500/60 hover:shadow-[0_0_35px_rgba(59,130,246,0.4)]'
       },
       scholar: { 
         border: 'border-purple-500/30 hover:border-purple-500/60', 
         text: 'text-purple-400', 
         bg: 'bg-purple-500/5 hover:bg-purple-500/10',
         glow: 'shadow-[0_0_15px_rgba(124,58,237,0.15)]',
-        shadowColor: 'rgba(124, 58, 237, 0.4)'
+        shadowColor: 'rgba(124, 58, 237, 0.4)',
+        rankHover: 'hover:border-purple-500/60 hover:shadow-[0_0_35px_rgba(124,58,237,0.4)]'
       },
       creator: { 
         border: 'border-amber-500/30 hover:border-amber-500/60', 
         text: 'text-amber-400', 
         bg: 'bg-amber-500/5 hover:bg-amber-500/10',
         glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]',
-        shadowColor: 'rgba(251, 191, 36, 0.4)'
+        shadowColor: 'rgba(251, 191, 36, 0.4)',
+        rankHover: 'hover:border-amber-500/60 hover:shadow-[0_0_35px_rgba(251,191,36,0.4)]'
       },
       monk: { 
         border: 'border-cyan-500/30 hover:border-cyan-500/60', 
         text: 'text-cyan-400', 
         bg: 'bg-cyan-500/5 hover:bg-cyan-500/10',
         glow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]',
-        shadowColor: 'rgba(6, 182, 212, 0.4)'
+        shadowColor: 'rgba(6, 182, 212, 0.4)',
+        rankHover: 'hover:border-cyan-500/60 hover:shadow-[0_0_35px_rgba(6,182,212,0.4)]'
       },
       leader: { 
         border: 'border-rose-500/30 hover:border-rose-500/60', 
         text: 'text-rose-400', 
         bg: 'bg-rose-500/5 hover:bg-rose-500/10',
         glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]',
-        shadowColor: 'rgba(244, 63, 94, 0.4)'
+        shadowColor: 'rgba(244, 63, 94, 0.4)',
+        rankHover: 'hover:border-rose-500/60 hover:shadow-[0_0_35px_rgba(244,63,94,0.4)]'
       },
     };
     const currentClass = (state.hunterClass || 'warrior').toLowerCase();
@@ -392,11 +397,9 @@ export function Dashboard() {
           {/* Avatar & Rank Container */}
           <div className="flex shrink-0 gap-4 sm:gap-6 items-center justify-center">
             {/* Avatar de Classe Dinâmico */}
-            <motion.div
-              whileHover={{ scale: 1.05 }}
+            <div
               onClick={() => setIsAvatarOpen(true)}
-              transition={{ duration: 0.2 }}
-              className={`relative size-24 sm:size-32 rounded-2xl sm:rounded-3xl overflow-hidden border bg-black/40 group cursor-pointer ${themeColors.border} ${themeColors.glow}`}
+              className={`relative size-24 sm:size-32 rounded-2xl sm:rounded-3xl overflow-hidden border bg-black/40 group cursor-pointer transition-all duration-150 ease-out hover:scale-105 ${themeColors.border} ${themeColors.glow}`}
             >
               <img 
                 src={characterAvatar} 
@@ -405,18 +408,11 @@ export function Dashboard() {
                 style={{ imageRendering: 'pixelated' }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
-            </motion.div>
+            </div>
 
             {/* Rank Badge */}
-            <motion.div 
-              whileHover={{ 
-                scale: 1.05,
-                rotate: [0, -1, 1, 0],
-                boxShadow: `0 0 35px ${themeColors.shadowColor}`,
-                borderColor: 'rgba(59, 130, 246, 0.6)'
-              }}
-              transition={{ duration: 0.2 }}
-              className="relative flex size-24 sm:size-32 items-center justify-center rounded-2xl sm:rounded-3xl border border-blue-500/30 bg-blue-500/5 shadow-[0_0_30px_rgba(59,130,246,0.2)] cursor-pointer"
+            <div 
+              className={`relative flex size-24 sm:size-32 items-center justify-center rounded-2xl sm:rounded-3xl border border-blue-500/30 bg-blue-500/5 shadow-[0_0_30px_rgba(59,130,246,0.2)] cursor-pointer transition-all duration-150 ease-out hover:scale-105 hover:rotate-[-1deg] active:scale-95 ${themeColors.rankHover}`}
             >
               <span className="text-4xl sm:text-6xl font-black text-blue-500 italic drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 {state.rank || 'E'}
@@ -424,7 +420,7 @@ export function Dashboard() {
               <div className="absolute -bottom-3 rounded-full bg-blue-600 px-4 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-xl">
                 RANK
               </div>
-            </motion.div>
+            </div>
           </div>
 
           <div className="flex-1 space-y-6">
@@ -533,20 +529,13 @@ export function Dashboard() {
               {dailyQuestsList.map((q) => {
                 const IconComponent = q.icon;
                 return (
-                  <motion.button 
+                  <button 
                     key={q.id}
                     onClick={() => navigate(q.path)}
-                    whileHover={{ 
-                      scale: 1.02, 
-                      x: 2, 
-                      borderColor: q.isCompleted ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.4)',
-                      boxShadow: q.isCompleted ? '0 0 15px rgba(16, 185, 129, 0.1)' : '0 0 15px rgba(59, 130, 246, 0.1)'
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`flex items-center gap-3 rounded-xl border p-3 transition-all text-left cursor-pointer ${
+                    className={`flex items-center gap-3 rounded-xl border p-3 transition-all duration-150 ease-out text-left cursor-pointer hover:scale-[1.02] hover:translate-x-0.5 active:scale-[0.98] ${
                       q.isCompleted 
-                        ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400' 
-                        : 'border-[#1E1E26] bg-black/20 text-gray-400 hover:border-blue-500/30'
+                        ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400 hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]' 
+                        : 'border-[#1E1E26] bg-black/20 text-gray-400 hover:border-blue-500/40 hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]'
                     }`}
                   >
                     <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
@@ -569,7 +558,7 @@ export function Dashboard() {
                     ) : (
                       <span className="text-[8px] font-black uppercase tracking-widest text-orange-400 shrink-0 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20 animate-pulse">Pendente</span>
                     )}
-                  </motion.button>
+                  </button>
                 );
               })}
             </div>
@@ -577,16 +566,14 @@ export function Dashboard() {
           
           {/* Botão de Resgate de Bônus Diário */}
           <div className="flex shrink-0 items-center justify-center md:border-l md:border-[#1E1E26] md:pl-6">
-            <motion.button
-              whileHover={allQuestsCompleted && !bonusClaimed ? { scale: 1.05 } : {}}
-              whileTap={allQuestsCompleted && !bonusClaimed ? { scale: 0.95 } : {}}
+            <button
               disabled={!allQuestsCompleted || bonusClaimed}
               onClick={handleClaimDailyBonus}
-              className={`relative flex flex-col items-center justify-center rounded-xl p-5 w-full md:w-48 text-center border transition-all cursor-pointer select-none ${
+              className={`relative flex flex-col items-center justify-center rounded-xl p-5 w-full md:w-48 text-center border transition-all duration-150 ease-out cursor-pointer select-none ${
                 bonusClaimed
                   ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
                   : allQuestsCompleted
-                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 shadow-[0_0_25px_rgba(245,158,11,0.15)] animate-pulse-amber'
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:scale-105 active:scale-95 shadow-[0_0_25px_rgba(245,158,11,0.15)] animate-pulse-amber'
                     : 'border-[#1E1E26] bg-black/40 text-gray-600 cursor-not-allowed'
               }`}
             >
@@ -602,7 +589,7 @@ export function Dashboard() {
                     : `${completedQuestsCount}/4 COMPLETAS`
                 }
               </span>
-            </motion.button>
+            </button>
           </div>
         </div>
       </motion.div>
@@ -615,12 +602,10 @@ export function Dashboard() {
         transition={{ duration: 0.3, delay: 0.05 }}
         className="grid grid-cols-2 sm:grid-cols-4 gap-3"
       >
-        <motion.button
+        <button
           id="tour-shortcut-workouts"
-          whileHover={{ scale: 1.02, translateY: -2 }}
-          whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/workouts')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
+          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
         >
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
             <Dumbbell size={18} />
@@ -629,14 +614,12 @@ export function Dashboard() {
             <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Treinamento</p>
             <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Módulo Treinos</p>
           </div>
-        </motion.button>
+        </button>
 
-        <motion.button
+        <button
           id="tour-shortcut-nutrition"
-          whileHover={{ scale: 1.02, translateY: -2 }}
-          whileTap={{ scale: 0.98 }}
           onClick={() => navigate('/nutrition')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
+          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
         >
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-400 group-hover:scale-110 transition-transform">
             <Apple size={18} />
@@ -645,13 +628,11 @@ export function Dashboard() {
             <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Recuperação</p>
             <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Restaurar Mana</p>
           </div>
-        </motion.button>
+        </button>
 
-        <motion.button
-          whileHover={{ scale: 1.02, translateY: -2 }}
-          whileTap={{ scale: 0.98 }}
+        <button
           onClick={() => navigate('/quests')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
+          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
         >
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
             <CheckCircle2 size={18} />
@@ -660,13 +641,11 @@ export function Dashboard() {
             <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Missões</p>
             <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Acessar Fenda</p>
           </div>
-        </motion.button>
+        </button>
 
-        <motion.button
-          whileHover={{ scale: 1.02, translateY: -2 }}
-          whileTap={{ scale: 0.98 }}
+        <button
           onClick={() => navigate('/settings')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
+          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
         >
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-zinc-500/10 text-gray-400 group-hover:scale-110 transition-transform">
             <Settings size={18} />
@@ -675,7 +654,7 @@ export function Dashboard() {
             <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Ajustes</p>
             <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Menu Sistema</p>
           </div>
-        </motion.button>
+        </button>
       </motion.div>
 
       {/* ── Grid Principal de Storytelling Bento RPG ─────────────────── */}
@@ -721,20 +700,13 @@ export function Dashboard() {
                   if (mission.type === 'workout') {
                     const m = mission.data;
                     return (
-                      <motion.button
+                      <button
                         key={`workout_${m.id}_${idx}`}
                         onClick={() => navigate('/workouts')}
-                        whileHover={{ 
-                          scale: 1.01, 
-                          x: 4,
-                          boxShadow: '0 0 20px rgba(147, 51, 234, 0.15)',
-                          borderColor: 'rgba(147, 51, 234, 0.4)'
-                        }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all cursor-pointer ${
+                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all duration-150 ease-out hover:scale-[1.01] hover:translate-x-1 active:scale-[0.98] cursor-pointer ${
                           m.isCompleted
-                            ? 'border-purple-500/30 bg-purple-500/10'
-                            : 'border-purple-500/20 bg-purple-900/5 hover:border-purple-500/50 hover:bg-purple-900/15'
+                            ? 'border-purple-500/30 bg-purple-500/10 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(147,51,234,0.2)]'
+                            : 'border-purple-500/20 bg-purple-900/5 hover:border-purple-500/50 hover:bg-purple-900/15 hover:shadow-[0_0_20px_rgba(147,51,234,0.15)]'
                         }`}
                       >
                         <div className={`flex size-10 items-center justify-center rounded-xl transition-all ${
@@ -762,25 +734,18 @@ export function Dashboard() {
                         <div className="text-[9px] font-black uppercase tracking-widest text-purple-500 group-hover:text-purple-300 transition-colors shrink-0">
                           {m.isCompleted ? 'Concluído' : 'Iniciar →'}
                         </div>
-                      </motion.button>
+                      </button>
                     );
                   } else if (mission.type === 'meal') {
                     const m = mission.data;
                     return (
-                      <motion.button
+                      <button
                         key={`meal_${m.id}_${idx}`}
                         onClick={() => toggleMealMission(m.meal_plan_id)}
-                        whileHover={{ 
-                          scale: 1.01, 
-                          x: 4,
-                          boxShadow: '0 0 20px rgba(249, 115, 22, 0.15)',
-                          borderColor: 'rgba(249, 115, 22, 0.4)'
-                        }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all cursor-pointer ${
+                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all duration-150 ease-out cursor-pointer hover:scale-[1.01] hover:translate-x-1 active:scale-[0.98] ${
                           m.isCompleted
-                            ? 'border-orange-500/30 bg-orange-500/10'
-                            : 'border-orange-500/20 bg-orange-900/5 hover:border-orange-500/50 hover:bg-orange-900/15'
+                            ? 'border-orange-500/30 bg-orange-500/10 hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.2)]'
+                            : 'border-orange-500/20 bg-orange-900/5 hover:border-orange-500/50 hover:bg-orange-900/15 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)]'
                         }`}
                       >
                         <div className={`flex size-10 items-center justify-center rounded-xl transition-all ${
@@ -810,26 +775,19 @@ export function Dashboard() {
                         <div className="text-[9px] font-black uppercase tracking-widest text-orange-400 group-hover:text-orange-300 transition-colors shrink-0">
                           {m.isCompleted ? 'Concluído' : 'Marcar →'}
                         </div>
-                      </motion.button>
+                      </button>
                     );
                   } else {
                     const quest = mission.data;
                     const isCompleted = completedToday.has(quest.id);
                     return (
-                      <motion.button
+                      <button
                         key={`habit_${quest.id}_${idx}`}
                         onClick={() => toggleCompletion(quest.id)}
-                        whileHover={{ 
-                          scale: 1.01, 
-                          x: 4,
-                          boxShadow: '0 0 20px rgba(59, 130, 246, 0.15)',
-                          borderColor: 'rgba(59, 130, 246, 0.4)'
-                        }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all cursor-pointer ${
+                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all duration-150 ease-out hover:scale-[1.01] hover:translate-x-1 active:scale-[0.98] cursor-pointer ${
                           isCompleted 
-                            ? 'border-blue-500/30 bg-blue-500/10' 
-                            : 'border-[#1E1E26] bg-black/40 hover:border-blue-500/50 hover:bg-[#16161D]'
+                            ? 'border-blue-500/30 bg-blue-500/10 hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]' 
+                            : 'border-[#1E1E26] bg-black/40 hover:border-blue-500/50 hover:bg-[#16161D] hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]'
                         }`}
                       >
                         <div className={`flex size-10 items-center justify-center rounded-xl transition-all ${
@@ -864,7 +822,7 @@ export function Dashboard() {
                         <div className={`transition-opacity shrink-0 ${isCompleted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                           <Zap size={16} className={isCompleted ? 'text-blue-500' : 'text-gray-700'} />
                         </div>
-                      </motion.button>
+                      </button>
                     );
                   }
                 })}

@@ -87,24 +87,43 @@ export function Settings() {
   
   // Codex de Conquistas e Títulos
   const [achievements, setAchievements] = useState<{ title: string; description: string; icon: string; unlocked_at: string }[]>([]);
-  const [loadingAchievements, setLoadingAchievements] = useState(true);
+  const [loadingAchievements, setLoadingAchievements] = useState(false);
+  const [achievementsError, setAchievementsError] = useState<string | null>(null);
 
   const fetchAchievements = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoadingAchievements(false);
+      setAchievementsError(null);
+      return;
+    }
+
+    const safetyTimer = setTimeout(() => {
+      setLoadingAchievements(false);
+      setAchievementsError('A sincronização do Codex expirou. O banco de dados pode estar lento ou inacessível.');
+      console.warn('[Settings] Safety timeout disparado para conquistas.');
+    }, 5000);
+
     try {
       setLoadingAchievements(true);
+      setAchievementsError(null);
       const { data, error } = await supabase
         .from('achievements')
         .select('*')
         .eq('user_id', user.id)
         .order('unlocked_at', { ascending: false });
 
-      if (!error && data) {
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
         setAchievements(data);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar conquistas:', err);
+      setAchievementsError(err.message || String(err));
     } finally {
+      clearTimeout(safetyTimer);
       setLoadingAchievements(false);
     }
   };
@@ -141,13 +160,22 @@ export function Settings() {
     meals: 0,
     habits: 0,
     tasks: 0,
-    loading: true,
+    loading: false,
     error: null
   });
 
   useEffect(() => {
     async function fetchTelemetry() {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setTelemetry(prev => ({ ...prev, loading: false, error: null }));
+        return;
+      }
+
+      const safetyTimer = setTimeout(() => {
+        setTelemetry(prev => ({ ...prev, loading: false, error: 'A conexão de telemetria expirou. O banco de dados pode estar lento ou inacessível.' }));
+        console.warn('[Settings] Safety timeout disparado para telemetria.');
+      }, 5000);
+
       try {
         setTelemetry(prev => ({ ...prev, loading: true, error: null }));
         const [
@@ -182,6 +210,8 @@ export function Settings() {
           loading: false,
           error: err.message || String(err)
         }));
+      } finally {
+        clearTimeout(safetyTimer);
       }
     }
     void fetchTelemetry();
@@ -927,7 +957,13 @@ export function Settings() {
                     <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">Acessando Codex...</span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-4">
+                    {achievementsError && (
+                      <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 text-xs text-rose-400 font-semibold uppercase tracking-wide">
+                        ⚠️ {achievementsError}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {ALL_POSSIBLE_ACHIEVEMENTS.map((item) => {
                       const matchingUnlock = achievements.find(a => a.title === item.title);
                       const isUnlocked = !!matchingUnlock;
@@ -974,6 +1010,7 @@ export function Settings() {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 )}
               </div>

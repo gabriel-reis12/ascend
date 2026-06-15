@@ -534,15 +534,13 @@ export function Quests() {
             </h1>
           </div>
           
-          <motion.button
-            whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(59,130,246,0.3)' }}
-            whileTap={{ scale: 0.98 }}
+          <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-black uppercase italic tracking-widest text-white transition-all hover:bg-blue-500"
+            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out hover:bg-blue-500 hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] cursor-pointer"
           >
             <Plus size={18} strokeWidth={3} />
             Nova Quest
-          </motion.button>
+          </button>
         </div>
 
         {/* Global Progress */}
@@ -796,12 +794,12 @@ export function Quests() {
 
                           {/* Botão de Despertar com Loading */}
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                            <motion.button
-                              whileHover={!generatingBonus ? { scale: 1.02, boxShadow: '0 0 20px rgba(6,182,212,0.3)' } : {}}
-                              whileTap={!generatingBonus ? { scale: 0.98 } : {}}
+                            <button
                               onClick={handleAwakenBonusQuest}
                               disabled={generatingBonus}
-                              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-purple-600 px-6 py-3.5 text-xs font-black uppercase italic tracking-widest text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              className={`flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-purple-600 px-6 py-3.5 text-xs font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                                !generatingBonus ? 'hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]' : ''
+                              }`}
                             >
                               {generatingBonus ? (
                                 <>
@@ -814,7 +812,7 @@ export function Quests() {
                                   <span>Despertar Quest Extra</span>
                                 </>
                               )}
-                            </motion.button>
+                            </button>
                             
                             {bonusError && (
                               <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">
@@ -1231,28 +1229,24 @@ export function Quests() {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                   {row.isModule ? (
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
+                                    <button
                                       onClick={() => navigate(row.route!)}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-400 transition-colors hover:border-blue-500/60 hover:text-white cursor-pointer"
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-400 transition-all duration-150 ease-out hover:border-blue-500/60 hover:text-white hover:scale-105 active:scale-95 cursor-pointer"
                                     >
                                       <span>Ir para Módulo</span>
                                       <Sword size={12} />
-                                    </motion.button>
+                                    </button>
                                   ) : (
-                                    <motion.button
-                                      whileHover={{ scale: 1.05 }}
-                                      whileTap={{ scale: 0.95 }}
+                                    <button
                                       onClick={() => {
                                         setPresetHabitData(row.preset!);
                                         setModalOpen(true);
                                       }}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400 transition-colors hover:border-emerald-500/60 hover:text-white cursor-pointer"
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400 transition-all duration-150 ease-out hover:border-emerald-500/60 hover:text-white hover:scale-105 active:scale-95 cursor-pointer"
                                     >
                                       <span>Despertar Quest</span>
                                       <Plus size={12} strokeWidth={3} />
-                                    </motion.button>
+                                    </button>
                                   )}
                                 </td>
                               </tr>

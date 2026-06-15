@@ -283,14 +283,13 @@ export function Nutrition() {
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredFoods.map((food) => (
-                  <motion.button
+                  <button
                     key={food.id}
-                    whileHover={{ y: -4, borderColor: 'rgba(168,85,247,0.5)' }}
                     onClick={() => {
                       setSelectedFood(food);
                       setIsModalOpen(true);
                     }}
-                    className="flex flex-col gap-3 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all hover:bg-[#16161D]"
+                    className="flex flex-col gap-3 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all duration-150 ease-out hover:bg-[#16161D] hover:border-purple-500/50 hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
@@ -304,7 +303,7 @@ export function Nutrition() {
                         {food.category} • {food.protein_per_100g}g Prot.
                       </p>
                     </div>
-                  </motion.button>
+                  </button>
                 ))}
               </div>
             ) : (
