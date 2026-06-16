@@ -508,6 +508,15 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Sincronizado o cache local de tarefas, hábitos, conclusões e missões de refeição após mutações, evitando que dados antigos reapareçam após refresh.
   - Corrigido o cadastro de alimentos personalizados para usar `created_by`, alinhado ao schema e às policies RLS do Supabase.
 ### 2026-06-16
+- **Rework de Pontuacao Nutricional:**
+  - Adicionado objetivo nutricional separado (`nutrition_goal`: perder, manter ou ganhar peso) no onboarding, ajustes e profile.
+  - Criada avaliacao diaria idempotente baseada em TMB, meta calorica e tolerancia, com registro em `nutrition_daily_scores`.
+  - Removido XP instantaneo de refeicoes registradas por IA; a recompensa/punicao agora ocorre no fechamento do dia anterior ao abrir o app.
+  - Refeicoes registradas no dia aparecem temporariamente em Missoes como itens ja concluidos, sem conflitar com cardapios cadastrados.
+  - Criada migration `20260616_nutrition_daily_scoring.sql` e atualizada a migration consolidada de contrato.
+  - Build de producao validado com `npm.cmd run build`.
+
+### 2026-06-16
 - **Invalidacao de Cache por Deploy:**
   - Adicionado versionamento de build via `VERCEL_GIT_COMMIT_SHA` no Vite para detectar commits novos no navegador.
   - Criado guard de inicializacao que limpa caches locais de dados do ASCEND quando a versao do app muda, preservando a sessao do Supabase.

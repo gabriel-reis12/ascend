@@ -31,6 +31,7 @@ export interface HunterState {
   weightTarget: number | null;
   trainingFocus: string | null;
   mainGoal: string | null;
+  nutritionGoal: string | null;
   experienceLevel: string | null;
   stats: HunterStats;
   streak: {
@@ -80,6 +81,7 @@ const INITIAL_STATE = {
   weightTarget: null as number | null,
   trainingFocus: null as string | null,
   mainGoal: null as string | null,
+  nutritionGoal: 'maintain' as string | null,
   experienceLevel: null as string | null,
   stats: INITIAL_STATS,
   streak: { current: 0, best: 0 },
@@ -355,6 +357,7 @@ export const useHunterStore = create<HunterState>()(
             weightTarget: data.weight_target || null,
             trainingFocus: data.training_focus || null,
             mainGoal: data.main_goal || null,
+            nutritionGoal: data.nutrition_goal || 'maintain',
             experienceLevel: data.experience_level || null,
             stats: {
               strength: Number(data.strength) || 10,
@@ -415,6 +418,7 @@ export const useHunterStore = create<HunterState>()(
             weight_target: state.weightTarget || null,
             training_focus: state.trainingFocus || null,
             main_goal: state.mainGoal || null,
+            nutrition_goal: state.nutritionGoal || 'maintain',
             experience_level: state.experienceLevel || null,
             strength: state.stats.strength,
             intelligence: state.stats.intelligence,

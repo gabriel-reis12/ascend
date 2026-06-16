@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useHunterStore } from '@/stores/useHunterStore';
-import { useBossStore } from '@/stores/useBossStore';
 import { localDateString } from '@/lib/date';
-
-const ALL_MEALS_XP_BONUS = 50;
-const ALL_MEALS_VITALITY_BONUS = 2;
-
 
 export interface MealPlanItem {
   id: string;
@@ -63,7 +57,6 @@ export function calcMealMacros(items: MealPlanItem[]) {
 
 export function useMealPlans() {
   const { user } = useAuth();
-  const { addXp, updateStat } = useHunterStore();
 
   const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
   const [completedToday, setCompletedToday] = useState<Set<string>>(new Set());
@@ -163,15 +156,6 @@ export function useMealPlans() {
         });
 
         // Se todas as refeições estavam completas antes, remove o bônus consolidado
-        const allCompletedBefore = completedToday.size === activeMealPlans.length;
-        if (allCompletedBefore && activeMealPlans.length > 0) {
-          await addXp(-ALL_MEALS_XP_BONUS, user.id);
-          await updateStat('vitality', -ALL_MEALS_VITALITY_BONUS, user.id);
-          
-          // Reverter dano no boss
-          const bossStore = useBossStore.getState();
-          await bossStore.attackActiveBoss(user.id, -ALL_MEALS_XP_BONUS, 'nutrition');
-        }
       }
     } else {
       const { error } = await supabase.from('meal_completions').insert({
@@ -184,15 +168,6 @@ export function useMealPlans() {
         setCompletedToday((prev) => new Set([...prev, mealPlanId]));
 
         // Se agora todas as refeições estão completas, concede o bônus consolidado
-        const allCompletedAfter = completedToday.size + 1 === activeMealPlans.length;
-        if (allCompletedAfter && activeMealPlans.length > 0) {
-          await addXp(ALL_MEALS_XP_BONUS, user.id);
-          await updateStat('vitality', ALL_MEALS_VITALITY_BONUS, user.id);
-          
-          // Dano nutricional ao boss ativo
-          const bossStore = useBossStore.getState();
-          await bossStore.attackActiveBoss(user.id, ALL_MEALS_XP_BONUS, 'nutrition');
-        }
       }
     }
   };

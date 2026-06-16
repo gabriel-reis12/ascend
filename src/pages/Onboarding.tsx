@@ -31,6 +31,7 @@ interface FormData {
   weightCurrent: string;
   weightTarget: string;
   trainingFocus: string;
+  nutritionGoal: string;
   mainGoal: string;
   experienceLevel: string;
 }
@@ -255,6 +256,7 @@ export function Onboarding() {
     weightCurrent: '',
     weightTarget: '',
     trainingFocus: '',
+    nutritionGoal: 'maintain',
     mainGoal: '',
     experienceLevel: '',
   });
@@ -316,6 +318,7 @@ export function Onboarding() {
       weight_current: form.weightCurrent ? parseFloat(form.weightCurrent) : null,
       weight_target: form.weightTarget ? parseFloat(form.weightTarget) : null,
       training_focus: form.trainingFocus || null,
+      nutrition_goal: form.nutritionGoal || 'maintain',
     }).eq('id', user.id);
     setStep('main-goal');
   };
@@ -491,6 +494,32 @@ export function Onboarding() {
                     />
                   </div>
                 ))}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-[10px] font-orbitron text-purple-400 uppercase tracking-widest">
+                  <Target className="w-3 h-3" /> Objetivo Nutricional
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'lose', label: 'Perder peso' },
+                    { value: 'maintain', label: 'Manter peso' },
+                    { value: 'gain', label: 'Ganhar peso' },
+                  ].map(goal => (
+                    <motion.button
+                      key={goal.value}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setField('nutritionGoal', goal.value)}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                        form.nutritionGoal === goal.value
+                          ? 'bg-purple-500/20 border-purple-400 text-purple-100'
+                          : 'bg-purple-950/20 border-purple-900/60 text-gray-400 hover:border-purple-700'
+                      }`}
+                    >
+                      {goal.label}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-1.5">

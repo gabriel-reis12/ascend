@@ -23,8 +23,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NutritionMealPlans } from '@/components/nutrition/NutritionMealPlans';
 import type { Food } from '@/types/nutrition';
 import { localDayBounds } from '@/lib/date';
-import { useHunterStore } from '@/stores/useHunterStore';
-import { useBossStore } from '@/stores/useBossStore';
 
 interface FoodLog {
   id: string;
@@ -37,8 +35,6 @@ interface FoodLog {
 
 export function Nutrition() {
   const { user } = useAuth();
-  const hunterStore = useHunterStore();
-  const bossStore = useBossStore();
 
   const [activeTab, setActiveTab] = useState<'diario' | 'cardapios'>('diario');
   const [subTab, setSubTab] = useState<'codex' | 'library'>('codex');
@@ -305,18 +301,14 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
       if (logError) throw logError;
 
-      // 4. Conceder +15 XP no HunterStore e aplicar 15 de dano no BossStore (categoria 'nutrition')
-      await hunterStore.addXp(15, user.id);
-      await bossStore.attackActiveBoss(user.id, 15, 'nutrition');
-
-      // 5. Configurar sucesso para o alert animado
+      // 4. Configurar sucesso para o alert animado. XP nutricional e boss sao avaliados no fechamento diario.
       setIaSuccessAlert({
         mealName: meal_name,
         calories: Math.round(calories),
         protein: Math.round(protein),
         carbs: Math.round(carbs),
         fat: Math.round(fat),
-        xp: 15
+        xp: 0
       });
 
       // Resetar campo de entrada de texto
@@ -607,7 +599,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                             </div>
                           </div>
                           <div className="mt-4 flex items-center justify-between text-[10px] font-black text-purple-400 uppercase tracking-widest bg-purple-500/10 px-3 py-2.5 rounded-lg border border-purple-500/20">
-                            <span>SISTEMA: +{iaSuccessAlert.xp} XP obtidos</span>
+                            <span>SISTEMA: registro computado para a avaliacao diaria</span>
                             <span>ATAQUE AO BOSS: -15 HP (CRÍTICO!)</span>
                           </div>
                         </div>

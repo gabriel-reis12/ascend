@@ -34,6 +34,7 @@ create table if not exists profiles (
   weight_target numeric,
   training_focus text,
   main_goal text,
+  nutrition_goal text default 'maintain',
   experience_level text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -67,6 +68,7 @@ alter table profiles add column if not exists weight_current numeric;
 alter table profiles add column if not exists weight_target numeric;
 alter table profiles add column if not exists training_focus text;
 alter table profiles add column if not exists main_goal text;
+alter table profiles add column if not exists nutrition_goal text default 'maintain';
 alter table profiles add column if not exists experience_level text;
 alter table profiles add column if not exists created_at timestamptz default now();
 alter table profiles add column if not exists updated_at timestamptz default now();
@@ -258,6 +260,23 @@ create table if not exists daily_checklist (
   unique(user_id, date)
 );
 
+create table if not exists nutrition_daily_scores (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  date date not null,
+  goal text not null default 'maintain',
+  bmr numeric,
+  target_calories numeric not null default 0,
+  tolerance_calories numeric not null default 150,
+  total_calories numeric not null default 0,
+  success boolean not null default false,
+  xp_awarded integer not null default 0,
+  stat_awarded integer not null default 0,
+  evaluated_at timestamptz default now(),
+  created_at timestamptz default now(),
+  unique(user_id, date)
+);
+
 create table if not exists boss_battles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -289,6 +308,7 @@ alter table meal_plan_items enable row level security;
 alter table meal_completions enable row level security;
 alter table achievements enable row level security;
 alter table daily_checklist enable row level security;
+alter table nutrition_daily_scores enable row level security;
 alter table boss_battles enable row level security;
 
 drop policy if exists "Users can view their own profile" on profiles;
@@ -361,6 +381,9 @@ create policy "Users can manage their own achievements" on achievements for all 
 
 drop policy if exists "Users can view/update their own daily checklist" on daily_checklist;
 create policy "Users can view/update their own daily checklist" on daily_checklist for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "Users can manage their own nutrition daily scores" on nutrition_daily_scores;
+create policy "Users can manage their own nutrition daily scores" on nutrition_daily_scores for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 drop policy if exists "Users can manage their own boss battles" on boss_battles;
 create policy "Users can manage their own boss battles" on boss_battles for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

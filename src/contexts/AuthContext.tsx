@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useHunterStore } from '../stores/useHunterStore';
+import { useBossStore } from '../stores/useBossStore';
+import { evaluateYesterdayNutrition } from '../lib/nutritionDailyScore';
 
 interface AuthContextValue {
   user: User | null;
@@ -24,6 +26,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const currentUserRef = useRef<string | null>(null);
   // Ref para evitar chamadas concorrentes ao loadProfile
   const loadingProfileRef = useRef(false);
+
+  const syncProfileAndDailyNutrition = async (userId: string) => {
+    await loadProfile(userId);
+    await evaluateYesterdayNutrition(userId, {
+      addXp: useHunterStore.getState().addXp,
+      updateStat: useHunterStore.getState().updateStat,
+      attackBoss: useBossStore.getState().attackActiveBoss,
+    }).catch((err) => {
+      console.warn('[AuthContext] Avaliacao diaria de nutricao ignorada:', err);
+    });
+  };
 
   useEffect(() => {
     let active = true;
@@ -58,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!loadingProfileRef.current) {
             loadingProfileRef.current = true;
             try {
-              await loadProfile(userId);
+              await syncProfileAndDailyNutrition(userId);
             } finally {
               loadingProfileRef.current = false;
             }
@@ -102,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!loadingProfileRef.current) {
             loadingProfileRef.current = true;
             try {
-              await loadProfile(newUserId);
+              await syncProfileAndDailyNutrition(newUserId);
             } catch (err) {
               console.error('[AuthContext] Erro ao carregar perfil:', err);
             } finally {

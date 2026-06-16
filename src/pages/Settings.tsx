@@ -87,6 +87,7 @@ export function Settings() {
   const [weightCurrent, setWeightCurrent] = useState(hunterStore.weightCurrent ? String(hunterStore.weightCurrent) : '');
   const [weightTarget, setWeightTarget] = useState(hunterStore.weightTarget ? String(hunterStore.weightTarget) : '');
   const [trainingFocus, setTrainingFocus] = useState(hunterStore.trainingFocus || '');
+  const [nutritionGoal, setNutritionGoal] = useState(hunterStore.nutritionGoal || 'maintain');
   const [mainGoal, setMainGoal] = useState(hunterStore.mainGoal || '');
   const [experienceLevel, setExperienceLevel] = useState(hunterStore.experienceLevel || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -285,6 +286,7 @@ export function Settings() {
     setWeightCurrent(hunterStore.weightCurrent ? String(hunterStore.weightCurrent) : '');
     setWeightTarget(hunterStore.weightTarget ? String(hunterStore.weightTarget) : '');
     setTrainingFocus(hunterStore.trainingFocus || '');
+    setNutritionGoal(hunterStore.nutritionGoal || 'maintain');
     setMainGoal(hunterStore.mainGoal || '');
     setExperienceLevel(hunterStore.experienceLevel || '');
   }, [
@@ -295,6 +297,7 @@ export function Settings() {
     hunterStore.weightCurrent,
     hunterStore.weightTarget,
     hunterStore.trainingFocus,
+    hunterStore.nutritionGoal,
     hunterStore.mainGoal,
     hunterStore.experienceLevel
   ]);
@@ -414,6 +417,7 @@ export function Settings() {
           weight_current: weightCurrent ? parseFloat(weightCurrent) : null,
           weight_target: weightTarget ? parseFloat(weightTarget) : null,
           training_focus: trainingFocus || null,
+          nutrition_goal: nutritionGoal || 'maintain',
           main_goal: mainGoal || null,
           experience_level: experienceLevel || null,
         })
@@ -556,6 +560,7 @@ export function Settings() {
       await supabase.from('food_logs').delete().eq('user_id', user.id);
       await supabase.from('achievements').delete().eq('user_id', user.id);
       await supabase.from('daily_checklist').delete().eq('user_id', user.id);
+      await supabase.from('nutrition_daily_scores').delete().eq('user_id', user.id);
 
       // 3. Deletar customs criados pelo usuário
       await supabase.from('exercises').delete().eq('created_by', user.id);
@@ -867,6 +872,27 @@ export function Settings() {
                       <option value="Esportes de Combate">Esportes de Combate</option>
                       <option value="Calistenia">Calistenia</option>
                       <option value="Flexibilidade / Yoga">Flexibilidade / Yoga</option>
+                    </select>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
+                      <ChevronDown size={14} className="text-gray-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Objetivo Nutricional */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Objetivo Nutricional
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={nutritionGoal}
+                      onChange={(e) => setNutritionGoal(e.target.value)}
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                    >
+                      <option value="lose">Perder peso</option>
+                      <option value="maintain">Manter peso</option>
+                      <option value="gain">Ganhar peso</option>
                     </select>
                     <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
                       <ChevronDown size={14} className="text-gray-500" />

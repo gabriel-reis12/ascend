@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
-import { localDateString } from '@/lib/date';
+import { localDateString, localDayBounds } from '@/lib/date';
 
 const ALL_MEALS_XP_BONUS = 50;
 const ALL_MEALS_VITALITY_BONUS = 2;
@@ -58,6 +58,7 @@ export interface WorkoutMission {
 export interface MealMission {
   id: string; // meal_plan_id com prefixo para evitar colisão
   meal_plan_id: string;
+  source?: 'plan' | 'food_log';
   title: string;
   totalKcal: number;
   xp_reward: number;
@@ -181,6 +182,7 @@ export function useHabits() {
         routineCompletionsRes,
         mealPlansRes,
         mealCompletionsRes,
+        foodLogsRes,
       ] = await Promise.all([
         supabase
           .from('habits')
@@ -232,6 +234,19 @@ export function useHabits() {
           .select('meal_plan_id')
           .eq('user_id', user.id)
           .eq('completed_at', today),
+        supabase
+          .from('food_logs')
+          .select(`
+            id,
+            quantity_grams,
+            logged_at,
+            meal_type,
+            food:foods(name, calories_per_100g)
+          `)
+          .eq('user_id', user.id)
+          .gte('logged_at', localDayBounds().startIso)
+          .lte('logged_at', localDayBounds().endIso)
+          .order('logged_at', { ascending: true }),
       ]);
 
       if (habitsRes.error) throw habitsRes.error;
@@ -240,6 +255,7 @@ export function useHabits() {
       if (routineCompletionsRes.error) throw routineCompletionsRes.error;
       if (mealPlansRes.error) throw mealPlansRes.error;
       if (mealCompletionsRes.error) throw mealCompletionsRes.error;
+      if (foodLogsRes.error) throw foodLogsRes.error;
 
       if (!active) return;
 
@@ -277,6 +293,7 @@ export function useHabits() {
         return {
           id: `meal_mission_${plan.id}`,
           meal_plan_id: plan.id,
+          source: 'plan' as const,
           title: plan.name,
           totalKcal: Math.round(totalKcal),
           xp_reward: plan.xp_reward,
@@ -287,18 +304,37 @@ export function useHabits() {
         };
       });
 
+      const loggedMeals = (foodLogsRes.data ?? []).map((log: any) => {
+        const foodObj = Array.isArray(log.food) ? log.food[0] : log.food;
+        const totalKcal = Math.round(((foodObj?.calories_per_100g ?? 0) * (log.quantity_grams ?? 0)) / 100);
+        const loggedAt = new Date(log.logged_at);
+
+        return {
+          id: `food_log_mission_${log.id}`,
+          meal_plan_id: `food_log_${log.id}`,
+          source: 'food_log' as const,
+          title: foodObj?.name ? `${log.meal_type || 'Refeicao'}: ${foodObj.name}` : (log.meal_type || 'Refeicao registrada'),
+          totalKcal,
+          xp_reward: 0,
+          type: 'meal' as const,
+          isCompleted: true,
+          scheduled_time: loggedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          scheduled_end_time: null,
+        };
+      });
+
       const completedHabitIds = (completionsRes.data ?? []).map((c) => c.habit_id);
 
       updateHabitsState(habitsRes.data ?? []);
       updateCompletedState(new Set(completedHabitIds));
       setWorkoutMissions(computedWorkouts);
-      updateMealMissionsState(computedMeals);
+      updateMealMissionsState([...computedMeals, ...loggedMeals]);
 
       // Persiste no localStorage do usuário
       localStorage.setItem(`ascend_habits_${user.id}`, JSON.stringify(habitsRes.data ?? []));
       localStorage.setItem(`ascend_completed_${user.id}`, JSON.stringify(completedHabitIds));
       localStorage.setItem(`ascend_workouts_${user.id}`, JSON.stringify(computedWorkouts));
-      localStorage.setItem(`ascend_meals_${user.id}`, JSON.stringify(computedMeals));
+      localStorage.setItem(`ascend_meals_${user.id}`, JSON.stringify([...computedMeals, ...loggedMeals]));
     } catch (err: any) {
       console.error('Erro ao buscar dados de hábitos e missões:', err);
       if (active) {
@@ -367,6 +403,7 @@ export function useHabits() {
     if (!user) return;
     const mission = mealMissions.find((m) => m.meal_plan_id === mealPlanId);
     if (!mission) return;
+    if (mission.source === 'food_log') return;
 
     const done = mission.isCompleted;
     const completedCount = mealMissions.filter((m) => m.isCompleted).length;
@@ -383,15 +420,6 @@ export function useHabits() {
         updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: false } : m));
         
         // Se todas as refeições estavam completas antes, remove o bônus consolidado
-        const allCompletedBefore = completedCount === mealMissions.length;
-        if (allCompletedBefore && mealMissions.length > 0) {
-          await addXp(-ALL_MEALS_XP_BONUS, user.id);
-          await updateStat('vitality', -ALL_MEALS_VITALITY_BONUS, user.id);
-          
-          // Reverter dano nutricional consolidado
-          const bossStore = useBossStore.getState();
-          await bossStore.attackActiveBoss(user.id, -ALL_MEALS_XP_BONUS, 'nutrition');
-        }
       }
     } else {
       const { error } = await supabase.from('meal_completions').insert({
@@ -404,15 +432,6 @@ export function useHabits() {
         updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: true } : m));
         
         // Se agora todas as refeições estão completas, concede o bônus consolidado
-        const allCompletedAfter = completedCount + 1 === mealMissions.length;
-        if (allCompletedAfter && mealMissions.length > 0) {
-          await addXp(ALL_MEALS_XP_BONUS, user.id);
-          await updateStat('vitality', ALL_MEALS_VITALITY_BONUS, user.id);
-          
-          // Causar dano nutricional consolidado
-          const bossStore = useBossStore.getState();
-          await bossStore.attackActiveBoss(user.id, ALL_MEALS_XP_BONUS, 'nutrition');
-        }
       }
     }
   };
