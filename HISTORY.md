@@ -13,6 +13,20 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Fase 10: Módulo de Descanso & Lazer (Templo do Caçador)
+- **Tabela e Schema no Supabase (`rest_logs`)**:
+  - Criada a migration `20260616_rest_module.sql` definindo a tabela `rest_logs` para persistência de dados de sono, meditação e lazer offline.
+  - Aplicada a migração no Supabase remoto via MCP tool com políticas RLS restritas ao próprio proprietário do registro.
+- **Desenvolvimento da Página Rest (`Rest.tsx`)**:
+  - Criada uma interface cyberpunk moderna nas cores roxo/índigo (`#6366f1` / `#8b5cf6`) com cards de resumo do dia para Sono, Meditação e Lazer.
+  - Desenvolvido o **Templo da Mente**: Um cronômetro de meditação interativo que pulsa no ritmo de respiração orientada ("Inspire... Expire") utilizando Framer Motion, gerando inserções automáticas no Supabase e concedendo **+15 XP** e **+2 Equilíbrio (BAL)** na conclusão.
+  - Implementado formulário rápido de Sono (horas + estrelas de qualidade neon) concedendo **+20 XP** e **+2 Equilíbrio (BAL)**.
+  - Implementado formulário rápido de Lazer/Hobby desconectado de telas concedendo **+15 XP** e **+1 Equilíbrio (BAL)**.
+  - Integrada a listagem histórica com opção de exclusão atômica de logs.
+- **Roteamento e Portal de Comando**:
+  - Habilitada a rota `/rest` no [App.tsx](file:///d:/Área de Trabalho/App/src/App.tsx) carregando a nova página `Rest`.
+  - Desbloqueado e ativado o card "Descanso & Lazer" no Portal de Comando ([QuickMenu.tsx](file:///d:/Área de Trabalho/App/src/pages/QuickMenu.tsx)) com o ícone `Moon` e glow roxo.
+
 ### 2026-06-16 — Fase 9: Biblioteca de Programas de Treino (Treinos Pré-Prontos)
 - **Presets de Programas de Treino Estáticos**:
   - Criado o arquivo `src/data/workoutPresets.ts` contendo rotinas realistas organizadas por frequência de treino (Push Pull Legs 3x, ABCD 4x, ABCDE 5x, PPL 6x e Treino em Casa), com exercícios, séries e repetições sugeridas.

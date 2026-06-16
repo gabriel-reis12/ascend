@@ -13,6 +13,7 @@ import { Settings } from './pages/Settings';
 import { QuickMenu } from './pages/QuickMenu';
 import { Bosses } from './pages/Bosses';
 import { Fortuna } from './pages/Fortuna';
+import { Rest } from './pages/Rest';
 import { useHunterStore } from './stores/useHunterStore';
 
 function HunterGuard({ children }: { children: React.ReactNode }) {
@@ -59,7 +60,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
             <Route path="fortuna" element={<Fortuna />} />
             <Route path="bosses" element={<Bosses />} />
-            <Route path="rest" element={<ComingSoon title="Descanso & Lazer" />} />
+            <Route path="rest" element={<Rest />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

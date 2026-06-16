@@ -51,3 +51,7 @@
 ## Phase 9: Biblioteca de Programas de Treino (Treinos Pré-Prontos)
 - **Goal:** Fornecer modelos estruturados de rotinas esportivas organizadas por frequência de sessões para importação ágil.
 - **Status:** ✅ Complete — Implementado o arquivo estático de presets `src/data/workoutPresets.ts` agrupado por programas (3x, 4x, 5x, 6x e Casa). Desenvolvida a aba "Modelos de Treino" em `/workouts` com filtros e modal de visualização detalhada, integrando um fluxo de importação em lote altamente resiliente contra duplicidades e erros de chave estrangeira.
+
+## Phase 10: Módulo de Descanso & Lazer (Templo do Caçador)
+- **Goal:** Habilitar o registro de repouso noturno, lazer offline e cronômetro de respiração/meditação para calibrar o atributo de Equilíbrio (BAL) no RPG.
+- **Status:** ✅ Complete — Criada a tabela `rest_logs` com políticas RLS. Desenvolvida a rota `/rest` com interface de resumo e formulários de lançamento, contendo também o Templo da Mente (cronômetro guiado em Framer Motion) com recompensas de XP e BAL. Desbloqueado o card "Descanso & Lazer" no Portal de Comando.

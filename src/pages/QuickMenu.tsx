@@ -100,12 +100,12 @@ export function QuickMenu() {
     },
     {
       title: 'Descanso & Lazer',
-      desc: 'Monitore sua qualidade de sono e descanso mental para recuperar pontos de vitalidade (VIT).',
+      desc: 'Monitore sua qualidade de sono e descanso mental para calibrar seu Equilíbrio (BAL) e ganhar XP.',
       path: '/rest',
-      status: 'locked',
-      statusLabel: 'NÍVEL INSUFICIENTE',
+      status: 'active',
+      statusLabel: 'SISTEMA ATIVO',
       icon: <Moon className="w-5 h-5" />,
-      color: 'border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.08)] text-emerald-500/70',
+      color: 'border-indigo-500/30 hover:border-indigo-500/60 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)] text-indigo-400',
       bgClass: '',
       image: '/Cards/Descanso-Lazer.jpeg'
     }
