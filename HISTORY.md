@@ -508,6 +508,13 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Sincronizado o cache local de tarefas, hábitos, conclusões e missões de refeição após mutações, evitando que dados antigos reapareçam após refresh.
   - Corrigido o cadastro de alimentos personalizados para usar `created_by`, alinhado ao schema e às policies RLS do Supabase.
 ### 2026-06-16
+- **Invalidacao de Cache por Deploy:**
+  - Adicionado versionamento de build via `VERCEL_GIT_COMMIT_SHA` no Vite para detectar commits novos no navegador.
+  - Criado guard de inicializacao que limpa caches locais de dados do ASCEND quando a versao do app muda, preservando a sessao do Supabase.
+  - Configurados headers `Cache-Control: no-store` na Vercel para evitar que rotas/HTML antigos fiquem presos no Chrome apos deploy.
+  - Build de producao validado com `npm.cmd run build`.
+
+### 2026-06-16
 - **Resiliencia Supabase em Producao:**
   - Validado o projeto Supabase remoto via REST e smoke test autenticado com usuario temporario: criacao de missoes, bosses, alimentos, logs, cardapios, exercicios e rotinas passou com sucesso.
   - Adicionado timeout defensivo no carregamento/criacao de batalhas de bosses para impedir sincronizacao infinita quando uma chamada fica pendente.

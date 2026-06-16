@@ -3,6 +3,7 @@
 ## Production Stabilization - 2026-06-16
 - **Status:** Complete - Supabase remoto validado com REST e smoke test autenticado para missoes, bosses, alimentos, logs, cardapios, exercicios e rotinas.
 - **Frontend hardening:** Bosses agora tem timeout defensivo, seletores estaveis do Zustand e estado de erro com retry. Missoes, Recuperacao e Centro de Treinamento exibem falhas reais de sincronizacao em tela.
+- **Deploy cache control:** App agora embute `VERCEL_GIT_COMMIT_SHA`, limpa caches locais de dados quando muda de versao e envia `Cache-Control: no-store` pela Vercel para evitar Chrome preso em bundle antigo.
 - **Validation:** `npm.cmd run build` aprovado.
 
 ## Phase 1: Foundation & UI/UX Base
