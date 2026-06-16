@@ -23,9 +23,10 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - Implementado formulário rápido de Sono (horas + estrelas de qualidade neon) concedendo **+20 XP** e **+2 Equilíbrio (BAL)**.
   - Implementado formulário rápido de Lazer/Hobby desconectado de telas concedendo **+15 XP** e **+1 Equilíbrio (BAL)**.
   - Integrada a listagem histórica com opção de exclusão atômica de logs.
-- **Roteamento e Portal de Comando**:
+- **Roteamento, Portal de Comando & Menu Lateral**:
   - Habilitada a rota `/rest` no [App.tsx](file:///d:/Área de Trabalho/App/src/App.tsx) carregando a nova página `Rest`.
   - Desbloqueado e ativado o card "Descanso & Lazer" no Portal de Comando ([QuickMenu.tsx](file:///d:/Área de Trabalho/App/src/pages/QuickMenu.tsx)) com o ícone `Moon` e glow roxo.
+  - Adicionado o atalho `/rest` ("Descanso") com ícone `Moon` no menu lateral desktop ([RPGLayout.tsx](file:///d:/Área de Trabalho/App/src/components/layout/RPGLayout.tsx)) e no menu móvel ([MobileMenu.tsx](file:///d:/Área de Trabalho/App/src/components/layout/MobileMenu.tsx)).
 
 ### 2026-06-16 — Fase 9: Biblioteca de Programas de Treino (Treinos Pré-Prontos)
 - **Presets de Programas de Treino Estáticos**:
