@@ -28,6 +28,9 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Ganho de Disciplina Automático por Streaks**:
   - Implementado o acréscimo automático de **+1 ponto de Disciplina (DIS)** na store global [useHunterStore.ts](file:///d:/Área de Trabalho/App/src/stores/useHunterStore.ts) toda vez que o caçador mantém a streak de check-in diário consecutiva (de ontem para hoje).
   - O valor atualizado é refletido em tempo real na interface e persistido de forma segura no Supabase (`profiles`).
+- **Correção do Botão de Desconectar (Logout Resiliente)**:
+  - Implementada uma estrutura defensiva com `try-catch-finally` na função `signOut` do [AuthContext.tsx](file:///d:/Área de Trabalho/App/src/contexts/AuthContext.tsx).
+  - Garante a limpeza instantânea da sessão do cliente, do estado local e da store do Zustand no bloco `finally`, mesmo em caso de perda de conexão ou de expiração/bloqueio de token de sessão do Supabase no servidor, eliminando o travamento do botão.
 - **Validação de Build**:
   - bundle de produção validado e compilado via `npm run build` com sucesso absoluto (zero erros estáticos ou de digitação).
 

@@ -156,8 +156,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    currentUserRef.current = null;
-    await supabase.auth.signOut();
+    try {
+      currentUserRef.current = null;
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('[AuthContext] Erro no signOut do Supabase:', err);
+    } finally {
+      setSession(null);
+      setUser(null);
+      reset();
+    }
   };
 
   return (
