@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { useBossStore } from '@/stores/useBossStore';
 
 export interface Task {
   id: string;
@@ -147,6 +148,10 @@ export function useTasks() {
       );
       await addXp(task.xp_reward, user.id);
       if (task.stat_target) await updateStat(task.stat_target, task.stat_reward, user.id);
+      
+      // Causar dano ao chefe ativo
+      const bossStore = useBossStore.getState();
+      await bossStore.attackActiveBoss(user.id, task.xp_reward, 'task');
     }
   };
 
@@ -166,6 +171,10 @@ export function useTasks() {
       );
       await addXp(-task.xp_reward, user.id);
       if (task.stat_target) await updateStat(task.stat_target, -task.stat_reward, user.id);
+      
+      // Reverter dano ao chefe ativo
+      const bossStore = useBossStore.getState();
+      await bossStore.attackActiveBoss(user.id, -task.xp_reward, 'task');
     }
   };
 

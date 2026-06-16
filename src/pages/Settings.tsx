@@ -48,6 +48,14 @@ const ALL_POSSIBLE_ACHIEVEMENTS = [
   { key: 'discipline', title: 'Mente de Ferro', desc: 'Alcance 20 pontos de Disciplina', icon: 'Brain', titleReward: 'Focado', xp: 100 },
   { key: 'wisdom', title: 'Olhar Aguçado', desc: 'Alcance 20 pontos de Sabedoria', icon: 'Compass', titleReward: 'Eremita', xp: 100 },
   { key: 'balance', title: 'Zenith', desc: 'Alcance 20 pontos de Equilíbrio', icon: 'Scale', titleReward: 'Harmônico', xp: 100 },
+  // Chefes Finais
+  { key: 'boss_01', title: 'O Senhor da Procrastinação Derrotado', desc: 'Purificou o Senhor da Procrastinação', icon: 'Sword', titleReward: 'Executor Implacável', xp: 300 },
+  { key: 'boss_02', title: 'O Rei da Preguiça Derrotado', desc: 'Purificou o Rei da Preguiça', icon: 'Flame', titleReward: 'O Incansável', xp: 350 },
+  { key: 'boss_03', title: 'A Sereia da Distração Derrotada', desc: 'Purificou a Sereia da Distração', icon: 'Brain', titleReward: 'Mestre do Foco', xp: 400 },
+  { key: 'boss_04', title: 'O Devorador do Progresso Derrotado', desc: 'Purificou o Devorador do Progresso', icon: 'Heart', titleReward: 'Mestre da Disciplina', xp: 450 },
+  { key: 'boss_05', title: 'O Mercador das Dívidas Derrotado', desc: 'Purificou o Mercador das Dívidas', icon: 'Scale', titleReward: 'Guardião da Liberdade', xp: 500 },
+  { key: 'boss_06', title: 'O Arauto do Caos Derrotado', desc: 'Purificou o Arauto do Caos', icon: 'Compass', titleReward: 'Mestre da Clareza', xp: 550 },
+  { key: 'boss_07', title: 'O Reflexo da Autossabotagem Purificado', desc: 'Superou a si mesmo e purificou o Reflexo da Autossabotagem', icon: 'Crown', titleReward: 'O Purificado', xp: 800 },
 ];
 
 const getAchievementIcon = (iconName: string, size = 20, className = '') => {

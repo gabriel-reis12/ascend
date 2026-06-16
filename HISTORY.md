@@ -14,6 +14,28 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Implementação do Módulo de Chefes Finais (Raid Semanal)
+- **Criação do useBossStore.ts (Zustand)**:
+  - Desenvolvida a store que gerencia o ciclo de vida do combate das Raids. Mapeados os 7 chefes com base nas imagens e lores de `public/Bosses/Lore dos Boss.txt`.
+  - Implementado o método `loadActiveBattle` para restaurar o estado não finalizado do Supabase (`boss_battles`). Se o caçador não tiver nenhuma batalha de boss ativa, ela é inicializada contra o primeiro boss (`boss_01`).
+  - Implementado o método `attackActiveBoss` que atualiza o HP local de forma otimista e persiste no banco. Reduções no HP curam o boss em caso de desmarcação de tarefas/hábitos (evitando farm de dano).
+  - Implementado o método `purifyActiveBoss` que encerra a batalha ativa, insere a conquista lendária no Supabase para habilitar o título em `Settings`, concede o bônus de XP do boss e avança para a próxima Raid da fila.
+- **Integração de Danos Automáticos (Hooks & Páginas)**:
+  - Vinculadas as conclusões/desmarcações de tarefas (`useTasks.ts`) e hábitos (`useHabits.ts`) para causar dano ao chefe ativo proporcional ao XP ganho.
+  - Vinculados os logs e conclusões de treinos (`Workouts.tsx`) e a conclusão consolidade de planos alimentares diários (`useMealPlans.ts`) ao dano automático.
+  - Implementado o multiplicador de **Dano Crítico (1.5x a 2.0x)** baseado nas fraquezas de cada chefe (ex: treinar contra o Rei da Preguiça, finanças contra o Mercador das Dívidas).
+- **Desenvolvimento da Página Premium Cyberpunk (Bosses.tsx)**:
+  - Substituído o placeholder temporário `ComingSoon` em `src/App.tsx` para renderizar a página real de Bosses.
+  - Criada uma interface imersiva com barra de HP neon pulsante (que muda de cor e pisca em HP crítico), descrição da lore original, indicação detalhada de fraquezas e efeitos de floating numbers em Framer Motion no feed de dano.
+  - Estado de HP = 0 com tela triunfante de purificação, exibindo a lore de vitória original do chefe e botão neon para reivindicar os prêmios.
+  - Adicionado no rodapé a galeria de troféus exibindo insígnias e estados de todas as Raids do caçador (Purificado, Em Combate, Bloqueado).
+  - Adicionado um botão discreto de simulação de ataque rápido para fins de validação local instantânea.
+- **Sincronização Resiliente (useHunterStore.ts e Settings.tsx)**:
+  - Integrado o carregamento do boss ativo em background ao fim do `loadProfile` de `useHunterStore.ts`.
+  - Mapeadas as 7 conquistas dos chefes na lista estática `ALL_POSSIBLE_ACHIEVEMENTS` em `Settings.tsx` para desbloqueio dos respectivos títulos no Codex de conquistas e menu de perfil do caçador.
+- **Integridade da Compilação**:
+  - Validado o build com `npm run build` com sucesso absoluto (zero erros de TypeScript ou bundle).
+
 ### 2026-06-16 — Implementação do Quick Menu e Novo Fluxo de Roteamento Pós-Login
 - **Novo Roteamento do Sistema (App.tsx)**:
   - Definida a rota raiz protegida `/` como o novo **Menu Rápido (Quick Menu)**, tornando-a a tela de pouso padrão imediata pós-login do caçador.

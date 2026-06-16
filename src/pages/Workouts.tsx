@@ -26,6 +26,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { useBossStore } from '@/stores/useBossStore';
 import { WorkoutProgress } from '@/components/workouts/WorkoutProgress';
 import { cn } from '@/lib/utils';
 import { localDateString } from '@/lib/date';
@@ -384,6 +385,9 @@ export function Workouts() {
       await addXp(xpReward, user.id);
       await updateStat(statTarget, 2, user.id);
       
+      // Causar dano ao chefe ativo na Raid
+      await useBossStore.getState().attackActiveBoss(user.id, xpReward, 'workout');
+      
       setIsRoutineSessionOpen(false);
       setSessionRoutineId(null);
       setCompletedSessionExs([]);
@@ -499,6 +503,9 @@ export function Workouts() {
       
       // Add XP Reward for individual logging
       await addXp(10, user.id);
+      
+      // Causar dano ao chefe ativo na Raid (menor intensidade)
+      await useBossStore.getState().attackActiveBoss(user.id, 10, 'workout');
 
       setIsModalOpen(false);
       setSelectedExercise(null);

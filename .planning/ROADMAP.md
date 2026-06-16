@@ -30,3 +30,7 @@
 - **Goal:** Registro de refeições e tracking de calorias (Módulo de Nutrição e Missões de Refeições integradas).
 - **Status:** ✅ Complete — Implementado o painel de planos de refeições, metas nutricionais diárias, ingestão de macros (Carboidratos, Proteínas, Gorduras, Fibras e Calorias) com cálculo reativo, e sincronização completa com o store de RPG (`useHunterStore`) para XP e subida de nível. Integração visual no Dashboard e cards inferiores de Calorias, Volume e Energia 100% reativos com micro-animações dinâmicas de altíssima qualidade.
 
+## Phase 7: Boss Battles (Raid Semanal)
+- **Goal:** Implementação do sistema de Chefes Finais e provações de consistência com lores associadas e persistência de dados.
+- **Status:** ✅ Complete — Desenvolvida a store `useBossStore` integrada ao Supabase (`boss_battles`), vinculando a redução de HP do chefe ativo às atividades realizadas no aplicativo (tarefas, treinos, nutrição e hábitos). Criada a página premium ciberpunk `/bosses` com barra de HP neon pulsante, lore imersiva, fraquezas de combate com dano crítico, feed de dano flutuante em Framer Motion e fluxos de vitória, desbloqueio de medalhas e novos títulos equipáveis na página de configurações.
+

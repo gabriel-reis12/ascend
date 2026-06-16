@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
+import { useBossStore } from './useBossStore';
 
 export type HunterRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'National' | 'Monarch';
 export type HunterClass = 'Warrior' | 'Scholar' | 'Creator' | 'Monk' | 'Leader';
@@ -351,6 +352,9 @@ export const useHunterStore = create<HunterState>()(
           // Verificar streaks e conquistas após carregar
           await get().checkStreakMilestones(userId);
           await get().checkAchievements(userId);
+
+          // Carregar batalha de boss ativa em segundo plano para o caçador
+          useBossStore.getState().loadActiveBattle(userId);
         }
       },
 

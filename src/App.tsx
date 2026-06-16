@@ -11,6 +11,7 @@ import { RegisterPage } from './pages/auth/RegisterPage';
 import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
 import { QuickMenu } from './pages/QuickMenu';
+import { Bosses } from './pages/Bosses';
 import { useHunterStore } from './stores/useHunterStore';
 
 function HunterGuard({ children }: { children: React.ReactNode }) {
@@ -56,7 +57,7 @@ function App() {
             <Route path="nutrition" element={<Nutrition />} />
             <Route path="settings" element={<Settings />} />
             <Route path="fortuna" element={<ComingSoon title="Módulo Fortuna" />} />
-            <Route path="bosses" element={<ComingSoon title="Chefes Finais (Raid)" />} />
+            <Route path="bosses" element={<Bosses />} />
             <Route path="rest" element={<ComingSoon title="Descanso & Lazer" />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

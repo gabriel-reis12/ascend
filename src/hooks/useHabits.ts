@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { useBossStore } from '@/stores/useBossStore';
 import { localDateString } from '@/lib/date';
 
 const ALL_MEALS_XP_BONUS = 50;
@@ -338,6 +339,10 @@ export function useHabits() {
         });
         await addXp(-habit.xp_reward, user.id);
         if (habit.stat_target) await updateStat(habit.stat_target, -habit.stat_reward, user.id);
+        
+        // Reverter dano no boss com base na categoria
+        const bossStore = useBossStore.getState();
+        await bossStore.attackActiveBoss(user.id, -habit.xp_reward, habit.category);
       }
     } else {
       const { error } = await supabase.from('habit_completions').insert({
@@ -350,6 +355,10 @@ export function useHabits() {
         updateCompletedState((prev) => new Set([...prev, habitId]));
         await addXp(habit.xp_reward, user.id);
         if (habit.stat_target) await updateStat(habit.stat_target, habit.stat_reward, user.id);
+        
+        // Causar dano no boss com base na categoria
+        const bossStore = useBossStore.getState();
+        await bossStore.attackActiveBoss(user.id, habit.xp_reward, habit.category);
       }
     }
   };
@@ -378,6 +387,10 @@ export function useHabits() {
         if (allCompletedBefore && mealMissions.length > 0) {
           await addXp(-ALL_MEALS_XP_BONUS, user.id);
           await updateStat('vitality', -ALL_MEALS_VITALITY_BONUS, user.id);
+          
+          // Reverter dano nutricional consolidado
+          const bossStore = useBossStore.getState();
+          await bossStore.attackActiveBoss(user.id, -ALL_MEALS_XP_BONUS, 'nutrition');
         }
       }
     } else {
@@ -395,6 +408,10 @@ export function useHabits() {
         if (allCompletedAfter && mealMissions.length > 0) {
           await addXp(ALL_MEALS_XP_BONUS, user.id);
           await updateStat('vitality', ALL_MEALS_VITALITY_BONUS, user.id);
+          
+          // Causar dano nutricional consolidado
+          const bossStore = useBossStore.getState();
+          await bossStore.attackActiveBoss(user.id, ALL_MEALS_XP_BONUS, 'nutrition');
         }
       }
     }
