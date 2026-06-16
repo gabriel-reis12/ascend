@@ -11,8 +11,22 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Gerenciamento de Estado:** Zustand.
 
 ---
-
 ## 🕒 Histórico de Mudanças Recentes
+
+### 2026-06-16 — Fase 3: Módulo de IA Nutricional (Códex da Alimentação) e Reestruturação de Abas
+- **Códex da Alimentação (IA com Groq/Llama 3.1)**:
+  - Desenvolvida a lógica de análise de refeição em linguagem natural conectando o frontend ao endpoint da Groq API (`llama-3.1-8b-instant`) com formato JSON estruturado (`response_format`).
+  - Implementada a conversão matemática dos macronutrientes estimados da refeição consolidada para a base de 100g.
+  - Integrada a persistência atômica no banco de dados Supabase criando o registro em `foods` (com flag `is_custom = true`) e gerando automaticamente o log correspondente na tabela `food_logs` com a gramatura total da refeição estimadas pela IA.
+  - Conectada a calibração com as mecânicas de gamificação de RPG: adicionando +15 XP no `useHunterStore` do caçador e desferindo 15 de dano de nutrição (crítico de 2x = 30 de dano por fraqueza temática) ao Boss ativo na store `useBossStore`.
+- **Reestruturação das Abas e Experiência de Usuário (Nutrition.tsx)**:
+  - Modificado o menu de navegação da tela de Nutrição para as abas principales **Diário e Códex** (`'diario'`) e **Cardápios do Caçador** (`'cardapios'`), definindo o Diário como página padrão de entrada.
+  - Implementada uma grade responsiva cyberpunk no Diário com painel consolidado de macros diários reativos no topo (Energia/Kcal, Proteínas, Carboidratos e Gorduras).
+  - Criadas sub-abas centrais dentro do Diário para alternância fluida entre o **Códex da Alimentação (IA)** e a **Biblioteca de Itens (Manual)**.
+  - Fixada a coluna lateral de **Consumo Diário** (histórico de logs do dia) de modo comum a ambas as sub-abas do diário, fornecendo feedback de atualização de dados em tempo real.
+  - Adicionado suporte a banners animados de sucesso neon detalhando macros, XP ganho e dano causado no Boss ativo pós-calibração por IA.
+- **Integridade e Build**:
+  - Validada a compilação do TypeScript e bundle do Vite com `npm run build` obtendo sucesso absoluto (zero erros sintáticos ou estáticos).
 
 ### 2026-06-16 — Correções Pós-Implementação do Módulo Bosses
 - **Resiliência da Store de Bosses**:
