@@ -376,6 +376,31 @@
   }
 }
 
+.onboarding-ritual-particle {
+  animation: onboarding-ritual-drift 5.8s ease-in-out infinite;
+}
+
+@keyframes onboarding-ritual-drift {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.65);
+  }
+  35%,
+  70% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(16px, -34px, 0) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-ritual-particle {
+    animation: none;
+  }
+}
+
 /* Neon Glows reativos para as Classes do Sistema */
 .glow-mage { box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); border-color: rgba(139, 92, 246, 0.3) !important; }
 .glow-assassin { box-shadow: 0 0 15px rgba(236, 72, 153, 0.4); border-color: rgba(236, 72, 153, 0.3) !important; }

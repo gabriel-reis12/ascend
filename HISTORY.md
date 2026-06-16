@@ -13,6 +13,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Ritual de Despertar no Onboarding
+- **Experiência RPG do Onboarding:**
+  - Transformado o fluxo em fases narrativas do Sistema: calibração biológica, análise corporal, missão central, rank, avaliação e despertar da classe.
+  - Adicionada sincronização visual com percentual de progresso, trilha de fase e partículas discretas sem alterar paleta, tipografia ou estrutura geral.
+  - Melhorado feedback de escolha em sexo, objetivo, rank, foco, nutrição e quiz com estado "Registrado" e mensagens de decisão do Sistema.
+  - Reforçada a revelação de classe com card de desbloqueio, imagem da classe, atributos iniciais, destaque de conquista e classe recomendada já selecionada.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-16 — Fase 10.1: Calibração de Gamificação de Atributos & Progresso Reativo
 - **Correção dos Domínios da Evolução (Dashboard)**:
   - Sincronizados os Domínios da Evolução no [Dashboard.tsx](file:///d:/Área de Trabalho/App/src/pages/Dashboard.tsx) com as métricas e atributos exatos do `IDEAS.md`:

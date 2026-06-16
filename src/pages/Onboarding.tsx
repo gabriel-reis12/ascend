@@ -8,7 +8,7 @@ import { MatrixLoader } from '../components/ui/matrix-loader';
 import {
   Shield, Sword, Book, Zap, ChevronRight, Lightbulb, Crown,
   User, Calendar, Ruler, Weight, Target, Brain, Dumbbell, Star,
-  CheckCircle2, ArrowRight, Sparkles
+  CheckCircle2, ArrowRight, Sparkles, Activity, ScanLine, Trophy
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -168,6 +168,40 @@ const AWAKENING_MESSAGES = [
   'Classe determinada pelo Arquiteto.',
 ];
 
+const RITUAL_STEPS: Array<{ id: Exclude<OnboardingStep, 'loading'>; label: string; phase: string }> = [
+  { id: 'basic-info', label: 'Calibração de Identidade', phase: 'Fase I' },
+  { id: 'physical-profile', label: 'Análise Corporal', phase: 'Fase II' },
+  { id: 'main-goal', label: 'Missão Central', phase: 'Fase III' },
+  { id: 'experience-level', label: 'Calibração de Rank', phase: 'Fase IV' },
+  { id: 'architect-intro', label: 'Contato do Arquiteto', phase: 'Fase V' },
+  { id: 'class-quiz', label: 'Avaliação do Sistema', phase: 'Fase VI' },
+  { id: 'awakening', label: 'Síntese de Mana', phase: 'Fase VII' },
+  { id: 'class-selection', label: 'Despertar da Classe', phase: 'Fase VIII' },
+];
+
+const RITUAL_PARTICLES = Array.from({ length: 14 }, (_, index) => ({
+  id: index,
+  left: `${6 + ((index * 19) % 88)}%`,
+  top: `${8 + ((index * 31) % 82)}%`,
+  delay: `${(index % 7) * 0.3}s`,
+}));
+
+const getRitualProgress = (step: OnboardingStep, currentQuestionIndex: number) => {
+  if (step === 'loading') return 0;
+  const baseIndex = RITUAL_STEPS.findIndex(item => item.id === step);
+  if (baseIndex < 0) return 0;
+  const baseProgress = (baseIndex / RITUAL_STEPS.length) * 100;
+  if (step === 'class-quiz') {
+    return Math.round(baseProgress + ((currentQuestionIndex + 1) / QUESTIONS.length) * (100 / RITUAL_STEPS.length));
+  }
+  if (step === 'awakening') return 92;
+  if (step === 'class-selection') return 100;
+  return Math.round(((baseIndex + 1) / RITUAL_STEPS.length) * 100);
+};
+
+const getCurrentRitual = (step: OnboardingStep) =>
+  RITUAL_STEPS.find(item => item.id === step) || RITUAL_STEPS[0];
+
 // ─── Componente OptionCard ────────────────────────────────────────────────────
 function OptionCard({
   label,
@@ -188,38 +222,67 @@ function OptionCard({
       aria-pressed={isSelected}
       initial={{ opacity: 0, x: -16 }}
       animate={{ opacity: 1, x: 0 }}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.985 }}
       transition={{ delay, duration: 0.3 }}
       onClick={onClick}
       className={`
-        relative flex items-center gap-3 p-4 rounded-xl border-l-4 cursor-pointer select-none
-        transition-all duration-150 ease-out hover:scale-[1.01] active:scale-[0.99]
+        group relative flex items-center gap-3 p-4 rounded-xl border-l-4 cursor-pointer select-none overflow-hidden
+        transition-all duration-200 ease-out active:scale-[0.99]
         ${isSelected
-          ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(124,58,237,0.35)] ring-1 ring-purple-500/50'
-          : 'bg-purple-950/30 border-purple-700/60 hover:bg-purple-900/40 hover:border-purple-500'}
+          ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_24px_rgba(124,58,237,0.42)] ring-1 ring-purple-500/50'
+          : 'bg-purple-950/30 border-purple-700/60 hover:bg-purple-900/40 hover:border-purple-500 hover:shadow-[0_0_18px_rgba(124,58,237,0.18)]'}
       `}
     >
+      <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_12%_50%,rgba(124,58,237,0.18),transparent_38%)] pointer-events-none" />
       {icon && <span className="flex-shrink-0">{icon}</span>}
-      <p className={`text-sm font-medium leading-snug flex-1 ${isSelected ? 'text-purple-100' : 'text-purple-200/80'}`}>
+      <p className={`relative text-sm font-medium leading-snug flex-1 ${isSelected ? 'text-purple-100' : 'text-purple-200/80'}`}>
         {label}
       </p>
       <motion.div
         initial={{ opacity: 0, scale: 0.6 }}
         animate={{ opacity: isSelected ? 1 : 0, scale: isSelected ? 1 : 0.6 }}
         transition={{ duration: 0.2 }}
+        className="relative"
       >
         <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
       </motion.div>
       {isSelected && (
-        <motion.div layoutId="option-glow" className="absolute inset-0 rounded-xl bg-purple-500/10 pointer-events-none" />
+        <>
+          <motion.div layoutId="option-glow" className="absolute inset-0 rounded-xl bg-purple-500/10 pointer-events-none" />
+          <motion.div
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute right-3 top-2 text-[8px] font-orbitron uppercase tracking-[0.24em] text-purple-300/70"
+          >
+            Registrado
+          </motion.div>
+        </>
       )}
     </motion.div>
   );
 }
 
 // ─── Componente StepHeader ────────────────────────────────────────────────────
-function StepHeader({ step, total, label }: { step: number; total: number; label: string }) {
+function StepHeader({ step, total, label, progress }: { step: number; total: number; label: string; progress?: number }) {
   return (
     <div className="space-y-4 text-center mb-8">
+      {typeof progress === 'number' && (
+        <div className="mx-auto max-w-sm rounded-2xl border border-purple-500/20 bg-purple-950/20 p-3 shadow-[0_0_24px_rgba(124,58,237,0.12)]">
+          <div className="mb-2 flex items-center justify-between text-[9px] font-orbitron uppercase tracking-[0.22em] text-purple-400">
+            <span className="flex items-center gap-1.5"><ScanLine className="w-3 h-3" /> Sincronização</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-purple-950/70">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-purple-600 to-blue-500 shadow-[0_0_14px_rgba(124,58,237,0.65)]"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+            />
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-center gap-2">
         {Array.from({ length: total }).map((_, i) => (
           <motion.div
@@ -235,6 +298,25 @@ function StepHeader({ step, total, label }: { step: number; total: number; label
   );
 }
 
+function DecisionFeedback({ message }: { message: string | null }) {
+  return (
+    <AnimatePresence>
+      {message && (
+        <motion.div
+          key={message}
+          initial={{ opacity: 0, y: 10, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -8 }}
+          className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-purple-500/25 bg-purple-500/10 px-4 py-2 text-[10px] font-orbitron uppercase tracking-[0.18em] text-purple-200 shadow-[0_0_24px_rgba(124,58,237,0.18)]"
+        >
+          <Activity className="w-3 h-3 text-purple-300" />
+          {message}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export function Onboarding() {
   const { user } = useAuth();
@@ -247,6 +329,7 @@ export function Onboarding() {
   const [revealedClass, setRevealedClass] = useState<HunterClass | null>(null);
   const [selectedClass, setSelectedClass] = useState<HunterClass | null>(null);
   const [awakeningMsgIdx, setAwakeningMsgIdx] = useState(0);
+  const [decisionFeedback, setDecisionFeedback] = useState<string | null>(null);
 
   const [form, setForm] = useState<FormData>({
     fullName: '',
@@ -289,6 +372,17 @@ export function Onboarding() {
 
   const setField = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setForm(prev => ({ ...prev, [key]: value }));
+
+  const registerDecision = <K extends keyof FormData>(key: K, value: FormData[K], message: string) => {
+    setField(key, value);
+    setDecisionFeedback(message);
+  };
+
+  useEffect(() => {
+    if (!decisionFeedback) return;
+    const t = setTimeout(() => setDecisionFeedback(null), 1800);
+    return () => clearTimeout(t);
+  }, [decisionFeedback]);
 
   const calculateSuggestedClass = (): HunterClass => {
     const counts: Record<string, number> = { Warrior: 0, Scholar: 0, Creator: 0, Monk: 0, Leader: 0 };
@@ -338,6 +432,7 @@ export function Onboarding() {
   const handleSelectQuizOption = (value: string) => {
     const questionId = QUESTIONS[currentQuestionIndex].id;
     setAnswers(prev => ({ ...prev, [questionId]: value }));
+    setDecisionFeedback('Resposta registrada. Assinatura de classe atualizada.');
   };
 
   const handleNextQuestion = () => {
@@ -346,6 +441,7 @@ export function Onboarding() {
     } else {
       const suggested = calculateSuggestedClass();
       setRevealedClass(suggested);
+      setSelectedClass(suggested);
       setStep('awakening');
     }
   };
@@ -358,9 +454,29 @@ export function Onboarding() {
   };
 
   const currentAnswer = answers[QUESTIONS[currentQuestionIndex]?.id];
+  const ritualProgress = getRitualProgress(step, currentQuestionIndex);
+  const currentRitual = getCurrentRitual(step);
+  const revealedClassData = CLASSES.find(c => c.id === revealedClass);
 
   return (
-    <div className="min-h-screen bg-[#0B0B0F] text-white flex items-center justify-center p-6">
+    <div className="relative min-h-screen bg-[#0B0B0F] text-white flex items-center justify-center p-6 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_16%,rgba(124,58,237,0.12),transparent_32%),radial-gradient(circle_at_18%_82%,rgba(59,130,246,0.09),transparent_28%)]" />
+      {RITUAL_PARTICLES.map(particle => (
+        <span
+          key={particle.id}
+          className="onboarding-ritual-particle absolute h-1 w-1 rounded-full bg-purple-400/60 shadow-[0_0_14px_rgba(124,58,237,0.8)]"
+          style={{ left: particle.left, top: particle.top, animationDelay: particle.delay }}
+        />
+      ))}
+      {step !== 'loading' && (
+        <div className="pointer-events-none absolute left-1/2 top-5 z-20 hidden -translate-x-1/2 items-center gap-3 rounded-full border border-purple-500/20 bg-[#0B0B0F]/70 px-4 py-2 backdrop-blur-xl md:flex">
+          <span className="text-[9px] font-orbitron uppercase tracking-[0.24em] text-purple-500">{currentRitual.phase}</span>
+          <span className="h-1 w-1 rounded-full bg-purple-500" />
+          <span className="text-[9px] font-orbitron uppercase tracking-[0.24em] text-gray-500">{currentRitual.label}</span>
+          <span className="h-1 w-1 rounded-full bg-purple-500" />
+          <span className="text-[9px] font-orbitron uppercase tracking-[0.24em] text-purple-400">{ritualProgress}%</span>
+        </div>
+      )}
       <AnimatePresence mode="wait">
 
         {/* ── LOADING ── */}
@@ -373,15 +489,15 @@ export function Onboarding() {
         {/* ── ETAPA 1: INFORMAÇÕES BÁSICAS ── */}
         {step === 'basic-info' && (
           <motion.div key="basic-info" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={1} total={4} label="Informações Básicas" />
+            <StepHeader step={1} total={8} label="Calibração Biológica" progress={ritualProgress} />
 
             <div className="space-y-2 text-center mb-8">
               <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Protocolo de Identificação</p>
               <h1 className="text-2xl md:text-3xl font-orbitron font-bold text-white leading-tight">
-                Quem é o <span className="text-purple-400">Caçador</span>?
+                O Sistema precisa reconhecer o <span className="text-purple-400">Caçador</span>.
               </h1>
               <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                Cada caçador tem uma identidade única na Fenda. Precisamos registrar a sua.
+                Sua assinatura inicial será gravada antes da abertura da primeira Fenda.
               </p>
             </div>
 
@@ -427,7 +543,7 @@ export function Onboarding() {
                     <motion.button
                       key={opt.value}
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => setField('gender', opt.value as HunterGender)}
+                      onClick={() => registerDecision('gender', opt.value as HunterGender, `Sexo ${opt.label.toLowerCase()} registrado pelo Sistema`)}
                       className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all duration-150 ${
                         form.gender === opt.value
                           ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(124,58,237,0.3)]'
@@ -441,6 +557,7 @@ export function Onboarding() {
                     </motion.button>
                   ))}
                 </div>
+                <DecisionFeedback message={decisionFeedback} />
               </div>
             </div>
 
@@ -464,14 +581,14 @@ export function Onboarding() {
         {/* ── ETAPA 2: PERFIL FÍSICO ── */}
         {step === 'physical-profile' && (
           <motion.div key="physical" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={2} total={4} label="Perfil Físico" />
+            <StepHeader step={2} total={8} label="Análise Corporal" progress={ritualProgress} />
 
             <div className="space-y-2 text-center mb-8">
-              <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Registros Biométricos</p>
+              <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Varredura Biométrica</p>
               <h1 className="text-2xl md:text-3xl font-orbitron font-bold leading-tight">
-                Seu <span className="text-purple-400">Corpo</span> é sua base
+                O Sistema está lendo sua <span className="text-purple-400">base física</span>.
               </h1>
-              <p className="text-sm text-gray-500">Estes dados ajudam a calibrar sua evolução física no sistema.</p>
+              <p className="text-sm text-gray-500">Cada métrica ajusta a dificuldade das primeiras missões.</p>
             </div>
 
             <div className="space-y-4">
@@ -509,7 +626,7 @@ export function Onboarding() {
                     <motion.button
                       key={goal.value}
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => setField('nutritionGoal', goal.value)}
+                      onClick={() => registerDecision('nutritionGoal', goal.value, `Objetivo nutricional sincronizado: ${goal.label}`)}
                       className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
                         form.nutritionGoal === goal.value
                           ? 'bg-purple-500/20 border-purple-400 text-purple-100'
@@ -520,6 +637,7 @@ export function Onboarding() {
                     </motion.button>
                   ))}
                 </div>
+                <DecisionFeedback message={decisionFeedback} />
               </div>
 
               <div className="space-y-1.5">
@@ -531,7 +649,7 @@ export function Onboarding() {
                     <motion.button
                       key={focus}
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => setField('trainingFocus', focus)}
+                      onClick={() => registerDecision('trainingFocus', focus, `Foco de treino registrado: ${focus}`)}
                       className={`text-left px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
                         form.trainingFocus === focus
                           ? 'bg-purple-500/20 border-purple-400 text-purple-100'
@@ -560,13 +678,16 @@ export function Onboarding() {
         {/* ── ETAPA 3: OBJETIVO PRINCIPAL ── */}
         {step === 'main-goal' && (
           <motion.div key="main-goal" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={3} total={4} label="Objetivo Principal" />
+            <StepHeader step={3} total={8} label="Missão Central" progress={ritualProgress} />
 
             <div className="space-y-2 text-center mb-8">
               <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Missão Central</p>
               <h1 className="text-2xl md:text-3xl font-orbitron font-bold leading-tight">
-                Por que você quer <span className="text-purple-400">Evoluir</span>?
+                O Sistema detectou múltiplos caminhos. Qual representa sua <span className="text-purple-400">essência</span>?
               </h1>
+              <p className="text-sm text-gray-500 max-w-md mx-auto">
+                Esta escolha define o primeiro eixo das suas quests de evolução.
+              </p>
             </div>
 
             <div className="space-y-3">
@@ -580,12 +701,13 @@ export function Onboarding() {
                   key={opt.value}
                   label={`${opt.label} — ${opt.sub}`}
                   isSelected={form.mainGoal === opt.value}
-                  onClick={() => setField('mainGoal', opt.value)}
+                  onClick={() => registerDecision('mainGoal', opt.value, `Missão central travada: ${opt.label}`)}
                   icon={<span className={`${form.mainGoal === opt.value ? 'text-purple-300' : 'text-purple-600'}`}>{opt.icon}</span>}
                   delay={idx * 0.06}
                 />
               ))}
             </div>
+            <DecisionFeedback message={decisionFeedback} />
 
             <div className="mt-8 flex justify-end">
               <AnimatePresence>
@@ -607,14 +729,14 @@ export function Onboarding() {
         {/* ── ETAPA 4: NÍVEL DE EXPERIÊNCIA ── */}
         {step === 'experience-level' && (
           <motion.div key="experience" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={4} total={4} label="Nível de Experiência" />
+            <StepHeader step={4} total={8} label="Calibração de Rank" progress={ritualProgress} />
 
             <div className="space-y-2 text-center mb-8">
               <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Calibração de Rank</p>
               <h1 className="text-2xl md:text-3xl font-orbitron font-bold leading-tight">
-                Qual é o seu <span className="text-purple-400">Rank</span> atual?
+                Informe seu <span className="text-purple-400">Rank</span> inicial para calibrar a ameaça.
               </h1>
-              <p className="text-sm text-gray-500">Isso calibra a dificuldade inicial das suas missões.</p>
+              <p className="text-sm text-gray-500">O Sistema ajustará as primeiras missões sem quebrar seu ritmo.</p>
             </div>
 
             <div className="space-y-3">
@@ -627,11 +749,12 @@ export function Onboarding() {
                   key={opt.value}
                   label={`[Rank ${opt.rank}] ${opt.label} — ${opt.sub}`}
                   isSelected={form.experienceLevel === opt.value}
-                  onClick={() => setField('experienceLevel', opt.value)}
+                  onClick={() => registerDecision('experienceLevel', opt.value, `Rank ${opt.rank} aceito pelo Sistema`)}
                   delay={idx * 0.07}
                 />
               ))}
             </div>
+            <DecisionFeedback message={decisionFeedback} />
 
             <div className="mt-8 flex justify-end">
               <AnimatePresence>
@@ -725,6 +848,19 @@ export function Onboarding() {
 
             {/* Progresso */}
             <div className="w-full space-y-3 text-center">
+              <div className="mx-auto max-w-md rounded-2xl border border-purple-500/20 bg-purple-950/20 p-3">
+                <div className="mb-2 flex items-center justify-between text-[9px] font-orbitron uppercase tracking-[0.22em] text-purple-400">
+                  <span className="flex items-center gap-1.5"><ScanLine className="w-3 h-3" /> Avaliação do Sistema</span>
+                  <span>{ritualProgress}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-purple-950/70">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-600 to-blue-500 shadow-[0_0_14px_rgba(124,58,237,0.65)]"
+                    animate={{ width: `${ritualProgress}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
               <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">
                 Avaliação do Arquiteto · {currentQuestionIndex + 1} / {QUESTIONS.length}
               </span>
@@ -767,6 +903,7 @@ export function Onboarding() {
                 ))}
               </motion.div>
             </AnimatePresence>
+            <DecisionFeedback message={decisionFeedback} />
 
             <AnimatePresence>
               {currentAnswer && (
@@ -885,23 +1022,65 @@ export function Onboarding() {
             <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
               <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Resultado da Avaliação · Sistema do Arquiteto</p>
               <h1 className="text-3xl md:text-4xl font-orbitron font-bold text-white tracking-tight">
-                Você é um{' '}
+                Classe despertada:{' '}
                 <motion.span
                   className="text-purple-400"
                   initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5, type: 'spring' }}
+                  animate={{ opacity: 1, scale: [0.8, 1.12, 1] }}
+                  transition={{ delay: 0.5, duration: 0.65, type: 'spring' }}
                 >
                   {revealedClass}
                 </motion.span>
               </h1>
               <p className="text-gray-500 max-w-lg mx-auto text-sm leading-relaxed">
-                O sistema identificou sua essência. Mas o poder final de escolha é sempre do caçador — confirme ou escolha outro caminho.
+                O Sistema identificou sua essência. Confirme o despertar ou escolha outro caminho antes de entrar na Fenda.
               </p>
               <p className="text-[11px] text-purple-600/60 italic font-mono">
                 "A fraqueza não é uma limitação. É um ponto de partida." — Arquiteto, Solo Leveling
               </p>
             </motion.div>
+
+            {revealedClassData && (
+              <motion.div
+                initial={{ opacity: 0, y: 18, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.35, duration: 0.55, type: 'spring', stiffness: 170, damping: 18 }}
+                className="relative mx-auto grid max-w-3xl overflow-hidden rounded-3xl border border-purple-500/30 bg-purple-950/20 p-4 text-left shadow-[0_0_60px_rgba(124,58,237,0.28)] md:grid-cols-[180px_1fr] md:p-5"
+              >
+                <motion.div
+                  className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_18%_28%,rgba(124,58,237,0.28),transparent_34%),linear-gradient(120deg,transparent,rgba(255,255,255,0.08),transparent)]"
+                  animate={{ opacity: [0.45, 0.8, 0.45] }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+                  <img src={revealedClassData.image} alt={revealedClassData.name} className="h-56 w-full object-cover md:h-full" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  <div className="absolute bottom-3 left-3 rounded-full border border-purple-400/40 bg-purple-600/30 px-3 py-1 text-[9px] font-orbitron uppercase tracking-[0.2em] text-purple-100">
+                    Desbloqueado
+                  </div>
+                </div>
+                <div className="relative flex flex-col justify-center p-4 md:p-6">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/40 shadow-inner">
+                      {revealedClassData.icon}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-orbitron uppercase tracking-[0.24em] text-purple-400">Conquista de despertar</p>
+                      <h2 className={`font-orbitron text-2xl font-bold ${revealedClassData.accent}`}>{revealedClassData.name}</h2>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed text-gray-400">{revealedClassData.description}</p>
+                  <div className="mt-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                    <p className="mb-1 text-[9px] font-orbitron uppercase tracking-[0.22em] text-gray-600">Atributos iniciais</p>
+                    <p className="font-mono text-xs tracking-wider text-purple-200">{revealedClassData.stats}</p>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 text-[10px] font-orbitron uppercase tracking-[0.2em] text-purple-300">
+                    <Trophy className="w-4 h-4" />
+                    Sua classe acabou de despertar.
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Grid de classes */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -916,7 +1095,10 @@ export function Onboarding() {
                     whileHover={{ scale: 1.05, y: -8, transition: { type: 'spring', stiffness: 400, damping: 15 } }}
                     whileTap={{ scale: 0.97 }}
                     transition={{ opacity: { delay: 0.15 + idx * 0.08 }, y: { delay: 0.15 + idx * 0.08 } }}
-                    onClick={() => setSelectedClass(c.id)}
+                    onClick={() => {
+                      setSelectedClass(c.id);
+                      setDecisionFeedback(`${c.name} selecionado para despertar`);
+                    }}
                     className={`
                       relative glass-panel p-5 flex flex-col items-center gap-4 group
                       border-2 transition-colors duration-200 ${c.color} ${isSuggested ? c.glow : ''}
@@ -969,6 +1151,8 @@ export function Onboarding() {
                 );
               })}
             </div>
+
+            <DecisionFeedback message={decisionFeedback} />
 
             {/* Botão de Confirmação */}
             <div className="flex justify-center pt-4">
