@@ -663,7 +663,7 @@ export function Quests() {
                           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
                             {nutritionTargets.targetCalories
                               ? `Objetivo: ${nutritionTargets.goalLabel}. Alvo de ${nutritionTargets.targetCalories} kcal com tolerancia diaria.`
-                              : 'Complete seu perfil em Ajustes para calcular TMB e meta calorica.'}
+                              : `Faltam no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados fisicos'}.`}
                           </p>
                         </div>
                       </div>

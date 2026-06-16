@@ -479,7 +479,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                 <p className="mt-2 text-xs font-semibold text-gray-500">
                   {nutritionTargets.targetCalories
                     ? `Faltam ${Math.round(remainingCalories ?? 0)} kcal para sua meta de ${nutritionTargets.goalLabel.toLowerCase()}.`
-                    : 'Preencha data de nascimento, genero, altura e peso atual em Ajustes para calcular sua meta.'}
+                    : `Faltam no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados fisicos'}. Atualize em Ajustes.`}
                 </p>
               </div>
 

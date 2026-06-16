@@ -19,6 +19,7 @@ export interface NutritionTargets {
   maxCalories: number | null;
   activityFactor: number;
   adjustmentPercent: number;
+  missingFields: string[];
 }
 
 const ACTIVITY_FACTOR = 1.2;
@@ -61,6 +62,12 @@ export function calculateBmr(profile: NutritionProfile) {
 export function calculateNutritionTargets(profile: NutritionProfile): NutritionTargets {
   const goal = normalizeNutritionGoal(profile.nutritionGoal);
   const bmr = calculateBmr(profile);
+  const missingFields = [
+    !profile.birthday ? 'data de nascimento' : null,
+    !profile.gender ? 'genero' : null,
+    !profile.height ? 'altura' : null,
+    !profile.weightCurrent ? 'peso atual' : null,
+  ].filter(Boolean) as string[];
 
   if (!bmr) {
     return {
@@ -74,6 +81,7 @@ export function calculateNutritionTargets(profile: NutritionProfile): NutritionT
       maxCalories: null,
       activityFactor: ACTIVITY_FACTOR,
       adjustmentPercent: 0,
+      missingFields,
     };
   }
 
@@ -93,5 +101,6 @@ export function calculateNutritionTargets(profile: NutritionProfile): NutritionT
     maxCalories: targetCalories + toleranceCalories,
     activityFactor: ACTIVITY_FACTOR,
     adjustmentPercent,
+    missingFields,
   };
 }

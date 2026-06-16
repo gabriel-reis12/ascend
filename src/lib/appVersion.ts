@@ -1,4 +1,6 @@
 const VERSION_KEY = 'ascend_app_version';
+const PROFILE_SCHEMA_KEY = 'ascend_profile_schema_version';
+const PROFILE_SCHEMA_VERSION = '2026-06-16-nutrition-goal-v2';
 
 const LOCAL_CACHE_PREFIXES = [
   'ascend_tasks_',
@@ -8,6 +10,7 @@ const LOCAL_CACHE_PREFIXES = [
   'ascend_meals_',
   'ascend_active_workout_',
   'bonus_quest_lore_',
+  'hunter-storage',
 ];
 
 declare const __APP_VERSION__: string;
@@ -42,11 +45,13 @@ export function syncAppVersion() {
 
   const currentVersion = __APP_VERSION__;
   const previousVersion = window.localStorage.getItem(VERSION_KEY);
+  const previousProfileSchema = window.localStorage.getItem(PROFILE_SCHEMA_KEY);
 
-  if (previousVersion && previousVersion !== currentVersion) {
+  if ((previousVersion && previousVersion !== currentVersion) || previousProfileSchema !== PROFILE_SCHEMA_VERSION) {
     clearLocalAppCaches();
     void clearBrowserCaches();
   }
 
   window.localStorage.setItem(VERSION_KEY, currentVersion);
+  window.localStorage.setItem(PROFILE_SCHEMA_KEY, PROFILE_SCHEMA_VERSION);
 }

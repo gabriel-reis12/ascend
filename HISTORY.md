@@ -508,6 +508,13 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Sincronizado o cache local de tarefas, hábitos, conclusões e missões de refeição após mutações, evitando que dados antigos reapareçam após refresh.
   - Corrigido o cadastro de alimentos personalizados para usar `created_by`, alinhado ao schema e às policies RLS do Supabase.
 ### 2026-06-16
+- **Fix de Cache do Perfil Nutricional:**
+  - Incluido `hunter-storage` na limpeza automatica de cache por versao para evitar perfil antigo preso no navegador apos deploy.
+  - Adicionada assinatura de schema do perfil para forcar limpeza quando novos campos nutricionais entram no app.
+  - Mensagens de meta calorica agora indicam exatamente quais campos faltam para calcular TMB.
+  - Build de producao validado com `npm.cmd run build`.
+
+### 2026-06-16
 - **Ajuste Visual e Regra Calorica Nutricional:**
   - Atualizado o banner de nutricao em Missoes para mostrar calorias restantes/objetivo diario em vez de contagem de refeicoes.
   - Adicionado painel na aba Recuperacao com objetivo nutricional, TMB estimada, manutencao estimada, meta calorica e faixa de tolerancia para XP.
