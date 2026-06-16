@@ -26,6 +26,7 @@ import { useHabits } from '@/hooks/useHabits';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { UtensilsCrossed } from 'lucide-react';
+import { localDateString, localDayBounds } from '@/lib/date';
 
 export function Dashboard() {
   const state = useHunterStore();
@@ -72,15 +73,15 @@ export function Dashboard() {
       if (!uid) return;
       try {
         setLoadingVolume(true);
-        const todayStr = new Date().toISOString().split('T')[0];
+        const { startIso, endIso } = localDayBounds();
         
         // 1. Volume de Treino
         const { data: workoutData, error: workoutError } = await supabase
           .from('workout_logs')
           .select('sets, reps, weight_kg')
           .eq('user_id', uid)
-          .gte('logged_at', `${todayStr}T00:00:00.000Z`)
-          .lte('logged_at', `${todayStr}T23:59:59.999Z`);
+          .gte('logged_at', startIso)
+          .lte('logged_at', endIso);
 
         if (workoutError) throw workoutError;
 
@@ -99,8 +100,8 @@ export function Dashboard() {
           .select('*', { count: 'exact', head: true })
           .eq('user_id', uid)
           .eq('completed', true)
-          .gte('completed_at', `${todayStr}T00:00:00.000Z`)
-          .lte('completed_at', `${todayStr}T23:59:59.999Z`);
+          .gte('completed_at', startIso)
+          .lte('completed_at', endIso);
 
         if (!tasksError && count !== null) {
           setTasksCompletedToday(count);
@@ -258,7 +259,7 @@ export function Dashboard() {
   }, [activeHabits, completedToday, classKeyStats]);
 
   // Lista de Daily Main Quests
-  const todayStr = React.useMemo(() => new Date().toLocaleDateString('en-CA'), []);
+  const todayStr = React.useMemo(() => localDateString(), []);
   const claimKey = React.useMemo(() => `daily_bonus_claimed_${user?.id}_${todayStr}`, [user?.id, todayStr]);
   const [bonusClaimed, setBonusClaimed] = React.useState<boolean>(false);
 
@@ -1029,4 +1030,3 @@ export function Dashboard() {
     </div>
   );
 }
-

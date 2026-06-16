@@ -144,6 +144,27 @@ const calculateAntiFarmXp = (currentGainedToday: number, amount: number): { adde
   };
 };
 
+const subtractXp = (state: HunterState, amount: number) => {
+  let newLevel = state.level;
+  let newXp = state.xp - amount;
+
+  while (newXp < 0 && newLevel > 1) {
+    newLevel--;
+    newXp += getXpRequiredForLevel(newLevel);
+  }
+
+  if (newLevel === 1 && newXp < 0) {
+    newXp = 0;
+  }
+
+  return {
+    xp: newXp,
+    level: newLevel,
+    xpRequired: getXpRequiredForLevel(newLevel),
+    rank: getRankForLevel(newLevel),
+  };
+};
+
 export const useHunterStore = create<HunterState>()(
   persist(
     (set, get) => ({
@@ -151,6 +172,19 @@ export const useHunterStore = create<HunterState>()(
 
       addXp: async (amount, userId) => {
         const state = get();
+
+        if (amount < 0) {
+          const removedXp = Math.abs(amount);
+          set({
+            ...subtractXp(state, removedXp),
+            xpGainedToday: Math.max(0, state.xpGainedToday - removedXp),
+          });
+
+          if (userId) {
+            await get().saveProfile(userId);
+          }
+          return;
+        }
 
         // Bônus de Streak: +2% por dia de streak, limitado a +100%
         const streakBonus = Math.min(state.streak.current * 0.02, 1.0);

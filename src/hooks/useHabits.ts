@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { localDateString } from '@/lib/date';
 
 const ALL_MEALS_XP_BONUS = 50;
 const ALL_MEALS_VITALITY_BONUS = 2;
@@ -66,7 +67,7 @@ export interface MealMission {
 }
 
 function todayStr() {
-  return new Date().toLocaleDateString('en-CA');
+  return localDateString();
 }
 
 // Retorna o índice do dia da semana (0 = Domingo, 1 = Segunda, ..., 6 = Sábado)
@@ -88,6 +89,36 @@ export function useHabits() {
   const [workoutMissions, setWorkoutMissions] = useState<WorkoutMission[]>([]);
   // Missões de refeição (cardápios ativos — todos os dias)
   const [mealMissions, setMealMissions] = useState<MealMission[]>([]);
+
+  const updateHabitsState = useCallback((updater: Habit[] | ((prev: Habit[]) => Habit[])) => {
+    setHabits((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (user?.id) {
+        localStorage.setItem(`ascend_habits_${user.id}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, [user?.id]);
+
+  const updateCompletedState = useCallback((updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    setCompletedToday((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (user?.id) {
+        localStorage.setItem(`ascend_completed_${user.id}`, JSON.stringify([...next]));
+      }
+      return next;
+    });
+  }, [user?.id]);
+
+  const updateMealMissionsState = useCallback((updater: MealMission[] | ((prev: MealMission[]) => MealMission[])) => {
+    setMealMissions((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (user?.id) {
+        localStorage.setItem(`ascend_meals_${user.id}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, [user?.id]);
 
   // Carrega do cache local associado ao id do usuário para carregamento instantâneo
   useEffect(() => {
@@ -257,10 +288,10 @@ export function useHabits() {
 
       const completedHabitIds = (completionsRes.data ?? []).map((c) => c.habit_id);
 
-      setHabits(habitsRes.data ?? []);
-      setCompletedToday(new Set(completedHabitIds));
+      updateHabitsState(habitsRes.data ?? []);
+      updateCompletedState(new Set(completedHabitIds));
       setWorkoutMissions(computedWorkouts);
-      setMealMissions(computedMeals);
+      updateMealMissionsState(computedMeals);
 
       // Persiste no localStorage do usuário
       localStorage.setItem(`ascend_habits_${user.id}`, JSON.stringify(habitsRes.data ?? []));
@@ -300,7 +331,7 @@ export function useHabits() {
         .eq('completed_date', todayStr());
 
       if (!error) {
-        setCompletedToday((prev) => {
+        updateCompletedState((prev) => {
           const next = new Set(prev);
           next.delete(habitId);
           return next;
@@ -316,7 +347,7 @@ export function useHabits() {
       });
 
       if (!error) {
-        setCompletedToday((prev) => new Set([...prev, habitId]));
+        updateCompletedState((prev) => new Set([...prev, habitId]));
         await addXp(habit.xp_reward, user.id);
         if (habit.stat_target) await updateStat(habit.stat_target, habit.stat_reward, user.id);
       }
@@ -340,7 +371,7 @@ export function useHabits() {
         .eq('completed_at', todayStr());
 
       if (!error) {
-        setMealMissions((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: false } : m));
+        updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: false } : m));
         
         // Se todas as refeições estavam completas antes, remove o bônus consolidado
         const allCompletedBefore = completedCount === mealMissions.length;
@@ -357,7 +388,7 @@ export function useHabits() {
       });
 
       if (!error) {
-        setMealMissions((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: true } : m));
+        updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: true } : m));
         
         // Se agora todas as refeições estão completas, concede o bônus consolidado
         const allCompletedAfter = completedCount + 1 === mealMissions.length;
@@ -400,7 +431,7 @@ export function useHabits() {
     }
 
     if (data) {
-      setHabits((prev) => [...prev, data]);
+      updateHabitsState((prev) => [...prev, data]);
     }
     return { error: null };
   };
@@ -408,7 +439,7 @@ export function useHabits() {
   const deleteHabit = async (habitId: string) => {
     if (!user) return;
     const { error } = await supabase.from('habits').delete().eq('id', habitId);
-    if (!error) setHabits((prev) => prev.filter((h) => h.id !== habitId));
+    if (!error) updateHabitsState((prev) => prev.filter((h) => h.id !== habitId));
   };
 
   const toggleActive = async (habitId: string) => {
@@ -420,7 +451,7 @@ export function useHabits() {
       .update({ active: !habit.active })
       .eq('id', habitId);
     if (!error)
-      setHabits((prev) =>
+      updateHabitsState((prev) =>
         prev.map((h) => (h.id === habitId ? { ...h, active: !h.active } : h))
       );
   };
@@ -432,7 +463,7 @@ export function useHabits() {
       .update({ scheduled_days: days })
       .eq('id', id);
     if (!error) {
-      setHabits((prev) =>
+      updateHabitsState((prev) =>
         prev.map((h) => (h.id === id ? { ...h, scheduled_days: days } : h))
       );
     }
@@ -457,11 +488,11 @@ export function useHabits() {
       
     if (!error) {
       if (type === 'habit') {
-        setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, ...updatePayload } : h)));
+        updateHabitsState((prev) => prev.map((h) => (h.id === id ? { ...h, ...updatePayload } : h)));
       } else if (type === 'workout') {
         setWorkoutMissions((prev) => prev.map((m) => (m.routine_id === id ? { ...m, ...(field === 'start' ? { scheduled_time: formattedTime ? formattedTime.slice(0, 5) : null } : { scheduled_end_time: formattedTime ? formattedTime.slice(0, 5) : null }) } : m)));
       } else if (type === 'meal') {
-        setMealMissions((prev) => prev.map((m) => (m.meal_plan_id === id ? { ...m, ...(field === 'start' ? { scheduled_time: formattedTime ? formattedTime.slice(0, 5) : null } : { scheduled_end_time: formattedTime ? formattedTime.slice(0, 5) : null }) } : m)));
+        updateMealMissionsState((prev) => prev.map((m) => (m.meal_plan_id === id ? { ...m, ...(field === 'start' ? { scheduled_time: formattedTime ? formattedTime.slice(0, 5) : null } : { scheduled_end_time: formattedTime ? formattedTime.slice(0, 5) : null }) } : m)));
       }
     }
   };

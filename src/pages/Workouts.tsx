@@ -28,6 +28,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { WorkoutProgress } from '@/components/workouts/WorkoutProgress';
 import { cn } from '@/lib/utils';
+import { localDateString } from '@/lib/date';
 
 interface Exercise {
   id: string;
@@ -376,7 +377,7 @@ export function Workouts() {
       await supabase.from('routine_completions').upsert({
         user_id: user.id,
         routine_id: sessionRoutineId,
-        completed_date: new Date().toISOString().split('T')[0],
+        completed_date: localDateString(),
         xp_awarded: xpReward,
       }, { onConflict: 'user_id,routine_id,completed_date' });
 

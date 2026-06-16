@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { NutritionMealPlans } from '@/components/nutrition/NutritionMealPlans';
 import type { Food } from '@/types/nutrition';
+import { localDayBounds } from '@/lib/date';
 
 // Food type now in @/types/nutrition
 
@@ -78,7 +79,7 @@ export function Nutrition() {
     }, 5000);
     
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const { startIso } = localDayBounds();
       const [
         { data: foodData, error: foodError },
         { data: logData, error: logError }
@@ -94,7 +95,7 @@ export function Nutrition() {
             food:foods(*)
           `)
           .eq('user_id', user.id)
-          .gte('logged_at', `${today}T00:00:00Z`)
+          .gte('logged_at', startIso)
           .order('logged_at', { ascending: false })
       ]);
       
@@ -148,7 +149,7 @@ export function Nutrition() {
         fat_per_100g: newFoodFat,
         category: newFoodCategory,
         is_custom: true,
-        user_id: user.id,
+        created_by: user.id,
         serving_size: newFoodServingSize || null,
         serving_unit: newFoodServingUnit || null,
       });

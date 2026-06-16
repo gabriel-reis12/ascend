@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { localDateString } from '@/lib/date';
 
 const ALL_MEALS_XP_BONUS = 50;
 const ALL_MEALS_VITALITY_BONUS = 2;
@@ -37,7 +38,7 @@ export interface MealPlan {
 }
 
 function todayStr() {
-  return new Date().toISOString().split('T')[0];
+  return localDateString();
 }
 
 export function calcMealMacros(items: MealPlanItem[]) {

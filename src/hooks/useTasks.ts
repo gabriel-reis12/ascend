@@ -36,6 +36,16 @@ export function useTasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const updateTasksState = useCallback((updater: Task[] | ((prev: Task[]) => Task[])) => {
+    setTasks((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (user?.id) {
+        localStorage.setItem(`ascend_tasks_${user.id}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, [user?.id]);
+
   // Carrega do cache local associado ao id do usuário para renderização instantânea
   useEffect(() => {
     if (!user?.id) return;
@@ -84,7 +94,7 @@ export function useTasks() {
         
       if (dbError) throw dbError;
       if (!active) return;
-      setTasks(data ?? []);
+      updateTasksState(data ?? []);
 
       // Persiste no localStorage
       localStorage.setItem(`ascend_tasks_${user.id}`, JSON.stringify(data ?? []));
@@ -113,7 +123,7 @@ export function useTasks() {
       .select()
       .single();
     if (!error && data) {
-      setTasks((prev) => [data, ...prev]);
+      updateTasksState((prev) => [data, ...prev]);
     }
     return { data: data as Task | null, error: error?.message ?? null };
   };
@@ -129,9 +139,10 @@ export function useTasks() {
       .eq('id', taskId);
 
     if (!error) {
-      setTasks((prev) =>
+      const completedAt = new Date().toISOString();
+      updateTasksState((prev) =>
         prev.map((t) =>
-          t.id === taskId ? { ...t, completed: true, completed_at: new Date().toISOString() } : t
+          t.id === taskId ? { ...t, completed: true, completed_at: completedAt } : t
         )
       );
       await addXp(task.xp_reward, user.id);
@@ -150,7 +161,7 @@ export function useTasks() {
       .eq('id', taskId);
 
     if (!error) {
-      setTasks((prev) =>
+      updateTasksState((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, completed: false, completed_at: null } : t))
       );
       await addXp(-task.xp_reward, user.id);
@@ -162,7 +173,7 @@ export function useTasks() {
     if (!user) return;
     const { error } = await supabase.from('tasks').delete().eq('id', taskId);
     if (!error) {
-      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      updateTasksState((prev) => prev.filter((t) => t.id !== taskId));
     }
   };
 

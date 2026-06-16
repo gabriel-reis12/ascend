@@ -419,4 +419,9 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   * Implementamos timeouts de segurança de 5 segundos (`safetyTimer`) que interrompem o carregamento infinito do Codex e de telemetria caso a comunicação com o Supabase falhe ou sofra com latência.
   * Adicionamos tratamento de erros visíveis com painéis vermelhos explicativos e amigáveis em tela, permitindo que a interface funcione normalmente usando os dados locais ou padrões em caso de falha de conexão.
 
-
+### 2026-06-16
+- **Correções de Produção em Quests/XP/Data:**
+  - Corrigida a remoção de XP ao desmarcar tarefas, hábitos e bônus consolidados: valores negativos agora subtraem XP de verdade, respeitando level down e sem passar pelo anti-farm de ganho diário.
+  - Padronizado o cálculo de "hoje" para data local do usuário em dashboard, refeições, cardápios e conclusão de treinos, evitando registros caírem no dia errado por conversão UTC.
+  - Sincronizado o cache local de tarefas, hábitos, conclusões e missões de refeição após mutações, evitando que dados antigos reapareçam após refresh.
+  - Corrigido o cadastro de alimentos personalizados para usar `created_by`, alinhado ao schema e às policies RLS do Supabase.
