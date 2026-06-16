@@ -20,6 +20,7 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - Habilitada RLS e configuradas políticas de acesso restritas ao próprio usuário.
 - **Quest Diária de Finanças**:
   - Integrada a quest reativa "Códex Financeiro" no Dashboard, detectando a inserção de logs financeiros na data atual.
+  - Sincronizada a exibição da Quest Diária de Finanças na aba de Missões Diárias da tela de Missões (`Quests.tsx`), recalculando as métricas de progresso da página em tempo real.
   - Ajustado o Bônus Diário de Sobrevivência para 5 quests (passando de 4).
 - **Gerenciador de Metas no Módulo Fortuna**:
   - Removida a meta estática e implementado um painel dinâmico e interativo de Objetivos & Metas de Longo Prazo.

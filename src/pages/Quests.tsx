@@ -20,8 +20,12 @@ import {
   Heart,
   Award,
   Briefcase,
-  Languages
+  Languages,
+  Coins
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { localDayBounds } from '@/lib/date';
 import { useHabits } from '@/hooks/useHabits';
 import { useMealPlans } from '@/hooks/useMealPlans';
 import { useTasks } from '@/hooks/useTasks';
@@ -82,7 +86,7 @@ function MissionCard({
   index,
 }: {
   id: string;
-  type: 'habit' | 'workout' | 'meal' | 'task';
+  type: 'habit' | 'workout' | 'meal' | 'task' | 'finance';
   title: string;
   category: string;
   categoryColor: string;
@@ -92,8 +96,8 @@ function MissionCard({
   done: boolean;
   startTime: string | null;
   endTime: string | null;
-  onToggle: (id: string, type: 'habit'|'workout'|'meal'|'task') => void;
-  onUpdateTime: (id: string, type: 'habit'|'workout'|'meal'|'task', field: 'start'|'end', t: string | null) => void;
+  onToggle: (id: string, type: 'habit'|'workout'|'meal'|'task'|'finance') => void;
+  onUpdateTime: (id: string, type: 'habit'|'workout'|'meal'|'task'|'finance', field: 'start'|'end', t: string | null) => void;
   onDelete?: (id: string) => void;
   index: number;
 }) {
@@ -108,6 +112,7 @@ function MissionCard({
     task: isBonus
       ? { border: 'border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]', bgDone: 'bg-cyan-500/5', bgHover: 'hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]', lineDone: 'bg-gradient-to-b from-cyan-500 to-purple-500', lineHover: 'group-hover:bg-cyan-400/50', icon: Zap, textDone: 'text-cyan-400', tag: 'bg-cyan-500/20 text-cyan-400', tagText: 'ANOMALIA CONCLUÍDA' }
       : { border: 'border-emerald-500/30', bgDone: 'bg-emerald-500/5', bgHover: 'hover:border-emerald-500/50', lineDone: 'bg-emerald-500', lineHover: 'group-hover:bg-emerald-500/50', icon: ScrollText, textDone: 'text-emerald-500', tag: 'bg-emerald-500/20 text-emerald-400', tagText: 'MISSÃO CONCLUÍDA' },
+    finance: { border: 'border-amber-500/30', bgDone: 'bg-amber-500/5', bgHover: 'hover:border-amber-500/50', lineDone: 'bg-amber-500', lineHover: 'group-hover:bg-amber-500/50', icon: Coins, textDone: 'text-amber-500', tag: 'bg-amber-500/20 text-amber-400', tagText: 'FLUXO REGISTRADO' },
   }[type];
 
   const Icon = theme.icon;
@@ -389,11 +394,11 @@ export function Quests() {
 
   const handleUpdateTime = async (
     id: string,
-    type: 'habit' | 'workout' | 'meal' | 'task',
+    type: 'habit' | 'workout' | 'meal' | 'task' | 'finance',
     field: 'start' | 'end',
     time: string | null
   ) => {
-    if (type !== 'task') {
+    if (type !== 'task' && type !== 'finance') {
       await updateScheduledTime(id, type, field, time);
     }
   };
@@ -406,10 +411,34 @@ export function Quests() {
   const [modalOpen, setModalOpen] = useState(false);
   const [presetHabitData, setPresetHabitData] = useState<Partial<CreateHabitInput> | null>(null);
 
+  const { user } = useAuth();
+  const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = useState(false);
+
   // Estados locais para a Fenda de Anomalia IA
   const [selectedCategory, setSelectedCategory] = useState<string>('Estudo');
   const [generatingBonus, setGeneratingBonus] = useState<boolean>(false);
   const [bonusError, setBonusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkFinanceToday() {
+      if (!user?.id) return;
+      try {
+        const { startIso } = localDayBounds();
+        const todayYYYYMMDD = startIso.split('T')[0];
+        const { data, error } = await supabase
+          .from('financial_logs')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('date', todayYYYYMMDD);
+        if (!error) {
+          setHasLoggedFinanceToday((data || []).length > 0);
+        }
+      } catch (err) {
+        console.error('Erro ao verificar logs financeiros em Quests:', err);
+      }
+    }
+    void checkFinanceToday();
+  }, [user?.id]);
 
   const todayStr = new Date().toLocaleDateString('en-CA');
   
@@ -425,8 +454,8 @@ export function Quests() {
 
   const activeTasks = tasks.filter(t => !t.completed || isToday(t.completed_at));
 
-  const totalMissions = totalActive + workoutMissions.length + mealMissions.length + activeTasks.length;
-  const totalCompleted = completedCount + workoutMissions.filter(m => m.isCompleted).length + mealMissions.filter(m => m.isCompleted).length + activeTasks.filter(t => t.completed).length;
+  const totalMissions = totalActive + workoutMissions.length + mealMissions.length + activeTasks.length + 1;
+  const totalCompleted = completedCount + workoutMissions.filter(m => m.isCompleted).length + mealMissions.filter(m => m.isCompleted).length + activeTasks.filter(t => t.completed).length + (hasLoggedFinanceToday ? 1 : 0);
   const progressPct = totalMissions > 0 ? (totalCompleted / totalMissions) * 100 : 0;
   const nutritionTargets = calculateNutritionTargets({
     birthday: hunterProfile.birthday,
@@ -502,13 +531,27 @@ export function Quests() {
     | { type: 'workout'; data: any; time: string | null; endTime: string | null }
     | { type: 'meal'; data: any; time: string | null; endTime: string | null }
     | { type: 'habit'; data: any; time: string | null; endTime: string | null }
-    | { type: 'task'; data: any; time: string | null; endTime: string | null };
+    | { type: 'task'; data: any; time: string | null; endTime: string | null }
+    | { type: 'finance'; data: any; time: string | null; endTime: string | null };
 
   const allMissions: UnifiedMission[] = [
     ...workoutMissions.map(m => ({ type: 'workout' as const, data: m, time: m.scheduled_time, endTime: m.scheduled_end_time })),
     ...mealMissions.map(m => ({ type: 'meal' as const, data: m, time: m.scheduled_time, endTime: m.scheduled_end_time })),
     ...activeHabits.map(h => ({ type: 'habit' as const, data: h, time: h.scheduled_time ? h.scheduled_time.slice(0, 5) : null, endTime: h.scheduled_end_time ? h.scheduled_end_time.slice(0, 5) : null })),
-    ...activeTasks.map(t => ({ type: 'task' as const, data: t, time: null, endTime: null }))
+    ...activeTasks.map(t => ({ type: 'task' as const, data: t, time: null, endTime: null })),
+    {
+      type: 'finance' as const,
+      data: {
+        id: 'daily-finance-quest',
+        title: 'Registrar Operações Financeiras do Dia',
+        category: 'FINANÇAS',
+        category_color: '#f59e0b',
+        xp_reward: 10,
+        completed: hasLoggedFinanceToday
+      },
+      time: null,
+      endTime: null
+    }
   ];
 
   allMissions.sort((a, b) => {
@@ -920,6 +963,26 @@ export function Quests() {
                               startTime={mission.time}
                               endTime={mission.endTime}
                               onToggle={() => navigate('/workouts')}
+                              onUpdateTime={handleUpdateTime}
+                              index={i}
+                            />
+                          );
+                        } else if (mission.type === 'finance') {
+                          const f = mission.data;
+                          return (
+                            <MissionCard
+                              key="daily-finance-quest"
+                              id={f.id}
+                              type="finance"
+                              title={f.title}
+                              category={f.category}
+                              categoryColor={f.category_color}
+                              xpReward={f.xp_reward}
+                              statLabel={undefined}
+                              done={f.completed}
+                              startTime={mission.time}
+                              endTime={mission.endTime}
+                              onToggle={() => navigate('/fortuna')}
                               onUpdateTime={handleUpdateTime}
                               index={i}
                             />
