@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import { localDateString, localDayBounds } from './date';
-
-type NutritionGoal = 'lose' | 'maintain' | 'gain';
+import { calculateNutritionTargets } from './nutritionTargets';
 
 interface ProfileForNutrition {
   birthday: string | null;
@@ -27,40 +26,6 @@ function previousLocalDate() {
   return date;
 }
 
-function calculateAge(birthday: string) {
-  const birthDate = new Date(`${birthday}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-
-  return age;
-}
-
-function normalizeGoal(goal: string | null | undefined): NutritionGoal {
-  if (goal === 'lose' || goal === 'gain' || goal === 'maintain') return goal;
-  return 'maintain';
-}
-
-function calculateBmr(profile: ProfileForNutrition) {
-  if (!profile.birthday || !profile.gender || !profile.height || !profile.weight_current) {
-    return null;
-  }
-
-  const age = calculateAge(profile.birthday);
-  const base = 10 * profile.weight_current + 6.25 * profile.height - 5 * age;
-  return Math.round(profile.gender === 'female' ? base - 161 : base + 5);
-}
-
-function calculateTargetCalories(bmr: number, goal: NutritionGoal) {
-  if (goal === 'lose') return Math.max(1200, bmr - 300);
-  if (goal === 'gain') return bmr + 300;
-  return bmr;
-}
-
 export async function evaluateYesterdayNutrition(userId: string, handlers: AwardHandlers) {
   const date = previousLocalDate();
   const dateKey = localDateString(date);
@@ -83,12 +48,17 @@ export async function evaluateYesterdayNutrition(userId: string, handlers: Award
 
   if (profileError) throw profileError;
 
-  const bmr = calculateBmr(profile as ProfileForNutrition);
-  if (!bmr) return;
+  const profileData = profile as ProfileForNutrition;
+  const targets = calculateNutritionTargets({
+    birthday: profileData.birthday,
+    gender: profileData.gender,
+    height: profileData.height,
+    weightCurrent: profileData.weight_current,
+    nutritionGoal: profileData.nutrition_goal,
+  });
 
-  const goal = normalizeGoal((profile as ProfileForNutrition).nutrition_goal);
-  const targetCalories = calculateTargetCalories(bmr, goal);
-  const toleranceCalories = Math.max(150, Math.round(targetCalories * 0.1));
+  if (!targets.bmr || !targets.targetCalories || !targets.toleranceCalories) return;
+
   const { startIso, endIso } = localDayBounds(date);
 
   const { data: logs, error: logsError } = await supabase
@@ -107,7 +77,7 @@ export async function evaluateYesterdayNutrition(userId: string, handlers: Award
     }, 0)
   );
 
-  const success = Math.abs(totalCalories - targetCalories) <= toleranceCalories;
+  const success = Math.abs(totalCalories - targets.targetCalories) <= targets.toleranceCalories;
   const xpAwarded = success ? SUCCESS_XP : FAILURE_XP;
   const statAwarded = success ? SUCCESS_VITALITY : 0;
 
@@ -116,10 +86,10 @@ export async function evaluateYesterdayNutrition(userId: string, handlers: Award
     .insert({
       user_id: userId,
       date: dateKey,
-      goal,
-      bmr,
-      target_calories: targetCalories,
-      tolerance_calories: toleranceCalories,
+      goal: targets.goal,
+      bmr: targets.bmr,
+      target_calories: targets.targetCalories,
+      tolerance_calories: targets.toleranceCalories,
       total_calories: totalCalories,
       success,
       xp_awarded: xpAwarded,

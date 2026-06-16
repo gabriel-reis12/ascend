@@ -5,6 +5,7 @@
 - **Frontend hardening:** Bosses agora tem timeout defensivo, seletores estaveis do Zustand e estado de erro com retry. Missoes, Recuperacao e Centro de Treinamento exibem falhas reais de sincronizacao em tela.
 - **Deploy cache control:** App agora embute `VERCEL_GIT_COMMIT_SHA`, limpa caches locais de dados quando muda de versao e envia `Cache-Control: no-store` pela Vercel para evitar Chrome preso em bundle antigo.
 - **Nutrition scoring:** Regras de XP nutricional migradas de recompensa instantanea/cardapio completo para avaliacao diaria por TMB + objetivo nutricional, com tabela idempotente `nutrition_daily_scores`.
+- **Nutrition UX:** Missoes exibe calorias restantes/objetivo diario; Recuperacao mostra TMB, manutencao estimada, meta calorica e faixa de tolerancia.
 - **Validation:** `npm.cmd run build` aprovado.
 
 ## Phase 1: Foundation & UI/UX Base

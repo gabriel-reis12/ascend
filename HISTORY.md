@@ -508,6 +508,13 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Sincronizado o cache local de tarefas, hábitos, conclusões e missões de refeição após mutações, evitando que dados antigos reapareçam após refresh.
   - Corrigido o cadastro de alimentos personalizados para usar `created_by`, alinhado ao schema e às policies RLS do Supabase.
 ### 2026-06-16
+- **Ajuste Visual e Regra Calorica Nutricional:**
+  - Atualizado o banner de nutricao em Missoes para mostrar calorias restantes/objetivo diario em vez de contagem de refeicoes.
+  - Adicionado painel na aba Recuperacao com objetivo nutricional, TMB estimada, manutencao estimada, meta calorica e faixa de tolerancia para XP.
+  - Centralizado o calculo nutricional em `nutritionTargets`, usando Mifflin-St Jeor, fator de atividade base 1.2, deficit de 15% para perda e superavit de 10% para ganho.
+  - Build de producao validado com `npm.cmd run build`.
+
+### 2026-06-16
 - **Rework de Pontuacao Nutricional:**
   - Adicionado objetivo nutricional separado (`nutrition_goal`: perder, manter ou ganhar peso) no onboarding, ajustes e profile.
   - Criada avaliacao diaria idempotente baseada em TMB, meta calorica e tolerancia, com registro em `nutrition_daily_scores`.

@@ -23,6 +23,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NutritionMealPlans } from '@/components/nutrition/NutritionMealPlans';
 import type { Food } from '@/types/nutrition';
 import { localDayBounds } from '@/lib/date';
+import { useHunterStore } from '@/stores/useHunterStore';
+import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 
 interface FoodLog {
   id: string;
@@ -35,6 +37,7 @@ interface FoodLog {
 
 export function Nutrition() {
   const { user } = useAuth();
+  const hunterProfile = useHunterStore();
 
   const [activeTab, setActiveTab] = useState<'diario' | 'cardapios'>('diario');
   const [subTab, setSubTab] = useState<'codex' | 'library'>('codex');
@@ -340,6 +343,17 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
     };
   }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
 
+  const nutritionTargets = calculateNutritionTargets({
+    birthday: hunterProfile.birthday,
+    gender: hunterProfile.gender,
+    height: hunterProfile.height,
+    weightCurrent: hunterProfile.weightCurrent,
+    nutritionGoal: hunterProfile.nutritionGoal,
+  });
+  const remainingCalories = nutritionTargets.targetCalories
+    ? Math.max(0, nutritionTargets.targetCalories - dailyMacros.kcal)
+    : null;
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -448,6 +462,49 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
               <h3 className="mt-2 text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 {dailyMacros.fat.toFixed(1)} <span className="text-xs text-blue-400">g</span>
               </h3>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-5 shadow-lg">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">
+                  Meta Calorica Diaria
+                </span>
+                <h2 className="mt-1 text-xl font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {nutritionTargets.targetCalories
+                    ? `${Math.round(dailyMacros.kcal)} / ${nutritionTargets.targetCalories} kcal`
+                    : 'Perfil incompleto'}
+                </h2>
+                <p className="mt-2 text-xs font-semibold text-gray-500">
+                  {nutritionTargets.targetCalories
+                    ? `Faltam ${Math.round(remainingCalories ?? 0)} kcal para sua meta de ${nutritionTargets.goalLabel.toLowerCase()}.`
+                    : 'Preencha data de nascimento, genero, altura e peso atual em Ajustes para calcular sua meta.'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[560px]">
+                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Objetivo</p>
+                  <p className="mt-1 text-xs font-black uppercase text-orange-300">{nutritionTargets.goalLabel}</p>
+                </div>
+                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">TMB</p>
+                  <p className="mt-1 text-xs font-black text-white">{nutritionTargets.bmr ?? '--'} kcal</p>
+                </div>
+                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Manutencao</p>
+                  <p className="mt-1 text-xs font-black text-white">{nutritionTargets.maintenanceCalories ?? '--'} kcal</p>
+                </div>
+                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Faixa XP</p>
+                  <p className="mt-1 text-xs font-black text-white">
+                    {nutritionTargets.minCalories && nutritionTargets.maxCalories
+                      ? `${nutritionTargets.minCalories}-${nutritionTargets.maxCalories}`
+                      : '--'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -31,6 +31,7 @@ import { NeonCheckbox } from '@/components/ui/animated-check-box';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useNavigate } from 'react-router-dom';
 import type { Habit, CreateHabitInput } from '@/hooks/useHabits';
+import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 
 function TimeBadgeInput({ time, onChange }: { time: string | null; onChange: (t: string | null) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -399,6 +400,7 @@ export function Quests() {
 
   const navigate = useNavigate();
   const hunterClass = useHunterStore(s => s.hunterClass);
+  const hunterProfile = useHunterStore();
   
   const [tab, setTab] = useState<'daily' | 'manage' | 'codex'>('daily');
   const [modalOpen, setModalOpen] = useState(false);
@@ -426,6 +428,17 @@ export function Quests() {
   const totalMissions = totalActive + workoutMissions.length + mealMissions.length + activeTasks.length;
   const totalCompleted = completedCount + workoutMissions.filter(m => m.isCompleted).length + mealMissions.filter(m => m.isCompleted).length + activeTasks.filter(t => t.completed).length;
   const progressPct = totalMissions > 0 ? (totalCompleted / totalMissions) * 100 : 0;
+  const nutritionTargets = calculateNutritionTargets({
+    birthday: hunterProfile.birthday,
+    gender: hunterProfile.gender,
+    height: hunterProfile.height,
+    weightCurrent: hunterProfile.weightCurrent,
+    nutritionGoal: hunterProfile.nutritionGoal,
+  });
+  const caloriesLoggedToday = mealMissions.reduce((sum, meal) => sum + (meal.totalKcal || 0), 0);
+  const caloriesRemaining = nutritionTargets.targetCalories
+    ? Math.max(0, nutritionTargets.targetCalories - caloriesLoggedToday)
+    : null;
 
   // Busca se já gerou a quest extra diária da IA hoje
   const bonusQuestToday = tasks.find(t => t.title.startsWith('[BÔNUS IA] ') && isToday(t.created_at));
@@ -632,8 +645,45 @@ export function Quests() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-4"
                 >
+                  {(mealMissions.length > 0 || nutritionTargets.targetCalories) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_0_20px_rgba(249,115,22,0.08)]"
+                    >
+                      <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-2xl" />
+                      <div className="relative flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+                          <UtensilsCrossed size={20} className="animate-pulse" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-white tracking-[0.15em] font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Meta Calorica do Dia
+                          </h4>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                            {nutritionTargets.targetCalories
+                              ? `Objetivo: ${nutritionTargets.goalLabel}. Alvo de ${nutritionTargets.targetCalories} kcal com tolerancia diaria.`
+                              : 'Complete seu perfil em Ajustes para calcular TMB e meta calorica.'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="relative flex items-center gap-3 bg-black/40 border border-[#1E1E26] rounded-xl px-4 py-2 shrink-0 justify-between sm:w-auto w-full">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Calorias:</span>
+                        <span className="text-xs font-black text-orange-500 font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                          {nutritionTargets.targetCalories
+                            ? `${Math.round(caloriesRemaining ?? 0)} / ${nutritionTargets.targetCalories}`
+                            : `${Math.round(caloriesLoggedToday)} / --`}
+                        </span>
+                        {nutritionTargets.targetCalories && Math.abs(caloriesLoggedToday - nutritionTargets.targetCalories) <= (nutritionTargets.toleranceCalories ?? 0) ? (
+                          <span className="text-[9px] font-black uppercase tracking-widest text-green-400 border border-green-500/30 bg-green-500/10 px-2 py-0.5 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.15)]">NO ALVO</span>
+                        ) : (
+                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 bg-white/5 px-2 py-0.5 rounded-lg">PENDENTE</span>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
                   {/* BANNER DO PROTOCOLO DE NUTRIÇÃO CONSOLIDADA */}
-                  {mealMissions.length > 0 && (
+                  {false && mealMissions.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
