@@ -30,6 +30,16 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Integridade e Build**:
   - Validada a compilação do TypeScript e bundle do Vite com `npm run build` obtendo sucesso absoluto (zero erros sintáticos ou estáticos).
 
+### 2026-06-16 — Reparação do Contrato Frontend/Supabase
+- **Schema e RLS Consolidados**:
+  - Criada a migration `20260616_repair_app_contract.sql` com todas as tabelas usadas pelo front atual: `tasks`, `habits`, `habit_completions`, `workout_routines`, `routine_exercises`, `routine_completions`, `meal_plans`, `meal_plan_items`, `meal_completions`, `boss_battles`, além de ajustes em `profiles`, `foods`, `exercises`, logs e achievements.
+  - Adicionadas policies RLS idempotentes para leitura/escrita por usuário e bibliotecas globais/customizadas (`foods` e `exercises`), incluindo update/delete de itens customizados.
+  - Adicionado trigger `on_auth_user_created` para criar `profiles` automaticamente em novos cadastros.
+- **Resiliência no Frontend**:
+  - `useHunterStore.loadProfile` agora cria um profile mínimo via `upsert` quando usuários antigos não possuem linha em `profiles`.
+  - Corrigido reset geral em `Settings.tsx` para usar `xp_to_next_level` e deletar subitens por `routine_id`/`meal_plan_id` usando `.in(...)`.
+  - Incluídos assets do Quick Menu (`Status.jpeg` e `Quadro de Missoes.jpeg`) que já eram referenciados pelo front.
+
 ### 2026-06-16 — Correções Pós-Implementação do Módulo Bosses
 - **Resiliência da Store de Bosses**:
   - Corrigido `attackActiveBoss` para carregar/inicializar a batalha ativa antes de aplicar dano, evitando perda silenciosa de ataques quando a store ainda não estava hidratada.

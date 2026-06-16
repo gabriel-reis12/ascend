@@ -537,12 +537,15 @@ export function Settings() {
       await supabase.from('habit_completions').delete().eq('user_id', user.id);
       await supabase.from('routine_completions').delete().eq('user_id', user.id);
       await supabase.from('meal_completions').delete().eq('user_id', user.id);
-      await supabase.from('routine_exercises').delete().filter('id', 'in', 
-        (await supabase.from('workout_routines').select('id').eq('user_id', user.id)).data?.map(r => r.id) || []
-      );
-      await supabase.from('meal_plan_items').delete().filter('id', 'in', 
-        (await supabase.from('meal_plans').select('id').eq('user_id', user.id)).data?.map(m => m.id) || []
-      );
+      const routineIds = (await supabase.from('workout_routines').select('id').eq('user_id', user.id)).data?.map(r => r.id) || [];
+      if (routineIds.length > 0) {
+        await supabase.from('routine_exercises').delete().in('routine_id', routineIds);
+      }
+
+      const mealPlanIds = (await supabase.from('meal_plans').select('id').eq('user_id', user.id)).data?.map(m => m.id) || [];
+      if (mealPlanIds.length > 0) {
+        await supabase.from('meal_plan_items').delete().in('meal_plan_id', mealPlanIds);
+      }
 
       // 2. Deletar tabelas principais
       await supabase.from('habits').delete().eq('user_id', user.id);
@@ -565,7 +568,7 @@ export function Settings() {
           class: null,
           level: 1,
           xp: 0,
-          xp_required: 100,
+          xp_to_next_level: 100,
           rank: 'E',
           strength: 10,
           intelligence: 10,

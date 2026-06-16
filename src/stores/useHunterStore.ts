@@ -249,11 +249,49 @@ export const useHunterStore = create<HunterState>()(
       },
 
       loadProfile: async (userId) => {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+        if (error) {
+          console.error('[useHunterStore] Erro ao carregar profile:', error);
+          return;
+        }
+
+        if (!data) {
+          const { data: createdProfile, error: createProfileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: userId,
+              level: 1,
+              xp: 0,
+              xp_to_next_level: 100,
+              rank: 'E',
+              strength: 10,
+              intelligence: 10,
+              endurance: 10,
+              vitality: 10,
+              discipline: 10,
+              wisdom: 10,
+              balance: 10,
+              streak_current: 0,
+              streak_best: 0,
+              xp_gained_today: 0,
+              streak_milestones_claimed: [],
+              title: 'Iniciante',
+            }, { onConflict: 'id' })
+            .select('*')
+            .single();
+
+          if (createProfileError) {
+            console.error('[useHunterStore] Erro ao criar profile ausente:', createProfileError);
+            return;
+          }
+
+          data = createdProfile;
+        }
 
         if (data && !error) {
           const level = data.level || 1;
