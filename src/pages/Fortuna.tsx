@@ -768,114 +768,191 @@ export function Fortuna() {
                   <div className="size-6 rounded-full border-2 border-amber-500/10 border-t-amber-500 animate-spin mx-auto" />
                   <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600 mt-2">Sincronizando metas...</p>
                 </div>
-              ) : goals.length === 0 ? (
-                <div className="py-6 text-center bg-black/10 rounded-xl border border-[#1E1E26] border-dashed p-4">
-                  <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">Nenhuma meta estabelecida.</p>
-                  <p className="text-[8px] text-gray-500 uppercase mt-1">Crie objetivos para expandir sua Sabedoria.</p>
-                </div>
               ) : (
-                goals.map((goal) => {
-                  const pct = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
-                  const isCompleted = goal.completed || pct >= 100;
+                <>
+                  {/* Quest do Sistema Permanente */}
+                  {(() => {
+                    const systemTarget = monthlySummary.income * 0.2;
+                    const systemProgress = monthlySummary.investment;
+                    const systemPct = monthlySummary.income > 0 ? Math.min(100, (systemProgress / systemTarget) * 100) : 0;
+                    const isSystemCompleted = monthlySummary.income > 0 && systemPct >= 100;
 
-                  return (
-                    <div 
-                      key={goal.id} 
-                      className={`relative overflow-hidden rounded-xl border p-4 bg-[#0A0A0D] transition-all ${
-                        isCompleted 
-                          ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-[0_0_15px_rgba(245,158,11,0.08)]' 
-                          : 'border-[#1E1E26]'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
-                            goal.type === 'recurring_monthly' 
-                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          }`}>
-                            {goal.type === 'recurring_monthly' ? 'Mensal Recorrente' : 'Objetivo Único'}
-                          </span>
-                          <h3 className={`text-xs font-bold mt-2 uppercase ${isCompleted ? 'text-amber-400 line-through opacity-85' : 'text-white'}`}>
-                            {goal.title}
-                          </h3>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          {isCompleted ? (
-                            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-pulse">
-                              <Trophy size={13} />
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                if (editingGoalId === goal.id) {
-                                  setEditingGoalId(null);
-                                } else {
-                                  setEditingGoalId(goal.id);
-                                  setTempGoalProgress(goal.current_amount);
-                                }
-                              }}
-                              className="text-[9px] text-gray-500 hover:text-white uppercase font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 cursor-pointer"
-                            >
-                              [EDITAR]
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteGoal(goal.id)}
-                            className="p-1 rounded text-gray-600 hover:text-rose-400 transition-colors cursor-pointer"
-                            title="Remover meta"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Progresso e Valores */}
-                      <div className="mt-3.5 space-y-1.5">
-                        <div className="flex justify-between items-end text-[10px]">
-                          <span className="font-bold text-gray-400">
-                            R$ {goal.current_amount.toLocaleString('pt-BR')} <span className="text-gray-600">/</span> R$ {goal.target_amount.toLocaleString('pt-BR')}
-                          </span>
-                          <span className="font-orbitron font-black text-amber-400">
-                            {pct.toFixed(0)}%
-                          </span>
-                        </div>
-
-                        {/* Barra */}
-                        <div className="h-2 w-full bg-black/55 rounded-full border border-white/5 p-[1px] overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              isCompleted 
-                                ? 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
-                                : 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
-                            }`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-
-                        {/* Editor de progresso */}
-                        {editingGoalId === goal.id && (
-                          <div className="mt-3 flex items-center gap-2 bg-[#0F0F13] p-2 rounded-lg border border-[#1E1E26] animate-slide-down">
-                            <input
-                              type="number"
-                              value={tempGoalProgress}
-                              onChange={(e) => setTempGoalProgress(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                              placeholder="Novo valor"
-                              className="w-full rounded border border-[#1E1E26] bg-[#0A0A0D] py-1 px-2 text-xs text-white focus:outline-none"
-                            />
-                            <button
-                              onClick={() => handleUpdateGoalProgress(goal, Number(tempGoalProgress))}
-                              className="bg-amber-600 text-white text-[9px] px-2.5 py-1.5 rounded font-black cursor-pointer uppercase tracking-widest shrink-0"
-                            >
-                              Salvar
-                            </button>
+                    return (
+                      <div 
+                        className={`relative overflow-hidden rounded-xl border p-4 bg-[#0A0A0D] transition-all ${
+                          isSystemCompleted 
+                            ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-[0_0_15px_rgba(245,158,11,0.08)]' 
+                            : 'border-[#1E1E26]'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              Quest do Sistema
+                            </span>
+                            <h3 className={`text-xs font-bold mt-2 uppercase ${isSystemCompleted ? 'text-amber-400 line-through opacity-85' : 'text-white'}`}>
+                              Aporte de Purificação (Guardar 20% do Ganho)
+                            </h3>
                           </div>
-                        )}
+
+                          <div className="flex items-center gap-1">
+                            {isSystemCompleted ? (
+                              <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-pulse">
+                                <Trophy size={13} />
+                              </div>
+                            ) : (
+                              <span className="text-[8px] font-bold text-amber-500 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                                Fixa
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Progresso e Valores */}
+                        <div className="mt-3.5 space-y-1.5">
+                          <div className="flex justify-between items-end text-[10px]">
+                            {monthlySummary.income > 0 ? (
+                              <span className="font-bold text-gray-400">
+                                R$ {systemProgress.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-600">/</span> R$ {systemTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            ) : (
+                              <span className="font-bold text-gray-500 uppercase tracking-wider">
+                                Aguardando receita mensal...
+                              </span>
+                            )}
+                            <span className="font-orbitron font-black text-amber-400">
+                              {systemPct.toFixed(0)}%
+                            </span>
+                          </div>
+
+                          {/* Barra */}
+                          <div className="h-2 w-full bg-black/55 rounded-full border border-white/5 p-[1px] overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]`}
+                              style={{ width: `${systemPct}%` }}
+                            />
+                          </div>
+                          <p className="text-[8px] text-gray-500 uppercase tracking-wide leading-tight mt-1">
+                            Calculado automaticamente com base na receita e nos investimentos deste mês.
+                          </p>
+                        </div>
                       </div>
+                    );
+                  })()}
+
+                  <div className="border-t border-[#1E1E26] border-dashed pt-4 mt-4" />
+
+                  {/* Metas dos Usuários */}
+                  {goals.length === 0 ? (
+                    <div className="py-6 text-center bg-black/10 rounded-xl border border-[#1E1E26] border-dashed p-4">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">Nenhum objetivo personalizado estabelecido.</p>
+                      <p className="text-[8px] text-gray-500 uppercase mt-1">Crie objetivos para expandir sua Sabedoria.</p>
                     </div>
-                  );
-                })
+                  ) : (
+                    goals.map((goal) => {
+                      const pct = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
+                      const isCompleted = goal.completed || pct >= 100;
+
+                      return (
+                        <div 
+                          key={goal.id} 
+                          className={`relative overflow-hidden rounded-xl border p-4 bg-[#0A0A0D] transition-all ${
+                            isCompleted 
+                              ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-[0_0_15px_rgba(245,158,11,0.08)]' 
+                              : 'border-[#1E1E26]'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                                goal.type === 'recurring_monthly' 
+                                  ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              }`}>
+                                {goal.type === 'recurring_monthly' ? 'Mensal Recorrente' : 'Objetivo Único'}
+                              </span>
+                              <h3 className={`text-xs font-bold mt-2 uppercase ${isCompleted ? 'text-amber-400 line-through opacity-85' : 'text-white'}`}>
+                                {goal.title}
+                              </h3>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {isCompleted ? (
+                                <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.3)] animate-pulse">
+                                  <Trophy size={13} />
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    if (editingGoalId === goal.id) {
+                                      setEditingGoalId(null);
+                                    } else {
+                                      setEditingGoalId(goal.id);
+                                      setTempGoalProgress(goal.current_amount);
+                                    }
+                                  }}
+                                  className="text-[9px] text-gray-500 hover:text-white uppercase font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 cursor-pointer"
+                                >
+                                  [EDITAR]
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteGoal(goal.id)}
+                                className="p-1 rounded text-gray-600 hover:text-rose-400 transition-colors cursor-pointer"
+                                title="Remover meta"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Progresso e Valores */}
+                          <div className="mt-3.5 space-y-1.5">
+                            <div className="flex justify-between items-end text-[10px]">
+                              <span className="font-bold text-gray-400">
+                                R$ {goal.current_amount.toLocaleString('pt-BR')} <span className="text-gray-600">/</span> R$ {goal.target_amount.toLocaleString('pt-BR')}
+                              </span>
+                              <span className="font-orbitron font-black text-amber-400">
+                                {pct.toFixed(0)}%
+                              </span>
+                            </div>
+
+                            {/* Barra */}
+                            <div className="h-2 w-full bg-black/55 rounded-full border border-white/5 p-[1px] overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  isCompleted 
+                                    ? 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+                                    : 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
+                                }`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+
+                            {/* Editor de progresso */}
+                            {editingGoalId === goal.id && (
+                              <div className="mt-3 flex items-center gap-2 bg-[#0F0F13] p-2 rounded-lg border border-[#1E1E26] animate-slide-down">
+                                <input
+                                  type="number"
+                                  value={tempGoalProgress}
+                                  onChange={(e) => setTempGoalProgress(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                  placeholder="Novo valor"
+                                  className="w-full rounded border border-[#1E1E26] bg-[#0A0A0D] py-1 px-2 text-xs text-white focus:outline-none"
+                                />
+                                <button
+                                  onClick={() => handleUpdateGoalProgress(goal, Number(tempGoalProgress))}
+                                  className="bg-amber-600 text-white text-[9px] px-2.5 py-1.5 rounded font-black cursor-pointer uppercase tracking-widest shrink-0"
+                                >
+                                  Salvar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </>
               )}
             </div>
           </div>

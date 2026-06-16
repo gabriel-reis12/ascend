@@ -26,6 +26,7 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - Adicionado formulário de criação de metas categorizadas por tipo (Meta Única ou Mensal Recorrente) e valor alvo.
   - Implementado o ajuste de progresso acumulado com atualização em tempo real no Supabase.
   - Configurada a recompensa de **+50 XP** e **+2 Sabedoria (WIS)** na conclusão de cada meta financeira.
+  - Adicionada a **Quest do Sistema fixa de Aporte de Purificação (Guardar 20% do Ganho Mensal)** no topo da barra de metas, calculada automaticamente com base na receita e nos investimentos cadastrados no mês atual.
 - **Validação de Build**:
   - Executado o build do Vite com sucesso absoluto (`npm run build`).
 
