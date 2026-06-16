@@ -40,7 +40,8 @@ export function QuickMenu() {
       statusLabel: 'MÓDULO ATIVADO',
       icon: <LayoutDashboard className="w-5 h-5" />,
       color: 'border-blue-500/30 hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] text-blue-400',
-      bgClass: 'bg-gradient-to-br from-blue-950/45 via-blue-900/10 to-transparent border-blue-500/20'
+      bgClass: '',
+      image: '/Cards/Status.jpeg'
     },
     {
       title: 'Quadro de Missões',
@@ -51,7 +52,7 @@ export function QuickMenu() {
       icon: <CheckSquare className="w-5 h-5" />,
       color: 'border-cyan-500/30 hover:border-cyan-400/60 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] text-cyan-400',
       bgClass: '',
-      image: '/Cards/Estudos-Nutricao.jpeg'
+      image: '/Cards/Quadro de Missoes.jpeg'
     },
     {
       title: 'Módulo de Treinamento',

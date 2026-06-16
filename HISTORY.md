@@ -25,6 +25,8 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - Criadas sub-abas centrais dentro do Diário para alternância fluida entre o **Códex da Alimentação (IA)** e a **Biblioteca de Itens (Manual)**.
   - Fixada a coluna lateral de **Consumo Diário** (histórico de logs do dia) de modo comum a ambas as sub-abas do diário, fornecendo feedback de atualização de dados em tempo real.
   - Adicionado suporte a banners animados de sucesso neon detalhando macros, XP ganho e dano causado no Boss ativo pós-calibração por IA.
+- **Atualização Visual do Quick Menu (QuickMenu.tsx)**:
+  - Ajustados os caminhos de background de imagem dos cards do Portal de Comando utilizando as novas artes de RPG em `public/Cards/`, adicionando arte real para os cards de *Status do Caçador* (`Status.jpeg`) e *Quadro de Missões* (`Quadro de Missoes.jpeg`), eliminando gradientes alternativos e unificando o visual temático.
 - **Integridade e Build**:
   - Validada a compilação do TypeScript e bundle do Vite com `npm run build` obtendo sucesso absoluto (zero erros sintáticos ou estáticos).
 
