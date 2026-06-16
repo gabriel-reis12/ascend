@@ -43,3 +43,11 @@
 - **Goal:** Implementação do sistema de Chefes Finais e provações de consistência com lores associadas e persistência de dados.
 - **Status:** ✅ Complete — Desenvolvida a store `useBossStore` integrada ao Supabase (`boss_battles`), vinculando a redução de HP do chefe ativo às atividades realizadas no aplicativo (tarefas, treinos, nutrição e hábitos). Criada a página premium ciberpunk `/bosses` com barra de HP neon pulsante, lore imersiva, fraquezas de combate com dano crítico, feed de dano flutuante em Framer Motion e fluxos de vitória, desbloqueio de medalhas e novos títulos equipáveis na página de configurações.
 - **2026-06-16 Contract Repair:** adicionada migration consolidada `20260616_repair_app_contract.sql` para alinhar as tabelas/policies RLS do Supabase com o frontend atual, cobrindo missões, hábitos, treinos, nutrição, bosses, achievements e criação automática de profile.
+
+## Phase 8: Módulo Fortuna (Finanças & Metas de Longo Prazo)
+- **Goal:** Registro simplificado de transações e investimentos que alimentam a Sabedoria (WIS) e o dano contra o chefe do ciberespaço, além do tracking de objetivos de longo prazo.
+- **Status:** ✅ Complete — Criadas as tabelas `financial_logs` e `financial_goals` com RLS restrito. Integrada a quest diária reativa "Códex Financeiro" e o painel dinâmico de metas no Módulo Fortuna, contendo a Quest do Sistema de 20% fixa e premiação de +50 XP e +2 Sabedoria.
+
+## Phase 9: Biblioteca de Programas de Treino (Treinos Pré-Prontos)
+- **Goal:** Fornecer modelos estruturados de rotinas esportivas organizadas por frequência de sessões para importação ágil.
+- **Status:** ✅ Complete — Implementado o arquivo estático de presets `src/data/workoutPresets.ts` agrupado por programas (3x, 4x, 5x, 6x e Casa). Desenvolvida a aba "Modelos de Treino" em `/workouts` com filtros e modal de visualização detalhada, integrando um fluxo de importação em lote altamente resiliente contra duplicidades e erros de chave estrangeira.

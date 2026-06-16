@@ -30,6 +30,9 @@ import { useBossStore } from '@/stores/useBossStore';
 import { WorkoutProgress } from '@/components/workouts/WorkoutProgress';
 import { cn } from '@/lib/utils';
 import { localDateString } from '@/lib/date';
+import { WORKOUT_PROGRAM_PRESETS } from '@/data/workoutPresets';
+import type { WorkoutProgramPreset, PresetRoutine } from '@/data/workoutPresets';
+
 
 interface Exercise {
   id: string;
@@ -74,7 +77,11 @@ interface WorkoutLog {
 export function Workouts() {
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
-  const [activeTab, setActiveTab] = useState<'library' | 'routines' | 'progress'>('routines');
+  const [activeTab, setActiveTab] = useState<'library' | 'routines' | 'progress' | 'presets'>('routines');
+  const [selectedPreset, setSelectedPreset] = useState<WorkoutProgramPreset | null>(null);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [isImportingPreset, setIsImportingPreset] = useState(false);
+  const [presetFilter, setPresetFilter] = useState<'Todos' | '3x na semana' | '4x na semana' | '5x na semana' | '6x na semana' | 'Treino em Casa'>('Todos');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [routines, setRoutines] = useState<WorkoutRoutine[]>([]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
@@ -490,6 +497,95 @@ export function Workouts() {
     }
   }
 
+  async function handleImportProgram(program: WorkoutProgramPreset) {
+    if (!user) return;
+    setLoading(true);
+    setIsImportingPreset(true);
+    setIsPresetModalOpen(false);
+    try {
+      const dayMap: Record<string, number> = {
+        dom: 0,
+        seg: 1,
+        ter: 2,
+        qua: 3,
+        qui: 4,
+        sex: 5,
+        sab: 6
+      };
+
+      let currentExercises = [...exercises];
+
+      for (const r of program.routines) {
+        const numericDays = r.scheduled_days.map(d => dayMap[d.toLowerCase()]).filter(v => v !== undefined);
+        const { data: newRoutine, error: routineErr } = await supabase
+          .from('workout_routines')
+          .insert({
+            user_id: user.id,
+            name: r.name,
+            scheduled_days: numericDays
+          })
+          .select()
+          .single();
+
+        if (routineErr) throw routineErr;
+        if (!newRoutine) throw new Error("Erro ao criar rotina.");
+
+        for (let i = 0; i < r.exercises.length; i++) {
+          const ex = r.exercises[i];
+          let matchedExercise = currentExercises.find(
+            e => e.name.toLowerCase().trim() === ex.name.toLowerCase().trim()
+          );
+
+          let exerciseId = matchedExercise?.id;
+
+          if (!exerciseId) {
+            const { data: createdEx, error: createExErr } = await supabase
+              .from('exercises')
+              .insert({
+                name: ex.name,
+                muscle_group: ex.muscle_group,
+                category: ex.category,
+                is_custom: true,
+                created_by: user.id
+              })
+              .select()
+              .single();
+
+            if (createExErr) throw createExErr;
+            if (!createdEx) throw new Error("Erro ao criar exercício.");
+            
+            exerciseId = createdEx.id;
+            currentExercises.push(createdEx);
+          }
+
+          const { error: joinErr } = await supabase
+            .from('routine_exercises')
+            .insert({
+              routine_id: newRoutine.id,
+              exercise_id: exerciseId,
+              sets: ex.sets,
+              reps: ex.reps,
+              weight_kg: ex.weight_kg,
+              order_index: i
+            });
+
+          if (joinErr) throw joinErr;
+        }
+      }
+
+      setExercises(currentExercises);
+      alert(`Programa "${program.title}" importado com sucesso!`);
+      setActiveTab('routines');
+      fetchData();
+    } catch (err) {
+      console.error('Erro ao importar programa de treino:', err);
+      alert('Ocorreu um erro ao importar o programa de treino. Tente novamente.');
+    } finally {
+      setLoading(false);
+      setIsImportingPreset(false);
+    }
+  }
+
   async function handleLogWorkout() {
     if (!user || !selectedExercise) return;
 
@@ -594,6 +690,13 @@ export function Workouts() {
           style={{ fontFamily: 'Orbitron, sans-serif' }}
         >
           Minhas Rotinas
+        </button>
+        <button 
+          onClick={() => setActiveTab('presets')}
+          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'presets' ? 'text-amber-500 border-b-2 border-amber-500' : 'text-gray-500 hover:text-white'}`}
+          style={{ fontFamily: 'Orbitron, sans-serif' }}
+        >
+          Modelos de Treino
         </button>
         <button 
           onClick={() => setActiveTab('progress')}
@@ -722,6 +825,93 @@ export function Workouts() {
                 )}
               </div>
             </>
+          )}
+
+          {activeTab === 'presets' && (
+            <div className="space-y-6">
+              {/* Filtros por frequência */}
+              <div className="flex flex-wrap gap-2">
+                {(['Todos', '3x na semana', '4x na semana', '5x na semana', '6x na semana', 'Treino em Casa'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setPresetFilter(filter)}
+                    className={`rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-all ${
+                      presetFilter === filter
+                        ? 'border-amber-500 bg-amber-500/20 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                        : 'border-[#1E1E26] bg-[#0F0F13] text-gray-500 hover:border-amber-500/50 hover:text-amber-400'
+                    }`}
+                    style={{ fontFamily: 'Orbitron, sans-serif' }}
+                  >
+                    {filter === 'Treino em Casa' ? 'Em Casa' : filter === 'Todos' ? 'Todos os Modelos' : filter}
+                  </button>
+                ))}
+              </div>
+
+              {/* Grid de Programas de Treino */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {WORKOUT_PROGRAM_PRESETS
+                  .filter(p => presetFilter === 'Todos' || p.frequency === presetFilter)
+                  .map((program) => (
+                    <div
+                      key={program.id}
+                      className="group relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-all duration-150 ease-out hover:border-amber-500/50 hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] flex flex-col justify-between"
+                    >
+                      <div className="absolute -right-4 -top-4 size-24 bg-amber-500/5 blur-3xl group-hover:bg-amber-500/10" />
+
+                      <div>
+                        <div className="mb-4 flex items-center justify-between">
+                          <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-amber-400 font-orbitron">
+                            {program.frequency}
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-600 font-mono">
+                            {program.estimatedDuration}
+                          </span>
+                        </div>
+
+                        <h3 className="text-lg font-black uppercase italic text-white tracking-tight leading-snug" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                          {program.title}
+                        </h3>
+                        <p className="mt-2 text-xs text-gray-500 leading-relaxed min-h-[48px]">
+                          {program.description}
+                        </p>
+
+                        <div className="mt-4 border-t border-[#1E1E26] pt-4 space-y-2">
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600">Estrutura do Programa:</p>
+                          {program.routines.map((r, rIdx) => (
+                            <div key={rIdx} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5">
+                              <span className="text-[10px] font-bold text-gray-300 uppercase truncate">{r.name}</span>
+                              <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest font-mono">
+                                {r.exercises.length} Exs
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedPreset(program);
+                            setIsPresetModalOpen(true);
+                          }}
+                          className="flex-1 rounded-xl border border-[#1E1E26] bg-white/5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 transition-all hover:bg-white/10 hover:text-white"
+                          style={{ fontFamily: 'Orbitron, sans-serif' }}
+                        >
+                          Visualizar
+                        </button>
+                        <button
+                          onClick={() => handleImportProgram(program)}
+                          disabled={loading}
+                          className="flex-1 rounded-xl bg-amber-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)] disabled:opacity-50"
+                          style={{ fontFamily: 'Orbitron, sans-serif' }}
+                        >
+                          {loading && isImportingPreset ? 'Importando...' : 'Importar'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           )}
 
           {activeTab === 'routines' && (
@@ -1748,6 +1938,108 @@ export function Workouts() {
                     Confirmar
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      
+      {/* Modal de Detalhes do Preset de Treino */}
+      <AnimatePresence>
+        {isPresetModalOpen && selectedPreset && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPresetModalOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col rounded-3xl border border-[#1E1E26] bg-[#0F0F13] shadow-2xl"
+            >
+              <div className="p-8 border-b border-[#1E1E26]">
+                <button 
+                  onClick={() => setIsPresetModalOpen(false)}
+                  className="absolute right-6 top-6 text-gray-500 hover:text-white"
+                >
+                  <X className="size-6" />
+                </button>
+
+                <div className="flex items-center gap-5">
+                  <div className="flex size-14 items-center justify-center rounded-2xl bg-amber-600/20 text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                    <Dumbbell className="size-7" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black uppercase italic text-white tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                      {selectedPreset.title}
+                    </h2>
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-500 font-orbitron">{selectedPreset.frequency} · {selectedPreset.estimatedDuration}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  {selectedPreset.description}
+                </p>
+
+                <div className="space-y-6">
+                  {selectedPreset.routines.map((routine, rIdx) => (
+                    <div key={rIdx} className="space-y-3">
+                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-amber-400 font-orbitron">
+                        {routine.name}
+                      </h3>
+                      <div className="space-y-2">
+                        {routine.exercises.map((ex, exIdx) => (
+                          <div key={exIdx} className="flex items-center justify-between rounded-2xl border border-[#1E1E26] bg-white/5 p-4">
+                            <div className="flex items-center gap-4">
+                              <div className="flex size-8 items-center justify-center rounded-lg bg-white/5 text-gray-400">
+                                <span className="text-xs font-bold font-orbitron">{exIdx + 1}</span>
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-white uppercase">{ex.name}</p>
+                                <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">
+                                  {ex.muscle_group} · {ex.category}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest font-mono">
+                                {ex.weight_kg > 0 ? `${ex.weight_kg} KG` : 'Peso Corporal'}
+                              </span>
+                              <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest font-mono">
+                                {ex.sets}S x {ex.reps}R
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-8 border-t border-[#1E1E26] bg-white/5 flex gap-4">
+                <button 
+                  onClick={() => setIsPresetModalOpen(false)}
+                  className="flex-1 rounded-xl border border-[#1E1E26] bg-white/5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 transition-all hover:bg-white/10 hover:text-white"
+                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                >
+                  Voltar
+                </button>
+                <button 
+                  onClick={() => handleImportProgram(selectedPreset)}
+                  disabled={loading}
+                  className="flex-1 rounded-xl bg-amber-600 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-amber-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                >
+                  {loading ? 'Importando...' : 'Importar Programa Completo'}
+                </button>
               </div>
             </motion.div>
           </div>

@@ -13,6 +13,18 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Fase 9: Biblioteca de Programas de Treino (Treinos Pré-Prontos)
+- **Presets de Programas de Treino Estáticos**:
+  - Criado o arquivo `src/data/workoutPresets.ts` contendo rotinas realistas organizadas por frequência de treino (Push Pull Legs 3x, ABCD 4x, ABCDE 5x, PPL 6x e Treino em Casa), com exercícios, séries e repetições sugeridas.
+- **Importação Dinâmica de Rotinas**:
+  - Implementada a função `handleImportProgram` no `Workouts.tsx` para importar múltiplos protocolos de uma vez em lote no Supabase.
+  - O importador valida se cada exercício já existe no banco global (reaproveitando o `id`) ou o cria de forma customizada (`is_custom = true`), garantindo total resiliência contra erros de chave estrangeira ou dados duplicados.
+- **Interface Ciberpunk Dourada**:
+  - Adicionada a aba "Modelos de Treino" na página `/workouts` com filtros rápidos de frequência.
+  - Criado o modal de detalhes do preset de treino para visualização completa da estrutura de exercícios e séries antes da confirmação.
+- **Compatibilidade Mantida**:
+  - A opção clássica de criação manual de rotinas e exercícios permanece ativa e intocada no componente.
+
 ### 2026-06-16 — Fase 8.1: Quests & Metas Financeiras (Módulo Fortuna)
 - **Schema no Supabase e Migration Local**:
   - Criada a migration `20260616_fortuna_goals.sql` definindo a tabela `financial_goals` para rastrear objetivos de médio e longo prazo.
