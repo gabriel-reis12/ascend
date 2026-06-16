@@ -13,6 +13,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Ajustes de Interface e Galeria de Ranks no Onboarding
+- **Correção de Colisão e Layout**: Mudar o container de página do Onboarding para suportar rolagem vertical natural e margem superior adequada, eliminando a sobreposição do chip superior com o título.
+- **Visualizador Interativo de Ranks (Galeria E ao S)**: Implementação de um Lightbox modal em tela cheia acessado ao clicar na imagem da classe despertada e no grid inferior de classes.
+- **Seletor de Ranks Cyberpunk**: Chips de seleção rápida dos Ranks E, D, C, B, A, S que trocam as imagens dinamicamente e atualizam as descrições personalizadas de evolução de poder de mana para cada uma das 5 classes em PT-BR.
+- **Correção do Aspecto Pixelado das Artes**: Configuração explícita de `image-rendering: auto` para garantir que as imagens em alta resolução preservem seu traçado nítido e suave.
+- **Validação de Build**: Compilação estática do Vite validada e bem-sucedida (`npm run build`).
+
 ### 2026-06-16 — Ritual de Despertar no Onboarding
 - **Experiência RPG do Onboarding:**
   - Transformado o fluxo em fases narrativas do Sistema: calibração biológica, análise corporal, missão central, rank, avaliação e despertar da classe.

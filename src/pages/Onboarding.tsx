@@ -8,7 +8,8 @@ import { MatrixLoader } from '../components/ui/matrix-loader';
 import {
   Shield, Sword, Book, Zap, ChevronRight, Lightbulb, Crown,
   User, Calendar, Ruler, Weight, Target, Brain, Dumbbell, Star,
-  CheckCircle2, ArrowRight, Sparkles, Activity, ScanLine, Trophy
+  CheckCircle2, ArrowRight, Sparkles, Activity, ScanLine, Trophy,
+  Maximize2, X
 } from 'lucide-react';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -158,6 +159,49 @@ const CLASSES = [
     stats: 'DIS ▲▲▲  SAB ▲▲  EQU ▲',
   },
 ];
+
+const RANK_DESCRIPTIONS: Record<HunterClass, Record<string, string>> = {
+  Warrior: {
+    E: "Soldado Recruta. Força física ligeiramente elevada. O início de sua pavimentação por ferro.",
+    D: "Guerreiro de Vanguarda. Corpo blindado capaz de suportar impactos diretos de mana.",
+    C: "Cavaleiro do Caos. Domínio excelente de combate a curta distância e golpes destruidores.",
+    B: "Paladino da Ruína. A força física gera ondas de choque destrutivas ao colidir.",
+    A: "Warlord Titã. Um exército de um homem só capaz de limpar fendas de alto nível sozinho.",
+    S: "Monarca do Ferro. O ápice da força inabalável. Nada no universo pode romper sua armadura."
+  },
+  Scholar: {
+    E: "Aprendiz de Mana. Percepção sensorial e leitura inicial do fluxo oculto de energia.",
+    D: "Mago Incipiente. Foco mental afiado e raciocínio lógico sob pressão extrema.",
+    C: "Sabedor das Runas. Decifração de escritas proibidas e conjuração de feitiços médios.",
+    B: "Arquimago do Conhecimento. Domínio de feitiços complexos e estratégias profundas de evolução.",
+    A: "Sábio Dimensional. Distorção das leis físicas simples e manipulação de espaço-tempo.",
+    S: "Arquivista do Destino. Conhecimento absoluto do Sistema. Sua mente calcula todas as variáveis do universo."
+  },
+  Creator: {
+    E: "Artesão Iniciante. Criação de ferramentas rudimentares e prototipagem rápida de hábitos.",
+    D: "Inventor do Sistema. Planejamento geométrico de rotinas de alta durabilidade.",
+    C: "Forjador de Runas. Criação de itens de suporte que auxiliam na jornada e aumentam a produtividade.",
+    B: "Engenheiro de Mana. Automação de processos cognitivos e rotinas de evolução em lote.",
+    A: "Arquiteto da Fenda. Manipulação espacial de áreas personalizadas de treino corporal.",
+    S: "Criador do Vazio. Capacidade de manifestar e forjar qualquer realidade através da mana pura."
+  },
+  Monk: {
+    E: "Iniciado do Templo. Respiração controlada e meditação básica para equilíbrio inicial.",
+    D: "Monge da Brisa. Agilidade física aprimorada e flexibilidade muscular.",
+    C: "Guerreiro Espiritual. Alinhamento perfeito permitindo cura e remoção rápida de fadiga física.",
+    B: "Mestre do Qi. Manipulação interna de energia vital para imunidade a desgastes diários.",
+    A: "Asceta Iluminado. Estado mental inabalável e imunidade completa à fadiga psicológica.",
+    S: "Monarca do Nirvana. Controle biológico perfeito. Sua vitalidade e energia de mana tornam-se infinitas."
+  },
+  Leader: {
+    E: "Líder de Esquadrão. Orientação de pequenos grupos e compartilhamento de metas de evolução.",
+    D: "Comandante de Campo. Capacidade de inspirar persistência e disciplina nos companheiros.",
+    C: "Estrategista de Guilda. Coordenação de equipes para maximizar o rendimento coletivo.",
+    B: "General das Fendas. Habilidade tática superior para liderar campanhas complexas de evolução.",
+    A: "Soberano da Aliança. Influência massiva guiando guildas inteiras em direção ao progresso.",
+    S: "Imperador do Destino. Autoridade soberana. Sua presença eleva o poder de todos ao redor a níveis lendários."
+  }
+};
 
 const AWAKENING_MESSAGES = [
   'Inicializando protocolo de avaliação...',
@@ -331,6 +375,9 @@ export function Onboarding() {
   const [awakeningMsgIdx, setAwakeningMsgIdx] = useState(0);
   const [decisionFeedback, setDecisionFeedback] = useState<string | null>(null);
 
+  const [previewClassId, setPreviewClassId] = useState<HunterClass | null>(null);
+  const [previewRank, setPreviewRank] = useState<'E' | 'D' | 'C' | 'B' | 'A' | 'S'>('E');
+
   const [form, setForm] = useState<FormData>({
     fullName: '',
     birthday: '',
@@ -459,7 +506,7 @@ export function Onboarding() {
   const revealedClassData = CLASSES.find(c => c.id === revealedClass);
 
   return (
-    <div className="relative min-h-screen bg-[#0B0B0F] text-white flex items-center justify-center p-6 overflow-hidden">
+    <div className="relative min-h-screen bg-[#0B0B0F] text-white flex flex-col items-center justify-start pt-24 pb-12 px-6 overflow-y-auto">
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_16%,rgba(124,58,237,0.12),transparent_32%),radial-gradient(circle_at_18%_82%,rgba(59,130,246,0.09),transparent_28%)]" />
       {RITUAL_PARTICLES.map(particle => (
         <span
@@ -1052,11 +1099,25 @@ export function Onboarding() {
                   animate={{ opacity: [0.45, 0.8, 0.45] }}
                   transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
-                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
-                  <img src={revealedClassData.image} alt={revealedClassData.name} className="h-56 w-full object-cover md:h-full" />
+                <div
+                  onClick={() => {
+                    setPreviewClassId(revealedClassData.id);
+                    setPreviewRank('E');
+                  }}
+                  className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 cursor-pointer group/img transition-all"
+                >
+                  <img
+                    src={revealedClassData.image}
+                    alt={revealedClassData.name}
+                    className="h-56 w-full object-cover md:h-full transition-transform duration-500 group-hover/img:scale-105"
+                    style={{ imageRendering: 'auto' }}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute bottom-3 left-3 rounded-full border border-purple-400/40 bg-purple-600/30 px-3 py-1 text-[9px] font-orbitron uppercase tracking-[0.2em] text-purple-100">
                     Desbloqueado
+                  </div>
+                  <div className="absolute top-3 right-3 rounded-full p-2 bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all opacity-0 group-hover/img:opacity-100 md:opacity-100">
+                    <Maximize2 className="w-4 h-4" />
                   </div>
                 </div>
                 <div className="relative flex flex-col justify-center p-4 md:p-6">
@@ -1126,15 +1187,26 @@ export function Onboarding() {
                     </div>
 
                     {/* Imagem ou placeholder */}
-                    <div className="w-full aspect-[3/4] relative rounded-lg overflow-hidden border border-white/10 group-hover:border-white/20 transition-colors">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewClassId(c.id);
+                        setPreviewRank('E');
+                      }}
+                      className="w-full aspect-[3/4] relative rounded-lg overflow-hidden border border-white/10 group-hover:border-white/20 transition-colors cursor-zoom-in group/img"
+                    >
                       {c.image ? (
                         <>
                           <img
                             src={c.image}
                             alt={c.name}
                             className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100"
+                            style={{ imageRendering: 'auto' }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                          <div className="absolute top-2 right-2 rounded-full p-1.5 bg-black/60 border border-white/10 text-white/50 group-hover/img:text-white transition-all opacity-0 group-hover/img:opacity-100">
+                            <Maximize2 className="w-3 h-3" />
+                          </div>
                         </>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-black/40 gap-2">
@@ -1174,6 +1246,106 @@ export function Onboarding() {
           </motion.div>
         )}
 
+        {/* Lightbox para Visualização das Artes e Ranks */}
+        <AnimatePresence>
+          {previewClassId && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPreviewClassId(null)}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0B0F]/95 p-4 md:p-6 backdrop-blur-md overflow-y-auto"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-4xl rounded-3xl border border-purple-500/30 bg-[#13131A] p-5 shadow-[0_0_80px_rgba(124,58,237,0.35)] md:p-8 grid md:grid-cols-12 gap-6 items-center"
+              >
+                {/* Botão Fechar */}
+                <button
+                  onClick={() => setPreviewClassId(null)}
+                  className="absolute top-4 right-4 rounded-full border border-purple-500/20 bg-purple-950/40 p-2 text-purple-400 hover:text-white hover:border-purple-400/50 hover:bg-purple-900/60 transition-all z-10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Lado Esquerdo: Imagem da Classe no Rank Selecionado */}
+                <div className="md:col-span-6 relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-black/60 shadow-[0_0_30px_rgba(124,58,237,0.15)] flex items-center justify-center">
+                  <motion.img
+                    key={`${previewClassId}-${previewRank}`}
+                    initial={{ opacity: 0, scale: 0.95, filter: 'blur(5px)' }}
+                    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                    transition={{ duration: 0.4 }}
+                    src={`/Classes/${previewClassId}/Rank ${previewRank}.jpeg`}
+                    alt={`${previewClassId} Rank ${previewRank}`}
+                    className="w-full h-full object-cover"
+                    style={{ imageRendering: 'auto' }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                  
+                  {/* Badge do Rank */}
+                  <div className={`absolute bottom-4 left-4 rank-badge rank-${previewRank.toLowerCase()} text-xs font-orbitron tracking-widest px-3 py-1.5`}>
+                    RANK {previewRank}
+                  </div>
+                </div>
+
+                {/* Lado Direito: Informações e Seletores */}
+                <div className="md:col-span-6 flex flex-col justify-between h-full space-y-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Evolução de Classe</span>
+                    </div>
+                    <h2 className="font-orbitron text-3xl font-extrabold text-white tracking-tight uppercase">
+                      {CLASSES.find(c => c.id === previewClassId)?.name}
+                    </h2>
+                    <p className="text-sm font-medium text-purple-300/80 font-orbitron tracking-wider mt-1">
+                      {CLASSES.find(c => c.id === previewClassId)?.tagline}
+                    </p>
+                  </div>
+
+                  {/* Seletor de Ranks */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-orbitron uppercase tracking-widest text-gray-500">Selecione o Nível de Rank</p>
+                    <div className="grid grid-cols-6 gap-2">
+                      {(['E', 'D', 'C', 'B', 'A', 'S'] as const).map((rk) => {
+                        const isCurrent = previewRank === rk;
+                        return (
+                          <button
+                            key={rk}
+                            onClick={() => setPreviewRank(rk)}
+                            className={`
+                              py-2.5 rounded-xl font-orbitron text-sm font-bold border transition-all duration-200
+                              ${isCurrent
+                                ? 'bg-purple-600 border-purple-400 text-white shadow-[0_0_15px_rgba(124,58,237,0.6)] scale-105'
+                                : 'bg-purple-950/20 border-purple-900/40 text-purple-300/50 hover:border-purple-500 hover:text-purple-300'}
+                            `}
+                          >
+                            {rk}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Descrição Dinâmica do Rank */}
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-5 space-y-2">
+                    <p className="text-[9px] font-orbitron uppercase tracking-[0.2em] text-purple-400">Atributo & Potencial de Mana</p>
+                    <p className="text-sm text-gray-300 leading-relaxed min-h-[72px]">
+                      {RANK_DESCRIPTIONS[previewClassId]?.[previewRank] || ""}
+                    </p>
+                  </div>
+
+                  <div className="text-[10px] text-gray-600 font-mono tracking-wider text-center md:text-left">
+                    Use o seletor para vislumbrar seu poder futuro no Rank S.
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </AnimatePresence>
     </div>
   );
