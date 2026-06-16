@@ -211,6 +211,19 @@ const normalizeActionType = (actionType: string) => {
   return 'task';
 };
 
+const withTimeout = async <T,>(promise: PromiseLike<T>, label: string, ms = 12000): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} demorou demais para responder.`)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+};
+
 export const useBossStore = create<BossStoreState>((set, get) => ({
   activeBattle: null,
   defeatedBossIds: [],
@@ -222,24 +235,30 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       // 1. Buscar se há alguma batalha ativa (defeated = false)
-      const { data: active, error: activeErr } = await supabase
-        .from('boss_battles')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('defeated', false)
-        .order('started_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: active, error: activeErr } = await withTimeout(
+        supabase
+          .from('boss_battles')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('defeated', false)
+          .order('started_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        'A busca da batalha ativa'
+      );
 
       if (activeErr) throw activeErr;
 
       // 2. Se não há batalha ativa, precisamos determinar qual é o próximo boss.
       // Buscaremos todas as batalhas derrotadas para ver a sequência.
-      const { data: completed, error: completedErr } = await supabase
-        .from('boss_battles')
-        .select('boss_id')
-        .eq('user_id', userId)
-        .eq('defeated', true);
+      const { data: completed, error: completedErr } = await withTimeout(
+        supabase
+          .from('boss_battles')
+          .select('boss_id')
+          .eq('user_id', userId)
+          .eq('defeated', true),
+        'A busca dos bosses derrotados'
+      );
 
       if (completedErr) throw completedErr;
 
@@ -273,11 +292,14 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         started_at: new Date().toISOString()
       };
 
-      const { data: created, error: createErr } = await supabase
-        .from('boss_battles')
-        .insert(newBattleObj)
-        .select()
-        .single();
+      const { data: created, error: createErr } = await withTimeout(
+        supabase
+          .from('boss_battles')
+          .insert(newBattleObj)
+          .select()
+          .single(),
+        'A criacao da batalha ativa'
+      );
 
       if (createErr) throw createErr;
 

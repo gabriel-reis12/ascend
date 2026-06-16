@@ -46,6 +46,7 @@ export function Nutrition() {
   const [logs, setLogs] = useState<FoodLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewFoodModalOpen, setIsNewFoodModalOpen] = useState(false);
@@ -91,6 +92,7 @@ export function Nutrition() {
       return;
     }
     setLoading(true);
+    setDataError(null);
 
     const safetyTimer = setTimeout(() => {
       setLoading(false);
@@ -125,6 +127,7 @@ export function Nutrition() {
       setLogs(logData || []);
     } catch (err) {
       console.error('Error fetching nutrition data:', err);
+      setDataError(err instanceof Error ? err.message : String(err));
     } finally {
       clearTimeout(safetyTimer);
       setLoading(false);
@@ -403,6 +406,12 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
       {/* Diário de Consumo Tab */}
       {activeTab === 'diario' && (
         <div className="space-y-6">
+          {dataError && (
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
+              <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
+              {dataError}
+            </div>
+          )}
           {/* Painel Consolidado de Macros do Dia */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {/* Calorias */}

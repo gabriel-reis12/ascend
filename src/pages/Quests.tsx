@@ -364,6 +364,7 @@ export function Quests() {
     totalActive, 
     xpEarnedToday, 
     loading, 
+    error: habitsError,
     toggleCompletion, 
     createHabit, 
     deleteHabit, 
@@ -382,6 +383,7 @@ export function Quests() {
     uncompleteTask,
     deleteTask,
     loading: loadingTasks,
+    error: tasksError,
   } = useTasks();
 
   const handleUpdateTime = async (
@@ -516,6 +518,12 @@ export function Quests() {
       />
 
       <div className="mx-auto max-w-4xl space-y-8">
+        {(habitsError || tasksError) && (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
+            <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
+            {habitsError || tasksError}
+          </div>
+        )}
         {/* System Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">

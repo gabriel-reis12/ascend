@@ -80,6 +80,7 @@ export function Workouts() {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewExerciseModalOpen, setIsNewExerciseModalOpen] = useState(false);
@@ -219,6 +220,7 @@ export function Workouts() {
       return;
     }
     setLoading(true);
+    setDataError(null);
 
     // Safety timeout de 5s para evitar skeleton eterno em caso de lentidão
     const safetyTimer = setTimeout(() => {
@@ -268,6 +270,7 @@ export function Workouts() {
       setLogs(logData || []);
     } catch (err) {
       console.error('Error fetching workout data:', err);
+      setDataError(err instanceof Error ? err.message : String(err));
     } finally {
       clearTimeout(safetyTimer);
       setLoading(false);
@@ -609,6 +612,12 @@ export function Workouts() {
       </div>
 
       <div className="space-y-6">
+        {dataError && (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
+            <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
+            {dataError}
+          </div>
+        )}
         {activeTab === 'library' && (
           <>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

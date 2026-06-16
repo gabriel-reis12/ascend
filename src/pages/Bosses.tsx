@@ -24,7 +24,15 @@ import { useBossStore, BOSS_LIST } from '@/stores/useBossStore';
 export function Bosses() {
   const { user } = useAuth();
   const hunterStore = useHunterStore();
-  const bossStore = useBossStore();
+  const activeBattle = useBossStore((state) => state.activeBattle);
+  const defeatedBossIds = useBossStore((state) => state.defeatedBossIds);
+  const bossLoading = useBossStore((state) => state.loading);
+  const bossError = useBossStore((state) => state.error);
+  const recentDamage = useBossStore((state) => state.recentDamage);
+  const loadActiveBattle = useBossStore((state) => state.loadActiveBattle);
+  const attackActiveBoss = useBossStore((state) => state.attackActiveBoss);
+  const purifyActiveBoss = useBossStore((state) => state.purifyActiveBoss);
+  const resetBattle = useBossStore((state) => state.resetBattle);
   const [purifying, setPurifying] = useState(false);
   const [showAttackFeed, setShowAttackFeed] = useState(false);
   const [feedDamage, setFeedDamage] = useState(0);
@@ -33,20 +41,20 @@ export function Bosses() {
   // Carrega a batalha ativa quando o componente monta
   useEffect(() => {
     if (user?.id) {
-      void bossStore.loadActiveBattle(user.id);
+      void loadActiveBattle(user.id);
     }
-  }, [user?.id]);
+  }, [user?.id, loadActiveBattle]);
 
   // Monitora alterações de dano recente para exibir animação de floating numbers
   useEffect(() => {
-    if (bossStore.recentDamage) {
-      setFeedDamage(bossStore.recentDamage.damage);
-      setFeedCritical(bossStore.recentDamage.isCritical);
+    if (recentDamage) {
+      setFeedDamage(recentDamage.damage);
+      setFeedCritical(recentDamage.isCritical);
       setShowAttackFeed(true);
       const timer = setTimeout(() => setShowAttackFeed(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [bossStore.recentDamage]);
+  }, [recentDamage]);
 
   if (!user) {
     return (
@@ -56,7 +64,6 @@ export function Bosses() {
     );
   }
 
-  const activeBattle = bossStore.activeBattle;
   const bossDef = activeBattle ? BOSS_LIST.find(b => b.id === activeBattle.boss_id) : null;
   const hpPercent = activeBattle ? (activeBattle.current_hp / activeBattle.max_hp) * 100 : 0;
 
@@ -64,7 +71,7 @@ export function Bosses() {
   const handleTestAttack = async () => {
     if (!user.id || !activeBattle || activeBattle.current_hp <= 0) return;
     // Simula um ataque de treino de 15 de dano
-    await bossStore.attackActiveBoss(user.id, 15, 'workout');
+    await attackActiveBoss(user.id, 15, 'workout');
   };
 
   // Handler para purificar o boss derrotado
@@ -72,7 +79,7 @@ export function Bosses() {
     if (!user.id) return;
     setPurifying(true);
     try {
-      await bossStore.purifyActiveBoss(user.id);
+      await purifyActiveBoss(user.id);
     } finally {
       setPurifying(false);
     }
@@ -83,13 +90,13 @@ export function Bosses() {
   // Para mostrar a galeria de troféus, listaremos os bosses e marcaremos como derrotados os que
   // têm IDs anteriores ao boss ativo, ou se já derrotou a campanha inteira.
   const getBossStatus = (bossId: string) => {
-    if (!activeBattle) return bossStore.loading ? 'locked' : 'locked';
+    if (!activeBattle) return bossLoading ? 'locked' : 'locked';
 
     const activeIndex = BOSS_LIST.findIndex(b => b.id === activeBattle.boss_id);
     const targetIndex = BOSS_LIST.findIndex(b => b.id === bossId);
     
     if (targetIndex === activeIndex) return 'active';
-    if (bossStore.defeatedBossIds.includes(bossId)) return 'defeated';
+    if (defeatedBossIds.includes(bossId)) return 'defeated';
     return 'locked';
   };
 
@@ -130,12 +137,12 @@ export function Bosses() {
         <div className="flex items-center gap-3 z-10">
           {activeBattle && activeBattle.current_hp > 0 && (
             <button
-              onClick={() => void bossStore.resetBattle(user.id)}
-              disabled={bossStore.loading}
+              onClick={() => void resetBattle(user.id)}
+              disabled={bossLoading}
               title="Resetar HP do Boss atual"
               className="flex size-9 items-center justify-center rounded-xl bg-black/40 border border-[#1e1e26] text-gray-400 hover:text-white hover:border-gray-500/50 transition cursor-pointer disabled:opacity-40"
             >
-              <RotateCcw size={15} className={bossStore.loading ? 'animate-spin' : ''} />
+              <RotateCcw size={15} className={bossLoading ? 'animate-spin' : ''} />
             </button>
           )}
           <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
@@ -145,7 +152,7 @@ export function Bosses() {
       </div>
 
       {/* Área Principal da Batalha */}
-      {bossStore.loading && !activeBattle ? (
+      {bossLoading && !activeBattle ? (
         <div className="flex flex-col items-center justify-center py-32 space-y-4">
           <div className="relative size-16">
             <div className="absolute inset-0 rounded-full border-2 border-purple-500/10" />
@@ -154,6 +161,22 @@ export function Bosses() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 animate-pulse font-orbitron">
             Sincronizando com a Fenda Dimensional...
           </p>
+        </div>
+      ) : bossError && !activeBattle ? (
+        <div className="rounded-3xl border border-rose-500/30 bg-rose-500/5 p-10 text-center shadow-xl">
+          <ShieldAlert className="mx-auto mb-4 size-10 text-rose-400" />
+          <p className="text-xs font-black uppercase tracking-widest text-rose-400 font-orbitron">
+            Falha ao sincronizar a fenda
+          </p>
+          <p className="mx-auto mt-3 max-w-2xl break-words text-xs font-semibold text-rose-200/80">
+            {bossError}
+          </p>
+          <button
+            onClick={() => user?.id && void loadActiveBattle(user.id)}
+            className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-rose-300 transition hover:bg-rose-500/20"
+          >
+            Tentar sincronizar novamente
+          </button>
         </div>
       ) : activeBattle && bossDef ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

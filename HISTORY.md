@@ -505,3 +505,10 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Padronizado o cálculo de "hoje" para data local do usuário em dashboard, refeições, cardápios e conclusão de treinos, evitando registros caírem no dia errado por conversão UTC.
   - Sincronizado o cache local de tarefas, hábitos, conclusões e missões de refeição após mutações, evitando que dados antigos reapareçam após refresh.
   - Corrigido o cadastro de alimentos personalizados para usar `created_by`, alinhado ao schema e às policies RLS do Supabase.
+### 2026-06-16
+- **Resiliencia Supabase em Producao:**
+  - Validado o projeto Supabase remoto via REST e smoke test autenticado com usuario temporario: criacao de missoes, bosses, alimentos, logs, cardapios, exercicios e rotinas passou com sucesso.
+  - Adicionado timeout defensivo no carregamento/criacao de batalhas de bosses para impedir sincronizacao infinita quando uma chamada fica pendente.
+  - Refatorada a tela de Bosses para consumir seletores estaveis do Zustand e exibir erro recuperavel com botao de nova sincronizacao.
+  - Adicionados paineis de erro visiveis em Missoes, Recuperacao e Centro de Treinamento para expor falhas reais de Supabase em vez de deixar listas vazias ou loading ambiguo.
+  - Build de producao validado com `npm.cmd run build`.

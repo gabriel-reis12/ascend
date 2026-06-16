@@ -1,5 +1,10 @@
 # Roadmap
 
+## Production Stabilization - 2026-06-16
+- **Status:** Complete - Supabase remoto validado com REST e smoke test autenticado para missoes, bosses, alimentos, logs, cardapios, exercicios e rotinas.
+- **Frontend hardening:** Bosses agora tem timeout defensivo, seletores estaveis do Zustand e estado de erro com retry. Missoes, Recuperacao e Centro de Treinamento exibem falhas reais de sincronizacao em tela.
+- **Validation:** `npm.cmd run build` aprovado.
+
 ## Phase 1: Foundation & UI/UX Base
 - **Goal:** Inicializar repositório, dependências, rotas básicas e o "Design System" (Temática RPG Moderno).
 - **Status:** ✅ Complete — React 19 + Vite + TailwindCSS v4 (RPG dark/neon theme), Zustand store, RPGLayout com sidebar + rotas, Supabase client configurado.
