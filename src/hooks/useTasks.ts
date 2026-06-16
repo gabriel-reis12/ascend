@@ -151,7 +151,7 @@ export function useTasks() {
       
       // Causar dano ao chefe ativo
       const bossStore = useBossStore.getState();
-      await bossStore.attackActiveBoss(user.id, task.xp_reward, 'task');
+      await bossStore.attackActiveBoss(user.id, task.xp_reward, task.category || 'task');
     }
   };
 
@@ -174,7 +174,7 @@ export function useTasks() {
       
       // Reverter dano ao chefe ativo
       const bossStore = useBossStore.getState();
-      await bossStore.attackActiveBoss(user.id, -task.xp_reward, 'task');
+      await bossStore.attackActiveBoss(user.id, -task.xp_reward, task.category || 'task');
     }
   };
 

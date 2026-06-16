@@ -14,6 +14,19 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Correções Pós-Implementação do Módulo Bosses
+- **Resiliência da Store de Bosses**:
+  - Corrigido `attackActiveBoss` para carregar/inicializar a batalha ativa antes de aplicar dano, evitando perda silenciosa de ataques quando a store ainda não estava hidratada.
+  - Corrigido cálculo de dano negativo: reversões agora curam apenas o dano base aplicado, sem multiplicador crítico, e nunca ultrapassam o HP máximo do boss.
+  - Adicionada normalização de categorias reais do app (`Estudo`, `Treino`, `Saúde`, `Trabalho`, `Finanças`, etc.) para as fraquezas internas dos bosses.
+  - A busca da batalha ativa agora prioriza a mais recente, reduzindo falhas caso existam registros ativos duplicados no Supabase.
+- **Conquistas, Galeria e Integração**:
+  - Alinhados os títulos/ícones/descrições de conquistas dos bosses com a lista reconhecida em `Settings.tsx`, incluindo casos especiais como Sereia e Boss Final.
+  - Purificação de boss agora evita duplicar conquistas em tentativas repetidas.
+  - Galeria de Bosses passa a usar a lista real de bosses derrotados carregada do Supabase e mantém o boss ativo com prioridade visual.
+  - `useTasks.ts` agora envia a categoria real da tarefa para cálculo de fraqueza, permitindo críticos de foco, finanças e organização.
+  - Quebrado o ciclo de importação entre `useHunterStore` e `useBossStore` usando import dinâmico no carregamento em background.
+
 ### 2026-06-16 — Implementação do Módulo de Chefes Finais (Raid Semanal)
 - **Criação do useBossStore.ts (Zustand)**:
   - Desenvolvida a store que gerencia o ciclo de vida do combate das Raids. Mapeados os 7 chefes com base nas imagens e lores de `public/Bosses/Lore dos Boss.txt`.

@@ -7,6 +7,9 @@ export interface BossDefinition {
   name: string;
   title: string;
   titleReward: string;
+  achievementTitle: string;
+  achievementDescription: string;
+  achievementIcon: string;
   maxHp: number;
   image: string;
   lore: string;
@@ -37,6 +40,9 @@ export const BOSS_LIST: BossDefinition[] = [
     name: 'O Senhor da Procrastinação',
     title: 'Boss 01',
     titleReward: 'Executor Implacável',
+    achievementTitle: 'O Senhor da Procrastinação Derrotado',
+    achievementDescription: 'Purificou o Senhor da Procrastinação',
+    achievementIcon: 'Sword',
     maxHp: 100,
     image: '/Bosses/O Senhor da Procrastinação.jpeg',
     lore: 'Uma entidade gigantesca feita de correntes, relógios quebrados e fumaça negra. Ao seu redor existem centenas de missões abandonadas, projetos inacabados e metas esquecidas.',
@@ -51,6 +57,9 @@ export const BOSS_LIST: BossDefinition[] = [
     name: 'O Rei da Preguiça',
     title: 'Boss 02',
     titleReward: 'O Incansável',
+    achievementTitle: 'O Rei da Preguiça Derrotado',
+    achievementDescription: 'Purificou o Rei da Preguiça',
+    achievementIcon: 'Flame',
     maxHp: 100,
     image: '/Bosses/O Rei da Preguiça.jpeg',
     lore: 'Uma criatura colossal sentada em um trono gigantesco de pedra e lodo. Ela não luta; apenas permanece imóvel. Correntes negras se espalham pelo chão, drenando a energia vital e a motivação de qualquer um que ouse se aproximar.',
@@ -65,6 +74,9 @@ export const BOSS_LIST: BossDefinition[] = [
     name: 'A Sereia da Distração',
     title: 'Boss 03',
     titleReward: 'Mestre do Foco',
+    achievementTitle: 'A Sereia da Distração Derrotada',
+    achievementDescription: 'Purificou a Sereia da Distração',
+    achievementIcon: 'Brain',
     maxHp: 120,
     image: '/Bosses/A Sereia da Distração.jpeg',
     lore: 'Uma entidade etérea que flutua acima de um oceano digital formado por telas luminosas. Ao seu redor brilham notificações, redes sociais e vídeos curtos. Os caçadores hipnotizados ficam presos olhando para as telas enquanto sua energia vital é sugada.',
@@ -79,6 +91,9 @@ export const BOSS_LIST: BossDefinition[] = [
     name: 'O Devorador do Progresso',
     title: 'Boss 04',
     titleReward: 'Mestre da Disciplina',
+    achievementTitle: 'O Devorador do Progresso Derrotado',
+    achievementDescription: 'Purificou o Devorador do Progresso',
+    achievementIcon: 'Heart',
     maxHp: 120,
     image: '/Bosses/O Devorador do Progresso.jpeg',
     lore: 'Uma criatura colossal e insaciável formada por energia escura e fragmentos de excessos, impulsos e gratificação imediata. Ele não destrói os caçadores por combate direto, mas os convence a abandonar seu potencial em troca de prazeres rápidos.',
@@ -93,6 +108,9 @@ export const BOSS_LIST: BossDefinition[] = [
     name: 'O Mercador das Dívidas',
     title: 'Boss 05',
     titleReward: 'Guardião da Liberdade',
+    achievementTitle: 'O Mercador das Dívidas Derrotado',
+    achievementDescription: 'Purificou o Mercador das Dívidas',
+    achievementIcon: 'Scale',
     maxHp: 150,
     image: '/Bosses/O Mercador das Dívidas.jpeg',
     lore: 'Sentado dentro de um mercado dimensional infinito cheio de ouro e armaduras lendárias, o Mercador domina pela sedução. Ele nunca obriga ninguém; ele apenas oferece. Mas atrás de cada item fácil existe uma corrente invisível que prende sua liberdade futura.',
@@ -107,6 +125,9 @@ export const BOSS_LIST: BossDefinition[] = [
     name: 'O Arauto do Caos',
     title: 'Boss 06',
     titleReward: 'Mestre da Clareza',
+    achievementTitle: 'O Arauto do Caos Derrotado',
+    achievementDescription: 'Purificou o Arauto do Caos',
+    achievementIcon: 'Compass',
     maxHp: 150,
     image: '/Bosses/O Arauto do Caos.jpeg',
     lore: 'Uma catástrofe silenciosa. Ele não ataca com força física, mas transforma toda a sua vida em ruído e confusão. Sob sua influência, as prioridades somem, os planos se misturam e você acorda muito ocupado, mas nunca produtivo.',
@@ -121,6 +142,9 @@ export const BOSS_LIST: BossDefinition[] = [
     name: 'O Reflexo da Autossabotagem',
     title: 'Boss Final',
     titleReward: 'O Purificado',
+    achievementTitle: 'O Reflexo da Autossabotagem Purificado',
+    achievementDescription: 'Superou a si mesmo e purificou o Reflexo da Autossabotagem',
+    achievementIcon: 'Crown',
     maxHp: 200,
     image: '/Bosses/O Reflexo da Autossabotagem.jpeg',
     lore: 'A origem de todos os males. Após derrotar todos os chefes anteriores, você alcança o último portal e encontra apenas um espelho. Dentro dele está você mesmo: a soma de todas as versões de você que desistiram no passado.',
@@ -134,6 +158,7 @@ export const BOSS_LIST: BossDefinition[] = [
 
 interface BossStoreState {
   activeBattle: BossBattle | null;
+  defeatedBossIds: string[];
   loading: boolean;
   error: string | null;
   recentDamage: { damage: number; isCritical: boolean } | null;
@@ -144,8 +169,51 @@ interface BossStoreState {
   resetBattle: (userId: string) => Promise<void>;
 }
 
+const normalizeActionType = (actionType: string) => {
+  const normalized = actionType
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (normalized.includes('workout') || normalized.includes('treino') || normalized.includes('cardio')) return 'workout';
+  if (
+    normalized.includes('estudo') ||
+    normalized.includes('leitura') ||
+    normalized.includes('idioma') ||
+    normalized.includes('program') ||
+    normalized.includes('tech') ||
+    normalized.includes('foco')
+  ) return 'foco';
+  if (
+    normalized.includes('nutrition') ||
+    normalized.includes('nutricao') ||
+    normalized.includes('saude') ||
+    normalized.includes('aliment') ||
+    normalized.includes('refeic') ||
+    normalized.includes('mana')
+  ) return 'nutrition';
+  if (
+    normalized.includes('finance') ||
+    normalized.includes('financ') ||
+    normalized.includes('divida') ||
+    normalized.includes('invest') ||
+    normalized.includes('freelance')
+  ) return 'finance';
+  if (
+    normalized.includes('organization') ||
+    normalized.includes('organiz') ||
+    normalized.includes('planej') ||
+    normalized.includes('trabalho') ||
+    normalized.includes('produt') ||
+    normalized.includes('rotina')
+  ) return 'organization';
+  if (normalized.includes('streak') || normalized.includes('consistencia')) return 'streak';
+  return 'task';
+};
+
 export const useBossStore = create<BossStoreState>((set, get) => ({
   activeBattle: null,
+  defeatedBossIds: [],
   loading: false,
   error: null,
   recentDamage: null,
@@ -159,14 +227,11 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         .select('*')
         .eq('user_id', userId)
         .eq('defeated', false)
+        .order('started_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (activeErr) throw activeErr;
-
-      if (active) {
-        set({ activeBattle: active, loading: false });
-        return;
-      }
 
       // 2. Se não há batalha ativa, precisamos determinar qual é o próximo boss.
       // Buscaremos todas as batalhas derrotadas para ver a sequência.
@@ -179,6 +244,12 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
       if (completedErr) throw completedErr;
 
       const completedIds = completed ? completed.map(c => c.boss_id) : [];
+      const defeatedBossIds = [...new Set(completedIds)];
+
+      if (active) {
+        set({ activeBattle: active, defeatedBossIds, loading: false });
+        return;
+      }
 
       // Encontrar o primeiro Boss na sequência de BOSS_LIST que não está na lista de concluídos
       let nextBossDef = BOSS_LIST.find(b => !completedIds.includes(b.id));
@@ -210,7 +281,7 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
 
       if (createErr) throw createErr;
 
-      set({ activeBattle: created, loading: false });
+      set({ activeBattle: created, defeatedBossIds, loading: false });
     } catch (err: any) {
       console.error('[useBossStore] Erro ao carregar/iniciar batalha:', err);
       set({ error: err.message || 'Erro desconhecido', loading: false });
@@ -218,32 +289,41 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
   },
 
   attackActiveBoss: async (userId: string, baseDamage: number, actionType: string) => {
+    if (!get().activeBattle) {
+      await get().loadActiveBattle(userId);
+    }
+
     const { activeBattle } = get();
     if (!activeBattle || activeBattle.defeated || activeBattle.current_hp <= 0) return;
 
     // Encontra a definição estática do Boss para aplicar bônus
     const bossDef = BOSS_LIST.find(b => b.id === activeBattle.boss_id);
-    let finalDamage = baseDamage;
+    const normalizedActionType = normalizeActionType(actionType);
+    const direction = baseDamage < 0 ? -1 : 1;
+    let finalDamage = Math.abs(baseDamage);
     let isCritical = false;
 
-    if (bossDef) {
+    if (bossDef && direction > 0) {
       // Se a categoria da ação bater com a categoria de fraqueza do chefe, aplica dano crítico
-      if (actionType === bossDef.weaknessCategory) {
-        finalDamage = Math.round(baseDamage * 2.0); // 2x Dano Crítico
+      if (normalizedActionType === bossDef.weaknessCategory) {
+        finalDamage = Math.round(finalDamage * 2.0); // 2x Dano Crítico
         isCritical = true;
       } else if (
         // Algumas sinergias adicionais de classes ou categorias gerais
-        (bossDef.id === 'boss_01' && actionType === 'task') ||
-        (bossDef.id === 'boss_03' && actionType === 'foco') ||
-        (bossDef.id === 'boss_07' && actionType === 'streak')
+        (bossDef.id === 'boss_01' && normalizedActionType === 'task') ||
+        (bossDef.id === 'boss_03' && normalizedActionType === 'foco') ||
+        (bossDef.id === 'boss_07' && normalizedActionType === 'streak')
       ) {
-        finalDamage = Math.round(baseDamage * 1.5);
+        finalDamage = Math.round(finalDamage * 1.5);
         isCritical = true;
       }
     }
 
     // O HP não pode descer abaixo de zero
-    const newHp = Math.max(0, activeBattle.current_hp - finalDamage);
+    finalDamage *= direction;
+
+    const newHp = Math.min(activeBattle.max_hp, Math.max(0, activeBattle.current_hp - finalDamage));
+    const actualDamage = activeBattle.current_hp - newHp;
 
     // Atualiza estado local de forma otimista
     set({
@@ -252,7 +332,7 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         current_hp: newHp,
         last_attack_at: new Date().toISOString()
       },
-      recentDamage: { damage: finalDamage, isCritical }
+      recentDamage: { damage: actualDamage, isCritical }
     });
 
     // Limpa o indicador de dano recente após 2 segundos
@@ -297,19 +377,35 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
       const bossDef = BOSS_LIST.find(b => b.id === activeBattle.boss_id);
       const xpReward = bossDef ? bossDef.xpReward : 300;
       const titleReward = bossDef ? bossDef.titleReward : 'Vencedor';
+      const achievementTitle = bossDef ? bossDef.achievementTitle : `${activeBattle.name} Derrotado`;
+      const achievementDescription = bossDef
+        ? bossDef.achievementDescription
+        : `Purificou o chefe ${activeBattle.name} e conquistou o título "${titleReward}".`;
+      const achievementIcon = bossDef ? bossDef.achievementIcon : 'Award';
 
       // 3. Adicionar uma conquista para desbloquear o título
-      const { error: achievementErr } = await supabase
+      const { data: existingAchievement, error: existingAchievementErr } = await supabase
         .from('achievements')
-        .insert({
-          user_id: userId,
-          title: `${activeBattle.name} Derrotado`,
-          description: `Purificou o chefe ${activeBattle.name} e conquistou o título "${titleReward}".`,
-          icon: 'Award',
-          unlocked_at: now
-        });
+        .select('id')
+        .eq('user_id', userId)
+        .eq('title', achievementTitle)
+        .maybeSingle();
 
-      if (achievementErr) throw achievementErr;
+      if (existingAchievementErr) throw existingAchievementErr;
+
+      if (!existingAchievement) {
+        const { error: achievementErr } = await supabase
+          .from('achievements')
+          .insert({
+            user_id: userId,
+            title: achievementTitle,
+            description: achievementDescription,
+            icon: achievementIcon,
+            unlocked_at: now
+          });
+
+        if (achievementErr) throw achievementErr;
+      }
 
       // 4. Conceder XP bônus ao caçador
       const hunterStore = useHunterStore.getState();
@@ -319,7 +415,10 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
       await hunterStore.equipTitle(titleReward, userId);
 
       // 5. Recarregar batalha ativa, que irá instanciar automaticamente o próximo boss
-      set({ activeBattle: null });
+      set((state) => ({
+        activeBattle: null,
+        defeatedBossIds: [...new Set([...state.defeatedBossIds, activeBattle.boss_id])]
+      }));
       await get().loadActiveBattle(userId);
     } catch (err: any) {
       console.error('[useBossStore] Erro ao purificar boss:', err);
