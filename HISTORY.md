@@ -13,6 +13,22 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Fase 8.1: Quests & Metas Financeiras (Módulo Fortuna)
+- **Schema no Supabase e Migration Local**:
+  - Criada a migration `20260616_fortuna_goals.sql` definindo a tabela `financial_goals` para rastrear objetivos de médio e longo prazo.
+  - Aplicada a migração no Supabase remoto via MCP tool `execute_sql`.
+  - Habilitada RLS e configuradas políticas de acesso restritas ao próprio usuário.
+- **Quest Diária de Finanças**:
+  - Integrada a quest reativa "Códex Financeiro" no Dashboard, detectando a inserção de logs financeiros na data atual.
+  - Ajustado o Bônus Diário de Sobrevivência para 5 quests (passando de 4).
+- **Gerenciador de Metas no Módulo Fortuna**:
+  - Removida a meta estática e implementado um painel dinâmico e interativo de Objetivos & Metas de Longo Prazo.
+  - Adicionado formulário de criação de metas categorizadas por tipo (Meta Única ou Mensal Recorrente) e valor alvo.
+  - Implementado o ajuste de progresso acumulado com atualização em tempo real no Supabase.
+  - Configurada a recompensa de **+50 XP** e **+2 Sabedoria (WIS)** na conclusão de cada meta financeira.
+- **Validação de Build**:
+  - Executado o build do Vite com sucesso absoluto (`npm run build`).
+
 ### 2026-06-16 — Fase 8: Módulo Fortuna (Finanças & Gestão de Recursos)
 - **Schema no Supabase e Migration Local**:
   - Criada a migration `20260616_fortuna_module.sql` definindo a tabela `financial_logs` para persistência de receitas, despesas e investimentos.

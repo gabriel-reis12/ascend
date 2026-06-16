@@ -17,7 +17,8 @@ import {
   Target,
   ShieldCheck,
   TrendingUp,
-  Settings
+  Settings,
+  Coins
 } from 'lucide-react';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { RadarChart } from '@/components/ui/RadarChart';
@@ -44,6 +45,7 @@ export function Dashboard() {
   const [todayVolume, setTodayVolume] = React.useState<number>(0);
   const [loadingVolume, setLoadingVolume] = React.useState<boolean>(true);
   const [tasksCompletedToday, setTasksCompletedToday] = React.useState<number>(0);
+  const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = React.useState<boolean>(false);
   const [chartSize, setChartSize] = React.useState<number>(340);
   const [isAvatarOpen, setIsAvatarOpen] = React.useState(false);
 
@@ -105,6 +107,18 @@ export function Dashboard() {
 
         if (!tasksError && count !== null) {
           setTasksCompletedToday(count);
+        }
+
+        // 3. Log Financeiro de Hoje
+        const todayYYYYMMDD = startIso.split('T')[0];
+        const { data: financeData, error: financeError } = await supabase
+          .from('financial_logs')
+          .select('id')
+          .eq('user_id', uid)
+          .eq('date', todayYYYYMMDD);
+
+        if (!financeError) {
+          setHasLoggedFinanceToday((financeData || []).length > 0);
         }
       } catch (err) {
         console.error('Erro ao buscar dados diários do caçador:', err);
@@ -305,12 +319,20 @@ export function Dashboard() {
         isCompleted: activeHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target)) ? completedClassQuest : true,
         icon: Zap,
         path: '/quests'
+      },
+      {
+        id: 'finance',
+        title: 'Códex Financeiro',
+        desc: 'Registre suas operações financeiras de hoje',
+        isCompleted: hasLoggedFinanceToday,
+        icon: Coins,
+        path: '/fortuna'
       }
     ];
-  }, [workoutMissions, mealMissions, completedToday, tasksCompletedToday, activeHabits, classKeyStats, completedClassQuest]);
+  }, [workoutMissions, mealMissions, completedToday, tasksCompletedToday, activeHabits, classKeyStats, completedClassQuest, hasLoggedFinanceToday]);
 
   const completedQuestsCount = React.useMemo(() => dailyQuestsList.filter(q => q.isCompleted).length, [dailyQuestsList]);
-  const allQuestsCompleted = completedQuestsCount === 4;
+  const allQuestsCompleted = completedQuestsCount === 5;
 
   const handleClaimDailyBonus = async () => {
     if (!user?.id || bonusClaimed || !allQuestsCompleted) return;
@@ -521,7 +543,7 @@ export function Dashboard() {
                 Missões Principais <span className="text-amber-400">do Dia</span>
               </h2>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">
-                Protocolo Diário de Sobrevivência • Progresso: {completedQuestsCount}/4 Quests
+                Protocolo Diário de Sobrevivência • Progresso: {completedQuestsCount}/5 Quests
               </p>
             </div>
             
@@ -587,7 +609,7 @@ export function Dashboard() {
                   ? 'BÔNUS COLETADO' 
                   : allQuestsCompleted 
                     ? 'REIVINDICAR +100 XP' 
-                    : `${completedQuestsCount}/4 COMPLETAS`
+                    : `${completedQuestsCount}/5 COMPLETAS`
                 }
               </span>
             </button>
