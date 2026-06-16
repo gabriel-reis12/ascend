@@ -52,6 +52,8 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
   - Galeria de Bosses passa a usar a lista real de bosses derrotados carregada do Supabase e mantém o boss ativo com prioridade visual.
   - `useTasks.ts` agora envia a categoria real da tarefa para cálculo de fraqueza, permitindo críticos de foco, finanças e organização.
   - Quebrado o ciclo de importação entre `useHunterStore` e `useBossStore` usando import dinâmico no carregamento em background.
+- **Ajuste de Proporção de Arte (Bosses.tsx)**:
+  - Alterada a classe de dimensionamento do card do Boss ativo de altura estática para `aspect-[4/5] w-full`, garantindo a exibição perfeita e completa de toda a imagem dos vilões sem cortes verticais/horizontais indesejados.
 
 ### 2026-06-16 — Implementação do Módulo de Chefes Finais (Raid Semanal)
 - **Criação do useBossStore.ts (Zustand)**:

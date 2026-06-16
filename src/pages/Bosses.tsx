@@ -184,7 +184,7 @@ export function Bosses() {
           {/* Card do Boss (Visual) */}
           <div className="lg:col-span-7 space-y-6">
             <div 
-              className="relative rounded-3xl border border-[#1e1e26] bg-[#0c0c0f] overflow-hidden flex flex-col justify-end min-h-[380px] sm:min-h-[460px] group shadow-2xl"
+              className="relative rounded-3xl border border-[#1e1e26] bg-[#0c0c0f] overflow-hidden flex flex-col justify-end aspect-[4/5] w-full group shadow-2xl"
               style={{
                 boxShadow: `0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 30px -5px ${bossDef.color}20`
               }}
