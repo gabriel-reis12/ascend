@@ -83,7 +83,12 @@ export function Bosses() {
   // Para mostrar a galeria de troféus, listaremos os bosses e marcaremos como derrotados os que
   // têm IDs anteriores ao boss ativo, ou se já derrotou a campanha inteira.
   const getBossStatus = (bossId: string) => {
-    if (!activeBattle) return 'defeated';
+    if (!activeBattle) {
+      if (!bossStore.loading) {
+        return 'defeated';
+      }
+      return 'locked';
+    }
     const activeIndex = BOSS_LIST.findIndex(b => b.id === activeBattle.boss_id);
     const targetIndex = BOSS_LIST.findIndex(b => b.id === bossId);
     

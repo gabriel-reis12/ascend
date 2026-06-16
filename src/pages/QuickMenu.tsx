@@ -90,10 +90,10 @@ export function QuickMenu() {
       title: 'Chefes Finais (Raid)',
       desc: 'Participe de batalhas semanais contra vilões da procrastinação. Hábitos completados desferem dano.',
       path: '/bosses',
-      status: 'locked',
-      statusLabel: 'NÍVEL INSUFICIENTE',
+      status: 'active',
+      statusLabel: 'SISTEMA ATIVO',
       icon: <Skull className="w-5 h-5" />,
-      color: 'border-rose-500/20 hover:border-rose-500/40 hover:shadow-[0_0_20px_rgba(244,63,94,0.08)] text-rose-500/70',
+      color: 'border-rose-500/30 hover:border-rose-500/60 hover:shadow-[0_0_20px_rgba(244,63,94,0.15)] text-rose-400',
       bgClass: '',
       image: '/Cards/Chefes Finais.jpeg'
     },
