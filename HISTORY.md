@@ -593,6 +593,14 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Sincronizado o cache local de tarefas, hábitos, conclusões e missões de refeição após mutações, evitando que dados antigos reapareçam após refresh.
   - Corrigido o cadastro de alimentos personalizados para usar `created_by`, alinhado ao schema e às policies RLS do Supabase.
 ### 2026-06-16
+- **Redesign Cinematografico do Login Ascend:**
+  - Reestruturada a tela de login/cadastro como entrada do `Ascend System`, com branding forte, hero integrado, particulas, glow responsivo e microcopy tematica.
+  - Reformulados inputs, botoes e estados de foco em estilo glassmorphism/dark fantasy, preservando handlers de autenticacao e rotas existentes.
+  - Adicionados previews de gamificacao com rank, level, streak, XP, classe, boss semanal e metricas da comunidade.
+  - Criados tokens/animacoes `auth-*` para particulas e barra de XP com suporte a `prefers-reduced-motion`.
+  - Build de producao validado com `npm.cmd run build` e rota local `/login` respondendo HTTP 200.
+
+### 2026-06-16
 - **Fix de Cache do Perfil Nutricional:**
   - Incluido `hunter-storage` na limpeza automatica de cache por versao para evitar perfil antigo preso no navegador apos deploy.
   - Adicionada assinatura de schema do perfil para forcar limpeza quando novos campos nutricionais entram no app.

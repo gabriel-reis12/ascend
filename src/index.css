@@ -326,6 +326,56 @@
   transform: translate3d(0, 0, 0);
 }
 
+/* Ascend auth design tokens */
+.auth-system-particle {
+  animation: auth-particle-rise 5s ease-in-out infinite;
+}
+
+.auth-xp-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-xp-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: auth-xp-scan 2.8s ease-in-out infinite;
+}
+
+@keyframes auth-particle-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.7);
+  }
+  25%,
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(20px, -46px, 0) scale(1.25);
+  }
+}
+
+@keyframes auth-xp-scan {
+  0% {
+    transform: translateX(-110%);
+  }
+  55%,
+  100% {
+    transform: translateX(110%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-system-particle,
+  .auth-xp-bar::after {
+    animation: none;
+  }
+}
+
 /* Neon Glows reativos para as Classes do Sistema */
 .glow-mage { box-shadow: 0 0 15px rgba(139, 92, 246, 0.4); border-color: rgba(139, 92, 246, 0.3) !important; }
 .glow-assassin { box-shadow: 0 0 15px rgba(236, 72, 153, 0.4); border-color: rgba(236, 72, 153, 0.3) !important; }
