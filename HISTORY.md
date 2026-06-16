@@ -13,6 +13,24 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Fase 10.1: Calibração de Gamificação de Atributos & Progresso Reativo
+- **Correção dos Domínios da Evolução (Dashboard)**:
+  - Sincronizados os Domínios da Evolução no [Dashboard.tsx](file:///d:/Área de Trabalho/App/src/pages/Dashboard.tsx) com as métricas e atributos exatos do `IDEAS.md`:
+    - **Corpo** (`corpoSum`): Média reativa de Força (FOR), Resistência (RES) e Vitalidade (VIT).
+    - **Mente** (`menteSum`): Valor absoluto do atributo Inteligência (INT).
+    - **Fortuna** (`fortunaSum`): Valor absoluto do atributo Sabedoria (WIS).
+    - **Carreira** (`carreiraSum`): Valor absoluto do atributo Disciplina (DIS).
+    - **Equilíbrio** (`equilibrioSum`): Valor absoluto do atributo Equilíbrio (BAL).
+  - Atualizadas as descrições dos domínios para correspondências reais da vida e design imersivo:
+    - Mente: "Estudos, Aprendizado & Foco".
+    - Fortuna: "Gestão Financeira & Decisões".
+    - Equilíbrio: "Sono, Calma & Saúde Mental".
+- **Ganho de Disciplina Automático por Streaks**:
+  - Implementado o acréscimo automático de **+1 ponto de Disciplina (DIS)** na store global [useHunterStore.ts](file:///d:/Área de Trabalho/App/src/stores/useHunterStore.ts) toda vez que o caçador mantém a streak de check-in diário consecutiva (de ontem para hoje).
+  - O valor atualizado é refletido em tempo real na interface e persistido de forma segura no Supabase (`profiles`).
+- **Validação de Build**:
+  - bundle de produção validado e compilado via `npm run build` com sucesso absoluto (zero erros estáticos ou de digitação).
+
 ### 2026-06-16 — Fase 10: Módulo de Descanso & Lazer (Templo do Caçador)
 - **Tabela e Schema no Supabase (`rest_logs`)**:
   - Criada a migration `20260616_rest_module.sql` definindo a tabela `rest_logs` para persistência de dados de sono, meditação e lazer offline.

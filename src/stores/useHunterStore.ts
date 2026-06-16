@@ -308,6 +308,8 @@ export const useHunterStore = create<HunterState>()(
 
           let xpGainedToday = data.xp_gained_today || 0;
 
+          let bonusDiscipline = 0;
+
           if (data.last_check_in) {
             const lastCheckInDate = new Date(data.last_check_in);
             const lastCheckInStr = lastCheckInDate.toLocaleDateString('en-CA');
@@ -326,6 +328,7 @@ export const useHunterStore = create<HunterState>()(
                 if (newStreakCurrent > newStreakBest) {
                   newStreakBest = newStreakCurrent;
                 }
+                bonusDiscipline = 1;
               } else {
                 // Caçador falhou no ciclo anterior: streak resetada
                 newStreakCurrent = 1;
@@ -341,6 +344,9 @@ export const useHunterStore = create<HunterState>()(
             xpGainedToday = 0;
             shouldUpdateProfileInDb = true;
           }
+
+          const currentDiscipline = Number(data.discipline) || 10;
+          const updatedDiscipline = currentDiscipline + bonusDiscipline;
 
           set({
             level,
@@ -364,7 +370,7 @@ export const useHunterStore = create<HunterState>()(
               intelligence: Number(data.intelligence) || 10,
               endurance: Number(data.endurance) || 10,
               vitality: Number(data.vitality) || 10,
-              discipline: Number(data.discipline) || 10,
+              discipline: updatedDiscipline,
               wisdom: Number(data.wisdom) || 10,
               balance: Number(data.balance) || 10,
             },
@@ -385,6 +391,7 @@ export const useHunterStore = create<HunterState>()(
                 streak_best: newStreakBest,
                 last_check_in: now.toISOString(),
                 xp_gained_today: xpGainedToday,
+                discipline: updatedDiscipline,
               })
               .eq('id', userId);
           }

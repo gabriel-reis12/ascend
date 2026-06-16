@@ -352,17 +352,17 @@ export function Dashboard() {
     const balance = state.stats.balance || 10;
 
     const corpoSum = Math.round((strength + endurance + vitality) / 3);
-    const menteSum = Math.round((intelligence + wisdom) / 2);
-    const fortunaSum = balance;
+    const menteSum = intelligence;
+    const fortunaSum = wisdom;
     const carreiraSum = discipline;
-    const equilibrioSum = Math.round((strength + endurance + vitality + intelligence + wisdom + discipline + balance) / 7);
+    const equilibrioSum = balance;
 
     const list = [
       { name: 'Corpo', value: corpoSum, desc: 'Força, Resistência & Vitalidade', color: 'from-red-500 to-orange-500' },
-      { name: 'Mente', value: menteSum, desc: 'Inteligência & Sabedoria', color: 'from-purple-500 to-indigo-500' },
-      { name: 'Fortuna', value: fortunaSum, desc: 'Equilíbrio Financeiro & Vida', color: 'from-emerald-500 to-teal-500' },
+      { name: 'Mente', value: menteSum, desc: 'Estudos, Aprendizado & Foco', color: 'from-purple-500 to-indigo-500' },
+      { name: 'Fortuna', value: fortunaSum, desc: 'Gestão Financeira & Decisões', color: 'from-emerald-500 to-teal-500' },
       { name: 'Carreira', value: carreiraSum, desc: 'Disciplina & Produtividade', color: 'from-blue-500 to-cyan-500' },
-      { name: 'Equilíbrio', value: equilibrioSum, desc: 'Média de Harmonia Geral', color: 'from-pink-500 to-rose-500' },
+      { name: 'Equilíbrio', value: equilibrioSum, desc: 'Sono, Calma & Saúde Mental', color: 'from-pink-500 to-rose-500' },
     ];
 
     return list.map(d => {
