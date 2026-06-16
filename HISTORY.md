@@ -18,6 +18,7 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - **Visualizador Interativo de Ranks (Galeria E ao S)**: Implementação de um Lightbox modal em tela cheia acessado ao clicar na imagem da classe despertada e no grid inferior de classes.
 - **Seletor de Ranks Cyberpunk**: Chips de seleção rápida dos Ranks E, D, C, B, A, S que trocam as imagens dinamicamente e atualizam as descrições personalizadas de evolução de poder de mana para cada uma das 5 classes em PT-BR.
 - **Correção do Aspecto Pixelado das Artes**: Configuração explícita de `image-rendering: auto` para garantir que as imagens em alta resolução preservem seu traçado nítido e suave.
+- **Unificação de Fontes no Login**: Substituição da tipografia genérica pela fonte padrão `.font-orbitron` (Orbitron) nos elementos da tela de login (`HunterLogin`), alinhando o estilo ciberpunk de RPG futurista do portal de entrada com o restante da aplicação.
 - **Validação de Build**: Compilação estática do Vite validada e bem-sucedida (`npm run build`).
 
 ### 2026-06-16 — Ritual de Despertar no Onboarding

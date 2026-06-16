@@ -63,7 +63,7 @@ const AppInput = ({
       {label && (
         <label
           htmlFor={name}
-          className={`block text-[11px] font-bold uppercase tracking-[0.18em] transition-colors duration-300 ${
+          className={`block text-[11px] font-bold font-orbitron uppercase tracking-[0.18em] transition-colors duration-300 ${
             isFocused ? 'text-cyan-200' : 'text-slate-400'
           }`}
         >
@@ -86,7 +86,7 @@ const AppInput = ({
           <input
             id={name}
             name={name}
-            className="h-full min-w-0 flex-1 bg-transparent px-4 text-[15px] font-medium text-white outline-none placeholder:text-slate-600"
+            className="h-full min-w-0 flex-1 bg-transparent px-4 text-[15px] font-medium font-orbitron text-white outline-none placeholder:text-slate-600"
             placeholder={placeholder}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
@@ -188,14 +188,14 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 <div className="absolute inset-1 rounded-xl border border-violet-300/20" />
               </div>
               <div>
-                <p className="text-xl font-black uppercase leading-none tracking-[0.22em] text-white">Ascend</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-200/70">
+                <p className="text-xl font-black font-orbitron uppercase leading-none tracking-[0.22em] text-white">Ascend</p>
+                <p className="mt-1 text-[10px] font-bold font-orbitron uppercase tracking-[0.24em] text-cyan-200/70">
                   Evolution System
                 </p>
               </div>
             </div>
 
-            <div className="hidden rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 backdrop-blur-xl sm:flex">
+            <div className="hidden rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[10px] font-bold font-orbitron uppercase tracking-[0.2em] text-slate-300 backdrop-blur-xl sm:flex">
               Sistema online
             </div>
           </header>
@@ -203,12 +203,12 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
           <div className="relative z-10 flex flex-1 items-center py-8 lg:py-10">
             <div className="w-full">
               <div className="mb-7 max-w-[560px]">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-violet-100 shadow-[0_0_30px_rgba(124,58,237,0.16)] backdrop-blur-xl">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-violet-100 shadow-[0_0_30px_rgba(124,58,237,0.16)] backdrop-blur-xl">
                   <Zap className="h-3.5 w-3.5 text-cyan-200" />
                   Ascend System v2.7
                 </div>
 
-                <h1 className="max-w-[520px] text-[2.45rem] font-black leading-[0.95] tracking-normal text-white sm:text-[3.25rem] lg:text-[3.55rem]">
+                <h1 className="max-w-[520px] text-[2.45rem] font-black font-orbitron leading-[0.95] tracking-normal text-white sm:text-[3.25rem] lg:text-[3.55rem]">
                   {title}
                 </h1>
                 <p className="mt-4 max-w-[450px] text-base leading-7 text-slate-300 sm:text-[17px]">
@@ -227,8 +227,8 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                       <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 ${stat.tone}`}>
                         <Icon className="h-4 w-4" />
                       </div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{stat.label}</p>
-                      <p className="mt-1 text-xl font-black text-white sm:text-2xl">{stat.value}</p>
+                      <p className="text-[10px] font-bold font-orbitron uppercase tracking-[0.14em] text-slate-500">{stat.label}</p>
+                      <p className="mt-1 text-xl font-black font-orbitron text-white sm:text-2xl">{stat.value}</p>
                     </div>
                   );
                 })}
@@ -237,10 +237,10 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
               <div className="mb-8 rounded-3xl border border-cyan-200/15 bg-black/24 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
                 <div className="mb-3 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200/70">Protocolo ativo</p>
-                    <p className="mt-1 text-sm font-bold text-white">XP para Level 13</p>
+                    <p className="text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-cyan-200/70">Protocolo ativo</p>
+                    <p className="mt-1 text-sm font-bold font-orbitron text-white">XP para Level 13</p>
                   </div>
-                  <span className="rounded-full border border-orange-300/20 bg-orange-300/10 px-3 py-1 text-xs font-black text-orange-100">
+                  <span className="rounded-full border border-orange-300/20 bg-orange-300/10 px-3 py-1 text-xs font-black font-orbitron text-orange-100">
                     82%
                   </span>
                 </div>
@@ -304,7 +304,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                   {!isSignUp && (
                     <a
                       href="#"
-                      className="inline-flex text-[12px] font-bold uppercase tracking-[0.12em] text-slate-500 transition-colors hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                      className="inline-flex text-[12px] font-bold font-orbitron uppercase tracking-[0.12em] text-slate-500 transition-colors hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                     >
                       Recuperar chave
                     </a>
@@ -337,7 +337,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative mt-2 flex h-[58px] w-full items-center justify-center overflow-hidden rounded-2xl border border-cyan-100/25 bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 text-[13px] font-black uppercase tracking-[0.2em] text-white shadow-[0_18px_55px_rgba(124,58,237,0.36),0_0_34px_rgba(34,211,238,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_75px_rgba(124,58,237,0.48),0_0_46px_rgba(34,211,238,0.26)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#03040a]"
+                  className="group relative mt-2 flex h-[58px] w-full items-center justify-center overflow-hidden rounded-2xl border border-cyan-100/25 bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 text-[13px] font-black font-orbitron uppercase tracking-[0.2em] text-white shadow-[0_18px_55px_rgba(124,58,237,0.36),0_0_34px_rgba(34,211,238,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_75px_rgba(124,58,237,0.48),0_0_46px_rgba(34,211,238,0.26)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#03040a]"
                 >
                   <span className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.34)_45%,transparent_60%)] opacity-0 transition-all duration-700 group-hover:translate-x-full group-hover:opacity-100" />
                   {loading ? (
@@ -355,7 +355,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 <button
                   type="button"
                   onClick={onToggleMode}
-                  className="ml-2 font-black text-cyan-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                  className="ml-2 font-black font-orbitron text-cyan-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                 >
                   {isSignUp ? 'Acessar conta' : 'Solicitar despertar'}
                 </button>
@@ -375,29 +375,29 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
           <div className="absolute bottom-0 left-0 right-0 h-[42%] bg-gradient-to-t from-[#03040a] via-[#03040a]/52 to-transparent" />
           <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.74)]" />
 
-          <div className="absolute left-10 top-10 rounded-full border border-cyan-200/20 bg-black/25 px-4 py-2 text-[10px] font-black uppercase tracking-[0.24em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.14)] backdrop-blur-xl">
+          <div className="absolute left-10 top-10 rounded-full border border-cyan-200/20 bg-black/25 px-4 py-2 text-[10px] font-black font-orbitron uppercase tracking-[0.24em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.14)] backdrop-blur-xl">
             Gate calibrado
           </div>
 
           <div className="absolute bottom-10 left-10 right-10 grid grid-cols-[1fr_1.2fr] gap-4">
             <div className="rounded-3xl border border-white/10 bg-black/34 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Status preview</p>
+                <p className="text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-slate-400">Status preview</p>
                 <Activity className="h-4 w-4 text-cyan-200" />
               </div>
               <div className="space-y-3">
                 {systemSignals.map((signal) => (
                   <div key={signal.label} className="flex items-center justify-between gap-4">
-                    <span className="text-xs text-slate-500">{signal.label}</span>
-                    <span className="text-right text-sm font-black text-white">{signal.value}</span>
+                    <span className="text-xs font-orbitron text-slate-500">{signal.label}</span>
+                    <span className="text-right text-sm font-black font-orbitron text-white">{signal.value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="flex flex-col justify-end rounded-3xl border border-violet-300/15 bg-violet-300/10 p-5 shadow-[0_24px_80px_rgba(124,58,237,0.18)] backdrop-blur-2xl">
-              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.26em] text-violet-100/70">Mensagem do sistema</p>
-              <p className="text-2xl font-black leading-tight text-white">
+              <p className="mb-3 text-[10px] font-black font-orbitron uppercase tracking-[0.26em] text-violet-100/70">Mensagem do sistema</p>
+              <p className="text-2xl font-black font-orbitron leading-tight text-white">
                 Transforme rotina em progressao visivel.
               </p>
               <p className="mt-3 text-sm leading-6 text-slate-300">
