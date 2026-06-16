@@ -13,6 +13,28 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Fase 8: Módulo Fortuna (Finanças & Gestão de Recursos)
+- **Schema no Supabase e Migration Local**:
+  - Criada a migration `20260616_fortuna_module.sql` definindo a tabela `financial_logs` para persistência de receitas, despesas e investimentos.
+  - Habilitada a segurança RLS na tabela e configuradas as políticas idempotentes para leitura/escrita restritas por usuário (`user_id = auth.uid()`).
+  - Aplicada a migration com sucesso na base remota do Supabase via MCP Server.
+- **Desenvolvimento da Página Fortuna (`Fortuna.tsx`)**:
+  - Construída a interface cyberpunk com temática dourada/âmbar (`#f59e0b`) e fontes Orbitron.
+  - Implementados cards de resumos financeiros mensais reativos: Ganhos, Gastos, Aportes e Taxas de Economia/Aporte.
+  - Criado o formulário de fluxo de recursos com selects reativos de categorias (Moradia, Alimentação, Ações, FIIs, Cripto, etc.).
+  - Desenvolvida a barra de progresso dourada de completude da Meta de Aporte Mensal com edição direta do valor alvo na tela.
+  - Criada a listagem de registros financeiros do mês atual com paginação e exclusão atômica de transações.
+- **Mecânicas de RPG Integradas**:
+  - Lançamento de transações concede **+10 XP** no `useHunterStore`.
+  - Transações do tipo *Investimento/Aporte* concedem **+1 de Sabedoria (WIS)**, elevando o atributo de sabedoria do caçador.
+  - Cada registro financeiro gera **10 de dano financeiro** contra o Boss ativo. Ao enfrentar o Boss 05 (**O Mercador das Dívidas**), o dano torna-se **Crítico de 2.0x (20 de dano)** por se alinhar à sua fraqueza temática.
+- **Navegação e Roteamento**:
+  - Configurada a rota `/fortuna` no [App.tsx](file:///d:/Área de Trabalho/App/src/App.tsx) importando o componente Fortuna.
+  - Desbloqueado o card do Módulo Fortuna no Portal de Comando ([QuickMenu.tsx](file:///d:/Área de Trabalho/App/src/pages/QuickMenu.tsx)) alterando seu status para ativo, removendo a opacidade de bloqueio e ativando o glow âmbar completo.
+  - Adicionados links rápidos para o Módulo Fortuna nos menus de navegação lateral desktop ([RPGLayout.tsx](file:///d:/Área de Trabalho/App/src/components/layout/RPGLayout.tsx)) e móvel ([MobileMenu.tsx](file:///d:/Área de Trabalho/App/src/components/layout/MobileMenu.tsx)) com o ícone `Coins`.
+- **Validação de Build**:
+  - Compilado o bundle de produção via `npm run build` com sucesso absoluto (zero erros sintáticos ou estáticos).
+
 ### 2026-06-16 — Fase 3: Módulo de IA Nutricional (Códex da Alimentação) e Reestruturação de Abas
 - **Códex da Alimentação (IA com Groq/Llama 3.1)**:
   - Desenvolvida a lógica de análise de refeição em linguagem natural conectando o frontend ao endpoint da Groq API (`llama-3.1-8b-instant`) com formato JSON estruturado (`response_format`).

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, X, LayoutGrid, Skull } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, X, LayoutGrid, Skull, Coins } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
@@ -18,6 +18,7 @@ const navItems = [
   { path: '/bosses',  label: 'Bosses',      icon: Skull },
   { path: '/workouts',label: 'Treinamento', icon: Dumbbell },
   { path: '/nutrition',label: 'Recuperação', icon: Apple },
+  { path: '/fortuna',  label: 'Fortuna',     icon: Coins },
   { path: '/settings',label: 'Ajustes',     icon: Settings },
 ];
 
