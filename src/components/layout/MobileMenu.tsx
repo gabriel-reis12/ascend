@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, X, LayoutGrid } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
@@ -12,7 +12,8 @@ interface MobileMenuProps {
 }
 
 const navItems = [
-  { path: '/',        label: 'Status',      icon: LayoutDashboard },
+  { path: '/',        label: 'Menu Rápido',  icon: LayoutGrid },
+  { path: '/status',  label: 'Status',      icon: LayoutDashboard },
   { path: '/quests',  label: 'Missões',     icon: CheckSquare },
   { path: '/workouts',label: 'Treinamento', icon: Dumbbell },
   { path: '/nutrition',label: 'Recuperação', icon: Apple },

@@ -14,6 +14,25 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-16 — Implementação do Quick Menu e Novo Fluxo de Roteamento Pós-Login
+- **Novo Roteamento do Sistema (App.tsx)**:
+  - Definida a rota raiz protegida `/` como o novo **Menu Rápido (Quick Menu)**, tornando-a a tela de pouso padrão imediata pós-login do caçador.
+  - Remapeado o Dashboard original de **Status** para a rota `/status`.
+  - Mapeadas as rotas temporárias `/fortuna`, `/bosses` (Chefes Finais) e `/rest` (Descanso & Lazer) que apontam para o componente de placeholder `ComingSoon`.
+- **Criação da Página QuickMenu.tsx**:
+  - Desenvolvida a página do Menu Rápido com visual cyberpunk de alta fidelidade e letreiros baseados em Orbitron.
+  - Exibido mini-card holográfico no topo com Rank, Nome, Nível e XP atual do Caçador para contexto.
+  - Grade responsiva com 7 cards customizados mapeando as áreas do sistema.
+  - Cards ativos (**Status**, **Missões**, **Treinamento** e **Recuperação**) direcionando para as rotas corretas. O card de Treinamento utiliza a imagem `/Cards/Treinos.jpeg`, o de Missões e Recuperação utilizam `/Cards/Estudos-Nutricao.jpeg`, e o card de Status utiliza um background gradiente e textura geométrica gerada por CSS puro.
+  - Cards bloqueados (**Módulo Fortuna**, **Chefes Finais** e **Descanso & Lazer**) com opacidade reduzida e selo indicador premium de RPG *"BLOQUEADO - NÍVEL INSUFICIENTE"*, direcionando o usuário para o aviso correspondente ao clicar.
+  - Animações de zoom de imagem e glows neon no hover aceleradas por hardware (GPU).
+- **Atualização de Layouts de Navegação (RPGLayout.tsx e MobileMenu.tsx)**:
+  - Adicionado o link `"Menu Rápido"` apontando para `/` com o ícone `LayoutGrid`.
+  - Atualizado o link `"Status"` para apontar para a nova rota `/status`.
+  - Garantida 100% de paridade responsiva na barra lateral (desktop) e no menu móvel (celular).
+- **Integridade de Build**:
+  - Validada a compilação do Vite e TypeScript com `npm run build` com sucesso absoluto (zero erros sintáticos ou de tipos).
+
 ### 2026-06-15 — Carregamento Instantâneo de Missões (SWR) e Resiliência em Ajustes
 - **Aceleração na Aba de Missões (useHabits.ts, useTasks.ts, Quests.tsx)**:
   - Implementado cache local persistente associado ao ID do usuário para renderização instantânea (SWR - Stale-While-Revalidate). O app carrega os dados em cache de hábitos, rotinas, refeições e tarefas de imediato na montagem (em menos de 10ms), removendo skeletons pesados e buscando atualizações em background no Supabase.

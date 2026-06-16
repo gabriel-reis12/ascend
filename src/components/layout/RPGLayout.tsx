@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, Menu, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, Menu, AlertTriangle, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
@@ -9,7 +9,8 @@ import { MobileMenu } from './MobileMenu';
 import { supabase } from '@/lib/supabase';
 
 const navItems = [
-  { path: '/', label: 'Status', icon: LayoutDashboard },
+  { path: '/', label: 'Menu Rápido', icon: LayoutGrid },
+  { path: '/status', label: 'Status', icon: LayoutDashboard },
   { path: '/quests', label: 'Missões', icon: CheckSquare },
   { path: '/workouts', label: 'Treinamento', icon: Dumbbell },
   { path: '/nutrition', label: 'Recuperação', icon: Apple },
