@@ -1,1053 +1,636 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Trophy, 
-  Zap, 
-  Flame, 
-  CheckCircle2, 
-  Circle,
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Activity,
+  Brain,
+  BriefcaseBusiness,
+  CheckCircle2,
+  Coins,
+  Crown,
   Dumbbell,
-  Droplets,
-  Apple,
-  BookOpen,
-  GraduationCap,
-  Moon,
-  Sword,
+  Flame,
+  HeartPulse,
+  History,
+  Scale,
+  Sparkles,
   Target,
-  ShieldCheck,
   TrendingUp,
-  Settings,
-  Coins
+  Trophy,
+  X,
+  Zap,
 } from 'lucide-react';
-import { useHunterStore } from '@/stores/useHunterStore';
+import { useHunterStore, type HunterStats } from '@/stores/useHunterStore';
 import { RadarChart } from '@/components/ui/RadarChart';
 import { ProductTour } from '@/components/rpg/ProductTour';
 import { useHabits } from '@/hooks/useHabits';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { UtensilsCrossed } from 'lucide-react';
-import { localDateString, localDayBounds } from '@/lib/date';
+import { localDayBounds } from '@/lib/date';
+
+type StatKey = keyof HunterStats;
+
+const STAT_META: Array<{
+  key: StatKey;
+  label: string;
+  name: string;
+  color: string;
+  border: string;
+}> = [
+  { key: 'strength', label: 'FOR', name: 'Força', color: 'text-red-400', border: 'hover:border-red-500/35' },
+  { key: 'intelligence', label: 'INT', name: 'Inteligência', color: 'text-blue-400', border: 'hover:border-blue-500/35' },
+  { key: 'endurance', label: 'RES', name: 'Resistência', color: 'text-emerald-400', border: 'hover:border-emerald-500/35' },
+  { key: 'vitality', label: 'VIT', name: 'Vitalidade', color: 'text-amber-400', border: 'hover:border-amber-500/35' },
+  { key: 'discipline', label: 'DIS', name: 'Disciplina', color: 'text-purple-400', border: 'hover:border-purple-500/35' },
+  { key: 'wisdom', label: 'SAB', name: 'Sabedoria', color: 'text-cyan-400', border: 'hover:border-cyan-500/35' },
+  { key: 'balance', label: 'EQU', name: 'Equilíbrio', color: 'text-pink-400', border: 'hover:border-pink-500/35' },
+];
+
+const RANK_LEVELS: Record<string, number> = {
+  E: 10,
+  D: 20,
+  C: 35,
+  B: 50,
+  A: 70,
+  S: 100,
+  National: 150,
+  Monarch: 150,
+};
+
+const NEXT_RANK: Record<string, string> = {
+  E: 'D',
+  D: 'C',
+  C: 'B',
+  B: 'A',
+  A: 'S',
+  S: 'National',
+  National: 'Monarch',
+  Monarch: 'Máximo',
+};
 
 export function Dashboard() {
   const state = useHunterStore();
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const { 
-    activeHabits, 
-    completedToday, 
-    toggleCompletion, 
-    workoutMissions, 
+  const {
+    activeHabits,
+    completedToday,
+    workoutMissions,
     mealMissions,
-    toggleMealMission
+    xpEarnedToday,
   } = useHabits();
 
-  const [todayVolume, setTodayVolume] = React.useState<number>(0);
-  const [loadingVolume, setLoadingVolume] = React.useState<boolean>(true);
-  const [tasksCompletedToday, setTasksCompletedToday] = React.useState<number>(0);
-  const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = React.useState<boolean>(false);
-  const [chartSize, setChartSize] = React.useState<number>(340);
+  const [todayVolume, setTodayVolume] = React.useState(0);
+  const [tasksCompletedToday, setTasksCompletedToday] = React.useState(0);
+  const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = React.useState(false);
   const [isAvatarOpen, setIsAvatarOpen] = React.useState(false);
 
-  React.useEffect(() => {
-    function handleResize() {
-      if (window.innerWidth < 480) {
-        setChartSize(255);
-      } else if (window.innerWidth < 768) {
-        setChartSize(285);
-      } else {
-        setChartSize(340);
-      }
-    }
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Performance Velo-System: StatusKey calculada para evitar requisições infinitas e desnecessárias no Supabase
-  const workoutStatusKey = React.useMemo(() => {
-    return JSON.stringify(workoutMissions.map(m => m.isCompleted));
-  }, [workoutMissions]);
+  const workoutStatusKey = React.useMemo(
+    () => JSON.stringify(workoutMissions.map(mission => mission.isCompleted)),
+    [workoutMissions],
+  );
 
   React.useEffect(() => {
-    async function fetchDailyData() {
-      const uid = user?.id;
-      if (!uid) return;
-      try {
-        setLoadingVolume(true);
-        const { startIso, endIso } = localDayBounds();
-        
-        // 1. Volume de Treino
-        const { data: workoutData, error: workoutError } = await supabase
+    async function fetchDailySignals() {
+      if (!user?.id) return;
+      const { startIso, endIso } = localDayBounds();
+
+      const [workouts, tasks, finances] = await Promise.all([
+        supabase
           .from('workout_logs')
           .select('sets, reps, weight_kg')
-          .eq('user_id', uid)
+          .eq('user_id', user.id)
           .gte('logged_at', startIso)
-          .lte('logged_at', endIso);
-
-        if (workoutError) throw workoutError;
-
-        const volume = (workoutData || []).reduce((sum, log) => {
-          const sets = log.sets || 0;
-          const reps = log.reps || 0;
-          const weight = log.weight_kg || 0;
-          return sum + (sets * reps * weight);
-        }, 0);
-
-        setTodayVolume(volume);
-
-        // 2. Tarefas Concluídas
-        const { count, error: tasksError } = await supabase
+          .lte('logged_at', endIso),
+        supabase
           .from('tasks')
           .select('*', { count: 'exact', head: true })
-          .eq('user_id', uid)
+          .eq('user_id', user.id)
           .eq('completed', true)
           .gte('completed_at', startIso)
-          .lte('completed_at', endIso);
-
-        if (!tasksError && count !== null) {
-          setTasksCompletedToday(count);
-        }
-
-        // 3. Log Financeiro de Hoje
-        const todayYYYYMMDD = startIso.split('T')[0];
-        const { data: financeData, error: financeError } = await supabase
+          .lte('completed_at', endIso),
+        supabase
           .from('financial_logs')
           .select('id')
-          .eq('user_id', uid)
-          .eq('date', todayYYYYMMDD);
+          .eq('user_id', user.id)
+          .eq('date', startIso.split('T')[0]),
+      ]);
 
-        if (!financeError) {
-          setHasLoggedFinanceToday((financeData || []).length > 0);
-        }
-      } catch (err) {
-        console.error('Erro ao buscar dados diários do caçador:', err);
-      } finally {
-        setLoadingVolume(false);
+      if (!workouts.error) {
+        setTodayVolume(
+          (workouts.data || []).reduce(
+            (sum, log) => sum + (Number(log.sets) || 0) * (Number(log.reps) || 0) * (Number(log.weight_kg) || 0),
+            0,
+          ),
+        );
       }
+      if (!tasks.error) setTasksCompletedToday(tasks.count || 0);
+      if (!finances.error) setHasLoggedFinanceToday((finances.data || []).length > 0);
     }
 
-    void fetchDailyData();
+    void fetchDailySignals();
   }, [user?.id, workoutStatusKey, completedToday]);
 
-  const themeColors = React.useMemo(() => {
-    const classColorMap: Record<string, { border: string; text: string; bg: string; glow: string; shadowColor: string; rankHover: string }> = {
-      warrior: { 
-        border: 'border-blue-500/30 hover:border-blue-500/60', 
-        text: 'text-blue-400', 
-        bg: 'bg-blue-500/5 hover:bg-blue-500/10',
-        glow: 'shadow-[0_0_15px_rgba(59,130,246,0.15)]',
-        shadowColor: 'rgba(59, 130, 246, 0.4)',
-        rankHover: 'hover:border-blue-500/60 hover:shadow-[0_0_35px_rgba(59,130,246,0.4)]'
-      },
-      scholar: { 
-        border: 'border-purple-500/30 hover:border-purple-500/60', 
-        text: 'text-purple-400', 
-        bg: 'bg-purple-500/5 hover:bg-purple-500/10',
-        glow: 'shadow-[0_0_15px_rgba(124,58,237,0.15)]',
-        shadowColor: 'rgba(124, 58, 237, 0.4)',
-        rankHover: 'hover:border-purple-500/60 hover:shadow-[0_0_35px_rgba(124,58,237,0.4)]'
-      },
-      creator: { 
-        border: 'border-amber-500/30 hover:border-amber-500/60', 
-        text: 'text-amber-400', 
-        bg: 'bg-amber-500/5 hover:bg-amber-500/10',
-        glow: 'shadow-[0_0_15px_rgba(251,191,36,0.15)]',
-        shadowColor: 'rgba(251, 191, 36, 0.4)',
-        rankHover: 'hover:border-amber-500/60 hover:shadow-[0_0_35px_rgba(251,191,36,0.4)]'
-      },
-      monk: { 
-        border: 'border-cyan-500/30 hover:border-cyan-500/60', 
-        text: 'text-cyan-400', 
-        bg: 'bg-cyan-500/5 hover:bg-cyan-500/10',
-        glow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]',
-        shadowColor: 'rgba(6, 182, 212, 0.4)',
-        rankHover: 'hover:border-cyan-500/60 hover:shadow-[0_0_35px_rgba(6,182,212,0.4)]'
-      },
-      leader: { 
-        border: 'border-rose-500/30 hover:border-rose-500/60', 
-        text: 'text-rose-400', 
-        bg: 'bg-rose-500/5 hover:bg-rose-500/10',
-        glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]',
-        shadowColor: 'rgba(244, 63, 94, 0.4)',
-        rankHover: 'hover:border-rose-500/60 hover:shadow-[0_0_35px_rgba(244,63,94,0.4)]'
-      },
-    };
-    const currentClass = (state.hunterClass || 'warrior').toLowerCase();
-    return classColorMap[currentClass] || classColorMap.warrior;
-  }, [state.hunterClass]);
-
-  // Avatar dinâmico e reativo de Classe/Rank do Caçador
   const characterAvatar = React.useMemo(() => {
-    const hClass = state.hunterClass || 'Warrior';
-    const rank = state.rank || 'E';
-    
-    const getRankImageName = (r: string) => {
-      const upperRank = r.toUpperCase();
-      if (['E', 'D', 'C', 'B', 'A', 'S'].includes(upperRank)) {
-        return `Rank ${upperRank}`;
-      }
-      if (upperRank === 'NATIONAL' || upperRank === 'MONARCH') {
-        return 'Rank S';
-      }
-      return 'Rank E';
-    };
-    
-    const rankName = getRankImageName(rank);
-    const classFolder = hClass.charAt(0).toUpperCase() + hClass.slice(1).toLowerCase();
-    const validClasses = ['Warrior', 'Scholar', 'Creator', 'Monk', 'Leader'];
-    const finalClass = validClasses.includes(classFolder) ? classFolder : 'Warrior';
-    
-    return `/Classes/${finalClass}/${rankName}.jpeg`;
+    const hunterClass = state.hunterClass || 'Warrior';
+    const upperRank = String(state.rank || 'E').toUpperCase();
+    const imageRank = ['E', 'D', 'C', 'B', 'A', 'S'].includes(upperRank) ? upperRank : 'S';
+    return `/Classes/${hunterClass}/Rank ${imageRank}.jpeg`;
   }, [state.hunterClass, state.rank]);
 
-  // Performance Velo-System: Memorização de cálculos complexos de missões diárias
-  const { xpPercent, statsData, progressPct, totalCaloriesToday, energyLevel, dashboardMissions } = React.useMemo(() => {
-    const xpPct = (state.xp / state.xpRequired) * 100;
-    
-    const stats = [
-      { label: 'FOR', value: state.stats.strength, max: 100 },
-      { label: 'INT', value: state.stats.intelligence, max: 100 },
-      { label: 'RES', value: state.stats.endurance, max: 100 },
-      { label: 'VIT', value: state.stats.vitality, max: 100 },
-      { label: 'DIS', value: state.stats.discipline, max: 100 },
-      { label: 'SAB', value: state.stats.wisdom, max: 100 },
-      { label: 'EQU', value: state.stats.balance, max: 100 },
-    ];
+  const statVariation = React.useMemo(() => {
+    const variations = Object.fromEntries(STAT_META.map(stat => [stat.key, 0])) as Record<StatKey, number>;
 
-    const total = activeHabits.length + workoutMissions.length + mealMissions.length;
-    const completed = completedToday.size + 
-      workoutMissions.filter(m => m.isCompleted).length + 
-      mealMissions.filter(m => m.isCompleted).length;
-    const progress = total > 0 ? (completed / total) * 100 : 0;
-    
-    const kcalToday = mealMissions
-      .filter(m => m.isCompleted)
-      .reduce((sum, m) => sum + (m.totalKcal || 0), 0);
-
-    const energy = total > 0 ? Math.max(20, Math.round(progress)) : 100;
-
-    type UnifiedMission = 
-      | { type: 'workout'; data: any; time: string | null }
-      | { type: 'meal'; data: any; time: string | null }
-      | { type: 'habit'; data: any; time: string | null };
-
-    const missions: UnifiedMission[] = [
-      ...workoutMissions.map(m => ({ type: 'workout' as const, data: m, time: m.scheduled_time })),
-      ...mealMissions.map(m => ({ type: 'meal' as const, data: m, time: m.scheduled_time })),
-      ...activeHabits.map(h => ({ type: 'habit' as const, data: h, time: h.scheduled_time ? h.scheduled_time.slice(0, 5) : null }))
-    ];
-
-    missions.sort((a, b) => {
-      if (!a.time && !b.time) return 0;
-      if (!a.time) return 1;
-      if (!b.time) return -1;
-      return a.time.localeCompare(b.time);
+    activeHabits.forEach(habit => {
+      if (completedToday.has(habit.id) && habit.stat_target) {
+        variations[habit.stat_target] += habit.stat_reward || 0;
+      }
     });
+    workoutMissions.forEach(mission => {
+      if (mission.isCompleted) variations[mission.stat_target] += mission.stat_reward || 0;
+    });
+
+    return variations;
+  }, [activeHabits, completedToday, workoutMissions]);
+
+  const statsData = React.useMemo(
+    () => STAT_META.map(stat => ({ label: stat.label, value: state.stats[stat.key], max: 100 })),
+    [state.stats],
+  );
+
+  const dailySummary = React.useMemo(() => {
+    const total = activeHabits.length + workoutMissions.length + mealMissions.length + tasksCompletedToday;
+    const completed =
+      completedToday.size +
+      workoutMissions.filter(mission => mission.isCompleted).length +
+      mealMissions.filter(mission => mission.isCompleted).length +
+      tasksCompletedToday;
+    const calories = mealMissions
+      .filter(mission => mission.isCompleted)
+      .reduce((sum, mission) => sum + (mission.totalKcal || 0), 0);
 
     return {
-      xpPercent: xpPct,
-      statsData: stats,
-      progressPct: progress,
-      totalCaloriesToday: kcalToday,
-      energyLevel: energy,
-      dashboardMissions: missions.slice(0, 10)
+      total,
+      completed,
+      progress: total > 0 ? Math.round((completed / total) * 100) : 0,
+      calories,
     };
-  }, [state.xp, state.xpRequired, state.stats, activeHabits, completedToday, workoutMissions, mealMissions]);
+  }, [activeHabits.length, completedToday, mealMissions, tasksCompletedToday, workoutMissions]);
 
-  // Atributos chaves por classe
-  const classKeyStats = React.useMemo(() => {
-    const hClass = (state.hunterClass || 'Warrior').toLowerCase();
-    if (hClass === 'warrior') return ['strength', 'endurance'];
-    if (hClass === 'scholar') return ['intelligence', 'wisdom'];
-    if (hClass === 'creator') return ['discipline', 'balance'];
-    if (hClass === 'monk') return ['vitality', 'balance'];
-    if (hClass === 'leader') return ['discipline', 'wisdom'];
-    return ['strength', 'endurance'];
-  }, [state.hunterClass]);
+  const domains = React.useMemo(() => {
+    const values = {
+      Corpo: Math.round((state.stats.strength + state.stats.endurance + state.stats.vitality) / 3),
+      Mente: state.stats.intelligence,
+      Fortuna: state.stats.wisdom,
+      Carreira: state.stats.discipline,
+      Equilíbrio: state.stats.balance,
+    };
 
-  // Se completou a quest da classe
-  const completedClassQuest = React.useMemo(() => {
-    const finishedHabits = activeHabits.filter(h => completedToday.has(h.id));
-    return finishedHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target));
-  }, [activeHabits, completedToday, classKeyStats]);
-
-  // Lista de Daily Main Quests
-  const todayStr = React.useMemo(() => localDateString(), []);
-  const claimKey = React.useMemo(() => `daily_bonus_claimed_${user?.id}_${todayStr}`, [user?.id, todayStr]);
-  const [bonusClaimed, setBonusClaimed] = React.useState<boolean>(false);
-
-  React.useEffect(() => {
-    if (user?.id) {
-      const claimed = localStorage.getItem(claimKey) === 'true';
-      setBonusClaimed(claimed);
-    }
-  }, [user?.id, claimKey]);
-
-  const dailyQuestsList = React.useMemo(() => {
     return [
       {
-        id: 'workout',
-        title: 'Superação Física',
-        desc: workoutMissions.length > 0 ? "Execute pelo menos 1 treino ativo hoje" : "Nenhum treino agendado hoje (Livre)",
-        isCompleted: workoutMissions.length > 0 ? workoutMissions.some(m => m.isCompleted) : true,
+        name: 'Corpo',
+        value: values.Corpo,
+        attributes: 'FOR · RES · VIT',
+        color: 'from-red-500 to-orange-500',
+        lastGain: workoutMissions.some(mission => mission.isCompleted) ? 'Treino concluído hoje' : 'Aguardando atividade física',
         icon: Dumbbell,
-        path: '/workouts'
       },
       {
-        id: 'meal',
-        title: 'Ciclo de Nutrição',
-        desc: mealMissions.length > 0 ? "Registre todas as refeições do seu cardápio" : "Nenhum cardápio ativo hoje (Livre)",
-        isCompleted: mealMissions.length > 0 ? mealMissions.every(m => m.isCompleted) : true,
-        icon: UtensilsCrossed,
-        path: '/nutrition'
+        name: 'Mente',
+        value: values.Mente,
+        attributes: 'INT',
+        color: 'from-purple-500 to-indigo-500',
+        lastGain: statVariation.intelligence > 0 ? 'Missão de estudo concluída' : 'Sem ganho recente',
+        icon: Brain,
       },
       {
-        id: 'habits',
-        title: 'Foco do Desperto',
-        desc: `Conclua 2 hábitos ou tarefas hoje (${completedToday.size + tasksCompletedToday}/2)`,
-        isCompleted: (completedToday.size + tasksCompletedToday) >= 2,
-        icon: CheckCircle2,
-        path: '/quests'
-      },
-      {
-        id: 'class',
-        title: 'Desafio de Classe',
-        desc: activeHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target))
-          ? `Realize 1 hábito/tarefa de classe [${classKeyStats.map(s => s.slice(0, 3).toUpperCase()).join('/')}]`
-          : 'Nenhum desafio de classe agendado hoje (Livre)',
-        isCompleted: activeHabits.some(h => h.stat_target && classKeyStats.includes(h.stat_target)) ? completedClassQuest : true,
-        icon: Zap,
-        path: '/quests'
-      },
-      {
-        id: 'finance',
-        title: 'Códex Financeiro',
-        desc: 'Registre suas operações financeiras de hoje',
-        isCompleted: hasLoggedFinanceToday,
+        name: 'Fortuna',
+        value: values.Fortuna,
+        attributes: 'SAB',
+        color: 'from-emerald-500 to-teal-500',
+        lastGain: hasLoggedFinanceToday ? 'Finanças atualizadas hoje' : 'Registro financeiro pendente',
         icon: Coins,
-        path: '/fortuna'
-      }
-    ];
-  }, [workoutMissions, mealMissions, completedToday, tasksCompletedToday, activeHabits, classKeyStats, completedClassQuest, hasLoggedFinanceToday]);
+      },
+      {
+        name: 'Carreira',
+        value: values.Carreira,
+        attributes: 'DIS',
+        color: 'from-blue-500 to-cyan-500',
+        lastGain: tasksCompletedToday > 0 ? `${tasksCompletedToday} tarefa(s) concluída(s)` : 'Missão produtiva pendente',
+        icon: BriefcaseBusiness,
+      },
+      {
+        name: 'Equilíbrio',
+        value: values.Equilíbrio,
+        attributes: 'EQU',
+        color: 'from-pink-500 to-rose-500',
+        lastGain: statVariation.balance > 0 ? 'Rotina de equilíbrio concluída' : 'Recuperação recomendada',
+        icon: Scale,
+      },
+    ].map(domain => ({
+      ...domain,
+      level: Math.max(1, Math.floor(domain.value / 10)),
+      progress: (domain.value % 10) * 10,
+    }));
+  }, [hasLoggedFinanceToday, state.stats, statVariation, tasksCompletedToday, workoutMissions]);
 
-  const completedQuestsCount = React.useMemo(() => dailyQuestsList.filter(q => q.isCompleted).length, [dailyQuestsList]);
-  const allQuestsCompleted = completedQuestsCount === 5;
+  const profileReading = React.useMemo(() => {
+    const rankedStats = STAT_META
+      .map(stat => ({ ...stat, value: state.stats[stat.key] }))
+      .sort((a, b) => b.value - a.value);
+    const weakestDomains = [...domains].sort((a, b) => a.value - b.value).slice(0, 2);
 
-  const handleClaimDailyBonus = async () => {
-    if (!user?.id || bonusClaimed || !allQuestsCompleted) return;
-    localStorage.setItem(claimKey, 'true');
-    setBonusClaimed(true);
-    await state.addXp(100, user.id);
-  };
+    return {
+      dominant: `${rankedStats[0].name} e ${rankedStats[1].name}`,
+      focus: weakestDomains.map(domain => domain.name).join(' e '),
+    };
+  }, [domains, state.stats]);
 
-  // Domínios da Evolução
-  const domains = React.useMemo(() => {
-    const strength = state.stats.strength || 10;
-    const endurance = state.stats.endurance || 10;
-    const vitality = state.stats.vitality || 10;
-    const intelligence = state.stats.intelligence || 10;
-    const wisdom = state.stats.wisdom || 10;
-    const discipline = state.stats.discipline || 10;
-    const balance = state.stats.balance || 10;
+  const evolutionEvents = React.useMemo(() => {
+    const events: Array<{
+      title: string;
+      detail: string;
+      color: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }> = [];
 
-    const corpoSum = Math.round((strength + endurance + vitality) / 3);
-    const menteSum = intelligence;
-    const fortunaSum = wisdom;
-    const carreiraSum = discipline;
-    const equilibrioSum = balance;
+    activeHabits
+      .filter(habit => completedToday.has(habit.id))
+      .slice(0, 3)
+      .forEach(habit => {
+        const stat = STAT_META.find(item => item.key === habit.stat_target);
+        events.push({
+          title: habit.stat_target ? `+${habit.stat_reward} ${stat?.label || 'ATR'}` : `+${habit.xp_reward} XP`,
+          detail: habit.title,
+          color: 'text-blue-400',
+          icon: CheckCircle2,
+        });
+      });
 
-    const list = [
-      { name: 'Corpo', value: corpoSum, desc: 'Força, Resistência & Vitalidade', color: 'from-red-500 to-orange-500' },
-      { name: 'Mente', value: menteSum, desc: 'Estudos, Aprendizado & Foco', color: 'from-purple-500 to-indigo-500' },
-      { name: 'Fortuna', value: fortunaSum, desc: 'Gestão Financeira & Decisões', color: 'from-emerald-500 to-teal-500' },
-      { name: 'Carreira', value: carreiraSum, desc: 'Disciplina & Produtividade', color: 'from-blue-500 to-cyan-500' },
-      { name: 'Equilíbrio', value: equilibrioSum, desc: 'Sono, Calma & Saúde Mental', color: 'from-pink-500 to-rose-500' },
-    ];
-
-    return list.map(d => {
-      const level = Math.floor(d.value / 10);
-      const progress = (d.value % 10) * 10;
-      return {
-        ...d,
-        level: level === 0 ? 1 : level,
-        progress
-      };
-    });
-  }, [state.stats]);
-
-  // Alerta de XP flutuante
-  const [xpAlerts, setXpAlerts] = React.useState<{ id: number; amount: number }[]>([]);
-  const prevXp = React.useRef(state.xp);
-  const prevLevel = React.useRef(state.level);
-
-  React.useEffect(() => {
-    if (state.xp !== prevXp.current && prevXp.current !== undefined) {
-      let diff = 0;
-      if (state.level === prevLevel.current) {
-        diff = state.xp - prevXp.current;
-      } else if (state.level > prevLevel.current) {
-        diff = state.xp;
-      }
-      
-      if (diff > 0) {
-        const id = Date.now();
-        setXpAlerts(prev => [...prev, { id, amount: diff }]);
-        setTimeout(() => {
-          setXpAlerts(prev => prev.filter(alert => alert.id !== id));
-        }, 1500);
-      }
+    const completedWorkout = workoutMissions.find(mission => mission.isCompleted);
+    if (completedWorkout) {
+      events.push({
+        title: `+${completedWorkout.stat_reward} ${completedWorkout.stat_target === 'strength' ? 'FOR' : 'RES'}`,
+        detail: completedWorkout.title,
+        color: 'text-purple-400',
+        icon: Dumbbell,
+      });
     }
-    prevXp.current = state.xp;
-    prevLevel.current = state.level;
-  }, [state.xp, state.level]);
+    if (hasLoggedFinanceToday) {
+      events.push({ title: '+1 SAB', detail: 'Finanças atualizadas', color: 'text-emerald-400', icon: Coins });
+    }
+    if (state.streak.current > 0) {
+      events.push({
+        title: `Streak ${state.streak.current}d`,
+        detail: 'Consistência diária mantida',
+        color: 'text-orange-400',
+        icon: Flame,
+      });
+    }
+    if (state.xpGainedToday > 0) {
+      events.push({
+        title: `+${state.xpGainedToday} XP`,
+        detail: 'Experiência acumulada hoje',
+        color: 'text-amber-400',
+        icon: Zap,
+      });
+    }
+
+    return events.slice(0, 6);
+  }, [activeHabits, completedToday, hasLoggedFinanceToday, state.streak.current, state.xpGainedToday, workoutMissions]);
+
+  const xpPercent = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
+  const nextRankLevel = RANK_LEVELS[state.rank] || 150;
+  const rankProgress = state.rank === 'Monarch' ? 100 : Math.min(100, (state.level / nextRankLevel) * 100);
 
   return (
     <div className="space-y-6 pb-12">
-      {/* ── Hunter Status Header ──────────────────────────── */}
-      <motion.div
+      <motion.section
         id="tour-hud"
-        initial={{ opacity: 0, y: -15 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] border border-[#1E1E26] bg-[#0F0F13] p-5 sm:p-8 shadow-2xl"
+        className="relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-2xl sm:p-7"
       >
-        {/* Glow Effects */}
-        <div className="absolute -right-20 -top-20 size-80 rounded-full bg-blue-500/10 blur-[100px]" />
-        <div className="absolute -bottom-20 -left-20 size-80 rounded-full bg-blue-600/5 blur-[100px]" />
-        
-        <div className="relative flex flex-col gap-6 md:gap-8 md:flex-row md:items-center">
-          {/* Avatar & Rank Container */}
-          <div className="flex shrink-0 gap-4 sm:gap-6 items-center justify-center">
-            {/* Avatar de Classe Dinâmico */}
-            <div
-              onClick={() => setIsAvatarOpen(true)}
-              className={`relative size-24 sm:size-32 rounded-2xl sm:rounded-3xl overflow-hidden border bg-black/40 group cursor-pointer transition-all duration-150 ease-out hover:scale-105 ${themeColors.border} ${themeColors.glow}`}
-            >
-              <img 
-                src={characterAvatar} 
-                alt="Avatar do Caçador" 
-                className="w-full h-full object-cover transition-all duration-700 group-hover:scale-115"
-                style={{ imageRendering: 'pixelated' }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
-            </div>
+        <div className="absolute -right-24 -top-24 size-80 rounded-full bg-blue-500/10 blur-[110px]" />
+        <div className="absolute -bottom-28 left-1/4 size-72 rounded-full bg-purple-500/8 blur-[110px]" />
 
-            {/* Rank Badge */}
-            <div 
-              className={`relative flex size-24 sm:size-32 items-center justify-center rounded-2xl sm:rounded-3xl border border-blue-500/30 bg-blue-500/5 shadow-[0_0_30px_rgba(59,130,246,0.2)] cursor-pointer transition-all duration-150 ease-out hover:scale-105 hover:rotate-[-1deg] active:scale-95 ${themeColors.rankHover}`}
-            >
-              <span className="text-4xl sm:text-6xl font-black text-blue-500 italic drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {state.rank || 'E'}
+        <div className="relative grid gap-6 lg:grid-cols-[180px_1fr_220px] lg:items-center">
+          <button
+            type="button"
+            onClick={() => setIsAvatarOpen(true)}
+            className="group relative mx-auto aspect-[4/5] w-40 overflow-hidden rounded-2xl border border-blue-500/25 bg-black/40 shadow-[0_0_34px_rgba(59,130,246,0.14)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 lg:mx-0"
+          >
+            <img
+              src={characterAvatar}
+              alt={`Avatar de ${state.username || 'Hunter'}`}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+            <span className="absolute bottom-3 left-3 rounded-md border border-blue-400/25 bg-black/60 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-blue-300 backdrop-blur-md">
+              Ver avatar
+            </span>
+          </button>
+
+          <div className="min-w-0">
+            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-blue-500 font-orbitron">Perfil do Caçador</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <h1 className="truncate text-3xl font-black uppercase italic tracking-tight text-white font-orbitron sm:text-4xl">
+                {state.username || state.fullName || 'Hunter'}
+              </h1>
+              <span className="rounded-lg border border-purple-500/25 bg-purple-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-purple-300">
+                {state.hunterClass || 'Sem classe'}
               </span>
-              <div className="absolute -bottom-3 rounded-full bg-blue-600 px-4 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-xl">
-                RANK
-              </div>
             </div>
-          </div>
-
-          <div className="flex-1 space-y-6">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white uppercase italic animate-pulse-blue" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {state.username || 'Hunter'}
-                  </h1>
-                  <div className="flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-blue-400">
-                    <Zap size={12} className="fill-current" />
-                    {state.hunterClass || 'Shadow Monarch'}
-                  </div>
-                </div>
-                <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest font-orbitron mt-1.5 flex items-center gap-1">
-                  <span>🏆 Título Equipado:</span>
-                  <span className="text-glow-amber">{state.activeTitle || 'Iniciante'}</span>
-                </p>
-                <p className="mt-1 flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-500 uppercase tracking-widest italic">
-                  Level {state.level} Hunter <span className="text-gray-700">•</span> O {state.hunterClass || 'Desperto'}
-                </p>
-              </div>
-              
-              <div className="flex gap-4">
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Streak Atual</p>
-                  <p className="text-2xl font-black text-orange-500 italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {state.streak.current} Dias
-                  </p>
-                </div>
-              </div>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+              <span className="flex items-center gap-1.5"><Crown className="h-4 w-4 text-amber-400" /> Título: <strong className="text-amber-300">{state.activeTitle || 'Iniciante'}</strong></span>
+              <span className="flex items-center gap-1.5"><Trophy className="h-4 w-4 text-blue-400" /> Rank {state.rank}</span>
+              <span className="flex items-center gap-1.5"><Flame className="h-4 w-4 text-orange-400" /> Streak {state.streak.current} dias</span>
             </div>
 
-            {/* XP Bar Progress */}
-            <div className="space-y-3">
-              <div className="flex items-end justify-between">
-                <div className="flex items-center gap-2 relative">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Experience Points</span>
-                  
-                  {/* Floating XP Alerts */}
-                  <AnimatePresence>
-                    {xpAlerts.map(alert => (
-                      <motion.span
-                        key={alert.id}
-                        initial={{ opacity: 0, y: 5, scale: 0.8 }}
-                        animate={{ opacity: 1, y: -15, scale: 1.1 }}
-                        exit={{ opacity: 0, y: -25, scale: 0.9 }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
-                        className="absolute left-full ml-4 text-[10px] font-black text-cyan-400 tracking-widest font-orbitron drop-shadow-[0_0_8px_rgba(34,211,238,0.8)] whitespace-nowrap"
-                      >
-                        +{alert.amount} XP
-                      </motion.span>
-                    ))}
-                  </AnimatePresence>
+            <div className="mt-6 max-w-2xl">
+              <div className="mb-2 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-gray-600">Experiência do Hunter</p>
+                  <p className="mt-1 text-sm font-black uppercase text-white font-orbitron">Level {state.level}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-[10px] font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {state.xp} <span className="text-gray-600">/</span> {state.xpRequired} XP
-                  </span>
-                  {state.streak.current > 0 && (
-                    <div className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 border border-orange-500/20">
-                      <Flame size={10} className="text-orange-500 fill-current" />
-                      <span className="text-[9px] font-black text-orange-400 uppercase tracking-tighter">
-                        +{Math.min(state.streak.current * 2, 100)}% XP BONUS
-                      </span>
-                    </div>
-                  )}
-                </div>
+                <span className="text-[11px] font-black text-blue-300 font-orbitron">{state.xp} / {state.xpRequired} XP</span>
               </div>
-              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-black/40 p-0.5">
+              <div className="h-2.5 overflow-hidden rounded-full border border-blue-500/15 bg-black/50 p-0.5">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${xpPercent}%` }}
-                  transition={{ duration: 0.8, ease: 'circOut' }}
-                  className="h-full rounded-full bg-gradient-to-r from-blue-600 via-blue-400 to-cyan-300 shadow-[0_0_15px_rgba(59,130,246,0.6)]"
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  className="h-full rounded-full bg-gradient-to-r from-blue-600 via-blue-400 to-purple-400 shadow-[0_0_16px_rgba(59,130,246,0.5)]"
                 />
               </div>
             </div>
           </div>
-        </div>
-      </motion.div>
 
-      {/* 🏆 ── Missões Principais do Dia (Daily Main Quests HUD) ────── */}
-      <motion.div
-        id="daily-main-quests"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.02 }}
-        className="relative overflow-hidden rounded-2xl sm:rounded-[2rem] border border-[#1E1E26] bg-[#0F0F13] p-5 sm:p-7 shadow-2xl"
-      >
-        <div className="absolute -right-20 -top-20 size-60 rounded-full bg-amber-500/5 blur-[80px]" />
-        
-        <div className="relative flex flex-col md:flex-row gap-6 justify-between items-stretch">
-          <div className="flex-1 space-y-4">
-            <div>
-              <h2 className="text-lg font-black uppercase tracking-tight text-white italic font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                Missões Principais <span className="text-amber-400">do Dia</span>
-              </h2>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">
-                Protocolo Diário de Sobrevivência • Progresso: {completedQuestsCount}/5 Quests
-              </p>
-            </div>
-            
-            {/* Grid de Quests */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {dailyQuestsList.map((q) => {
-                const IconComponent = q.icon;
-                return (
-                  <button 
-                    key={q.id}
-                    onClick={() => navigate(q.path)}
-                    className={`flex items-center gap-3 rounded-xl border p-3 transition-all duration-150 ease-out text-left cursor-pointer hover:scale-[1.02] hover:translate-x-0.5 active:scale-[0.98] ${
-                      q.isCompleted 
-                        ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400 hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)]' 
-                        : 'border-[#1E1E26] bg-black/20 text-gray-400 hover:border-blue-500/40 hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                    }`}
-                  >
-                    <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                      q.isCompleted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-gray-500'
-                    }`}>
-                      <IconComponent size={15} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-[10px] font-black uppercase tracking-wider font-orbitron truncate ${
-                        q.isCompleted ? 'text-emerald-400' : 'text-white'
-                      }`}>
-                        {q.title}
-                      </p>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate mt-0.5">
-                        {q.desc}
-                      </p>
-                    </div>
-                    {q.isCompleted ? (
-                      <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 shrink-0 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">Concluído</span>
-                    ) : (
-                      <span className="text-[8px] font-black uppercase tracking-widest text-orange-400 shrink-0 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20 animate-pulse">Pendente</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          
-          {/* Botão de Resgate de Bônus Diário */}
-          <div className="flex shrink-0 items-center justify-center md:border-l md:border-[#1E1E26] md:pl-6">
-            <button
-              disabled={!allQuestsCompleted || bonusClaimed}
-              onClick={handleClaimDailyBonus}
-              className={`relative flex flex-col items-center justify-center rounded-xl p-5 w-full md:w-48 text-center border transition-all duration-150 ease-out cursor-pointer select-none ${
-                bonusClaimed
-                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                  : allQuestsCompleted
-                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:scale-105 active:scale-95 shadow-[0_0_25px_rgba(245,158,11,0.15)] animate-pulse-amber'
-                    : 'border-[#1E1E26] bg-black/40 text-gray-600 cursor-not-allowed'
-              }`}
-            >
-              <Trophy size={28} className={allQuestsCompleted && !bonusClaimed ? 'text-amber-400 animate-bounce' : 'text-gray-600'} />
-              <span className="text-xs font-black uppercase tracking-widest font-orbitron mt-2">
-                {bonusClaimed ? 'Resgatado' : 'Bônus Diário'}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-widest mt-1">
-                {bonusClaimed 
-                  ? 'BÔNUS COLETADO' 
-                  : allQuestsCompleted 
-                    ? 'REIVINDICAR +100 XP' 
-                    : `${completedQuestsCount}/5 COMPLETAS`
-                }
-              </span>
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ── Atalhos Rápidos de Sistema (Acesso Fácil) ───────────────── */}
-      <motion.div
-        id="tour-shortcuts"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.05 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-      >
-        <button
-          id="tour-shortcut-workouts"
-          onClick={() => navigate('/workouts')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
-        >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
-            <Dumbbell size={18} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Treinamento</p>
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Módulo Treinos</p>
-          </div>
-        </button>
-
-        <button
-          id="tour-shortcut-nutrition"
-          onClick={() => navigate('/nutrition')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
-        >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-400 group-hover:scale-110 transition-transform">
-            <Apple size={18} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Recuperação</p>
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Restaurar Mana</p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate('/quests')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
-        >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform">
-            <CheckCircle2 size={18} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Missões</p>
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Acessar Fenda</p>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate('/settings')}
-          className={`flex items-center gap-3 rounded-xl border bg-black/40 p-3.5 transition-all duration-150 ease-out hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] text-left group cursor-pointer ${themeColors.border} ${themeColors.bg} ${themeColors.glow}`}
-        >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-zinc-500/10 text-gray-400 group-hover:scale-110 transition-transform">
-            <Settings size={18} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-white uppercase tracking-wider font-orbitron truncate">Ajustes</p>
-            <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest truncate">Menu Sistema</p>
-          </div>
-        </button>
-      </motion.div>
-
-      {/* ── Grid Principal de Storytelling Bento RPG ─────────────────── */}
-      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6">
-        
-        {/* 📜 ── Missões Diárias (Quests Ativas - Fenda do Dia) ── */}
-        {/* Ocupa 7 colunas no Desktop e sobe no mobile para usabilidade snapper */}
-        <motion.div
-          id="tour-quests"
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="rounded-2xl sm:rounded-[2rem] border border-[#1E1E26] bg-[#0F0F13] p-5 sm:p-8 shadow-xl order-1 lg:order-1 lg:col-span-7"
-        >
-          <div className="mb-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-xl font-black uppercase tracking-tight text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                Missões <span className="text-blue-500">Diárias</span>
-              </h2>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                Fendas Ativas • Progresso: {Math.round(progressPct)}%
-              </p>
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/5 px-3 py-1.5 text-[9px] font-black text-blue-500 uppercase tracking-widest italic shadow-[0_0_10px_rgba(59,130,246,0.1)]">
-              Sincronizado
-            </div>
-          </div>
-
-          <div className="space-y-3.5">
-            {dashboardMissions.length === 0 ? (
-              <div className="py-20 text-center space-y-4">
-                <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-white/5">
-                  <Sword size={32} className="text-gray-700" />
-                </div>
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Nenhuma Quest Ativa no Momento.</p>
-                <button onClick={() => navigate('/quests')} className="inline-block text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline cursor-pointer">
-                  + Ativar Protocolo de Missão
-                </button>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Próximo Rank</p>
+              <div className="mt-2 flex items-end justify-between">
+                <span className="text-2xl font-black italic text-blue-400 font-orbitron">{NEXT_RANK[state.rank] || 'D'}</span>
+                <span className="text-[10px] font-bold text-gray-500">Level {nextRankLevel}</span>
               </div>
-            ) : (
-              <>
-                {dashboardMissions.map((mission, idx) => {
-                  if (mission.type === 'workout') {
-                    const m = mission.data;
-                    return (
-                      <button
-                        key={`workout_${m.id}_${idx}`}
-                        onClick={() => navigate('/workouts')}
-                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all duration-150 ease-out hover:scale-[1.01] hover:translate-x-1 active:scale-[0.98] cursor-pointer ${
-                          m.isCompleted
-                            ? 'border-purple-500/30 bg-purple-500/10 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(147,51,234,0.2)]'
-                            : 'border-purple-500/20 bg-purple-900/5 hover:border-purple-500/50 hover:bg-purple-900/15 hover:shadow-[0_0_20px_rgba(147,51,234,0.15)]'
-                        }`}
-                      >
-                        <div className={`flex size-10 items-center justify-center rounded-xl transition-all ${
-                          m.isCompleted ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]' : 'bg-purple-600/20 text-purple-400'
-                        }`}>
-                          {m.isCompleted ? <ShieldCheck size={18} /> : <Dumbbell size={18} />}
-                        </div>
-                        <div className="flex-1 text-left min-w-0">
-                          <div className="flex items-center gap-2">
-                            {mission.time && (
-                              <span className="rounded bg-gray-800/80 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-gray-300">
-                                {mission.time}
-                              </span>
-                            )}
-                            <p className={`text-sm font-bold uppercase tracking-tight truncate transition-all ${
-                              m.isCompleted ? 'text-white line-through opacity-40' : 'text-gray-200'
-                            }`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                              {m.title}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">+{m.xp_reward} XP • Treino</span>
-                          </div>
-                        </div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-purple-500 group-hover:text-purple-300 transition-colors shrink-0">
-                          {m.isCompleted ? 'Concluído' : 'Iniciar →'}
-                        </div>
-                      </button>
-                    );
-                  } else if (mission.type === 'meal') {
-                    const m = mission.data;
-                    return (
-                      <button
-                        key={`meal_${m.id}_${idx}`}
-                        onClick={() => toggleMealMission(m.meal_plan_id)}
-                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all duration-150 ease-out cursor-pointer hover:scale-[1.01] hover:translate-x-1 active:scale-[0.98] ${
-                          m.isCompleted
-                            ? 'border-orange-500/30 bg-orange-500/10 hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.2)]'
-                            : 'border-orange-500/20 bg-orange-900/5 hover:border-orange-500/50 hover:bg-orange-900/15 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)]'
-                        }`}
-                      >
-                        <div className={`flex size-10 items-center justify-center rounded-xl transition-all ${
-                          m.isCompleted ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]' : 'bg-orange-500/10 text-orange-400'
-                        }`}>
-                          {m.isCompleted ? <CheckCircle2 size={18} /> : <UtensilsCrossed size={18} />}
-                        </div>
-                        <div className="flex-1 text-left min-w-0">
-                          <div className="flex items-center gap-2">
-                            {mission.time && (
-                              <span className="rounded bg-gray-800/80 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-gray-300">
-                                {mission.time}
-                              </span>
-                            )}
-                            <p className={`text-sm font-bold uppercase tracking-tight truncate transition-all ${
-                              m.isCompleted ? 'text-white line-through opacity-40' : 'text-gray-200'
-                            }`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                              {m.title}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">
-                              {m.totalKcal > 0 ? `${m.totalKcal} kcal` : 'Alimentação'} • Recompensa Consolidada
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-orange-400 group-hover:text-orange-300 transition-colors shrink-0">
-                          {m.isCompleted ? 'Concluído' : 'Marcar →'}
-                        </div>
-                      </button>
-                    );
-                  } else {
-                    const quest = mission.data;
-                    const isCompleted = completedToday.has(quest.id);
-                    return (
-                      <button
-                        key={`habit_${quest.id}_${idx}`}
-                        onClick={() => toggleCompletion(quest.id)}
-                        className={`group relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border p-4 transition-all duration-150 ease-out hover:scale-[1.01] hover:translate-x-1 active:scale-[0.98] cursor-pointer ${
-                          isCompleted 
-                            ? 'border-blue-500/30 bg-blue-500/10 hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]' 
-                            : 'border-[#1E1E26] bg-black/40 hover:border-blue-500/50 hover:bg-[#16161D] hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]'
-                        }`}
-                      >
-                        <div className={`flex size-10 items-center justify-center rounded-xl transition-all ${
-                          isCompleted ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'bg-[#1E1E26] text-gray-500 group-hover:text-white'
-                        }`}>
-                          {isCompleted ? <ShieldCheck size={18} /> : <Circle size={18} />}
-                        </div>
-                        <div className="flex-1 text-left min-w-0">
-                          <div className="flex items-center gap-2">
-                            {mission.time && (
-                              <span className="rounded bg-gray-800/80 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-gray-300">
-                                {mission.time}
-                              </span>
-                            )}
-                            <p className={`text-sm font-bold tracking-wide truncate transition-all ${
-                              isCompleted ? 'text-white line-through opacity-40' : 'text-gray-200 uppercase tracking-tight'
-                            }`} style={{ fontFamily: isCompleted ? 'inherit' : 'Orbitron, sans-serif' }}>
-                              {quest.title}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">
-                              +{quest.xp_reward} XP
-                            </span>
-                            {quest.stat_target && (
-                              <span className="text-[9px] font-black uppercase tracking-widest text-gray-600 italic">
-                                {quest.stat_target.slice(0, 3).toUpperCase()} +{quest.stat_reward}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className={`transition-opacity shrink-0 ${isCompleted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                          <Zap size={16} className={isCompleted ? 'text-blue-500' : 'text-gray-700'} />
-                        </div>
-                      </button>
-                    );
-                  }
-                })}
-              </>
-            )}
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/50">
+                <div className="h-full rounded-full bg-blue-500" style={{ width: `${rankProgress}%` }} />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Resumo de Hoje</p>
+              <p className="mt-2 text-lg font-black text-white font-orbitron">{dailySummary.completed}/{dailySummary.total || 0}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-orange-300">{state.xpGainedToday || xpEarnedToday} XP ganhos</p>
+            </div>
           </div>
-          {progressPct === 100 && activeHabits.length > 0 && (
+        </div>
+      </motion.section>
+
+      <section aria-labelledby="attributes-title">
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">Parâmetros do Sistema</p>
+            <h2 id="attributes-title" className="mt-1 text-lg font-black uppercase italic text-white font-orbitron">Atributos Principais</h2>
+          </div>
+          <span className="hidden text-[9px] font-bold uppercase tracking-widest text-gray-600 sm:block">Atualização em tempo real</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+          {STAT_META.map((stat, index) => (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mt-6 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-5 text-center shadow-[0_0_30px_rgba(59,130,246,0.15)]"
+              key={stat.key}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.04 }}
+              title={stat.name}
+              className={`relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-4 transition-all hover:-translate-y-0.5 ${stat.border}`}
             >
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-blue-500">
-                Limites Superados
-              </p>
-              <p className="mt-1.5 text-xs text-gray-400 leading-relaxed uppercase italic">
-                Todas as missões diárias foram concluídas. Sua força está aumentando...
+              <div className="flex items-start justify-between">
+                <span className={`text-sm font-black tracking-widest font-orbitron ${stat.color}`}>{stat.label}</span>
+                <Activity className="h-3.5 w-3.5 text-gray-700" />
+              </div>
+              <p className="mt-3 text-3xl font-black italic text-white font-orbitron">{state.stats[stat.key]}</p>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-600">{stat.name}</p>
+              <p className={`mt-3 text-[9px] font-black uppercase tracking-wider ${statVariation[stat.key] > 0 ? stat.color : 'text-gray-700'}`}>
+                {statVariation[stat.key] > 0 ? `+${statVariation[stat.key]} hoje` : 'Sem variação hoje'}
               </p>
             </motion.div>
-          )}
-        </motion.div>
+          ))}
+        </div>
+      </section>
 
-        {/* ⚔️ ── Janela de Status & Recursos Físicos Unificados ── */}
-        {/* Ocupa 5 colunas no Desktop e fica embaixo no mobile para visualização consolidada */}
-        <motion.div
+      <div className="grid gap-6 lg:grid-cols-12">
+        <motion.section
           id="tour-status"
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.15 }}
-          className="rounded-2xl sm:rounded-[2rem] border border-[#1E1E26] bg-[#0F0F13] p-5 sm:p-8 shadow-xl order-2 lg:order-2 lg:col-span-5 flex flex-col justify-between"
+          className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-xl sm:p-6 lg:col-span-5"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-blue-500 font-orbitron">Leitura Holográfica</p>
+              <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Janela de Status</h2>
+            </div>
+            <div className="flex size-10 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
+              <Target className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-4 flex min-h-[340px] items-center justify-center overflow-hidden">
+            <RadarChart stats={statsData} size={340} />
+          </div>
+
+          <div className="grid gap-3 border-t border-dashed border-[#252530] pt-5 sm:grid-cols-3">
+            <div>
+              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Perfil dominante</p>
+              <p className="mt-1 text-xs font-bold text-purple-300">{profileReading.dominant}</p>
+            </div>
+            <div>
+              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Classe atual</p>
+              <p className="mt-1 text-xs font-bold text-blue-300">{state.hunterClass || 'Não definida'}</p>
+            </div>
+            <div>
+              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Foco recomendado</p>
+              <p className="mt-1 text-xs font-bold text-orange-300">{profileReading.focus}</p>
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section
+          id="tour-domains"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-xl sm:p-6 lg:col-span-7"
         >
           <div>
-            <div className="mb-6 flex items-center justify-between">
-              <div className="space-y-1">
-                <h2 className="text-xl font-black uppercase tracking-tight text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  Janela de <span className="text-blue-500">Status</span>
-                </h2>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Atributos de Combate RPG</p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
-                <Target size={20} className="animate-pulse" />
-              </div>
-            </div>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">Dimensões da Vida</p>
+            <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Domínios de Evolução</h2>
+          </div>
 
-            <div className="flex flex-col items-center justify-center">
-              <RadarChart stats={statsData} size={chartSize} />
-              
-              {/* Atributos Básicos Alinhados */}
-              <div className="mt-6 grid w-full grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
-                {statsData.map((stat) => (
-                  <div key={stat.label} className="group flex flex-col items-center gap-1 sm:gap-1.5 rounded-xl border border-[#1E1E26] bg-black/40 py-2 transition-all hover:border-blue-500/30">
-                    <span className="text-[8px] sm:text-[9px] font-black text-gray-500 group-hover:text-blue-400 transition-colors uppercase tracking-widest">{stat.label}</span>
-                    <span className="text-xs sm:text-base font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>{stat.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Domínios da Evolução */}
-            <div className="border-t border-[#1E1E26] border-dashed pt-6 mt-8 space-y-4 w-full">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
-                  Domínios de Evolução
-                </h3>
-                <span className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">Dimensões da Vida</span>
-              </div>
-
-              <div className="space-y-3">
-                {domains.map((dom) => (
-                  <div key={dom.name} className="space-y-1.5">
-                    <div className="flex justify-between items-end">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-black uppercase text-white font-orbitron">{dom.name}</span>
-                        <span className="text-[8px] font-bold text-blue-400 uppercase">LVL {dom.level}</span>
+          <div className="mt-5 space-y-3">
+            {domains.map(domain => {
+              const Icon = domain.icon;
+              return (
+                <div key={domain.name} className="rounded-2xl border border-[#1E1E26] bg-black/25 p-4 transition-colors hover:border-white/10">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5 text-gray-300">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-white font-orbitron">{domain.name}</h3>
+                            <span className="text-[9px] font-black uppercase text-blue-400">Lvl {domain.level}</span>
+                          </div>
+                          <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-600">{domain.attributes}</p>
+                        </div>
+                        <span className="text-[10px] font-black text-gray-400 font-orbitron">{domain.progress}%</span>
                       </div>
-                      <span className="text-[9px] font-black text-gray-500 font-orbitron">
-                        {dom.progress}%
-                      </span>
-                    </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/40 p-0.5 border border-[#1E1E26]">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${dom.progress}%` }}
-                        transition={{ duration: 0.5, ease: 'circOut' }}
-                        className={`h-full rounded-full bg-gradient-to-r ${dom.color} shadow-[0_0_8px_rgba(255,255,255,0.05)]`}
-                      />
+                      <div className="mt-3 h-2 overflow-hidden rounded-full border border-[#1E1E26] bg-black/50 p-0.5">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${domain.progress}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                          className={`h-full rounded-full bg-gradient-to-r ${domain.color}`}
+                        />
+                      </div>
+                      <p className="mt-2 text-[10px] font-semibold text-gray-500">{domain.lastGain}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              );
+            })}
           </div>
-
-          {/* ── Storytelling: Registros Biométricos e Recursos Físicos de Caçador (Cards Unificados) ── */}
-          <div id="tour-biometrics" className="border-t border-[#1E1E26] border-dashed pt-6 mt-8 space-y-4">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
-              Registros Físicos & Recursos
-            </h3>
-            
-            <div className="grid grid-cols-3 gap-3">
-              {/* Calorias */}
-              <div 
-                onClick={() => navigate('/nutrition')}
-                className="group rounded-xl border border-[#1E1E26] bg-black/30 p-2.5 flex flex-col justify-between cursor-pointer transition-all hover:border-orange-500/30 hover:bg-orange-500/5 duration-300"
-              >
-                <div className="flex items-center justify-between text-orange-500">
-                  <Flame size={14} className="group-hover:scale-110 group-hover:rotate-6 transition-transform" />
-                  <span className="text-[8px] font-black uppercase tracking-wider text-gray-600 group-hover:text-orange-400 truncate">MANA</span>
-                </div>
-                <div className="mt-2.5">
-                  <p className="text-sm font-black text-white italic font-orbitron truncate">
-                    {totalCaloriesToday} <span className="text-[8px] text-gray-500 font-normal">kcal</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Volume */}
-              <div 
-                onClick={() => navigate('/workouts')}
-                className="group rounded-xl border border-[#1E1E26] bg-black/30 p-2.5 flex flex-col justify-between cursor-pointer transition-all hover:border-blue-500/30 hover:bg-blue-500/5 duration-300"
-              >
-                <div className="flex items-center justify-between text-blue-500">
-                  <Dumbbell size={14} className="group-hover:scale-110 group-hover:-rotate-12 transition-transform" />
-                  <span className="text-[8px] font-black uppercase tracking-wider text-gray-600 group-hover:text-blue-400 truncate">VOLUME</span>
-                </div>
-                <div className="mt-2.5">
-                  <p className="text-sm font-black text-white italic font-orbitron truncate">
-                    {loadingVolume ? '...' : todayVolume} <span className="text-[8px] text-gray-500 font-normal">kg</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Energia */}
-              <div 
-                onClick={() => navigate('/')}
-                className="group rounded-xl border border-[#1E1E26] bg-black/30 p-2.5 flex flex-col justify-between cursor-pointer transition-all hover:border-purple-500/30 hover:bg-purple-500/5 duration-300"
-              >
-                <div className="flex items-center justify-between text-purple-500">
-                  <TrendingUp size={14} className="group-hover:scale-110 group-hover:-translate-y-0.5 transition-transform" />
-                  <span className="text-[8px] font-black uppercase tracking-wider text-gray-600 group-hover:text-purple-400 truncate">FATIGA</span>
-                </div>
-                <div className="mt-2.5">
-                  <p className="text-sm font-black text-white italic font-orbitron truncate">
-                    {energyLevel}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-        
+        </motion.section>
       </div>
 
-      {/* ── Lightbox do Avatar ─────────────────────────────── */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        <motion.section
+          id="tour-history"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-xl sm:p-6 lg:col-span-8"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-cyan-400 font-orbitron">Registro do Sistema</p>
+              <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Histórico de Evolução</h2>
+            </div>
+            <History className="h-5 w-5 text-cyan-400" />
+          </div>
+
+          <div className="mt-5 space-y-1">
+            {evolutionEvents.length > 0 ? evolutionEvents.map((event, index) => {
+              const Icon = event.icon;
+              return (
+                <div key={`${event.title}-${index}`} className="relative flex gap-4 py-3">
+                  {index < evolutionEvents.length - 1 && <div className="absolute left-[17px] top-10 h-[calc(100%-20px)] w-px bg-[#252530]" />}
+                  <div className="relative z-10 flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-black/40">
+                    <Icon className={`h-4 w-4 ${event.color}`} />
+                  </div>
+                  <div className="min-w-0 flex-1 border-b border-[#1E1E26] pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className={`text-xs font-black uppercase tracking-wider font-orbitron ${event.color}`}>{event.title}</p>
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-gray-700">Hoje</span>
+                    </div>
+                    <p className="mt-1 text-xs font-medium text-gray-400">{event.detail}</p>
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="rounded-2xl border border-dashed border-[#252530] bg-black/20 p-8 text-center">
+                <Sparkles className="mx-auto h-6 w-6 text-gray-700" />
+                <p className="mt-3 text-xs font-black uppercase tracking-wider text-gray-500 font-orbitron">Nenhuma evolução registrada hoje</p>
+                <p className="mt-1 text-xs text-gray-600">Conclua uma missão para iniciar sua timeline.</p>
+              </div>
+            )}
+          </div>
+        </motion.section>
+
+        <motion.section
+          id="tour-biometrics"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-xl sm:p-6 lg:col-span-4"
+        >
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-orange-400 font-orbitron">Leitura Diária</p>
+            <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Recursos do Dia</h2>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            {[
+              { label: 'Mana', value: `${dailySummary.calories}`, unit: 'kcal', icon: Flame, color: 'text-orange-400' },
+              { label: 'Volume', value: `${Math.round(todayVolume)}`, unit: 'kg', icon: Dumbbell, color: 'text-blue-400' },
+              { label: 'Ritmo', value: `${dailySummary.progress}`, unit: '%', icon: TrendingUp, color: 'text-purple-400' },
+              { label: 'Streak', value: `${state.streak.current}`, unit: 'dias', icon: Flame, color: 'text-amber-400' },
+            ].map(resource => {
+              const Icon = resource.icon;
+              return (
+                <div key={resource.label} className="rounded-2xl border border-[#1E1E26] bg-black/25 p-4">
+                  <div className="flex items-center justify-between">
+                    <Icon className={`h-4 w-4 ${resource.color}`} />
+                    <span className="text-[8px] font-black uppercase tracking-wider text-gray-600">{resource.label}</span>
+                  </div>
+                  <p className="mt-4 text-xl font-black italic text-white font-orbitron">
+                    {resource.value} <span className="text-[9px] font-bold not-italic text-gray-600">{resource.unit}</span>
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-blue-500/15 bg-blue-500/5 p-4">
+            <div className="flex items-center gap-2">
+              <HeartPulse className="h-4 w-4 text-blue-400" />
+              <p className="text-[9px] font-black uppercase tracking-wider text-blue-300">Estado do sistema</p>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-gray-400">
+              {dailySummary.progress >= 70
+                ? 'Ritmo elevado. Sua progressão diária está consistente.'
+                : 'Potencial disponível. Complete novas ações para fortalecer sua ficha.'}
+            </p>
+          </div>
+        </motion.section>
+      </div>
+
       <AnimatePresence>
         {isAvatarOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop escuro com blur */}
-            <motion.div
+            <motion.button
+              type="button"
+              aria-label="Fechar avatar"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsAvatarOpen(false)}
               className="absolute inset-0 bg-black/90 backdrop-blur-md"
             />
-            
-            {/* Imagem Ampliada */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative max-w-[90vw] max-h-[85vh] sm:max-w-md w-full aspect-square rounded-3xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl z-10"
+              exit={{ opacity: 0, scale: 0.92 }}
+              className="relative z-10 aspect-[4/5] w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl"
             >
-              <img
-                src={characterAvatar}
-                alt="Avatar do Caçador Ampliado"
-                className="w-full h-full object-cover"
-                style={{ imageRendering: 'pixelated' }}
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-6 flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-black uppercase text-white font-orbitron tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {state.username || 'Hunter'}
-                  </h3>
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
-                    Rank {state.rank} • {state.hunterClass || 'Monarch'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsAvatarOpen(false)}
-                  className="rounded-xl bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-all cursor-pointer"
-                >
-                  Fechar
-                </button>
+              <img src={characterAvatar} alt="Avatar ampliado do Caçador" className="h-full w-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent p-6">
+                <p className="text-xl font-black uppercase text-white font-orbitron">{state.username || 'Hunter'}</p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-300">
+                  {state.hunterClass || 'Sem classe'} · Rank {state.rank} · Level {state.level}
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsAvatarOpen(false)}
+                className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-xl border border-white/10 bg-black/60 text-gray-300 backdrop-blur-md transition-colors hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Sistema de Onboarding Tour Cyberpunk */}
       <ProductTour />
     </div>
   );

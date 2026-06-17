@@ -13,6 +13,18 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-17 — Character Sheet Premium no Status
+- **Ficha do Caçador:**
+  - Refatorada a página de Status para priorizar perfil, classe, rank, título, level, streak e progressão de XP.
+  - Removidos atalhos redundantes e a listagem extensa de missões, substituídos por um resumo compacto do dia.
+- **Evolução Visível:**
+  - Criados sete cards de atributos com valor e variação diária baseada em conclusões reais.
+  - Reposicionado e refinado o radar com maior contraste, labels responsivas e leitura de perfil dominante/foco recomendado.
+  - Reformulados os cinco domínios com level, progresso, atributos relacionados e último sinal de evolução.
+  - Adicionados histórico de evolução e bloco compacto de recursos diários.
+  - Atualizado o Product Tour para refletir a nova estrutura da ficha.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-17 — Polimento de UX da Home e Navegação
 - **QuickMenu e Hierarquia:**
   - Ampliada discretamente a largura útil do conteúdo para melhor ocupação de telas desktop.

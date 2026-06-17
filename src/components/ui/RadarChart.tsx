@@ -13,7 +13,7 @@ interface RadarChartProps {
 
 export function RadarChart({ stats, size = 300 }: RadarChartProps) {
   const center = size / 2;
-  const radius = (size / 2) * 0.8;
+  const radius = (size / 2) * 0.74;
   const angleStep = (Math.PI * 2) / stats.length;
 
   // Pontos para as linhas de fundo (grid)
@@ -36,7 +36,7 @@ export function RadarChart({ stats, size = 300 }: RadarChartProps) {
   }).join(' ');
 
   // Labels
-  const labelRadius = radius * 1.15;
+  const labelRadius = radius * 1.22;
   const labels = stats.map((stat, i) => {
     const x = center + labelRadius * Math.cos(i * angleStep - Math.PI / 2);
     const y = center + labelRadius * Math.sin(i * angleStep - Math.PI / 2);
@@ -44,13 +44,13 @@ export function RadarChart({ stats, size = 300 }: RadarChartProps) {
   });
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="overflow-visible">
+    <div className="relative flex max-w-full items-center justify-center" style={{ width: size, height: size, aspectRatio: '1 / 1' }}>
+      <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
         {/* Gradients */}
         <defs>
           <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--royal-purple)" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="var(--ascend-blue)" stopOpacity="0.6" />
+            <stop offset="0%" stopColor="var(--royal-purple)" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="var(--ascend-blue)" stopOpacity="0.42" />
           </linearGradient>
           <filter id="glow">
             <feGaussianBlur stdDeviation="2" result="coloredBlur" />
@@ -67,8 +67,8 @@ export function RadarChart({ stats, size = 300 }: RadarChartProps) {
             key={i}
             points={points}
             fill="none"
-            stroke="rgba(201, 206, 214, 0.1)"
-            strokeWidth="1"
+            stroke={i === gridLines.length - 1 ? 'rgba(96,165,250,0.34)' : 'rgba(201,206,214,0.18)'}
+            strokeWidth={i === gridLines.length - 1 ? '1.4' : '1'}
           />
         ))}
 
@@ -83,7 +83,7 @@ export function RadarChart({ stats, size = 300 }: RadarChartProps) {
               y1={center}
               x2={x}
               y2={y}
-              stroke="rgba(201, 206, 214, 0.1)"
+              stroke="rgba(201, 206, 214, 0.17)"
               strokeWidth="1"
             />
           );
@@ -94,7 +94,7 @@ export function RadarChart({ stats, size = 300 }: RadarChartProps) {
           points={dataPoints}
           fill="url(#radarGradient)"
           stroke="var(--ascend-blue)"
-          strokeWidth="2"
+          strokeWidth="2.5"
           filter="url(#glow)"
           style={{ transition: 'all 0.5s ease-in-out' }}
         />
@@ -109,8 +109,10 @@ export function RadarChart({ stats, size = 300 }: RadarChartProps) {
               key={i}
               cx={x}
               cy={y}
-              r="3"
-              fill="var(--silver-steel)"
+              r="3.5"
+              fill="#E2E8F0"
+              stroke="var(--ascend-blue)"
+              strokeWidth="1.5"
               filter="url(#glow)"
               style={{ transition: 'all 0.5s ease-in-out' }}
             />
@@ -125,9 +127,9 @@ export function RadarChart({ stats, size = 300 }: RadarChartProps) {
             y={l.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="var(--silver-steel)"
-            fontSize="12"
-            fontWeight="bold"
+            fill="#CBD5E1"
+            fontSize="11"
+            fontWeight="800"
             style={{ fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase' }}
           >
             {l.label}
