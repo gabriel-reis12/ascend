@@ -13,6 +13,16 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-17 — Refinamento Premium da QuickMenu
+- **Hierarquia e Clareza dos Portais:**
+  - Separados os módulos principais (Status, Missões e Treinamento) dos módulos complementares, preservando a estrutura geral da página.
+  - Padronizados nomes e descrições dos sete módulos para leitura mais rápida e consistente.
+  - Criados componentes reutilizáveis `PortalCard` e `StatusBadge` com estados `SISTEMA ATIVO`, `NOVO`, `EM PROGRESSO`, `BOSS DISPONÍVEL` e `QUEST PENDENTE`.
+  - Adicionado hover de abertura de portal com zoom leve, contraste da imagem, brilho de borda e glow na seta, respeitando `motion-safe`.
+  - Expandida a ficha do usuário com nome, classe, rank, level, XP atual e barra de progresso.
+  - Ajustado o grid responsivo para uma coluna no mobile, duas em telas intermediárias e três nos portais principais em desktop.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-16 — Ajustes de Interface e Galeria de Ranks no Onboarding
 - **Correção de Colisão e Layout**: Mudar o container de página do Onboarding para suportar rolagem vertical natural e margem superior adequada, eliminando a sobreposição do chip superior com o título.
 - **Visualizador Interativo de Ranks (Galeria E ao S)**: Implementação de um Lightbox modal em tela cheia acessado ao clicar na imagem da classe despertada e no grid inferior de classes.
