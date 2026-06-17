@@ -29,6 +29,7 @@ interface CommandCard {
   status: 'active' | 'locked';
   badge: PortalBadge;
   priority: 'primary' | 'secondary';
+  primaryLabel?: string;
   icon: React.ReactNode;
   color: string;
   arrowColor: string;
@@ -51,6 +52,7 @@ const cards: CommandCard[] = [
     status: 'active',
     badge: 'SISTEMA ATIVO',
     priority: 'primary',
+    primaryLabel: 'Análise Principal',
     icon: <LayoutDashboard className="h-5 w-5" />,
     color: 'border-blue-500/40 hover:border-blue-400/80 hover:shadow-[0_0_34px_rgba(59,130,246,0.2)]',
     arrowColor: 'group-hover:border-blue-400/70 group-hover:bg-blue-500/15 group-hover:text-blue-300 group-hover:shadow-[0_0_18px_rgba(59,130,246,0.45)]',
@@ -63,6 +65,7 @@ const cards: CommandCard[] = [
     status: 'active',
     badge: 'QUEST PENDENTE',
     priority: 'primary',
+    primaryLabel: 'Centro de Quests',
     icon: <CheckSquare className="h-5 w-5" />,
     color: 'border-cyan-500/40 hover:border-cyan-300/80 hover:shadow-[0_0_34px_rgba(6,182,212,0.2)]',
     arrowColor: 'group-hover:border-cyan-400/70 group-hover:bg-cyan-500/15 group-hover:text-cyan-300 group-hover:shadow-[0_0_18px_rgba(6,182,212,0.45)]',
@@ -75,6 +78,7 @@ const cards: CommandCard[] = [
     status: 'active',
     badge: 'EM PROGRESSO',
     priority: 'primary',
+    primaryLabel: 'Módulo Físico',
     icon: <Dumbbell className="h-5 w-5" />,
     color: 'border-purple-500/40 hover:border-purple-400/80 hover:shadow-[0_0_34px_rgba(168,85,247,0.2)]',
     arrowColor: 'group-hover:border-purple-400/70 group-hover:bg-purple-500/15 group-hover:text-purple-300 group-hover:shadow-[0_0_18px_rgba(168,85,247,0.45)]',
@@ -133,7 +137,7 @@ const cards: CommandCard[] = [
 function StatusBadge({ badge }: { badge: PortalBadge }) {
   return (
     <span
-      className={`rounded-md border px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em] font-orbitron shadow-[0_0_12px_rgba(0,0,0,0.22)] ${badgeStyles[badge]}`}
+      className={`rounded-md border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] font-orbitron shadow-[0_0_12px_rgba(0,0,0,0.32)] ${badgeStyles[badge]}`}
     >
       {badge}
     </span>
@@ -190,9 +194,9 @@ function PortalCard({ card, onOpen }: { card: CommandCard; onOpen: () => void })
 
       <div className="relative z-20 mt-10">
         {isPrimary && (
-          <div className="mb-2 flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-blue-400/80 font-orbitron">
+          <div className="mb-2 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-blue-300 font-orbitron">
             <Sparkles className="h-3 w-3" />
-            Portal principal
+            {card.primaryLabel}
           </div>
         )}
         <h2
@@ -202,12 +206,12 @@ function PortalCard({ card, onOpen }: { card: CommandCard; onOpen: () => void })
         >
           {card.title}
         </h2>
-        <p className={`mt-2 max-w-[92%] font-semibold leading-relaxed text-gray-400 ${isPrimary ? 'text-xs' : 'text-[11px]'}`}>
+        <p className={`mt-2 max-w-[96%] font-semibold leading-relaxed text-gray-300 ${isPrimary ? 'text-[13px]' : 'text-xs'}`}>
           {card.desc}
         </p>
 
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-gray-600 transition-colors group-hover:text-gray-400">
+          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-400 transition-colors group-hover:text-white">
             Acessar módulo
           </span>
           <div
@@ -249,18 +253,19 @@ export function QuickMenu() {
             </p>
           </div>
 
-          <div className="w-full rounded-2xl border border-[#252530] bg-black/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] lg:max-w-[390px]">
+          <div className="w-full rounded-2xl border border-blue-500/15 bg-black/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_24px_rgba(59,130,246,0.06)] lg:max-w-[410px]">
             <div className="flex items-center gap-4">
               <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-lg font-black italic text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] font-orbitron">
                 {state.rank || 'E'}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black uppercase tracking-wider text-white">{hunterName}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500">
-                  {hunterClass} <span className="text-gray-700">·</span> Rank {state.rank || 'E'}{' '}
-                  <span className="text-gray-700">·</span> Level {state.level}{' '}
-                  <span className="text-gray-700">·</span>{' '}
-                  <span className="text-amber-400"><Zap className="mr-0.5 inline h-3 w-3" fill="currentColor" />{state.xp} XP</span>
+                <p className="truncate text-sm font-black uppercase tracking-[0.12em] text-white">{hunterName}</p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                  {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank || 'E'}
+                </p>
+                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.1em] text-blue-400">
+                  Level {state.level} <span className="text-gray-600">—</span>{' '}
+                  <span className="text-amber-400"><Zap className="mr-0.5 inline h-3 w-3" fill="currentColor" />{state.xp} / {state.xpRequired} XP</span>
                 </p>
               </div>
             </div>
@@ -277,6 +282,29 @@ export function QuickMenu() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-[#0F0F13] px-5 py-4 shadow-[0_0_24px_rgba(124,58,237,0.06)]">
+        <div className="absolute right-0 top-0 h-full w-40 bg-gradient-to-l from-purple-500/8 to-transparent" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-300">
+              <CheckSquare className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400 font-orbitron">Próxima ação recomendada</p>
+              <p className="mt-1 text-sm font-semibold text-gray-200">Complete sua primeira missão diária para ganhar XP.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/quests')}
+            className="flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-purple-200 transition-all hover:border-purple-400/60 hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
+          >
+            Abrir Quadro de Missões
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </section>
 

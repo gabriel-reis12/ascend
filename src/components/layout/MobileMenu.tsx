@@ -12,12 +12,12 @@ interface MobileMenuProps {
 }
 
 const navItems = [
-  { path: '/',        label: 'Menu Rápido',  icon: LayoutGrid },
+  { path: '/',        label: 'Portal',       icon: LayoutGrid },
   { path: '/status',  label: 'Status',      icon: LayoutDashboard },
   { path: '/quests',  label: 'Missões',     icon: CheckSquare },
   { path: '/bosses',  label: 'Bosses',      icon: Skull },
   { path: '/workouts',label: 'Treinamento', icon: Dumbbell },
-  { path: '/nutrition',label: 'Recuperação', icon: Apple },
+  { path: '/nutrition',label: 'Nutrição',    icon: Apple },
   { path: '/fortuna',  label: 'Fortuna',     icon: Coins },
   { path: '/rest',     label: 'Descanso',    icon: Moon },
   { path: '/settings',label: 'Ajustes',     icon: Settings },
@@ -49,6 +49,8 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   }, [open]);
 
   const xpPct = Math.min(100, (state.xp / Math.max(state.xpRequired, 1)) * 100);
+  const hunterName = state.username || state.fullName || 'Hunter';
+  const hunterClass = state.hunterClass || 'Classe não definida';
 
   const classGlowMap: Record<string, string> = {
     mage: 'glow-mage',
@@ -120,7 +122,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                         'flex items-center gap-4 rounded-xl px-4 py-4 text-xs font-bold uppercase tracking-widest transition-all',
                         isActive
                           ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
-                          : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                          : 'text-gray-400 hover:bg-white/5 hover:text-white'
                       )}
                     >
                       <Icon size={18} className={isActive ? 'text-blue-500' : ''} />
@@ -133,20 +135,23 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
             {/* Hunter footer */}
             <div className="border-t border-white/5 p-6 space-y-6">
-              <div className="flex items-center gap-4 rounded-2xl bg-white/5 p-4">
+              <div className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-black text-white shadow-lg">
                   {state.rank}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</p>
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Level {state.level}</p>
+                  <p className="truncate text-xs font-black uppercase tracking-tight text-white">{hunterName}</p>
+                  <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.08em] text-gray-400">
+                    {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank}
+                  </p>
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">Level {state.level}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                  <span>System XP</span>
-                  <span>{xpPct.toFixed(0)}%</span>
+                  <span>XP do Sistema</span>
+                  <span>{state.xp} / {state.xpRequired}</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
                   <motion.div

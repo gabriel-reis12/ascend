@@ -9,12 +9,12 @@ import { MobileMenu } from './MobileMenu';
 import { supabase } from '@/lib/supabase';
 
 const navItems = [
-  { path: '/', label: 'Menu Rápido', icon: LayoutGrid },
+  { path: '/', label: 'Portal', icon: LayoutGrid },
   { path: '/status', label: 'Status', icon: LayoutDashboard },
   { path: '/quests', label: 'Missões', icon: CheckSquare },
   { path: '/bosses', label: 'Bosses', icon: Skull },
   { path: '/workouts', label: 'Treinamento', icon: Dumbbell },
-  { path: '/nutrition', label: 'Recuperação', icon: Apple },
+  { path: '/nutrition', label: 'Nutrição', icon: Apple },
   { path: '/fortuna', label: 'Fortuna', icon: Coins },
   { path: '/rest', label: 'Descanso', icon: Moon },
   { path: '/settings', label: 'Ajustes', icon: Settings },
@@ -48,7 +48,8 @@ export function RPGLayout() {
   // Se o username não estiver preenchido, talvez o profile ainda esteja carregando
   // Mas vamos deixar renderizar com fallback se necessário.
   const xpPct = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
-  const initials = (state.username || 'H').slice(0, 2).toUpperCase();
+  const hunterName = state.username || state.fullName || 'Hunter';
+  const hunterClass = state.hunterClass || 'Classe não definida';
 
   return (
     <div className="flex h-screen bg-[#0B0B0F] text-[#C9CED6] overflow-hidden">
@@ -91,14 +92,14 @@ export function RPGLayout() {
                   'group flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-bold tracking-wide transition-all duration-200',
                   isActive
                     ? 'bg-blue-500/10 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)]'
-                    : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
                 )}
               >
                 <Icon
                   size={20}
                   className={cn(
                     'shrink-0 transition-colors',
-                    isActive ? 'text-blue-500' : 'text-gray-600 group-hover:text-gray-300'
+                    isActive ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-200'
                   )}
                 />
                 <span className="uppercase tracking-widest text-[11px]">{item.label}</span>
@@ -110,21 +111,24 @@ export function RPGLayout() {
         {/* Hunter profile footer */}
         <div className="border-t border-white/5 p-4 space-y-4">
           {/* Avatar + info */}
-          <div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 p-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
               {state.rank}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</p>
-              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Level {state.level}</p>
+              <p className="truncate text-xs font-black uppercase tracking-tight text-white">{hunterName}</p>
+              <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.08em] text-gray-400">
+                {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank}
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">Level {state.level}</p>
             </div>
           </div>
 
           {/* XP Bar */}
           <div className="px-1">
             <div className="mb-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
-              <span>System XP</span>
-              <span>{xpPct.toFixed(0)}%</span>
+              <span>XP do Sistema</span>
+              <span>{state.xp} / {state.xpRequired}</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
               <motion.div
@@ -188,7 +192,7 @@ export function RPGLayout() {
         {/* Page content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {supabaseError && (
-            <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-6">
               <div className="flex items-center gap-3 p-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 text-rose-400 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.05)]">
                 <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0" />
                 <span className="flex-1 font-orbitron text-[11px] leading-relaxed">
@@ -200,7 +204,7 @@ export function RPGLayout() {
               </div>
             </div>
           )}
-          <div className="mx-auto max-w-5xl px-4 sm:px-6 py-5 sm:py-8">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
             <Outlet />
           </div>
         </div>

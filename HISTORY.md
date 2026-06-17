@@ -13,6 +13,18 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-17 — Polimento de UX da Home e Navegação
+- **QuickMenu e Hierarquia:**
+  - Ampliada discretamente a largura útil do conteúdo para melhor ocupação de telas desktop.
+  - Refinados contraste e tamanho das descrições, badges e chamadas de acesso dos cards.
+  - Substituído o label repetido dos cards principais por `Análise Principal`, `Centro de Quests` e `Módulo Físico`.
+  - Adicionado bloco de próxima ação recomendada com acesso direto ao Quadro de Missões.
+- **Status do Hunter e Navegação:**
+  - Reorganizada a ficha superior com nome, classe, rank, level e progresso numérico de XP.
+  - Atualizados sidebar e menu mobile para usar `Portal` e `Nutrição`, com maior contraste nos itens inativos.
+  - Expandido o rodapé da navegação com classe, rank, level e XP atual/próximo nível.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-17 — Refinamento Premium da QuickMenu
 - **Hierarquia e Clareza dos Portais:**
   - Separados os módulos principais (Status, Missões e Treinamento) dos módulos complementares, preservando a estrutura geral da página.
