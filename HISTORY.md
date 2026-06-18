@@ -13,6 +13,17 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-17 — Timeline Real e Sete Domínios no Status
+- **Histórico de Evolução:**
+  - Substituído o histórico derivado da UI por eventos reais de tasks, hábitos, rotinas, refeições e registros financeiros do Supabase.
+  - Adicionados nome da ação, XP real, atributo impactado, domínio e horário quando o schema possui timestamp.
+  - Compactado o card com altura adaptável, scroll interno para muitos eventos e empty state com acesso às missões.
+  - Integrada a sequência atual como evento legítimo da timeline.
+- **Status e Domínios:**
+  - Refinado o estado de conquista da Missão Principal quando todas as pendências estão concluídas.
+  - Corrigidos Domínios de Evolução para sete categorias, alinhadas a `FOR`, `INT`, `RES`, `VIT`, `DIS`, `SAB` e `EQU`.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-17 — Status Vivo, Radar de 7 Atributos e Próxima Missão
 - **Correções e Utilidade da Character Sheet:**
   - Corrigido o Radar Chart para evidenciar os sete eixos `FOR`, `INT`, `RES`, `VIT`, `DIS`, `SAB` e `EQU`, incluindo vértices externos, labels e valores.

@@ -5,7 +5,6 @@ import {
   Activity,
   ArrowRight,
   Brain,
-  BriefcaseBusiness,
   CheckCircle2,
   Coins,
   Crown,
@@ -15,7 +14,9 @@ import {
   History,
   LoaderCircle,
   Scale,
+  Shield,
   Sparkles,
+  Sword,
   Target,
   TrendingUp,
   Trophy,
@@ -31,6 +32,16 @@ import { supabase } from '@/lib/supabase';
 import { localDayBounds } from '@/lib/date';
 
 type StatKey = keyof HunterStats;
+
+interface EvolutionEvent {
+  id: string;
+  title: string;
+  reward: string;
+  domain: string;
+  color: string;
+  icon: React.ComponentType<{ className?: string }>;
+  timestamp: string | null;
+}
 
 const STAT_META: Array<{
   key: StatKey;
@@ -70,6 +81,30 @@ const NEXT_RANK: Record<string, string> = {
   Monarch: 'Máximo',
 };
 
+const DOMAIN_META: Array<{
+  key: StatKey;
+  name: string;
+  attributes: string;
+  color: string;
+  nextReward: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { key: 'strength', name: 'Força', attributes: 'FOR', color: 'from-red-500 to-orange-500', nextReward: '+1 Potência', icon: Sword },
+  { key: 'intelligence', name: 'Inteligência', attributes: 'INT', color: 'from-blue-500 to-indigo-500', nextReward: 'Leitura Consistente', icon: Brain },
+  { key: 'endurance', name: 'Resistência', attributes: 'RES', color: 'from-emerald-500 to-teal-500', nextReward: '+1 Fôlego', icon: Shield },
+  { key: 'vitality', name: 'Vitalidade', attributes: 'VIT', color: 'from-amber-500 to-orange-500', nextReward: '+1 Recuperação', icon: HeartPulse },
+  { key: 'discipline', name: 'Disciplina', attributes: 'DIS', color: 'from-purple-500 to-fuchsia-500', nextReward: 'Foco Profundo', icon: Target },
+  { key: 'wisdom', name: 'Sabedoria', attributes: 'SAB', color: 'from-cyan-500 to-blue-500', nextReward: '+1 Percepção', icon: Coins },
+  { key: 'balance', name: 'Equilíbrio', attributes: 'EQU', color: 'from-pink-500 to-rose-500', nextReward: '+1 Harmonia', icon: Scale },
+];
+
+function formatEvolutionTime(timestamp: string | null) {
+  if (!timestamp) return 'Hoje';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return 'Hoje';
+  return `Hoje, ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 export function Dashboard() {
   const state = useHunterStore();
   const { user } = useAuth();
@@ -85,8 +120,8 @@ export function Dashboard() {
 
   const [todayVolume, setTodayVolume] = React.useState(0);
   const [tasksCompletedToday, setTasksCompletedToday] = React.useState(0);
-  const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = React.useState(false);
   const [loadingDailySignals, setLoadingDailySignals] = React.useState(true);
+  const [evolutionHistory, setEvolutionHistory] = React.useState<EvolutionEvent[]>([]);
   const [isAvatarOpen, setIsAvatarOpen] = React.useState(false);
 
   const workoutStatusKey = React.useMemo(
@@ -103,25 +138,40 @@ export function Dashboard() {
       setLoadingDailySignals(true);
       const { startIso, endIso } = localDayBounds();
 
-      const [workouts, tasks, finances] = await Promise.all([
+      const [workouts, tasks, finances, habitCompletions, routineCompletions, mealCompletions] = await Promise.all([
         supabase
           .from('workout_logs')
-          .select('sets, reps, weight_kg')
+          .select('id, sets, reps, weight_kg, logged_at')
           .eq('user_id', user.id)
           .gte('logged_at', startIso)
           .lte('logged_at', endIso),
         supabase
           .from('tasks')
-          .select('*', { count: 'exact', head: true })
+          .select('id, title, xp_reward, stat_target, stat_reward, completed_at')
           .eq('user_id', user.id)
           .eq('completed', true)
           .gte('completed_at', startIso)
           .lte('completed_at', endIso),
         supabase
           .from('financial_logs')
-          .select('id')
+          .select('id, description, type, created_at')
           .eq('user_id', user.id)
           .eq('date', startIso.split('T')[0]),
+        supabase
+          .from('habit_completions')
+          .select('id, created_at, habit:habits(title, xp_reward, stat_target, stat_reward)')
+          .eq('user_id', user.id)
+          .eq('completed_date', startIso.split('T')[0]),
+        supabase
+          .from('routine_completions')
+          .select('id, xp_awarded, created_at, routine:workout_routines(name)')
+          .eq('user_id', user.id)
+          .eq('completed_date', startIso.split('T')[0]),
+        supabase
+          .from('meal_completions')
+          .select('id, created_at, meal_plan:meal_plans(name)')
+          .eq('user_id', user.id)
+          .eq('completed_at', startIso.split('T')[0]),
       ]);
 
       if (!workouts.error) {
@@ -132,8 +182,93 @@ export function Dashboard() {
           ),
         );
       }
-      if (!tasks.error) setTasksCompletedToday(tasks.count || 0);
-      if (!finances.error) setHasLoggedFinanceToday((finances.data || []).length > 0);
+      if (!tasks.error) setTasksCompletedToday((tasks.data || []).length);
+      const events: EvolutionEvent[] = [];
+      const statDomain = (statTarget: string | null) => {
+        const stat = STAT_META.find(item => item.key === statTarget);
+        return stat ? stat.name : 'Evolução';
+      };
+      const statLabel = (statTarget: string | null) => {
+        const stat = STAT_META.find(item => item.key === statTarget);
+        return stat?.label || null;
+      };
+
+      (tasks.data || []).forEach(task => {
+        const attribute = statLabel(task.stat_target);
+        events.push({
+          id: `task-${task.id}`,
+          title: task.title,
+          reward: `+${task.xp_reward || 0} XP${attribute ? ` · ${attribute} +${task.stat_reward || 0}` : ''}`,
+          domain: statDomain(task.stat_target),
+          color: 'text-blue-400',
+          icon: CheckCircle2,
+          timestamp: task.completed_at,
+        });
+      });
+
+      (habitCompletions.data || []).forEach((completion: any) => {
+        const habit = Array.isArray(completion.habit) ? completion.habit[0] : completion.habit;
+        if (!habit) return;
+        const attribute = statLabel(habit.stat_target);
+        events.push({
+          id: `habit-${completion.id}`,
+          title: habit.title,
+          reward: `+${habit.xp_reward || 0} XP${attribute ? ` · ${attribute} +${habit.stat_reward || 0}` : ''}`,
+          domain: statDomain(habit.stat_target),
+          color: 'text-cyan-400',
+          icon: CheckCircle2,
+          timestamp: completion.created_at,
+        });
+      });
+
+      (routineCompletions.data || []).forEach((completion: any) => {
+        const routine = Array.isArray(completion.routine) ? completion.routine[0] : completion.routine;
+        const statTarget = routine?.name?.toLowerCase().includes('cardio') ? 'endurance' : 'strength';
+        const attribute = statLabel(statTarget);
+        events.push({
+          id: `routine-${completion.id}`,
+          title: routine?.name || 'Treino concluído',
+          reward: `+${completion.xp_awarded || 0} XP · ${attribute} +2`,
+          domain: statDomain(statTarget),
+          color: 'text-purple-400',
+          icon: Dumbbell,
+          timestamp: completion.created_at,
+        });
+      });
+
+      (mealCompletions.data || []).forEach((completion: any) => {
+        const meal = Array.isArray(completion.meal_plan) ? completion.meal_plan[0] : completion.meal_plan;
+        events.push({
+          id: `meal-${completion.id}`,
+          title: meal?.name || 'Refeição registrada',
+          reward: 'Recuperação registrada · VIT',
+          domain: 'Vitalidade',
+          color: 'text-orange-400',
+          icon: Flame,
+          timestamp: completion.created_at,
+        });
+      });
+
+      (finances.data || []).forEach(log => {
+        const wisdomGain = log.type === 'investment' ? ' · SAB +1' : '';
+        events.push({
+          id: `finance-${log.id}`,
+          title: log.description || 'Finanças atualizadas',
+          reward: `+10 XP${wisdomGain}`,
+          domain: 'Sabedoria',
+          color: 'text-emerald-400',
+          icon: Coins,
+          timestamp: log.created_at,
+        });
+      });
+
+      events.sort((a, b) => {
+        if (!a.timestamp && !b.timestamp) return 0;
+        if (!a.timestamp) return 1;
+        if (!b.timestamp) return -1;
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      });
+      setEvolutionHistory(events);
       setLoadingDailySignals(false);
     }
 
@@ -246,7 +381,7 @@ export function Dashboard() {
     }
 
     return {
-      title: 'Todas as missões detectadas foram concluídas',
+      title: 'Todas as missões de hoje foram concluídas.',
       eyebrow: 'Sistema sincronizado',
       reward: `+${state.xpGainedToday || xpEarnedToday} XP hoje`,
       impact: 'Próxima quest em preparação',
@@ -265,67 +400,19 @@ export function Dashboard() {
   ]);
 
   const domains = React.useMemo(() => {
-    const values = {
-      Corpo: Math.round((state.stats.strength + state.stats.endurance + state.stats.vitality) / 3),
-      Mente: state.stats.intelligence,
-      Fortuna: state.stats.wisdom,
-      Carreira: state.stats.discipline,
-      Equilíbrio: state.stats.balance,
-    };
-
-    return [
-      {
-        name: 'Corpo',
-        value: values.Corpo,
-        attributes: 'FOR · RES · VIT',
-        color: 'from-red-500 to-orange-500',
-        lastGain: workoutMissions.some(mission => mission.isCompleted) ? 'Treino concluído hoje' : 'Aguardando atividade física',
-        nextReward: '+1 Vitalidade',
-        icon: Dumbbell,
-      },
-      {
-        name: 'Mente',
-        value: values.Mente,
-        attributes: 'INT',
-        color: 'from-purple-500 to-indigo-500',
-        lastGain: statVariation.intelligence > 0 ? 'Missão de estudo concluída' : 'Sem ganho recente',
-        nextReward: 'Leitura Consistente',
-        icon: Brain,
-      },
-      {
-        name: 'Fortuna',
-        value: values.Fortuna,
-        attributes: 'SAB',
-        color: 'from-emerald-500 to-teal-500',
-        lastGain: hasLoggedFinanceToday ? 'Finanças atualizadas hoje' : 'Registro financeiro pendente',
-        nextReward: '+1 Sabedoria',
-        icon: Coins,
-      },
-      {
-        name: 'Carreira',
-        value: values.Carreira,
-        attributes: 'DIS',
-        color: 'from-blue-500 to-cyan-500',
-        lastGain: tasksCompletedToday > 0 ? `${tasksCompletedToday} tarefa(s) concluída(s)` : 'Missão produtiva pendente',
-        nextReward: 'Foco Profundo',
-        icon: BriefcaseBusiness,
-      },
-      {
-        name: 'Equilíbrio',
-        value: values.Equilíbrio,
-        attributes: 'EQU',
-        color: 'from-pink-500 to-rose-500',
-        lastGain: statVariation.balance > 0 ? 'Rotina de equilíbrio concluída' : 'Recuperação recomendada',
-        nextReward: '+1 Equilíbrio',
-        icon: Scale,
-      },
-    ].map(domain => ({
-      ...domain,
-      level: Math.max(1, Math.floor(domain.value / 10)),
-      progress: (domain.value % 10) * 10,
-      xpRemaining: 100 - (domain.value % 10) * 10,
-    }));
-  }, [hasLoggedFinanceToday, state.stats, statVariation, tasksCompletedToday, workoutMissions]);
+    return DOMAIN_META.map(domain => {
+      const value = state.stats[domain.key];
+      const latestEvent = evolutionHistory.find(event => event.domain === domain.name);
+      return {
+        ...domain,
+        value,
+        level: Math.max(1, Math.floor(value / 10)),
+        progress: (value % 10) * 10,
+        xpRemaining: 100 - (value % 10) * 10,
+        lastGain: latestEvent?.title || (statVariation[domain.key] > 0 ? `+${statVariation[domain.key]} registrado hoje` : 'Sem ganho recente'),
+      };
+    });
+  }, [evolutionHistory, state.stats, statVariation]);
 
   const profileReading = React.useMemo(() => {
     const rankedStats = STAT_META
@@ -340,62 +427,20 @@ export function Dashboard() {
   }, [domains, state.stats]);
 
   const evolutionEvents = React.useMemo(() => {
-    const events: Array<{
-      title: string;
-      detail: string;
-      color: string;
-      icon: React.ComponentType<{ className?: string }>;
-      time: string;
-    }> = [];
-
-    activeHabits
-      .filter(habit => completedToday.has(habit.id))
-      .slice(0, 3)
-      .forEach(habit => {
-        const stat = STAT_META.find(item => item.key === habit.stat_target);
-        events.push({
-          title: habit.stat_target ? `+${habit.stat_reward} ${stat?.label || 'ATR'}` : `+${habit.xp_reward} XP`,
-          detail: `${habit.title} · +${habit.xp_reward} XP`,
-          color: 'text-blue-400',
-          icon: CheckCircle2,
-          time: habit.scheduled_time?.slice(0, 5) || 'Hoje',
-        });
-      });
-
-    const completedWorkout = workoutMissions.find(mission => mission.isCompleted);
-    if (completedWorkout) {
-      events.push({
-        title: `+${completedWorkout.stat_reward} ${completedWorkout.stat_target === 'strength' ? 'FOR' : 'RES'}`,
-        detail: `${completedWorkout.title} · +${completedWorkout.xp_reward} XP`,
-        color: 'text-purple-400',
-        icon: Dumbbell,
-        time: completedWorkout.scheduled_time || 'Hoje',
-      });
-    }
-    if (hasLoggedFinanceToday) {
-      events.push({ title: '+1 SAB', detail: 'Finanças atualizadas', color: 'text-emerald-400', icon: Coins, time: 'Hoje' });
-    }
+    const events = [...evolutionHistory];
     if (state.streak.current > 0) {
       events.push({
-        title: `Streak ${state.streak.current}d`,
-        detail: 'Consistência diária mantida',
+        id: 'streak-current',
+        title: 'Sequência mantida',
+        reward: `Streak ${state.streak.current} dias`,
+        domain: 'Disciplina',
         color: 'text-orange-400',
         icon: Flame,
-        time: 'Hoje',
+        timestamp: null,
       });
     }
-    if (state.xpGainedToday > 0) {
-      events.push({
-        title: `+${state.xpGainedToday} XP`,
-        detail: 'Experiência acumulada hoje',
-        color: 'text-amber-400',
-        icon: Zap,
-        time: 'Agora',
-      });
-    }
-
-    return events.slice(0, 6);
-  }, [activeHabits, completedToday, hasLoggedFinanceToday, state.streak.current, state.xpGainedToday, workoutMissions]);
+    return events;
+  }, [evolutionHistory, state.streak.current]);
 
   const xpPercent = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
   const nextRankLevel = RANK_LEVELS[state.rank] || 150;
@@ -624,7 +669,7 @@ export function Dashboard() {
             <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Domínios de Evolução</h2>
           </div>
 
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {domains.map(domain => {
               const Icon = domain.icon;
               return (
@@ -672,7 +717,7 @@ export function Dashboard() {
         </motion.section>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid items-start gap-6 lg:grid-cols-12">
         <motion.section
           id="tour-history"
           initial={{ opacity: 0, y: 12 }}
@@ -687,29 +732,43 @@ export function Dashboard() {
             <History className="h-5 w-5 text-cyan-400" />
           </div>
 
-          <div className="mt-5 space-y-1">
-            {evolutionEvents.length > 0 ? evolutionEvents.map((event, index) => {
+          <div className={`mt-5 ${evolutionEvents.length > 4 ? 'max-h-[420px] overflow-y-auto pr-2' : ''} scrollbar-none`}>
+            {loadingDailySignals ? (
+              <div className="flex min-h-28 items-center justify-center rounded-2xl border border-dashed border-[#252530] bg-black/20">
+                <LoaderCircle className="h-5 w-5 animate-spin text-cyan-500" />
+                <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-gray-600">Sincronizando registros</span>
+              </div>
+            ) : evolutionEvents.length > 0 ? evolutionEvents.map((event, index) => {
               const Icon = event.icon;
               return (
-                <div key={`${event.title}-${index}`} className="group relative flex gap-4 rounded-xl px-1 py-3 transition-colors hover:bg-white/[0.02]">
+                <div key={event.id} className="group relative flex gap-4 rounded-xl px-1 py-3 transition-colors hover:bg-white/[0.02]">
                   {index < evolutionEvents.length - 1 && <div className="absolute left-[17px] top-10 h-[calc(100%-20px)] w-px bg-[#252530]" />}
-                  <div className="relative z-10 flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-black/40">
+                  <div className="relative z-10 flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-black/50 shadow-[0_0_14px_rgba(34,211,238,0.05)]">
                     <Icon className={`h-4 w-4 ${event.color}`} />
                   </div>
                   <div className="min-w-0 flex-1 border-b border-[#1E1E26] pb-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className={`text-xs font-black uppercase tracking-wider font-orbitron ${event.color}`}>{event.title}</p>
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">{event.time}</span>
+                      <p className="text-xs font-black uppercase tracking-wider text-white font-orbitron">{event.title}</p>
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">{formatEvolutionTime(event.timestamp)}</span>
                     </div>
-                    <p className="mt-1 text-xs font-medium text-gray-400">{event.detail}</p>
+                    <p className={`mt-1 text-[10px] font-black uppercase tracking-wider ${event.color}`}>{event.reward}</p>
+                    <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-600">Domínio: {event.domain}</p>
                   </div>
                 </div>
               );
             }) : (
-              <div className="rounded-2xl border border-dashed border-[#252530] bg-black/20 p-8 text-center">
+              <div className="rounded-2xl border border-dashed border-[#252530] bg-black/20 p-6 text-center">
                 <Sparkles className="mx-auto h-6 w-6 text-gray-700" />
                 <p className="mt-3 text-xs font-black uppercase tracking-wider text-gray-500 font-orbitron">O Sistema ainda não registrou evolução hoje.</p>
                 <p className="mt-1 text-xs text-gray-600">Complete uma missão para gerar seu primeiro registro.</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/quests')}
+                  className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-4 text-[9px] font-black uppercase tracking-[0.14em] text-cyan-300 transition-all hover:border-cyan-400/50 hover:bg-cyan-500/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70"
+                >
+                  Ver missões disponíveis
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
               </div>
             )}
           </div>
