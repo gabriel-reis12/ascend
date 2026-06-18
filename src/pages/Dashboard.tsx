@@ -1,7 +1,9 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Activity,
+  ArrowRight,
   Brain,
   BriefcaseBusiness,
   CheckCircle2,
@@ -11,6 +13,7 @@ import {
   Flame,
   HeartPulse,
   History,
+  LoaderCircle,
   Scale,
   Sparkles,
   Target,
@@ -70,17 +73,20 @@ const NEXT_RANK: Record<string, string> = {
 export function Dashboard() {
   const state = useHunterStore();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const {
     activeHabits,
     completedToday,
     workoutMissions,
     mealMissions,
     xpEarnedToday,
+    loading: habitsLoading,
   } = useHabits();
 
   const [todayVolume, setTodayVolume] = React.useState(0);
   const [tasksCompletedToday, setTasksCompletedToday] = React.useState(0);
   const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = React.useState(false);
+  const [loadingDailySignals, setLoadingDailySignals] = React.useState(true);
   const [isAvatarOpen, setIsAvatarOpen] = React.useState(false);
 
   const workoutStatusKey = React.useMemo(
@@ -90,7 +96,11 @@ export function Dashboard() {
 
   React.useEffect(() => {
     async function fetchDailySignals() {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setLoadingDailySignals(false);
+        return;
+      }
+      setLoadingDailySignals(true);
       const { startIso, endIso } = localDayBounds();
 
       const [workouts, tasks, finances] = await Promise.all([
@@ -124,6 +134,7 @@ export function Dashboard() {
       }
       if (!tasks.error) setTasksCompletedToday(tasks.count || 0);
       if (!finances.error) setHasLoggedFinanceToday((finances.data || []).length > 0);
+      setLoadingDailySignals(false);
     }
 
     void fetchDailySignals();
@@ -151,6 +162,21 @@ export function Dashboard() {
     return variations;
   }, [activeHabits, completedToday, workoutMissions]);
 
+  const statRecentXp = React.useMemo(() => {
+    const xpByStat = Object.fromEntries(STAT_META.map(stat => [stat.key, 0])) as Record<StatKey, number>;
+
+    activeHabits.forEach(habit => {
+      if (completedToday.has(habit.id) && habit.stat_target) {
+        xpByStat[habit.stat_target] += habit.xp_reward || 0;
+      }
+    });
+    workoutMissions.forEach(mission => {
+      if (mission.isCompleted) xpByStat[mission.stat_target] += mission.xp_reward || 0;
+    });
+
+    return xpByStat;
+  }, [activeHabits, completedToday, workoutMissions]);
+
   const statsData = React.useMemo(
     () => STAT_META.map(stat => ({ label: stat.label, value: state.stats[stat.key], max: 100 })),
     [state.stats],
@@ -175,6 +201,69 @@ export function Dashboard() {
     };
   }, [activeHabits.length, completedToday, mealMissions, tasksCompletedToday, workoutMissions]);
 
+  const nextMission = React.useMemo(() => {
+    const workout = workoutMissions.find(mission => !mission.isCompleted);
+    if (workout) {
+      return {
+        title: workout.title,
+        eyebrow: 'Missão física prioritária',
+        reward: `+${workout.xp_reward} XP`,
+        impact: `${workout.stat_target === 'strength' ? 'FOR' : 'RES'} +${workout.stat_reward}`,
+        path: '/workouts',
+        action: 'Iniciar missão',
+        time: workout.scheduled_time,
+        icon: Dumbbell,
+      };
+    }
+
+    const habit = activeHabits.find(item => !completedToday.has(item.id));
+    if (habit) {
+      const stat = STAT_META.find(item => item.key === habit.stat_target);
+      return {
+        title: habit.title,
+        eyebrow: 'Quest diária recomendada',
+        reward: `+${habit.xp_reward} XP`,
+        impact: habit.stat_target ? `${stat?.label || 'ATR'} +${habit.stat_reward}` : 'XP de evolução',
+        path: '/quests',
+        action: 'Ver missão',
+        time: habit.scheduled_time?.slice(0, 5) || null,
+        icon: CheckCircle2,
+      };
+    }
+
+    const meal = mealMissions.find(mission => !mission.isCompleted);
+    if (meal) {
+      return {
+        title: meal.title,
+        eyebrow: 'Protocolo de recuperação',
+        reward: meal.xp_reward > 0 ? `+${meal.xp_reward} XP` : `${meal.totalKcal} kcal`,
+        impact: 'VIT · Recuperação',
+        path: '/nutrition',
+        action: 'Ver missão',
+        time: meal.scheduled_time,
+        icon: Flame,
+      };
+    }
+
+    return {
+      title: 'Todas as missões detectadas foram concluídas',
+      eyebrow: 'Sistema sincronizado',
+      reward: `+${state.xpGainedToday || xpEarnedToday} XP hoje`,
+      impact: 'Próxima quest em preparação',
+      path: '/quests',
+      action: 'Abrir missões',
+      time: null,
+      icon: Trophy,
+    };
+  }, [
+    activeHabits,
+    completedToday,
+    mealMissions,
+    state.xpGainedToday,
+    workoutMissions,
+    xpEarnedToday,
+  ]);
+
   const domains = React.useMemo(() => {
     const values = {
       Corpo: Math.round((state.stats.strength + state.stats.endurance + state.stats.vitality) / 3),
@@ -191,6 +280,7 @@ export function Dashboard() {
         attributes: 'FOR · RES · VIT',
         color: 'from-red-500 to-orange-500',
         lastGain: workoutMissions.some(mission => mission.isCompleted) ? 'Treino concluído hoje' : 'Aguardando atividade física',
+        nextReward: '+1 Vitalidade',
         icon: Dumbbell,
       },
       {
@@ -199,6 +289,7 @@ export function Dashboard() {
         attributes: 'INT',
         color: 'from-purple-500 to-indigo-500',
         lastGain: statVariation.intelligence > 0 ? 'Missão de estudo concluída' : 'Sem ganho recente',
+        nextReward: 'Leitura Consistente',
         icon: Brain,
       },
       {
@@ -207,6 +298,7 @@ export function Dashboard() {
         attributes: 'SAB',
         color: 'from-emerald-500 to-teal-500',
         lastGain: hasLoggedFinanceToday ? 'Finanças atualizadas hoje' : 'Registro financeiro pendente',
+        nextReward: '+1 Sabedoria',
         icon: Coins,
       },
       {
@@ -215,6 +307,7 @@ export function Dashboard() {
         attributes: 'DIS',
         color: 'from-blue-500 to-cyan-500',
         lastGain: tasksCompletedToday > 0 ? `${tasksCompletedToday} tarefa(s) concluída(s)` : 'Missão produtiva pendente',
+        nextReward: 'Foco Profundo',
         icon: BriefcaseBusiness,
       },
       {
@@ -223,12 +316,14 @@ export function Dashboard() {
         attributes: 'EQU',
         color: 'from-pink-500 to-rose-500',
         lastGain: statVariation.balance > 0 ? 'Rotina de equilíbrio concluída' : 'Recuperação recomendada',
+        nextReward: '+1 Equilíbrio',
         icon: Scale,
       },
     ].map(domain => ({
       ...domain,
       level: Math.max(1, Math.floor(domain.value / 10)),
       progress: (domain.value % 10) * 10,
+      xpRemaining: 100 - (domain.value % 10) * 10,
     }));
   }, [hasLoggedFinanceToday, state.stats, statVariation, tasksCompletedToday, workoutMissions]);
 
@@ -250,6 +345,7 @@ export function Dashboard() {
       detail: string;
       color: string;
       icon: React.ComponentType<{ className?: string }>;
+      time: string;
     }> = [];
 
     activeHabits
@@ -259,9 +355,10 @@ export function Dashboard() {
         const stat = STAT_META.find(item => item.key === habit.stat_target);
         events.push({
           title: habit.stat_target ? `+${habit.stat_reward} ${stat?.label || 'ATR'}` : `+${habit.xp_reward} XP`,
-          detail: habit.title,
+          detail: `${habit.title} · +${habit.xp_reward} XP`,
           color: 'text-blue-400',
           icon: CheckCircle2,
+          time: habit.scheduled_time?.slice(0, 5) || 'Hoje',
         });
       });
 
@@ -269,13 +366,14 @@ export function Dashboard() {
     if (completedWorkout) {
       events.push({
         title: `+${completedWorkout.stat_reward} ${completedWorkout.stat_target === 'strength' ? 'FOR' : 'RES'}`,
-        detail: completedWorkout.title,
+        detail: `${completedWorkout.title} · +${completedWorkout.xp_reward} XP`,
         color: 'text-purple-400',
         icon: Dumbbell,
+        time: completedWorkout.scheduled_time || 'Hoje',
       });
     }
     if (hasLoggedFinanceToday) {
-      events.push({ title: '+1 SAB', detail: 'Finanças atualizadas', color: 'text-emerald-400', icon: Coins });
+      events.push({ title: '+1 SAB', detail: 'Finanças atualizadas', color: 'text-emerald-400', icon: Coins, time: 'Hoje' });
     }
     if (state.streak.current > 0) {
       events.push({
@@ -283,6 +381,7 @@ export function Dashboard() {
         detail: 'Consistência diária mantida',
         color: 'text-orange-400',
         icon: Flame,
+        time: 'Hoje',
       });
     }
     if (state.xpGainedToday > 0) {
@@ -291,6 +390,7 @@ export function Dashboard() {
         detail: 'Experiência acumulada hoje',
         color: 'text-amber-400',
         icon: Zap,
+        time: 'Agora',
       });
     }
 
@@ -300,6 +400,7 @@ export function Dashboard() {
   const xpPercent = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
   const nextRankLevel = RANK_LEVELS[state.rank] || 150;
   const rankProgress = state.rank === 'Monarch' ? 100 : Math.min(100, (state.level / nextRankLevel) * 100);
+  const NextMissionIcon = nextMission.icon;
 
   return (
     <div className="space-y-6 pb-12">
@@ -384,6 +485,48 @@ export function Dashboard() {
         </div>
       </motion.section>
 
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.03 }}
+        className="relative overflow-hidden rounded-2xl border border-purple-500/25 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(124,58,237,0.08)]"
+      >
+        <div className="absolute right-0 top-0 h-full w-72 bg-gradient-to-l from-purple-500/10 via-blue-500/5 to-transparent" />
+        <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-purple-400/20 bg-purple-500/10 text-purple-300 shadow-[0_0_18px_rgba(124,58,237,0.14)]">
+              {habitsLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <NextMissionIcon className="h-5 w-5" />}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">Missão Principal</p>
+                {nextMission.time && (
+                  <span className="rounded-md border border-white/5 bg-white/5 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-gray-500">
+                    {nextMission.time}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-600">{nextMission.eyebrow}</p>
+              <h2 className="mt-2 text-lg font-black uppercase tracking-tight text-white font-orbitron">{nextMission.title}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                <span className="text-amber-400">{nextMission.reward}</span>
+                <span className="text-gray-700">•</span>
+                <span className="text-blue-300">{nextMission.impact}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(nextMission.path)}
+            disabled={habitsLoading}
+            className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-5 text-[10px] font-black uppercase tracking-[0.15em] text-purple-200 transition-all hover:border-purple-400/60 hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(124,58,237,0.2)] disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
+          >
+            {habitsLoading ? 'Sincronizando' : nextMission.action}
+            {!habitsLoading && <ArrowRight className="h-4 w-4" />}
+          </button>
+        </div>
+      </motion.section>
+
       <section aria-labelledby="attributes-title">
         <div className="mb-4 flex items-end justify-between">
           <div>
@@ -400,17 +543,33 @@ export function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.04 }}
               title={stat.name}
-              className={`relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-4 transition-all hover:-translate-y-0.5 ${stat.border}`}
+              className={`group relative overflow-hidden rounded-2xl border bg-[#0F0F13] p-4 transition-all duration-300 hover:-translate-y-0.5 ${
+                statVariation[stat.key] > 0
+                  ? `border-white/10 shadow-[0_0_22px_rgba(59,130,246,0.08)] ${stat.border}`
+                  : `border-[#1E1E26] ${stat.border}`
+              }`}
             >
+              {statVariation[stat.key] > 0 && (
+                <motion.div
+                  className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.9)]"
+                  animate={{ opacity: [0.45, 1, 0.45], scale: [0.9, 1.2, 0.9] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                />
+              )}
               <div className="flex items-start justify-between">
                 <span className={`text-sm font-black tracking-widest font-orbitron ${stat.color}`}>{stat.label}</span>
-                <Activity className="h-3.5 w-3.5 text-gray-700" />
+                <Activity className={`h-3.5 w-3.5 transition-colors ${statVariation[stat.key] > 0 ? stat.color : 'text-gray-700 group-hover:text-gray-500'}`} />
               </div>
               <p className="mt-3 text-3xl font-black italic text-white font-orbitron">{state.stats[stat.key]}</p>
               <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-600">{stat.name}</p>
-              <p className={`mt-3 text-[9px] font-black uppercase tracking-wider ${statVariation[stat.key] > 0 ? stat.color : 'text-gray-700'}`}>
-                {statVariation[stat.key] > 0 ? `+${statVariation[stat.key]} hoje` : 'Sem variação hoje'}
-              </p>
+              <div className="mt-3 min-h-8">
+                <p className={`text-[9px] font-black uppercase tracking-wider ${statVariation[stat.key] > 0 ? stat.color : 'text-gray-600'}`}>
+                  {statVariation[stat.key] > 0 ? `+${statVariation[stat.key]} hoje` : 'Sem variação hoje'}
+                </p>
+                <p className={`mt-1 text-[8px] font-bold uppercase tracking-wider ${statRecentXp[stat.key] > 0 ? 'text-amber-400/80' : 'text-gray-800'}`}>
+                  {statRecentXp[stat.key] > 0 ? `+${statRecentXp[stat.key]} XP recente` : 'Aguardando evolução'}
+                </p>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -469,7 +628,7 @@ export function Dashboard() {
             {domains.map(domain => {
               const Icon = domain.icon;
               return (
-                <div key={domain.name} className="rounded-2xl border border-[#1E1E26] bg-black/25 p-4 transition-colors hover:border-white/10">
+                <div key={domain.name} className="group rounded-2xl border border-[#1E1E26] bg-black/25 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:bg-black/35">
                   <div className="flex items-start gap-3">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5 text-gray-300">
                       <Icon className="h-5 w-5" />
@@ -490,10 +649,20 @@ export function Dashboard() {
                           initial={{ width: 0 }}
                           animate={{ width: `${domain.progress}%` }}
                           transition={{ duration: 0.6, ease: 'easeOut' }}
-                          className={`h-full rounded-full bg-gradient-to-r ${domain.color}`}
+                          className={`h-full rounded-full bg-gradient-to-r shadow-[0_0_10px_rgba(96,165,250,0.15)] ${domain.color}`}
                         />
                       </div>
-                      <p className="mt-2 text-[10px] font-semibold text-gray-500">{domain.lastGain}</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div>
+                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-700">Último registro</p>
+                          <p className="mt-1 text-[10px] font-semibold text-gray-500">{domain.lastGain}</p>
+                        </div>
+                        <div className="sm:text-right">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-700">Próximo marco</p>
+                          <p className="mt-1 text-[10px] font-bold text-purple-300">{domain.nextReward}</p>
+                          <p className="mt-0.5 text-[9px] font-semibold text-gray-600">{domain.xpRemaining} XP restantes</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -522,7 +691,7 @@ export function Dashboard() {
             {evolutionEvents.length > 0 ? evolutionEvents.map((event, index) => {
               const Icon = event.icon;
               return (
-                <div key={`${event.title}-${index}`} className="relative flex gap-4 py-3">
+                <div key={`${event.title}-${index}`} className="group relative flex gap-4 rounded-xl px-1 py-3 transition-colors hover:bg-white/[0.02]">
                   {index < evolutionEvents.length - 1 && <div className="absolute left-[17px] top-10 h-[calc(100%-20px)] w-px bg-[#252530]" />}
                   <div className="relative z-10 flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-black/40">
                     <Icon className={`h-4 w-4 ${event.color}`} />
@@ -530,7 +699,7 @@ export function Dashboard() {
                   <div className="min-w-0 flex-1 border-b border-[#1E1E26] pb-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className={`text-xs font-black uppercase tracking-wider font-orbitron ${event.color}`}>{event.title}</p>
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-gray-700">Hoje</span>
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">{event.time}</span>
                     </div>
                     <p className="mt-1 text-xs font-medium text-gray-400">{event.detail}</p>
                   </div>
@@ -539,8 +708,8 @@ export function Dashboard() {
             }) : (
               <div className="rounded-2xl border border-dashed border-[#252530] bg-black/20 p-8 text-center">
                 <Sparkles className="mx-auto h-6 w-6 text-gray-700" />
-                <p className="mt-3 text-xs font-black uppercase tracking-wider text-gray-500 font-orbitron">Nenhuma evolução registrada hoje</p>
-                <p className="mt-1 text-xs text-gray-600">Conclua uma missão para iniciar sua timeline.</p>
+                <p className="mt-3 text-xs font-black uppercase tracking-wider text-gray-500 font-orbitron">O Sistema ainda não registrou evolução hoje.</p>
+                <p className="mt-1 text-xs text-gray-600">Complete uma missão para gerar seu primeiro registro.</p>
               </div>
             )}
           </div>
@@ -560,21 +729,26 @@ export function Dashboard() {
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             {[
-              { label: 'Mana', value: `${dailySummary.calories}`, unit: 'kcal', icon: Flame, color: 'text-orange-400' },
-              { label: 'Volume', value: `${Math.round(todayVolume)}`, unit: 'kg', icon: Dumbbell, color: 'text-blue-400' },
-              { label: 'Ritmo', value: `${dailySummary.progress}`, unit: '%', icon: TrendingUp, color: 'text-purple-400' },
-              { label: 'Streak', value: `${state.streak.current}`, unit: 'dias', icon: Flame, color: 'text-amber-400' },
+              { label: 'Mana', detail: 'Energia registrada', value: `${dailySummary.calories}`, unit: 'kcal', icon: Flame, color: 'text-orange-400' },
+              { label: 'Força Vital', detail: 'Volume mobilizado', value: `${Math.round(todayVolume)}`, unit: 'kg', icon: Dumbbell, color: 'text-blue-400' },
+              { label: 'Ritmo de Evolução', detail: 'Progresso diário', value: `${dailySummary.progress}`, unit: '%', icon: TrendingUp, color: 'text-purple-400' },
+              { label: 'Sequência', detail: 'Dias consecutivos', value: `${state.streak.current}`, unit: 'dias', icon: Flame, color: 'text-amber-400' },
             ].map(resource => {
               const Icon = resource.icon;
               return (
-                <div key={resource.label} className="rounded-2xl border border-[#1E1E26] bg-black/25 p-4">
+                <div key={resource.label} className="group rounded-2xl border border-[#1E1E26] bg-black/25 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:bg-black/35">
                   <div className="flex items-center justify-between">
                     <Icon className={`h-4 w-4 ${resource.color}`} />
                     <span className="text-[8px] font-black uppercase tracking-wider text-gray-600">{resource.label}</span>
                   </div>
                   <p className="mt-4 text-xl font-black italic text-white font-orbitron">
-                    {resource.value} <span className="text-[9px] font-bold not-italic text-gray-600">{resource.unit}</span>
+                    {loadingDailySignals ? (
+                      <LoaderCircle className="h-5 w-5 animate-spin text-gray-600" />
+                    ) : (
+                      <>{resource.value} <span className="text-[9px] font-bold not-italic text-gray-600">{resource.unit}</span></>
+                    )}
                   </p>
+                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-gray-700">{resource.detail}</p>
                 </div>
               );
             })}
