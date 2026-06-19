@@ -109,6 +109,15 @@ function inferDifficulty(exercise: Exercise) {
   return 'Intermediário';
 }
 
+const TRAINING_TABS = [
+  { id: 'routines' as const, title: 'Hoje', description: 'Missão física atual', icon: Target, tone: 'purple' },
+  { id: 'presets' as const, title: 'Protocolos', description: 'Modelos de treino', icon: Layers, tone: 'amber' },
+  { id: 'progress' as const, title: 'Evolução', description: 'Dados e progresso', icon: TrendingUp, tone: 'blue' },
+  { id: 'library' as const, title: 'Arsenal', description: 'Biblioteca de exercícios', icon: Dumbbell, tone: 'cyan' },
+];
+
+const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
 export function Workouts() {
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
@@ -375,6 +384,10 @@ export function Workouts() {
 
   async function handleStartRoutine(routine: WorkoutRoutine) {
     if (!routine.exercises || routine.exercises.length === 0) return;
+    if (sessionRoutineId === routine.id && sessionExercises.length > 0) {
+      setIsRoutineSessionOpen(true);
+      return;
+    }
     const sortedExercises = [...routine.exercises].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     setSessionExercises(sortedExercises);
     setCompletedSessionExs([]);
@@ -722,6 +735,37 @@ export function Workouts() {
   const todayRoutine = routines.find(routine => routine.scheduled_days?.includes(new Date().getDay())) || null;
   const todayRoutineIsCardio = todayRoutine?.exercises?.some(item => item.exercise?.category?.toLowerCase() === 'cardio') || false;
   const todayRoutineDuration = todayRoutine ? Math.max(25, (todayRoutine.exercises?.length || 1) * 8) : 0;
+  const activeSessionProgress = sessionExercises.length > 0 ? Math.round((completedSessionExs.length / sessionExercises.length) * 100) : 0;
+
+  const handleContextAction = () => {
+    if (activeTab === 'routines') {
+      setIsNewRoutineModalOpen(true);
+      return;
+    }
+    if (activeTab === 'presets') {
+      setSelectedPreset(WORKOUT_PROGRAM_PRESETS[0] || null);
+      setIsPresetModalOpen(Boolean(WORKOUT_PROGRAM_PRESETS[0]));
+      return;
+    }
+    if (activeTab === 'progress') {
+      if (exercises[0]) {
+        setSelectedExercise(exercises[0]);
+        setIsModalOpen(true);
+      } else {
+        setActiveTab('library');
+      }
+      return;
+    }
+    setIsNewExerciseModalOpen(true);
+  };
+
+  const contextualAction = {
+    routines: { label: 'Nova Rotina', icon: Plus, className: 'bg-purple-600 hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(147,51,234,0.3)]' },
+    presets: { label: 'Importar Protocolo', icon: Upload, className: 'bg-amber-600 hover:bg-amber-500 hover:shadow-[0_0_18px_rgba(245,158,11,0.3)]' },
+    progress: { label: 'Registrar Treino', icon: Zap, className: 'bg-blue-600 hover:bg-blue-500 hover:shadow-[0_0_18px_rgba(59,130,246,0.3)]' },
+    library: { label: 'Novo Exercício', icon: Plus, className: 'bg-cyan-600 hover:bg-cyan-500 hover:shadow-[0_0_18px_rgba(6,182,212,0.3)]' },
+  }[activeTab];
+  const ContextActionIcon = contextualAction.icon;
 
   return (
     <div className="space-y-6 pb-12">
@@ -737,60 +781,70 @@ export function Workouts() {
           </h1>
         </div>
         
-        <div className="flex gap-2">
-          {activeTab === 'library' ? (
-            <button 
-              onClick={() => setIsNewExerciseModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-            >
-              <Plus className="size-4" strokeWidth={3} />
-              Novo Exercício
-            </button>
-          ) : (
-            <button 
-              onClick={() => setIsNewRoutineModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_15px_rgba(147,51,234,0.3)]"
-            >
-              <Plus className="size-4" strokeWidth={3} />
-              Nova Rotina
-            </button>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={handleContextAction}
+          className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all duration-200 active:scale-[0.98] ${contextualAction.className}`}
+        >
+          <ContextActionIcon className="size-4" strokeWidth={3} />
+          {contextualAction.label}
+        </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-[#1E1E26] overflow-x-auto scrollbar-none flex-nowrap shrink-0">
-        <button 
-          onClick={() => setActiveTab('routines')}
-          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'routines' ? 'text-purple-500 border-b-2 border-purple-500' : 'text-gray-500 hover:text-white'}`}
-          style={{ fontFamily: 'Orbitron, sans-serif' }}
-        >
-          Minhas Rotinas
-        </button>
-        <button 
-          onClick={() => setActiveTab('presets')}
-          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'presets' ? 'text-amber-500 border-b-2 border-amber-500' : 'text-gray-500 hover:text-white'}`}
-          style={{ fontFamily: 'Orbitron, sans-serif' }}
-        >
-          Modelos de Treino
-        </button>
-        <button 
-          onClick={() => setActiveTab('progress')}
-          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'progress' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-white'}`}
-          style={{ fontFamily: 'Orbitron, sans-serif' }}
-        >
-          Evolução
-        </button>
-        <button 
-          onClick={() => setActiveTab('library')}
-          className={`pb-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'library' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500 hover:text-white'}`}
-          style={{ fontFamily: 'Orbitron, sans-serif' }}
-        >
-          Biblioteca
-        </button>
+      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[#1E1E26] bg-[#0B0B0F] p-2 sm:grid-cols-4">
+        {TRAINING_TABS.map((tab) => {
+          const TabIcon = tab.icon;
+          const isActive = activeTab === tab.id;
+          const activeTone = {
+            purple: 'border-purple-500/45 bg-purple-500/10 text-purple-300 shadow-[0_0_22px_rgba(147,51,234,0.12)]',
+            amber: 'border-amber-500/45 bg-amber-500/10 text-amber-300 shadow-[0_0_22px_rgba(245,158,11,0.1)]',
+            blue: 'border-blue-500/45 bg-blue-500/10 text-blue-300 shadow-[0_0_22px_rgba(59,130,246,0.1)]',
+            cyan: 'border-cyan-500/45 bg-cyan-500/10 text-cyan-300 shadow-[0_0_22px_rgba(6,182,212,0.1)]',
+          }[tab.tone];
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`group relative flex min-h-[72px] items-center gap-3 overflow-hidden rounded-xl border px-3 py-3 text-left transition-all duration-200 active:scale-[0.99] ${
+                isActive
+                  ? activeTone
+                  : 'border-transparent bg-white/[0.025] text-gray-500 hover:border-white/10 hover:bg-white/[0.045] hover:text-gray-200'
+              }`}
+            >
+              <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg border transition-all ${
+                isActive ? 'border-current/20 bg-current/10' : 'border-white/5 bg-black/20 group-hover:border-white/10'
+              }`}>
+                <TabIcon className="size-4" strokeWidth={2.2} />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[10px] font-black uppercase tracking-[0.16em] text-current" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {tab.title}
+                </span>
+                <span className={`mt-1 block truncate text-[9px] font-semibold ${isActive ? 'text-white/60' : 'text-gray-600 group-hover:text-gray-500'}`}>
+                  {tab.description}
+                </span>
+              </span>
+              {isActive && (
+                <motion.span
+                  layoutId="training-active-tab"
+                  className="absolute inset-x-3 bottom-0 h-px rounded-full bg-current"
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="space-y-6">
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        className="space-y-6"
+      >
         {dataError && (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
             <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
@@ -836,34 +890,34 @@ export function Workouts() {
 
               <div className="min-h-[400px]">
                 {loading ? (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {Array(6).fill(0).map((_, i) => (
-                      <div key={i} className="h-28 animate-pulse rounded-2xl bg-white/5 border border-white/5" />
+                      <div key={i} className="h-44 animate-pulse rounded-2xl bg-white/5 border border-white/5" />
                     ))}
                   </div>
                 ) : viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {filteredExercises.map((ex) => (
-                      <div key={ex.id} className="group flex flex-col rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all duration-200 hover:-translate-y-1 hover:border-blue-500/40 hover:bg-[#16161D] hover:shadow-[0_0_18px_rgba(59,130,246,0.12)]">
+                      <div key={ex.id} className="group flex min-h-44 flex-col rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:bg-[#15151B] hover:shadow-[0_0_18px_rgba(59,130,246,0.1)]">
                         <div className="flex items-center justify-between">
-                          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
-                            <Dumbbell className="size-5" />
+                          <div className="flex size-9 items-center justify-center rounded-lg border border-blue-500/15 bg-blue-500/10 text-blue-400 transition-colors group-hover:border-blue-500/30">
+                            <Dumbbell className="size-4" />
                           </div>
                           <span className="rounded-md border border-white/5 bg-white/5 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500">{inferDifficulty(ex)}</span>
                         </div>
-                        <div className="mt-4 flex-1">
-                          <h3 className="font-bold text-white uppercase tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{ex.name}</h3>
-                          <p className="mt-1 text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] italic">
+                        <div className="mt-3 flex-1">
+                          <h3 className="text-xs font-bold uppercase leading-snug text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>{ex.name}</h3>
+                          <p className="mt-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-blue-400">
                             {ex.muscle_group} · {ex.category}
                           </p>
-                          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-gray-600">{inferEquipment(ex)}</p>
+                          <p className="mt-2 text-[8px] font-bold uppercase tracking-wider text-gray-600">{inferEquipment(ex)}</p>
                         </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[#1E1E26] pt-4">
-                          <button type="button" onClick={() => { setSelectedExercise(ex); setIsModalOpen(true); }} className="rounded-xl border border-[#252530] bg-white/5 py-2.5 text-[9px] font-black uppercase tracking-wider text-gray-400 transition-colors hover:text-white">
+                        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[#1E1E26] pt-3">
+                          <button type="button" onClick={() => { setSelectedExercise(ex); setIsModalOpen(true); }} className="rounded-lg border border-[#252530] bg-white/5 py-2 text-[8px] font-black uppercase tracking-wider text-gray-400 transition-colors hover:border-white/15 hover:text-white">
                             Registrar
                           </button>
-                          <button type="button" onClick={() => routines.length === 0 ? setIsNewRoutineModalOpen(true) : setExerciseToAdd(ex)} className="rounded-xl border border-blue-500/25 bg-blue-500/10 py-2.5 text-[9px] font-black uppercase tracking-wider text-blue-300 transition-all hover:border-blue-400/50 hover:bg-blue-500/20 hover:text-white">
-                            Adicionar ao treino
+                          <button type="button" onClick={() => routines.length === 0 ? setIsNewRoutineModalOpen(true) : setExerciseToAdd(ex)} className="rounded-lg border border-blue-500/25 bg-blue-500/10 py-2 text-[8px] font-black uppercase tracking-wider text-blue-300 transition-all hover:border-blue-400/50 hover:bg-blue-500/20 hover:text-white">
+                            Adicionar
                           </button>
                         </div>
                       </div>
@@ -1062,6 +1116,22 @@ export function Workouts() {
                 {routines.map((routine) => {
                   const splitMatch = routine.name.match(/^[A-Z](?=\s*-|\s|$)/i);
                   const splitLetter = splitMatch ? splitMatch[0].toUpperCase() : null;
+                  const sortedRoutineExercises = [...(routine.exercises || [])].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+                  const routineExerciseIds = new Set(sortedRoutineExercises.map(item => item.exercise_id));
+                  const lastRoutineLog = logs.find(log => routineExerciseIds.has(log.exercise_id));
+                  const isActiveSession = isRoutineSessionOpen && sessionRoutineId === routine.id;
+                  const routineProgress = isActiveSession ? activeSessionProgress : 0;
+                  const nextExercise = isActiveSession
+                    ? sessionExercises.find(item => !completedSessionExs.includes(item.id))
+                    : sortedRoutineExercises[0];
+                  const scheduledDays = routine.scheduled_days?.length
+                    ? routine.scheduled_days.map(day => DAY_LABELS[day]).filter(Boolean).join(' · ')
+                    : 'Sem agenda';
+                  const protocolStatus = isActiveSession
+                    ? 'Em progresso'
+                    : todayRoutine?.id === routine.id
+                      ? 'Missão de hoje'
+                      : 'Protocolo ativo';
 
                   return (
                     <div
@@ -1120,26 +1190,50 @@ export function Workouts() {
                         </div>
                       </div>
 
-                      <div className="space-y-2 mb-6">
-                        {routine.exercises && routine.exercises.length > 0 ? (
-                          [...routine.exercises]
-                            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
-                            .slice(0, 3)
-                            .map((re) => (
-                              <div key={re.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-                                <span className="text-[10px] font-bold text-gray-300 uppercase truncate">{re.exercise?.name}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{re.weight_kg}KG</span>
-                                  <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">{re.sets}S x {re.reps}R</span>
-                                </div>
-                              </div>
-                            ))
-                        ) : (
-                          <p className="text-[10px] text-gray-600 uppercase font-bold italic">Nenhum exercício vinculado.</p>
-                        )}
-                        {routine.exercises && routine.exercises.length > 3 && (
-                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">+{routine.exercises.length - 3} mais...</p>
-                        )}
+                      <div className="mb-5 grid grid-cols-2 gap-2">
+                        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                          <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">Agenda</p>
+                          <div className="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-gray-300">
+                            <CalendarDays className="size-3.5 text-purple-400" />
+                            <span className="truncate">{scheduledDays}</span>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                          <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">Status</p>
+                          <div className="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-purple-300">
+                            <span className={`size-1.5 rounded-full ${isActiveSession ? 'animate-pulse bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]' : 'bg-purple-500/60'}`} />
+                            <span className="truncate">{protocolStatus}</span>
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                          <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">Último registro</p>
+                          <p className="mt-2 truncate text-[10px] font-bold text-gray-300">
+                            {lastRoutineLog
+                              ? new Date(lastRoutineLog.logged_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                              : 'Nenhum registro'}
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
+                          <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">Próximo exercício</p>
+                          <p className="mt-2 truncate text-[10px] font-bold uppercase text-gray-300">
+                            {nextExercise?.exercise?.name || 'Definir exercício'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mb-5">
+                        <div className="mb-2 flex items-center justify-between text-[8px] font-black uppercase tracking-[0.18em]">
+                          <span className="text-gray-600">Progresso do protocolo</span>
+                          <span className={isActiveSession ? 'text-purple-300' : 'text-gray-600'}>{routineProgress}%</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-black/50">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${routineProgress}%` }}
+                            transition={{ duration: 0.45, ease: 'easeOut' }}
+                            className="h-full rounded-full bg-gradient-to-r from-purple-700 via-purple-500 to-blue-400 shadow-[0_0_10px_rgba(147,51,234,0.45)]"
+                          />
+                        </div>
                       </div>
 
                       <button 
@@ -1151,7 +1245,7 @@ export function Workouts() {
                         className="w-full rounded-xl bg-purple-600/10 py-3 text-[10px] font-black uppercase tracking-[0.3em] text-purple-500 transition-all hover:bg-purple-600 hover:text-white border border-purple-600/20"
                         style={{ fontFamily: 'Orbitron, sans-serif' }}
                       >
-                        Iniciar Protocolo
+                        {isActiveSession ? 'Continuar Protocolo' : 'Iniciar Protocolo'}
                       </button>
                     </div>
                   );
@@ -1186,7 +1280,7 @@ export function Workouts() {
               <WorkoutProgress />
             </div>
           )}
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {exerciseToAdd && (

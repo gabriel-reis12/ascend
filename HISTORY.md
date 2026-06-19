@@ -13,6 +13,17 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-18 — Navegação e Polimento do Training Center
+- **Centro de Comando:**
+  - Substituídas as abas administrativas por uma navegação responsiva em cards compactos com ícones, descrições, estado ativo e glow contextual.
+  - Adicionados os destinos Hoje, Protocolos, Evolução e Arsenal, preservando os mesmos estados e fluxos internos.
+  - O botão principal do cabeçalho agora acompanha a aba ativa: Nova Rotina, Importar Protocolo, Registrar Treino ou Novo Exercício.
+- **Protocolos e Arsenal:**
+  - Cards de rotina agora exibem agenda, status, progresso da sessão, último registro real e próximo exercício.
+  - Compactada a grade da biblioteca para uma leitura de catálogo, mantendo busca, filtros, registro e adição às rotinas.
+  - Adicionadas transições suaves entre áreas e microinterações de hover/active com comportamento responsivo.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-18 — Training Center Premium
 - **Rotinas e Missão Física:**
   - Criado destaque dinâmico para a rotina agendada do dia com duração, XP, atributos e acesso à sessão.
