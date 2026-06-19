@@ -478,6 +478,37 @@ export function useHabits() {
     if (!error) updateHabitsState((prev) => prev.filter((h) => h.id !== habitId));
   };
 
+  const updateHabit = async (habitId: string, input: CreateHabitInput) => {
+    if (!user) return { error: 'Usuário não autenticado.' };
+
+    const payload = {
+      title: input.title,
+      category: input.category,
+      category_color: input.category_color,
+      xp_reward: input.xp_reward,
+      stat_target: input.stat_target,
+      stat_reward: input.stat_reward,
+      is_optional: input.is_optional ?? false,
+      scheduled_time: input.scheduled_time?.trim() || null,
+      scheduled_end_time: input.scheduled_end_time?.trim() || null,
+      scheduled_days: input.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6],
+    };
+
+    const { data, error } = await supabase
+      .from('habits')
+      .update(payload)
+      .eq('id', habitId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      updateHabitsState((prev) => prev.map((habit) => (habit.id === habitId ? data : habit)));
+    }
+
+    return { error: error?.message ?? null };
+  };
+
   const toggleActive = async (habitId: string) => {
     if (!user) return;
     const habit = habits.find((h) => h.id === habitId);
@@ -562,6 +593,7 @@ export function useHabits() {
     toggleCompletion,
     toggleMealMission,
     createHabit,
+    updateHabit,
     deleteHabit,
     toggleActive,
     updateScheduledTime,

@@ -13,6 +13,16 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-19 — Quest Board Premium
+- Reformulado o status diário com progresso, total concluído, percentual, XP acumulado e mensagem operacional do Sistema.
+- Adicionada a seção Próxima Missão com horário, categoria, XP, atributo e ação contextual.
+- Compactados os cards diários e padronizados os estados pendente, ativa, concluída, atrasada, bônus IA, recorrente e automática.
+- Refeições sem recompensa própria deixam de exibir `+0 XP`.
+- A Fenda de Anomalia IA tornou-se compacta e colapsável, com feedback de geração preservado.
+- “Lista de Sistema” foi renomeada para Quests Recorrentes, ganhou runas semanais maiores, status e edição real pelo modal existente.
+- O Códex do Caçador passou a usar accordions por categoria com diretrizes, atributos, recompensas, lore e ações.
+- Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-19 — Revisão e Legibilidade do Códex Nutricional
 - Elevada a escala tipográfica da Recuperação de Mana, reduzindo labels comprimidos e melhorando textos de apoio, números e ações.
 - O Códex agora separa análise e persistência: a IA gera uma prévia sem gravar dados automaticamente.

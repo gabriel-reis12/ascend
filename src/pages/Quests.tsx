@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
   RefreshCw, 
-  Star, 
   Trash2, 
   Power, 
   CheckCircle2, 
@@ -21,21 +20,102 @@ import {
   Award,
   Briefcase,
   Languages,
-  Coins
+  Coins,
+  ChevronDown,
+  Play,
+  Edit3,
+  CalendarDays
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { localDayBounds } from '@/lib/date';
 import { useHabits } from '@/hooks/useHabits';
-import { useMealPlans } from '@/hooks/useMealPlans';
 import { useTasks } from '@/hooks/useTasks';
+import type { Task } from '@/hooks/useTasks';
 import { generateBonusQuest } from '@/lib/groq';
 import { NewHabitModal } from '@/components/rpg/NewHabitModal';
 import { NeonCheckbox } from '@/components/ui/animated-check-box';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useNavigate } from 'react-router-dom';
-import type { Habit, CreateHabitInput } from '@/hooks/useHabits';
+import type { Habit, CreateHabitInput, WorkoutMission, MealMission } from '@/hooks/useHabits';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
+
+type CodexEntry = {
+  activity: string;
+  icon: LucideIcon;
+  iconColor: string;
+  stat: string;
+  statColor: string;
+  xp: string;
+  lore: string;
+  statBonus: string;
+  route?: string;
+  preset?: Partial<CreateHabitInput>;
+};
+
+const CODEX_CATEGORIES: Array<{ category: string; icon: LucideIcon; color: string; entries: CodexEntry[] }> = [
+  {
+    category: 'Nutrição',
+    icon: UtensilsCrossed,
+    color: '#F97316',
+    entries: [
+      { activity: 'Refeições Saudáveis', icon: UtensilsCrossed, iconColor: '#F97316', stat: 'Vitalidade (VIT)', statColor: 'text-orange-400', xp: '+15 XP', lore: 'Apoia energia, recuperação e consistência nutricional.', statBonus: '+1 VIT', route: '/nutrition' },
+    ],
+  },
+  {
+    category: 'Treino',
+    icon: Dumbbell,
+    color: '#A855F7',
+    entries: [
+      { activity: 'Treino de Força', icon: Dumbbell, iconColor: '#A855F7', stat: 'Força (FOR)', statColor: 'text-red-400', xp: '+50 XP', lore: 'Eleva a capacidade física e consolida progressão de cargas.', statBonus: '+2 FOR', route: '/workouts' },
+    ],
+  },
+  {
+    category: 'Cardio',
+    icon: Heart,
+    color: '#EF4444',
+    entries: [
+      { activity: 'Cardio', icon: Heart, iconColor: '#EF4444', stat: 'Resistência (RES)', statColor: 'text-green-400', xp: '+40 XP', lore: 'Aprimora condicionamento e capacidade de sustentar esforço.', statBonus: '+2 RES', route: '/workouts' },
+    ],
+  },
+  {
+    category: 'Trabalho',
+    icon: Briefcase,
+    color: '#06B6D4',
+    entries: [
+      { activity: 'Trabalhar (Foco Diário)', icon: Briefcase, iconColor: '#06B6D4', stat: 'Disciplina (DIS)', statColor: 'text-purple-400', xp: '+25 XP', lore: 'Fortalece constância profissional e execução sob pressão.', statBonus: '+1 DIS', preset: { title: 'Trabalhar (Foco Máximo)', category: 'Trabalho', category_color: '#06B6D4', xp_reward: 25, stat_target: 'discipline', stat_reward: 1 } },
+      { activity: 'Trabalho Extra / Freelance', icon: Briefcase, iconColor: '#FBBF24', stat: 'Disciplina (DIS)', statColor: 'text-purple-400', xp: '+40 XP', lore: 'Amplia autonomia, entrega e resiliência profissional.', statBonus: '+2 DIS', preset: { title: 'Trabalho Extra / Freelance', category: 'Trabalho', category_color: '#FBBF24', xp_reward: 40, stat_target: 'discipline', stat_reward: 2 } },
+    ],
+  },
+  {
+    category: 'Estudo',
+    icon: BookOpen,
+    color: '#3B82F6',
+    entries: [
+      { activity: 'Aprender Idiomas', icon: Languages, iconColor: '#3B82F6', stat: 'Inteligência (INT)', statColor: 'text-cyan-400', xp: '+25 XP', lore: 'Expande repertório, memória e adaptação cognitiva.', statBonus: '+2 INT', preset: { title: 'Estudar Novo Idioma', category: 'Estudo', category_color: '#3B82F6', xp_reward: 25, stat_target: 'intelligence', stat_reward: 2 } },
+      { activity: 'Leitura', icon: BookOpen, iconColor: '#3B82F6', stat: 'Inteligência (INT)', statColor: 'text-cyan-400', xp: '+25 XP', lore: 'Amplia capacidade cognitiva e profundidade de foco.', statBonus: '+2 INT', preset: { title: 'Ler 30 minutos', category: 'Estudo', category_color: '#3B82F6', xp_reward: 25, stat_target: 'intelligence', stat_reward: 2 } },
+      { activity: 'Programação & Tech', icon: Code, iconColor: '#10B981', stat: 'Inteligência (INT)', statColor: 'text-cyan-400', xp: '+30 XP', lore: 'Fortalece raciocínio sistêmico e solução de problemas.', statBonus: '+2 INT', preset: { title: 'Programação & Tech', category: 'Estudo', category_color: '#10B981', xp_reward: 30, stat_target: 'intelligence', stat_reward: 2 } },
+    ],
+  },
+  {
+    category: 'Hobbies',
+    icon: Music,
+    color: '#EC4899',
+    entries: [
+      { activity: 'Tocar Instrumentos', icon: Music, iconColor: '#EC4899', stat: 'Vitalidade (VIT)', statColor: 'text-orange-400', xp: '+20 XP', lore: 'Promove expressão criativa e equilíbrio mental.', statBonus: '+2 VIT', preset: { title: 'Tocar Instrumento / Música', category: 'Hobbies', category_color: '#EC4899', xp_reward: 20, stat_target: 'vitality', stat_reward: 2 } },
+    ],
+  },
+  {
+    category: 'Saúde',
+    icon: ShieldCheck,
+    color: '#10B981',
+    entries: [
+      { activity: 'Cuidado Preventivo', icon: ShieldCheck, iconColor: '#10B981', stat: 'Vitalidade (VIT)', statColor: 'text-emerald-400', xp: '+15 XP', lore: 'Reforça manutenção, autocuidado e progresso sustentável.', statBonus: '+1 VIT', preset: { title: 'Cuidado Preventivo', category: 'Saúde', category_color: '#10B981', xp_reward: 15, stat_target: 'vitality', stat_reward: 1 } },
+      { activity: 'Deveres Gerais', icon: Award, iconColor: '#F59E0B', stat: 'Disciplina (DIS)', statColor: 'text-purple-400', xp: '+15 a +30 XP', lore: 'Reforça constância diária e fortitude mental.', statBonus: '+1 DIS', preset: { title: 'Deveres Gerais', category: 'Rotina', category_color: '#F59E0B', xp_reward: 15, stat_target: 'discipline', stat_reward: 1 } },
+    ],
+  },
+];
 
 function TimeBadgeInput({ time, onChange }: { time: string | null; onChange: (t: string | null) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -83,7 +163,6 @@ function MissionCard({
   onToggle,
   onUpdateTime,
   onDelete,
-  index,
 }: {
   id: string;
   type: 'habit' | 'workout' | 'meal' | 'task' | 'finance';
@@ -99,11 +178,25 @@ function MissionCard({
   onToggle: (id: string, type: 'habit'|'workout'|'meal'|'task'|'finance') => void;
   onUpdateTime: (id: string, type: 'habit'|'workout'|'meal'|'task'|'finance', field: 'start'|'end', t: string | null) => void;
   onDelete?: (id: string) => void;
-  index: number;
 }) {
   const isBonus = type === 'task' && title.startsWith('[BÔNUS IA] ');
   const displayTitle = isBonus ? title.replace('[BÔNUS IA] ', '') : title;
   const bonusLore = isBonus ? localStorage.getItem(`bonus_quest_lore_${id}`) : null;
+  const nowTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const missionStatus = done
+    ? 'completed'
+    : endTime && nowTime > endTime.slice(0, 5)
+      ? 'late'
+      : startTime && nowTime >= startTime.slice(0, 5) && (!endTime || nowTime <= endTime.slice(0, 5))
+        ? 'active'
+        : 'pending';
+  const statusStyle = {
+    pending: 'border-gray-500/20 bg-gray-500/10 text-gray-400',
+    active: 'border-cyan-500/25 bg-cyan-500/10 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
+    completed: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
+    late: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
+  }[missionStatus];
+  const statusLabel = { pending: 'Pendente', active: 'Ativa', completed: 'Concluída', late: 'Atrasada' }[missionStatus];
 
   const theme = {
     habit: { border: 'border-blue-500/30', bgDone: 'bg-blue-500/5', bgHover: 'hover:border-blue-500/50', lineDone: 'bg-blue-500', lineHover: 'group-hover:bg-blue-500/50', icon: Clock, textDone: 'text-blue-500', tag: 'bg-blue-500/20 text-blue-400', tagText: 'COMPLETO' },
@@ -119,12 +212,14 @@ function MissionCard({
 
   return (
     <motion.div
+      id={`mission-${type}-${id}`}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
-      className={`group relative flex items-center gap-4 overflow-hidden rounded-xl border p-4 transition-all duration-150 ${
+      whileHover={done ? undefined : { y: -2 }}
+      className={`group relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 transition-all duration-150 sm:p-4 ${
         done
-          ? `${theme.border} ${theme.bgDone}`
+          ? 'border-[#1E1E26] bg-white/[0.025] opacity-75'
           : `border-[#1E1E26] bg-[#0F0F13] ${theme.bgHover} hover:bg-[#16161D]`
       }`}
     >
@@ -141,7 +236,7 @@ function MissionCard({
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 mb-1.5 shrink-0">
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
           <TimeBadgeInput 
             time={startTime ? startTime.slice(0, 5) : null} 
             onChange={(t) => onUpdateTime(id, type, 'start', t)}
@@ -155,31 +250,39 @@ function MissionCard({
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             {isBonus && (
-              <span className="rounded bg-gradient-to-r from-cyan-500 to-purple-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter text-white animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.4)]">
-                ANOMALIA IA
+              <span className="rounded bg-gradient-to-r from-cyan-500 to-purple-500 px-2 py-1 text-xs font-bold text-white shadow-[0_0_8px_rgba(6,182,212,0.35)]">
+                Bônus IA
               </span>
             )}
             <p
-              className={`truncate text-base font-bold tracking-wide transition-colors ${
-                done ? 'text-gray-500 line-through' : 'text-white'
+              className={`truncate text-sm font-bold transition-colors sm:text-base ${
+                done ? 'text-gray-500' : 'text-white'
               }`}
               style={{ fontFamily: 'Orbitron, sans-serif' }}
             >
               {displayTitle}
             </p>
             {isOptional && (
-              <span className="rounded border border-dashed border-gray-500/50 bg-gray-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter text-gray-400">
-                FLEXÍVEL
+              <span className="rounded border border-dashed border-gray-500/50 bg-gray-500/10 px-2 py-1 text-xs font-semibold text-gray-400">
+                Flexível
               </span>
             )}
-            {done && (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-tighter ${theme.tag}`}
-              >
-                {theme.tagText}
-              </motion.span>
+            <motion.span
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`rounded-md border px-2 py-1 text-xs font-semibold ${statusStyle}`}
+            >
+              {statusLabel}
+            </motion.span>
+            {(type === 'workout' || type === 'meal' || type === 'finance') && (
+              <span className="rounded-md border border-blue-500/15 bg-blue-500/5 px-2 py-1 text-xs font-semibold text-blue-300">
+                Automática
+              </span>
+            )}
+            {type === 'habit' && (
+              <span className="rounded-md border border-purple-500/15 bg-purple-500/5 px-2 py-1 text-xs font-semibold text-purple-300">
+                Recorrente
+              </span>
             )}
           </div>
           {bonusLore && (
@@ -191,20 +294,22 @@ function MissionCard({
 
         <div className="mt-2.5 flex flex-wrap items-center gap-3">
           <span
-            className="flex items-center gap-1 text-[11px] font-black uppercase tracking-widest"
+            className="flex items-center gap-1 text-xs font-semibold"
             style={{ color: categoryColor }}
           >
             <ScrollText size={12} />
             {category}
           </span>
           
-          <span className="flex items-center gap-1 text-[11px] font-bold text-yellow-500">
+          {xpReward > 0 && (
+          <span className={`flex items-center gap-1 text-xs font-bold text-yellow-500 ${done ? '' : 'drop-shadow-[0_0_6px_rgba(234,179,8,0.25)]'}`}>
             <Zap size={12} fill="currentColor" />
             +{xpReward} XP
           </span>
+          )}
 
           {statLabel && (
-            <span className="flex items-center gap-1 text-[11px] font-bold text-blue-400 uppercase italic">
+            <span className="flex items-center gap-1 text-xs font-semibold text-blue-400">
               <Sword size={12} />
               {statLabel}
             </span>
@@ -239,13 +344,13 @@ function ManageQuestRow({
   onDelete,
   onToggleActive,
   onUpdateScheduledDays,
-  index,
+  onEdit,
 }: {
   habit: Habit;
   onDelete: (id: string) => void;
   onToggleActive: (id: string) => void;
   onUpdateScheduledDays: (id: string, days: number[]) => void;
-  index: number;
+  onEdit: (habit: Habit) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -254,14 +359,14 @@ function ManageQuestRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
-      className={`flex flex-col gap-3 rounded-xl border border-[#1E1E26] bg-[#0F0F13] p-4 transition-opacity duration-150 ${
+      className={`flex flex-col gap-4 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 transition-all duration-150 hover:border-blue-500/25 ${
         habit.active ? 'opacity-100' : 'opacity-40'
       }`}
     >
       <div className="flex items-center gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-bold text-white uppercase tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+            <p className="truncate text-base font-bold text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
               {habit.title}
             </p>
             {habit.is_optional && (
@@ -270,13 +375,24 @@ function ManageQuestRow({
               </span>
             )}
           </div>
-          <div className="mt-1 flex items-center gap-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
             <span style={{ color: habit.category_color }}>{habit.category}</span>
-            <span>{habit.xp_reward} XP</span>
+            <span className="text-yellow-500">+{habit.xp_reward} XP</span>
+            <span className={`rounded-md border px-2 py-1 ${habit.active ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-gray-500/20 bg-gray-500/10 text-gray-400'}`}>
+              {habit.active ? 'Ativa' : 'Inativa'}
+            </span>
+            <span className="rounded-md border border-blue-500/15 bg-blue-500/5 px-2 py-1 text-blue-300">Recorrente</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => onEdit(habit)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-gray-400 transition-colors hover:border-blue-500/30 hover:text-blue-300"
+            title="Editar quest"
+          >
+            <Edit3 size={14} />
+          </button>
           <button
             onClick={() => onToggleActive(habit.id)}
             className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
@@ -316,8 +432,9 @@ function ManageQuestRow({
 
       {/* Seletor Compacto de Recorrência de Dias */}
       <div className="border-t border-[#1E1E26]/60 pt-3 flex flex-col gap-2">
-        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-          Recorrência Semanal:
+        <span className="flex items-center gap-2 text-sm font-semibold text-gray-400">
+          <CalendarDays className="size-4 text-blue-400" />
+          Recorrência semanal
         </span>
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none py-0.5">
           {[
@@ -341,14 +458,14 @@ function ManageQuestRow({
                     : [...currentDays, day.value].sort();
                   onUpdateScheduledDays(habit.id, newDays);
                 }}
-                className={`flex h-6 w-6 items-center justify-center rounded-lg border text-[9px] font-black transition-all duration-200 shrink-0 ${
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-xs font-black transition-all duration-200 ${
                   isSelected
                     ? 'border-transparent text-white'
-                    : 'border-[#38384A]/30 bg-black/40 text-[#444455] hover:border-gray-800'
+                    : 'border-[#38384A]/40 bg-black/40 text-gray-600 hover:border-gray-700'
                 }`}
                 style={{
                   backgroundColor: isSelected ? habit.category_color : undefined,
-                  boxShadow: isSelected ? `0 0 6px ${habit.category_color}30` : undefined,
+                  boxShadow: isSelected ? `0 0 12px ${habit.category_color}35, inset 0 0 8px ${habit.category_color}20` : undefined,
                 }}
               >
                 {day.label}
@@ -373,6 +490,7 @@ export function Quests() {
     error: habitsError,
     toggleCompletion, 
     createHabit, 
+    updateHabit,
     deleteHabit, 
     toggleActive,
     workoutMissions,
@@ -388,7 +506,6 @@ export function Quests() {
     completeTask,
     uncompleteTask,
     deleteTask,
-    loading: loadingTasks,
     error: tasksError,
   } = useTasks();
 
@@ -410,6 +527,11 @@ export function Quests() {
   const [tab, setTab] = useState<'daily' | 'manage' | 'codex'>('daily');
   const [modalOpen, setModalOpen] = useState(false);
   const [presetHabitData, setPresetHabitData] = useState<Partial<CreateHabitInput> | null>(null);
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [fissureExpanded, setFissureExpanded] = useState(false);
+  const [openCodexCategory, setOpenCodexCategory] = useState('Nutrição');
+  const legacyCodexVisible = Boolean(import.meta.env.VITE_SHOW_LEGACY_QUEST_CODEX);
+  const legacyMealBannerVisible = Boolean(import.meta.env.VITE_SHOW_LEGACY_MEAL_BANNER);
 
   const { user } = useAuth();
   const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = useState(false);
@@ -516,23 +638,32 @@ export function Quests() {
       if (res && res.data) {
         // Armazena a lore gerada no localStorage indexada pelo ID
         localStorage.setItem(`bonus_quest_lore_${res.data.id}`, result.lore);
+        setFissureExpanded(true);
       } else if (res && res.error) {
         setBonusError(res.error);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Falha ao despertar fenda de anomalia:", err);
-      setBonusError(err.message || 'Falha na conexão neural com o Groq.');
+      setBonusError(err instanceof Error ? err.message : 'Falha na conexão neural com o Groq.');
     } finally {
       setGeneratingBonus(false);
     }
   };
 
-  type UnifiedMission = 
-    | { type: 'workout'; data: any; time: string | null; endTime: string | null }
-    | { type: 'meal'; data: any; time: string | null; endTime: string | null }
-    | { type: 'habit'; data: any; time: string | null; endTime: string | null }
-    | { type: 'task'; data: any; time: string | null; endTime: string | null }
-    | { type: 'finance'; data: any; time: string | null; endTime: string | null };
+  type FinanceMissionData = {
+    id: string;
+    title: string;
+    category: string;
+    category_color: string;
+    xp_reward: number;
+    completed: boolean;
+  };
+  type UnifiedMission =
+    | { type: 'workout'; data: WorkoutMission; time: string | null; endTime: string | null }
+    | { type: 'meal'; data: MealMission; time: string | null; endTime: string | null }
+    | { type: 'habit'; data: Habit; time: string | null; endTime: string | null }
+    | { type: 'task'; data: Task; time: string | null; endTime: string | null }
+    | { type: 'finance'; data: FinanceMissionData; time: string | null; endTime: string | null };
 
   const allMissions: UnifiedMission[] = [
     ...workoutMissions.map(m => ({ type: 'workout' as const, data: m, time: m.scheduled_time, endTime: m.scheduled_end_time })),
@@ -561,6 +692,57 @@ export function Quests() {
     return a.time.localeCompare(b.time);
   });
 
+  const missionIsDone = (mission: UnifiedMission) => {
+    if (mission.type === 'habit') return completedToday.has(mission.data.id);
+    if (mission.type === 'workout' || mission.type === 'meal') return mission.data.isCompleted;
+    return mission.data.completed;
+  };
+  const nextMission = allMissions.find(mission => !missionIsDone(mission)) || null;
+  const nextMissionTitle = nextMission
+    ? (nextMission.type === 'task' ? nextMission.data.title.replace('[BÔNUS IA] ', '') : nextMission.data.title)
+    : null;
+  const nextMissionCategory = nextMission
+    ? nextMission.type === 'workout'
+      ? 'Treino'
+      : nextMission.type === 'meal'
+        ? 'Nutrição'
+        : nextMission.data.category
+    : null;
+  const nextMissionXp = nextMission?.data.xp_reward || 0;
+  const statAbbreviations: Record<string, string> = {
+        strength: 'FOR',
+        intelligence: 'INT',
+        endurance: 'RES',
+        vitality: 'VIT',
+        discipline: 'DIS',
+        wisdom: 'SAB',
+        balance: 'EQU',
+      };
+  const nextMissionStatTarget = nextMission && 'stat_target' in nextMission.data
+    ? nextMission.data.stat_target
+    : null;
+  const nextMissionStat = nextMissionStatTarget
+    ? statAbbreviations[nextMissionStatTarget]
+    : null;
+  const accumulatedXp = xpEarnedToday + activeTasks.filter(t => t.completed).reduce((acc, t) => acc + t.xp_reward, 0);
+
+  function handleStartNextMission() {
+    if (!nextMission) return;
+    if (nextMission.type === 'workout') {
+      navigate('/workouts');
+      return;
+    }
+    if (nextMission.type === 'meal') {
+      navigate('/nutrition');
+      return;
+    }
+    if (nextMission.type === 'finance') {
+      navigate('/fortuna');
+      return;
+    }
+    document.getElementById(`mission-${nextMission.type}-${nextMission.data.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   return (
     <>
       <NewHabitModal
@@ -568,12 +750,18 @@ export function Quests() {
         onClose={() => {
           setModalOpen(false);
           setPresetHabitData(null);
+          setEditingHabitId(null);
         }}
-        onSubmit={createHabit}
+        onSubmit={async (input) => {
+          if (editingHabitId) {
+            return updateHabit(editingHabitId, input);
+          }
+          return createHabit(input);
+        }}
         initialData={presetHabitData}
       />
 
-      <div className="mx-auto max-w-4xl space-y-8">
+      <div className="mx-auto max-w-6xl space-y-7">
         {(habitsError || tasksError) && (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
             <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
@@ -607,29 +795,30 @@ export function Quests() {
         </div>
 
         {/* Global Progress */}
-        <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-6">
+        <div className="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-[#0F0F13] p-5 shadow-[0_0_26px_rgba(59,130,246,0.07)] sm:p-6">
           {/* Background Decoration */}
           <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-500/5 blur-3xl" />
           
-          <div className="relative flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gray-400">
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-gray-300">
                 <ShieldCheck size={14} className="text-blue-500" />
                 Status de Hoje
               </h3>
-              <p className="text-2xl font-black italic tracking-tight text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {progressPct === 100 ? 'OBJETIVOS CONCLUÍDOS' : `${Math.round(progressPct)}% DA MISSÃO`}
+              <p className="text-2xl font-black tracking-tight text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                {totalCompleted} de {totalMissions} missões concluídas
+              </p>
+              <p className="text-sm text-gray-400">
+                {progressPct === 100
+                  ? 'Sistema sincronizado. Todas as quests do ciclo foram concluídas.'
+                  : `${Math.round(progressPct)}% da missão diária. O Sistema aguarda sua próxima ação.`}
               </p>
             </div>
             
-            <div className="text-right">
-              <div className="flex items-center justify-end gap-2 text-2xl font-black text-blue-500" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                <span>{totalCompleted}</span>
-                <span className="text-xs text-gray-600">/</span>
-                <span className="text-gray-400">{totalMissions}</span>
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-500">
-                +{xpEarnedToday + activeTasks.filter(t => t.completed).reduce((acc, t) => acc + t.xp_reward, 0)} XP ACUMULADO
+            <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 px-5 py-4 sm:text-right">
+              <p className="text-sm font-semibold text-gray-400">XP acumulado hoje</p>
+              <p className="mt-1 text-2xl font-black text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.22)]" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                +{accumulatedXp} XP
               </p>
             </div>
           </div>
@@ -644,17 +833,57 @@ export function Quests() {
           </div>
         </div>
 
+        <div className="relative overflow-hidden rounded-3xl border border-purple-500/25 bg-[#0F0F13] p-5 shadow-[0_0_24px_rgba(168,85,247,0.07)] sm:p-6">
+          <div className="absolute right-0 top-0 h-full w-72 bg-gradient-to-l from-purple-500/10 to-transparent" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-purple-500/25 bg-purple-500/10 text-purple-300">
+                <Play className="size-5" fill="currentColor" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-purple-300">Próxima missão</p>
+                <h2 className="mt-1 text-xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  {nextMissionTitle || 'Ciclo diário concluído'}
+                </h2>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  {nextMission ? (
+                    <>
+                      <span className="rounded-lg border border-white/5 bg-white/5 px-3 py-1.5 text-gray-300">
+                        {nextMission.time || 'Sem horário'}
+                      </span>
+                      <span className="rounded-lg border border-white/5 bg-white/5 px-3 py-1.5 text-gray-300">{nextMissionCategory}</span>
+                      {nextMissionXp > 0 && <span className="rounded-lg border border-yellow-500/15 bg-yellow-500/5 px-3 py-1.5 font-bold text-yellow-400">+{nextMissionXp} XP</span>}
+                      {nextMissionStat && <span className="rounded-lg border border-blue-500/15 bg-blue-500/5 px-3 py-1.5 font-bold text-blue-300">{nextMissionStat}</span>}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">O Sistema preparará novas quests no próximo ciclo.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleStartNextMission}
+              disabled={!nextMission}
+              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 text-sm font-black text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_22px_rgba(168,85,247,0.28)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Play className="size-4" fill="currentColor" />
+              Iniciar missão
+            </button>
+          </div>
+        </div>
+
         {/* Navigation Tabs */}
         <div className="flex gap-2 border-b border-[#1E1E26] pb-px overflow-x-auto scrollbar-none flex-nowrap shrink-0">
           {[
-            { id: 'daily', label: 'MISSÕES DIÁRIAS', icon: Sword },
-            { id: 'manage', label: 'LISTA DE SISTEMA', icon: RefreshCw },
-            { id: 'codex', label: 'CODEX DO CAÇADOR', icon: ScrollText },
+            { id: 'daily', label: 'Missões Diárias', icon: Sword },
+            { id: 'manage', label: 'Quests Recorrentes', icon: RefreshCw },
+            { id: 'codex', label: 'Códex do Caçador', icon: ScrollText },
           ].map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id as any)}
-              className={`relative flex items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+              onClick={() => setTab(t.id as typeof tab)}
+              className={`relative flex items-center gap-2 px-5 py-4 text-sm font-bold transition-all ${
                 tab === t.id ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
@@ -726,7 +955,7 @@ export function Quests() {
                     </motion.div>
                   )}
                   {/* BANNER DO PROTOCOLO DE NUTRIÇÃO CONSOLIDADA */}
-                  {false && mealMissions.length > 0 && (
+                  {legacyMealBannerVisible && mealMissions.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -764,7 +993,7 @@ export function Quests() {
                   )}
 
                   {/* FENDA DE ANOMALIA DA IA (WIDGET PREMIUM) */}
-                  <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#0F0F13] p-6 shadow-[0_0_25px_rgba(6,182,212,0.05)]">
+                  <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#0F0F13] p-4 shadow-[0_0_20px_rgba(6,182,212,0.05)]">
                     {/* Glowing effect inside the card */}
                     <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gradient-to-br from-cyan-500/10 to-purple-500/10 blur-3xl animate-pulse" />
                     <div className="absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-cyan-500/5 blur-3xl" />
@@ -777,11 +1006,11 @@ export function Quests() {
                             <Zap size={20} className="animate-pulse" />
                           </div>
                           <div>
-                            <h2 className="text-lg font-black uppercase italic text-white tracking-wider flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            <h2 className="flex items-center gap-2 text-base font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                               Fenda de Anomalia <span className="text-cyan-400">IA</span>
                             </h2>
-                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
-                              Quest Bônus Diária do Sistema
+                            <p className="text-xs font-medium text-gray-500">
+                              Gere uma quest bônus diária focada em um domínio.
                             </p>
                           </div>
                         </div>
@@ -796,10 +1025,26 @@ export function Quests() {
                             <span className={`h-1.5 w-1.5 rounded-full ${bonusQuestToday ? 'bg-purple-400' : 'bg-cyan-400 animate-ping'}`} />
                             {bonusQuestToday ? 'Portal Fechado' : 'Fenda Aberta'}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setFissureExpanded(current => !current)}
+                            className="flex size-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-colors hover:text-white"
+                            aria-label={fissureExpanded ? 'Recolher Fenda IA' : 'Expandir Fenda IA'}
+                          >
+                            <ChevronDown className={`size-4 transition-transform ${fissureExpanded ? 'rotate-180' : ''}`} />
+                          </button>
                         </div>
                       </div>
 
                       {/* Conteúdo dinâmico da Fenda */}
+                      <AnimatePresence initial={false}>
+                      {fissureExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
                       {bonusQuestToday ? (
                         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-3">
                           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -922,6 +1167,9 @@ export function Quests() {
                           </div>
                         </div>
                       )}
+                        </motion.div>
+                      )}
+                      </AnimatePresence>
                     </div>
                   </div>
 
@@ -946,7 +1194,7 @@ export function Quests() {
                     </div>
                   ) : (
                     <>
-                      {allMissions.map((mission, i) => {
+                      {allMissions.map((mission) => {
                         if (mission.type === 'workout') {
                           const m = mission.data;
                           return (
@@ -964,7 +1212,6 @@ export function Quests() {
                               endTime={mission.endTime}
                               onToggle={() => navigate('/workouts')}
                               onUpdateTime={handleUpdateTime}
-                              index={i}
                             />
                           );
                         } else if (mission.type === 'finance') {
@@ -984,7 +1231,6 @@ export function Quests() {
                               endTime={mission.endTime}
                               onToggle={() => navigate('/fortuna')}
                               onUpdateTime={handleUpdateTime}
-                              index={i}
                             />
                           );
                         } else if (mission.type === 'meal') {
@@ -1004,7 +1250,6 @@ export function Quests() {
                               endTime={mission.endTime}
                               onToggle={(id) => toggleMealMission(id)}
                               onUpdateTime={handleUpdateTime}
-                              index={i}
                             />
                           );
                         } else if (mission.type === 'task') {
@@ -1040,7 +1285,6 @@ export function Quests() {
                               }}
                               onUpdateTime={handleUpdateTime}
                               onDelete={deleteTask}
-                              index={i}
                             />
                           );
                         } else {
@@ -1061,7 +1305,6 @@ export function Quests() {
                               endTime={mission.endTime}
                               onToggle={(id) => toggleCompletion(id)}
                               onUpdateTime={handleUpdateTime}
-                              index={i}
                             />
                           );
                         }
@@ -1084,14 +1327,29 @@ export function Quests() {
                       </p>
                     </div>
                   ) : (
-                    habits.map((h, i) => (
+                    habits.map((h) => (
                       <ManageQuestRow
                         key={h.id}
                         habit={h}
                         onDelete={deleteHabit}
                         onToggleActive={toggleActive}
                         onUpdateScheduledDays={updateScheduledDays}
-                        index={i}
+                        onEdit={(habit) => {
+                          setEditingHabitId(habit.id);
+                          setPresetHabitData({
+                            title: habit.title,
+                            category: habit.category,
+                            category_color: habit.category_color,
+                            xp_reward: habit.xp_reward,
+                            stat_target: habit.stat_target,
+                            stat_reward: habit.stat_reward,
+                            is_optional: habit.is_optional,
+                            scheduled_time: habit.scheduled_time,
+                            scheduled_end_time: habit.scheduled_end_time,
+                            scheduled_days: habit.scheduled_days ?? [],
+                          });
+                          setModalOpen(true);
+                        }}
                       />
                     ))
                   )}
@@ -1128,6 +1386,84 @@ export function Quests() {
                     </div>
                   </div>
 
+                  <div className="space-y-3">
+                    {CODEX_CATEGORIES.map(group => {
+                      const GroupIcon = group.icon;
+                      const isOpen = openCodexCategory === group.category;
+                      return (
+                        <div key={group.category} className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] transition-colors hover:border-blue-500/20">
+                          <button
+                            type="button"
+                            onClick={() => setOpenCodexCategory(isOpen ? '' : group.category)}
+                            className="flex w-full items-center gap-4 p-5 text-left"
+                            aria-expanded={isOpen}
+                          >
+                            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5" style={{ color: group.color }}>
+                              <GroupIcon className="size-5" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-base font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>{group.category}</span>
+                              <span className="mt-1 block text-sm text-gray-500">{group.entries.length} {group.entries.length === 1 ? 'diretriz disponível' : 'diretrizes disponíveis'}</span>
+                            </span>
+                            <ChevronDown className={`size-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180 text-blue-400' : ''}`} />
+                          </button>
+
+                          <AnimatePresence initial={false}>
+                            {isOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="grid gap-3 border-t border-[#1E1E26] p-4 lg:grid-cols-2">
+                                  {group.entries.map(entry => {
+                                    const EntryIcon = entry.icon;
+                                    return (
+                                      <div key={entry.activity} className="rounded-xl border border-white/5 bg-black/20 p-4 transition-colors hover:border-white/10 hover:bg-white/[0.035]">
+                                        <div className="flex items-start gap-3">
+                                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5" style={{ color: entry.iconColor }}>
+                                            <EntryIcon className="size-4" />
+                                          </span>
+                                          <div className="min-w-0">
+                                            <h3 className="text-sm font-bold text-white">{entry.activity}</h3>
+                                            <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{entry.lore}</p>
+                                          </div>
+                                        </div>
+                                        <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+                                          <span className={`rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 ${entry.statColor}`}>{entry.stat}</span>
+                                          <span className="rounded-lg border border-blue-500/15 bg-blue-500/5 px-2.5 py-1.5 text-blue-300">{entry.statBonus}</span>
+                                          <span className="rounded-lg border border-yellow-500/15 bg-yellow-500/5 px-2.5 py-1.5 text-yellow-400">{entry.xp}</span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (entry.route) {
+                                              navigate(entry.route);
+                                            } else if (entry.preset) {
+                                              setPresetHabitData(entry.preset);
+                                              setEditingHabitId(null);
+                                              setModalOpen(true);
+                                            }
+                                          }}
+                                          className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 text-sm font-bold text-blue-300 transition-all hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-white"
+                                        >
+                                          {entry.route ? <Sword className="size-4" /> : <Plus className="size-4" />}
+                                          {entry.route ? 'Abrir módulo' : 'Criar quest'}
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {legacyCodexVisible && (
                   <div className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13]">
                     {/* ── Visualização em Tabela para Desktop (Oculta no mobile) ── */}
                     <div className="hidden md:block overflow-x-auto">
@@ -1623,6 +1959,7 @@ export function Quests() {
                       })}
                     </div>
                   </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
