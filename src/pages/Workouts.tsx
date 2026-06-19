@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   Trash2,
   Timer,
-  Image as ImageIcon,
   Eye,
   Upload,
   CalendarDays,
@@ -1009,10 +1008,16 @@ export function Workouts() {
                       key={program.id}
                       className="group relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] transition-all duration-200 hover:-translate-y-1 hover:border-amber-500/50 hover:shadow-[0_0_24px_rgba(245,158,11,0.12)] flex flex-col"
                     >
-                      <div className="relative flex h-32 items-center justify-center overflow-hidden border-b border-[#1E1E26] bg-[radial-gradient(circle_at_70%_25%,rgba(245,158,11,0.14),transparent_34%),linear-gradient(135deg,#111118,#09090d)]">
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:26px_26px]" />
-                        <ImageIcon className="relative h-8 w-8 text-amber-500/35 transition-transform duration-500 group-hover:scale-110" />
-                        <span className="absolute bottom-3 right-3 text-[8px] font-black uppercase tracking-[0.18em] text-gray-700">Arte do programa</span>
+                      <div className="relative h-36 overflow-hidden border-b border-[#1E1E26] bg-[#09090D]">
+                        <img
+                          src={program.image}
+                          alt={`Arte do protocolo ${program.title}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F13] via-black/10 to-black/5" />
+                        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent opacity-70" />
                       </div>
 
                       <div className="flex flex-1 flex-col p-5">
@@ -2246,16 +2251,25 @@ export function Workouts() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col rounded-3xl border border-[#1E1E26] bg-[#0F0F13] shadow-2xl"
             >
-              <div className="p-8 border-b border-[#1E1E26]">
+              <div className="relative overflow-hidden border-b border-[#1E1E26] p-8">
+                <img
+                  src={selectedPreset.image}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 h-full w-full object-cover object-center opacity-35"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F13] via-[#0F0F13]/85 to-[#0F0F13]/35" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F13] via-transparent to-black/20" />
                 <button 
                   onClick={() => setIsPresetModalOpen(false)}
-                  className="absolute right-6 top-6 text-gray-500 hover:text-white"
+                  className="absolute right-6 top-6 z-10 flex size-9 items-center justify-center rounded-lg border border-white/10 bg-black/40 text-gray-400 backdrop-blur-md transition-colors hover:border-white/20 hover:text-white"
+                  aria-label="Fechar detalhes do protocolo"
                 >
-                  <X className="size-6" />
+                  <X className="size-5" />
                 </button>
 
-                <div className="flex items-center gap-5">
-                  <div className="flex size-14 items-center justify-center rounded-2xl bg-amber-600/20 text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                <div className="relative flex items-center gap-5 pr-12">
+                  <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-600/20 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.15)] backdrop-blur-md">
                     <Dumbbell className="size-7" strokeWidth={2.5} />
                   </div>
                   <div>

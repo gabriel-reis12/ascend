@@ -13,6 +13,11 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-19 — Artes dos Protocolos de Treino
+- Vinculadas as nove imagens de `public/Treinos/` aos respectivos modelos do Centro de Treinamento.
+- Os cards de protocolos agora exibem banners cinematográficos com carregamento otimizado, enquadramento responsivo, contraste e microinteração no hover.
+- A visualização detalhada de cada protocolo reutiliza sua arte no cabeçalho, mantendo continuidade visual entre catálogo e modal.
+
 ### 2026-06-18 — Navegação e Polimento do Training Center
 - **Centro de Comando:**
   - Substituídas as abas administrativas por uma navegação responsiva em cards compactos com ícones, descrições, estado ativo e glow contextual.
