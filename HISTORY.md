@@ -13,6 +13,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-19 — Premiumização do Módulo Fortuna
+- O header financeiro passou a exibir saldo líquido, status do fluxo, meta principal e streak real de meses com aporte.
+- Cards de ganhos, gastos, aportes e proteção de renda ganharam comparativos reais com o mês anterior e microcopy contextual.
+- O registro de fluxo foi reorganizado em entrada rápida e opções avançadas, com ação principal mais forte.
+- Metas personalizadas agora destacam a principal, valor restante, previsão estimada e progresso animado.
+- Registros mensais receberam ícones e estados visuais distintos para receitas, gastos e aportes.
+- Provérbios da Sabedoria foram convertidos em um painel de lore mais legível e refinado.
+
 ### 2026-06-19 — Polimento de Navegação e Códex
 - Substituída a navegação simples do Quadro de Missões por pills responsivas com ícones, hover, glow azul e indicador ativo animado.
 - Ampliado o painel “Diretrizes do Códex” para toda a largura disponível, alinhando-o aos accordions inferiores.
