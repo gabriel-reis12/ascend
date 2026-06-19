@@ -13,6 +13,20 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-19 — Recuperação de Mana Premium
+- **Dashboard nutricional:**
+  - Reformulados os cards de energia e macros com metas de referência, consumido, restante, progresso animado e estados baixo/ideal/excedido.
+  - A meta diária ganhou hierarquia principal, faixa recomendada, objetivo, calorias restantes e previsão da recompensa real de `+60 XP` e `+2 VIT`.
+  - Adicionado streak nutricional baseado nos registros reais de `nutrition_daily_scores`.
+- **Códex e diário:**
+  - O analisador por IA recebeu microcopy orientada, exemplos rápidos, loading mais claro e resultado premium sem antecipar recompensas.
+  - Registros do dia agora possuem expansão, macros, quantidade, horário, edição e remoção reais.
+  - Criado empty state com acesso direto ao primeiro registro.
+- **Cardápios do Caçador:**
+  - Cards agora exibem objetivo estimado, energia, proteína, dificuldade, preparo e tags derivadas dos alimentos cadastrados.
+  - Adicionada ação para inserir todos os itens de um cardápio no diário do dia usando `food_logs`.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-19 — Artes dos Protocolos de Treino
 - Vinculadas as nove imagens de `public/Treinos/` aos respectivos modelos do Centro de Treinamento.
 - Os cards de protocolos agora exibem banners cinematográficos com carregamento otimizado, enquadramento responsivo, contraste e microinteração no hover.

@@ -1,11 +1,33 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Search, Trash2, UtensilsCrossed, Zap, Apple, ChevronDown, Flame, Droplets, Scale } from 'lucide-react';
+import { Plus, X, Search, Trash2, UtensilsCrossed, Zap, Apple, ChevronDown, Flame, Droplets, Scale, Clock, Gauge, CheckCircle2 } from 'lucide-react';
 import { useMealPlans, calcMealMacros, type MealPlan } from '@/hooks/useMealPlans';
 import type { Food } from '@/types/nutrition';
 
 interface NutritionMealPlansProps {
   foods: Food[];
+  onUsePlan: (plan: MealPlan) => Promise<void>;
+  feedback?: string | null;
+}
+
+function getPlanMetadata(plan: MealPlan, macros: ReturnType<typeof calcMealMacros>) {
+  const itemCount = plan.items?.length ?? 0;
+  const name = plan.name.toLowerCase();
+  const objective = macros.protein >= 30
+    ? 'Suporte à força e recuperação'
+    : macros.carbs >= 45
+      ? 'Energia e reposição'
+      : 'Equilíbrio e consistência';
+  const difficulty = itemCount <= 3 ? 'Fácil' : itemCount <= 5 ? 'Moderada' : 'Estruturada';
+  const prepTime = itemCount === 0 ? '--' : `${Math.min(45, 10 + itemCount * 5)} min`;
+  const tags = [
+    itemCount > 0 && itemCount <= 3 ? 'Rápido' : 'Planejado',
+    macros.protein >= 30 ? 'Alto em proteína' : 'Equilibrado',
+    name.includes('pré') || name.includes('pre') ? 'Pré-treino' : null,
+    name.includes('pós') || name.includes('pos') ? 'Pós-treino' : null,
+  ].filter(Boolean) as string[];
+
+  return { objective, difficulty, prepTime, tags };
 }
 
 function MacroBadge({ label, value, color }: { label: string; value: string; color: string }) {
@@ -58,18 +80,23 @@ function MealPlanCard({
   foods,
   onAddItem,
   onRemoveItem,
+  onUsePlan,
+  isUsing,
 }: {
   plan: MealPlan;
   onDelete: (id: string) => void;
   foods: Food[];
   onAddItem: (planId: string, foodId: string, qty: number) => void;
   onRemoveItem: (itemId: string, planId: string) => void;
+  onUsePlan: (plan: MealPlan) => Promise<void>;
+  isUsing: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
 
   const macros = calcMealMacros(plan.items ?? []);
+  const metadata = getPlanMetadata(plan, macros);
   const filtered = foods.filter(f => f.name.toLowerCase().includes(search.toLowerCase())).slice(0, 6);
 
   return (
@@ -77,33 +104,22 @@ function MealPlanCard({
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] transition-all"
+      className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] transition-all hover:border-orange-500/25 hover:shadow-[0_0_20px_rgba(249,115,22,0.07)]"
     >
       {/* Card Header */}
-      <div className="flex items-center gap-3 p-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 transition-all">
-          <UtensilsCrossed size={18} className="text-orange-400" />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black uppercase tracking-tight text-white"
-            style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            {plan.name}
-          </p>
-          <div className="flex items-center gap-3 mt-0.5">
-            <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">
-              {Math.round(macros.kcal)} kcal
-            </span>
-            <span className="text-[10px] font-bold text-gray-600 uppercase">
-              +{plan.xp_reward} XP
-            </span>
+      <div className="p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-orange-500/15 bg-orange-500/10 transition-all">
+            <UtensilsCrossed size={18} className="text-orange-400" />
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={() => setExpanded(p => !p)} className="text-gray-500 hover:text-white transition-colors">
-            <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
-          </button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-black uppercase tracking-tight text-white"
+              style={{ fontFamily: 'Orbitron, sans-serif' }}>
+              {plan.name}
+            </p>
+            <p className="mt-1 text-[10px] font-semibold text-gray-500">{metadata.objective}</p>
+          </div>
 
           {confirmDel ? (
             <div className="flex gap-1">
@@ -115,6 +131,49 @@ function MealPlanCard({
               <Trash2 size={14} />
             </button>
           )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: 'Energia', value: `${Math.round(macros.kcal)} kcal`, icon: Flame, tone: 'text-orange-400' },
+            { label: 'Proteína', value: `${macros.protein.toFixed(0)}g`, icon: Zap, tone: 'text-purple-400' },
+            { label: 'Dificuldade', value: metadata.difficulty, icon: Gauge, tone: 'text-blue-400' },
+            { label: 'Preparo', value: metadata.prepTime, icon: Clock, tone: 'text-emerald-400' },
+          ].map(item => (
+            <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3">
+              <item.icon className={`size-3.5 ${item.tone}`} />
+              <p className="mt-2 text-[7px] font-black uppercase tracking-wider text-gray-600">{item.label}</p>
+              <p className="mt-1 text-[10px] font-bold text-gray-300">{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {metadata.tags.map(tag => (
+            <span key={tag} className="rounded-md border border-orange-500/15 bg-orange-500/5 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-orange-300">
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+          <button
+            type="button"
+            onClick={() => void onUsePlan(plan)}
+            disabled={isUsing || !plan.items?.length}
+            className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-orange-500 hover:shadow-[0_0_18px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {isUsing ? <Clock className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+            {isUsing ? 'Adicionando...' : 'Adicionar ao dia'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded(p => !p)}
+            className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-500 transition-colors hover:text-white"
+            aria-label={expanded ? 'Recolher cardápio' : 'Expandir cardápio'}
+          >
+            <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -209,7 +268,7 @@ function MealPlanCard({
   );
 }
 
-export function NutritionMealPlans({ foods }: NutritionMealPlansProps) {
+export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMealPlansProps) {
   const {
     mealPlans,
     loading,
@@ -221,6 +280,16 @@ export function NutritionMealPlans({ foods }: NutritionMealPlansProps) {
 
   const [newName, setNewName] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [usingPlanId, setUsingPlanId] = useState<string | null>(null);
+
+  async function handleUsePlan(plan: MealPlan) {
+    setUsingPlanId(plan.id);
+    try {
+      await onUsePlan(plan);
+    } finally {
+      setUsingPlanId(null);
+    }
+  }
 
   async function handleCreate() {
     if (!newName.trim()) return;
@@ -242,6 +311,16 @@ export function NutritionMealPlans({ foods }: NutritionMealPlansProps) {
 
   return (
     <div className="space-y-6">
+      {feedback && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-200"
+        >
+          <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+          {feedback}
+        </motion.div>
+      )}
       {/* Stats Board */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
         {[
@@ -322,6 +401,8 @@ export function NutritionMealPlans({ foods }: NutritionMealPlansProps) {
               foods={foods}
               onAddItem={addItemToMeal}
               onRemoveItem={removeItemFromMeal}
+              onUsePlan={handleUsePlan}
+              isUsing={usingPlanId === plan.id}
             />
           ))}
         </div>

@@ -9,22 +9,28 @@ import {
   Flame,
   Zap,
   Droplets,
-  Scale,
   LayoutGrid,
   Table as TableIcon,
   UtensilsCrossed,
   BookOpen,
   Sparkles,
   Brain,
-  Cpu
+  Cpu,
+  ChevronDown,
+  Trash2,
+  Clock,
+  Target,
+  Gauge
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { NutritionMealPlans } from '@/components/nutrition/NutritionMealPlans';
 import type { Food } from '@/types/nutrition';
-import { localDayBounds } from '@/lib/date';
+import { localDateString, localDayBounds } from '@/lib/date';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
+import type { MealPlan } from '@/hooks/useMealPlans';
 
 interface FoodLog {
   id: string;
@@ -33,6 +39,90 @@ interface FoodLog {
   meal_type: string;
   logged_at: string;
   food?: Food;
+}
+
+interface NutritionScore {
+  date: string;
+  success: boolean;
+}
+
+type NutritionStatus = 'low' | 'ideal' | 'exceeded';
+
+const NUTRITION_PROMPTS = [
+  { label: 'Prato completo', text: '150g de frango, arroz, feijão e salada' },
+  { label: 'Lanche rápido', text: 'Iogurte natural, banana, aveia e mel' },
+  { label: 'Café proteico', text: 'Omelete com 3 ovos, queijo e pão integral' },
+];
+
+function NutritionMetricCard({
+  label,
+  unit,
+  consumed,
+  target,
+  icon: Icon,
+  accent,
+  bar,
+  status,
+}: {
+  label: string;
+  unit: string;
+  consumed: number;
+  target: number | null;
+  icon: LucideIcon;
+  accent: string;
+  bar: string;
+  status: NutritionStatus;
+}) {
+  const progress = target ? Math.min(100, Math.round((consumed / target) * 100)) : 0;
+  const remaining = target ? Math.max(0, target - consumed) : null;
+  const statusStyle = {
+    low: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
+    ideal: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
+    exceeded: 'border-blue-500/20 bg-blue-500/10 text-blue-300',
+  }[status];
+  const statusLabel = { low: 'Baixo', ideal: 'Ideal', exceeded: 'Excedido' }[status];
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-4 shadow-lg transition-colors hover:border-white/10 sm:p-5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</p>
+          <p className="mt-2 text-xl font-black text-white sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+            {consumed.toFixed(unit === 'kcal' ? 0 : 1)}
+            <span className={`ml-1 text-[10px] ${accent}`}>{unit}</span>
+          </p>
+        </div>
+        <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5 ${accent}`}>
+          <Icon className="size-4" />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="mb-2 flex items-center justify-between text-[8px] font-black uppercase tracking-wider">
+          <span className="text-gray-600">{target ? `Meta ${Math.round(target)} ${unit}` : 'Meta indisponível'}</span>
+          <span className={`rounded-md border px-1.5 py-0.5 ${statusStyle}`}>{statusLabel}</span>
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-black/50">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            className={`h-full rounded-full ${bar}`}
+          />
+        </div>
+        <p className="mt-2 text-[9px] font-semibold text-gray-600">
+          {remaining === null
+            ? 'Complete seu perfil para calibrar.'
+            : remaining > 0
+              ? `${remaining.toFixed(unit === 'kcal' ? 0 : 1)} ${unit} restantes`
+              : `Referência alcançada em ${progress}%`}
+        </p>
+      </div>
+    </motion.div>
+  );
 }
 
 export function Nutrition() {
@@ -78,6 +168,10 @@ export function Nutrition() {
     fat: number;
     xp: number;
   } | null>(null);
+  const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [mealPlanFeedback, setMealPlanFeedback] = useState<string | null>(null);
+  const [nutritionStreak, setNutritionStreak] = useState(0);
 
   useEffect(() => {
     fetchData();
@@ -88,6 +182,7 @@ export function Nutrition() {
       setLoading(false);
       setFoods([]);
       setLogs([]);
+      setNutritionStreak(0);
       return;
     }
     setLoading(true);
@@ -102,7 +197,8 @@ export function Nutrition() {
       const { startIso } = localDayBounds();
       const [
         { data: foodData, error: foodError },
-        { data: logData, error: logError }
+        { data: logData, error: logError },
+        { data: scoreData, error: scoreError },
       ] = await Promise.all([
         supabase
           .from('foods')
@@ -116,7 +212,13 @@ export function Nutrition() {
           `)
           .eq('user_id', user.id)
           .gte('logged_at', startIso)
-          .order('logged_at', { ascending: false })
+          .order('logged_at', { ascending: false }),
+        supabase
+          .from('nutrition_daily_scores')
+          .select('date, success')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+          .limit(30),
       ]);
       
       if (foodError) throw foodError;
@@ -124,6 +226,17 @@ export function Nutrition() {
  
       if (logError) throw logError;
       setLogs(logData || []);
+      if (scoreError) throw scoreError;
+
+      const scoresByDate = new Map((scoreData as NutritionScore[] || []).map(score => [score.date, score.success]));
+      const cursor = new Date();
+      cursor.setDate(cursor.getDate() - 1);
+      let streak = 0;
+      while (scoresByDate.get(localDateString(cursor)) === true) {
+        streak++;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      setNutritionStreak(streak);
     } catch (err) {
       console.error('Error fetching nutrition data:', err);
       setDataError(err instanceof Error ? err.message : String(err));
@@ -140,22 +253,72 @@ export function Nutrition() {
       const isCustomUnit = !!selectedFood.serving_unit && !!selectedFood.serving_size;
       const finalGrams = isCustomUnit ? quantity * (100 / selectedFood.serving_size!) : quantity;
 
-      const { error } = await supabase.from('food_logs').insert({
+      const payload = {
         user_id: user.id,
         food_id: selectedFood.id,
         quantity_grams: finalGrams,
         meal_type: mealType,
-      });
+      };
+      const { error } = editingLogId
+        ? await supabase.from('food_logs').update(payload).eq('id', editingLogId).eq('user_id', user.id)
+        : await supabase.from('food_logs').insert(payload);
 
       if (error) throw error;
       
       setIsModalOpen(false);
       setSelectedFood(null);
+      setEditingLogId(null);
       setQuantity(100);
       fetchData();
     } catch (err) {
       console.error('Error logging food:', err);
     }
+  }
+
+  function handleEditLog(log: FoodLog) {
+    if (!log.food) return;
+    const isCustom = !!log.food.serving_unit && !!log.food.serving_size;
+    const displayQuantity = isCustom
+      ? log.quantity_grams / (100 / log.food.serving_size!)
+      : log.quantity_grams;
+
+    setSelectedFood(log.food);
+    setQuantity(Number(displayQuantity.toFixed(2)));
+    setMealType(log.meal_type);
+    setEditingLogId(log.id);
+    setIsModalOpen(true);
+  }
+
+  async function handleDeleteLog(logId: string) {
+    if (!user) return;
+    const { error } = await supabase.from('food_logs').delete().eq('id', logId).eq('user_id', user.id);
+    if (error) {
+      setDataError(error.message);
+      return;
+    }
+    setLogs(current => current.filter(log => log.id !== logId));
+  }
+
+  async function handleUseMealPlan(plan: MealPlan) {
+    if (!user || !plan.items?.length) return;
+    setMealPlanFeedback(null);
+
+    const { error } = await supabase.from('food_logs').insert(
+      plan.items.map(item => ({
+        user_id: user.id,
+        food_id: item.food_id,
+        quantity_grams: item.quantity_grams,
+        meal_type: plan.name,
+      }))
+    );
+
+    if (error) {
+      setDataError(error.message);
+      return;
+    }
+
+    setMealPlanFeedback(`${plan.name} foi adicionado ao diário de hoje.`);
+    await fetchData();
   }
 
   async function handleCreateFood() {
@@ -320,9 +483,9 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
       // Recarregar os dados na tela
       await fetchData();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Códex IA] Erro ao processar:', err);
-      setIaError(err.message || 'Houve uma anomalia na calibração neural. Tente novamente.');
+      setIaError(err instanceof Error ? err.message : 'Houve uma anomalia na calibração neural. Tente novamente.');
     } finally {
       setIaLoading(false);
     }
@@ -353,6 +516,32 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
   const remainingCalories = nutritionTargets.targetCalories
     ? Math.max(0, nutritionTargets.targetCalories - dailyMacros.kcal)
     : null;
+  const calorieProgress = nutritionTargets.targetCalories
+    ? Math.min(100, Math.round((dailyMacros.kcal / nutritionTargets.targetCalories) * 100))
+    : 0;
+  const macroTargets = nutritionTargets.targetCalories
+    ? {
+        protein: (nutritionTargets.targetCalories * 0.25) / 4,
+        carbs: (nutritionTargets.targetCalories * 0.45) / 4,
+        fat: (nutritionTargets.targetCalories * 0.3) / 9,
+      }
+    : { protein: null, carbs: null, fat: null };
+
+  function getReferenceStatus(consumed: number, target: number | null): NutritionStatus {
+    if (!target || consumed < target * 0.75) return 'low';
+    if (consumed <= target * 1.1) return 'ideal';
+    return 'exceeded';
+  }
+
+  const calorieStatus: NutritionStatus = !nutritionTargets.minCalories || !nutritionTargets.maxCalories
+    ? 'low'
+    : dailyMacros.kcal < nutritionTargets.minCalories
+      ? 'low'
+      : dailyMacros.kcal <= nutritionTargets.maxCalories
+        ? 'ideal'
+        : 'exceeded';
+  const isInsideRecommendedRange = calorieStatus === 'ideal';
+  const projectedNutritionXp = 60;
 
   return (
     <div className="space-y-6 pb-12">
@@ -406,7 +595,11 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
       {/* Cardápios Tab */}
       {activeTab === 'cardapios' && (
-        <NutritionMealPlans foods={foods} />
+        <NutritionMealPlans
+          foods={foods}
+          onUsePlan={handleUseMealPlan}
+          feedback={mealPlanFeedback}
+        />
       )}
 
       {/* Diário de Consumo Tab */}
@@ -418,93 +611,138 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
               {dataError}
             </div>
           )}
-          {/* Painel Consolidado de Macros do Dia */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {/* Calorias */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
-              <div className="absolute right-4 top-4 size-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
-                <Flame className="size-5 animate-pulse" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Energia Diária</span>
-              <h3 className="mt-2 text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {dailyMacros.kcal.toFixed(0)} <span className="text-xs text-orange-400">kcal</span>
-              </h3>
-            </div>
-
-            {/* Proteínas */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
-              <div className="absolute right-4 top-4 size-10 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
-                <Zap className="size-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Proteínas</span>
-              <h3 className="mt-2 text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {dailyMacros.protein.toFixed(1)} <span className="text-xs text-purple-400">g</span>
-              </h3>
-            </div>
-
-            {/* Carboidratos */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
-              <div className="absolute right-4 top-4 size-10 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center">
-                <Apple className="size-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Carboidratos</span>
-              <h3 className="mt-2 text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {dailyMacros.carbs.toFixed(1)} <span className="text-xs text-green-400">g</span>
-              </h3>
-            </div>
-
-            {/* Gorduras */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
-              <div className="absolute right-4 top-4 size-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                <Droplets className="size-5" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Gorduras</span>
-              <h3 className="mt-2 text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {dailyMacros.fat.toFixed(1)} <span className="text-xs text-blue-400">g</span>
-              </h3>
-            </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <NutritionMetricCard
+              label="Energia diária"
+              unit="kcal"
+              consumed={dailyMacros.kcal}
+              target={nutritionTargets.targetCalories}
+              icon={Flame}
+              accent="text-orange-400"
+              bar="bg-gradient-to-r from-orange-700 via-orange-500 to-amber-300 shadow-[0_0_10px_rgba(249,115,22,0.45)]"
+              status={calorieStatus}
+            />
+            <NutritionMetricCard
+              label="Proteínas"
+              unit="g"
+              consumed={dailyMacros.protein}
+              target={macroTargets.protein}
+              icon={Zap}
+              accent="text-purple-400"
+              bar="bg-gradient-to-r from-purple-700 via-purple-500 to-fuchsia-300 shadow-[0_0_10px_rgba(168,85,247,0.4)]"
+              status={getReferenceStatus(dailyMacros.protein, macroTargets.protein)}
+            />
+            <NutritionMetricCard
+              label="Carboidratos"
+              unit="g"
+              consumed={dailyMacros.carbs}
+              target={macroTargets.carbs}
+              icon={Apple}
+              accent="text-green-400"
+              bar="bg-gradient-to-r from-emerald-700 via-green-500 to-lime-300 shadow-[0_0_10px_rgba(34,197,94,0.35)]"
+              status={getReferenceStatus(dailyMacros.carbs, macroTargets.carbs)}
+            />
+            <NutritionMetricCard
+              label="Gorduras"
+              unit="g"
+              consumed={dailyMacros.fat}
+              target={macroTargets.fat}
+              icon={Droplets}
+              accent="text-blue-400"
+              bar="bg-gradient-to-r from-blue-700 via-blue-500 to-cyan-300 shadow-[0_0_10px_rgba(59,130,246,0.35)]"
+              status={getReferenceStatus(dailyMacros.fat, macroTargets.fat)}
+            />
           </div>
 
-          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-5 shadow-lg">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative overflow-hidden rounded-3xl border border-orange-500/25 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(249,115,22,0.08)] sm:p-6">
+            <div className="absolute right-0 top-0 h-full w-72 bg-gradient-to-l from-orange-500/10 to-transparent" />
+            <div className="relative grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">
-                  Meta Calorica Diaria
-                </span>
-                <h2 className="mt-1 text-xl font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {nutritionTargets.targetCalories
-                    ? `${Math.round(dailyMacros.kcal)} / ${nutritionTargets.targetCalories} kcal`
-                    : 'Perfil incompleto'}
-                </h2>
-                <p className="mt-2 text-xs font-semibold text-gray-500">
-                  {nutritionTargets.targetCalories
-                    ? `Faltam ${Math.round(remainingCalories ?? 0)} kcal para sua meta de ${nutritionTargets.goalLabel.toLowerCase()}.`
-                    : `Faltam no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados fisicos'}. Atualize em Ajustes.`}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[560px]">
-                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Objetivo</p>
-                  <p className="mt-1 text-xs font-black uppercase text-orange-300">{nutritionTargets.goalLabel}</p>
+                <div className="flex items-center gap-2 text-orange-400">
+                  <Target className="size-4" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.24em]">Meta diária de recuperação</span>
                 </div>
-                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">TMB</p>
-                  <p className="mt-1 text-xs font-black text-white">{nutritionTargets.bmr ?? '--'} kcal</p>
-                </div>
-                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Manutencao</p>
-                  <p className="mt-1 text-xs font-black text-white">{nutritionTargets.maintenanceCalories ?? '--'} kcal</p>
-                </div>
-                <div className="rounded-xl border border-[#1E1E26] bg-black/30 p-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Faixa XP</p>
-                  <p className="mt-1 text-xs font-black text-white">
-                    {nutritionTargets.minCalories && nutritionTargets.maxCalories
-                      ? `${nutritionTargets.minCalories}-${nutritionTargets.maxCalories}`
-                      : '--'}
+                <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <h2 className="text-2xl font-black uppercase text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                    {Math.round(dailyMacros.kcal)}
+                  </h2>
+                  <p className="pb-1 text-xs font-black uppercase tracking-widest text-gray-500">
+                    de {nutritionTargets.targetCalories ?? '--'} kcal
                   </p>
                 </div>
+                <p className="mt-2 text-xs font-semibold leading-relaxed text-gray-400">
+                  {nutritionTargets.targetCalories
+                    ? remainingCalories && remainingCalories > 0
+                      ? `${Math.round(remainingCalories)} kcal disponíveis para completar o objetivo de ${nutritionTargets.goalLabel.toLowerCase()} com consistência.`
+                      : isInsideRecommendedRange
+                        ? 'Faixa recomendada alcançada. O Sistema avaliará o resultado no fechamento do dia.'
+                        : 'A referência diária foi ultrapassada. Siga normalmente e priorize consistência ao longo dos dias.'
+                    : `Complete no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados físicos'}.`}
+                </p>
+
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                    <span className="text-gray-500">Sincronização energética</span>
+                    <span className="text-orange-300">{calorieProgress}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-black/60">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${calorieProgress}%` }}
+                      transition={{ duration: 0.7, ease: 'easeOut' }}
+                      className="h-full rounded-full bg-gradient-to-r from-orange-700 via-orange-500 to-amber-300 shadow-[0_0_14px_rgba(249,115,22,0.5)]"
+                    />
+                  </div>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Objetivo', value: nutritionTargets.goalLabel, icon: Gauge, tone: 'text-orange-300' },
+                  { label: 'Restante', value: remainingCalories === null ? '--' : `${Math.round(remainingCalories)} kcal`, icon: Flame, tone: 'text-white' },
+                  {
+                    label: 'Faixa recomendada',
+                    value: nutritionTargets.minCalories && nutritionTargets.maxCalories
+                      ? `${nutritionTargets.minCalories}–${nutritionTargets.maxCalories}`
+                      : '--',
+                    icon: Target,
+                    tone: 'text-white',
+                  },
+                  {
+                    label: 'XP previsto',
+                    value: `+${projectedNutritionXp} XP`,
+                    icon: Zap,
+                    tone: isInsideRecommendedRange ? 'text-purple-300' : 'text-gray-400',
+                  },
+                ].map(item => (
+                  <div key={item.label} className="rounded-xl border border-white/5 bg-black/30 p-3">
+                    <item.icon className={`size-3.5 ${item.tone}`} />
+                    <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">{item.label}</p>
+                    <p className={`mt-1 text-[10px] font-black uppercase ${item.tone}`}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="relative mt-4 border-t border-white/5 pt-3 text-[9px] leading-relaxed text-gray-600">
+              Referências de macros são estimativas visuais do Sistema. A recompensa real é processada pela avaliação nutricional diária.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-purple-500/15 bg-purple-500/[0.035] p-4">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-purple-400">Suporte físico</p>
+              <p className="mt-2 text-xs font-bold text-white">Proteína em faixa de referência</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Acompanha a preparação de FOR e RES sem conceder atributos automaticamente.</p>
+            </div>
+            <div className="rounded-2xl border border-orange-500/15 bg-orange-500/[0.035] p-4">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-orange-400">Recompensa diária</p>
+              <p className="mt-2 text-xs font-bold text-white">+60 XP · +2 VIT</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Concedidos pelo Sistema no fechamento de um dia dentro da faixa recomendada.</p>
+            </div>
+            <div className="rounded-2xl border border-blue-500/15 bg-blue-500/[0.035] p-4">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-400">Streak nutricional</p>
+              <p className="mt-2 text-xs font-bold text-white">{nutritionStreak} {nutritionStreak === 1 ? 'dia' : 'dias'}</p>
+              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Sequência real de avaliações concluídas dentro da meta energética.</p>
             </div>
           </div>
 
@@ -546,14 +784,19 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-purple-500/5 blur-3xl" />
                   
                   <div className="space-y-1 relative z-10">
-                    <div className="flex items-center gap-2 text-purple-400">
-                      <Brain size={16} className="animate-pulse" />
-                      <h2 className="text-sm font-black uppercase tracking-widest italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        CÓDEX DA ALIMENTAÇÃO (IA)
-                      </h2>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-purple-400">
+                        <Brain size={16} className="animate-pulse" />
+                        <h2 className="text-sm font-black uppercase tracking-widest italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                          CÓDEX DA ALIMENTAÇÃO
+                        </h2>
+                      </div>
+                      <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-emerald-300">
+                        IA ativa
+                      </span>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Descreva sua refeição de forma livre. O Códex neural estimará os macros e registrará o suprimento em seu banco de dados automaticamente.
+                    <p className="max-w-2xl text-sm leading-relaxed text-gray-400">
+                      Descreva sua refeição e o Sistema calculará os nutrientes.
                     </p>
                   </div>
 
@@ -568,6 +811,18 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                         rows={4}
                         className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_15px_rgba(168,85,247,0.15)] focus:outline-none transition-all resize-none"
                       />
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {NUTRITION_PROMPTS.map(prompt => (
+                          <button
+                            key={prompt.label}
+                            type="button"
+                            onClick={() => setIaTextInput(prompt.text)}
+                            className="rounded-lg border border-white/5 bg-white/[0.025] px-3 py-2 text-left text-[9px] font-semibold text-gray-500 transition-all hover:border-purple-500/30 hover:bg-purple-500/5 hover:text-purple-200"
+                          >
+                            {prompt.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -590,18 +845,18 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                         <button
                           onClick={handleAnalyzeMealIa}
                           disabled={iaLoading}
-                          className="w-full rounded-xl bg-purple-600/90 hover:bg-purple-500 disabled:bg-purple-900/40 disabled:text-gray-500 text-white font-black uppercase tracking-widest text-xs py-4.5 px-4 flex items-center justify-center gap-2 border border-purple-500/30 transition-all cursor-pointer shadow-[0_0_20px_rgba(168,85,247,0.1)] active:scale-95"
+                          className="flex min-h-13 w-full items-center justify-center gap-2 rounded-xl border border-purple-400/30 bg-gradient-to-r from-purple-700 via-purple-600 to-blue-600 px-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_24px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 hover:shadow-[0_0_30px_rgba(168,85,247,0.28)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
                           style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
                           {iaLoading ? (
                             <>
                               <Cpu size={14} className="animate-spin text-purple-400" />
-                              Calibrando Suprimentos...
+                              Sistema analisando...
                             </>
                           ) : (
                             <>
                               <Sparkles size={14} className="text-purple-300" />
-                              Calibrar Nutrientes (IA)
+                              Analisar e registrar
                             </>
                           )}
                         </button>
@@ -627,12 +882,12 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
-                        className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-5 space-y-3 relative z-10 shadow-[0_0_20px_rgba(168,85,247,0.05)]"
+                        className="relative z-10 space-y-4 overflow-hidden rounded-2xl border border-purple-500/30 bg-purple-500/5 p-5 shadow-[0_0_24px_rgba(168,85,247,0.08)]"
                       >
                         <div className="flex items-center gap-2 text-purple-400">
                           <Zap size={16} className="animate-bounce" />
                           <span className="font-black text-xs uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            REFEIÇÃO CATALOGADA COM SUCESSO!
+                            ANÁLISE CONCLUÍDA
                           </span>
                         </div>
                         <div className="text-xs text-gray-300">
@@ -655,9 +910,9 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                               <span className="text-sm font-bold text-blue-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>+{iaSuccessAlert.fat}g</span>
                             </div>
                           </div>
-                          <div className="mt-4 flex items-center justify-between text-[10px] font-black text-purple-400 uppercase tracking-widest bg-purple-500/10 px-3 py-2.5 rounded-lg border border-purple-500/20">
-                            <span>SISTEMA: registro computado para a avaliacao diaria</span>
-                            <span>ATAQUE AO BOSS: -15 HP (CRÍTICO!)</span>
+                          <div className="mt-4 flex flex-col gap-1 rounded-lg border border-purple-500/20 bg-purple-500/10 px-3 py-2.5 text-[9px] font-black uppercase tracking-wider text-purple-300 sm:flex-row sm:items-center sm:justify-between">
+                            <span>Registro computado para a avaliação diária</span>
+                            <span>XP definido no fechamento do dia</span>
                           </div>
                         </div>
                       </motion.div>
@@ -786,8 +1041,19 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                   {logs.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <p className="text-[10px] uppercase font-bold text-gray-600">Nenhum nutriente detectado.</p>
+                    <div className="rounded-2xl border border-dashed border-purple-500/20 bg-purple-500/[0.03] px-4 py-10 text-center">
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
+                        <UtensilsCrossed className="size-5" />
+                      </div>
+                      <p className="mt-4 text-xs font-black uppercase text-white">O Sistema ainda não detectou nutrientes hoje.</p>
+                      <p className="mt-2 text-[10px] leading-relaxed text-gray-500">Registre sua primeira refeição para recuperar mana.</p>
+                      <button
+                        type="button"
+                        onClick={() => setSubTab('codex')}
+                        className="mt-5 rounded-xl bg-purple-600 px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(168,85,247,0.25)]"
+                      >
+                        Registrar refeição
+                      </button>
                     </div>
                   ) : (
                     logs.map((log) => {
@@ -796,24 +1062,91 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                       const displayUnit = isCustom ? log.food!.serving_unit : 'G';
                       const ratio = log.quantity_grams / 100;
                       const kcal = (log.food?.calories_per_100g || 0) * ratio;
+                      const protein = (log.food?.protein_per_100g || 0) * ratio;
+                      const carbs = (log.food?.carbs_per_100g || 0) * ratio;
+                      const fat = (log.food?.fat_per_100g || 0) * ratio;
+                      const isExpanded = expandedLogIds.has(log.id);
 
                       return (
-                        <div key={log.id} className="relative overflow-hidden rounded-xl border border-[#1E1E26] bg-white/5 p-4 transition-all hover:bg-white/10">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold text-white uppercase truncate pr-4">{log.food?.name}</p>
-                            <span className="text-[9px] font-black text-purple-500 uppercase tracking-tighter bg-purple-500/10 px-1.5 py-0.5 rounded">
-                              {log.meal_type}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-center justify-between">
-                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                              {displayQty}{displayUnit} • {kcal.toFixed(0)} KCAL
-                            </p>
-                            <p className="text-[9px] font-bold text-gray-700 uppercase">
-                              {new Date(log.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        </div>
+                        <motion.div layout key={log.id} className="relative overflow-hidden rounded-xl border border-[#1E1E26] bg-white/[0.035] transition-all hover:border-purple-500/25 hover:bg-white/[0.055]">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedLogIds(current => {
+                              const next = new Set(current);
+                              if (next.has(log.id)) next.delete(log.id);
+                              else next.add(log.id);
+                              return next;
+                            })}
+                            className="w-full p-4 text-left"
+                            aria-expanded={isExpanded}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <span className="rounded-md border border-purple-500/15 bg-purple-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-purple-300">
+                                  {log.meal_type}
+                                </span>
+                                <p className="mt-2 truncate text-xs font-bold uppercase text-white">{log.food?.name}</p>
+                              </div>
+                              <ChevronDown className={`mt-1 size-4 shrink-0 text-gray-600 transition-transform ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
+                            </div>
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                              <p className="text-[10px] font-black uppercase tracking-wider text-orange-300">
+                                {kcal.toFixed(0)} kcal
+                              </p>
+                              <p className="flex items-center gap-1 text-[9px] font-bold uppercase text-gray-600">
+                                <Clock className="size-3" />
+                                {new Date(log.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </button>
+
+                          <AnimatePresence initial={false}>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="border-t border-white/5 px-4 pb-4 pt-3">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                      ['Proteína', `${protein.toFixed(1)}g`],
+                                      ['Carbos', `${carbs.toFixed(1)}g`],
+                                      ['Gorduras', `${fat.toFixed(1)}g`],
+                                    ].map(([label, value]) => (
+                                      <div key={label} className="rounded-lg bg-black/25 p-2 text-center">
+                                        <p className="text-[7px] font-black uppercase tracking-wider text-gray-600">{label}</p>
+                                        <p className="mt-1 text-[10px] font-bold text-gray-300">{value}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="mt-3 flex items-center justify-between text-[9px]">
+                                    <span className="text-gray-500">{displayQty}{displayUnit} registrados</span>
+                                    <span className="font-black uppercase text-purple-300">XP diário pendente</span>
+                                  </div>
+                                  <div className="mt-3 grid grid-cols-2 gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditLog(log)}
+                                      className="rounded-lg border border-white/10 bg-white/5 py-2 text-[8px] font-black uppercase tracking-wider text-gray-400 transition-colors hover:text-white"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleDeleteLog(log.id)}
+                                      className="flex items-center justify-center gap-1 rounded-lg border border-red-500/15 bg-red-500/5 py-2 text-[8px] font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/10"
+                                    >
+                                      <Trash2 className="size-3" />
+                                      Remover
+                                    </button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
                       );
                     })
                   )}
@@ -833,7 +1166,10 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingLogId(null);
+              }}
               className="absolute inset-0 bg-black/90 backdrop-blur-md" 
             />
             
@@ -844,7 +1180,10 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
               className="relative w-full max-w-md overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-8 shadow-2xl"
             >
               <button 
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingLogId(null);
+                }}
                 className="absolute right-6 top-6 text-gray-500 hover:text-white"
               >
                 <X className="size-6" />
@@ -856,7 +1195,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase italic text-white tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    Registrar <span className="text-purple-500">Recuperação</span>
+                    {editingLogId ? 'Editar' : 'Registrar'} <span className="text-purple-500">Recuperação</span>
                   </h2>
                   <p className="text-xs font-black uppercase tracking-widest text-gray-600">{selectedFood.name}</p>
                 </div>
@@ -904,7 +1243,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                   className="w-full rounded-2xl bg-purple-600 py-5 font-black uppercase italic tracking-[0.2em] text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  Confirmar Recuperação
+                  {editingLogId ? 'Salvar Registro' : 'Confirmar Recuperação'}
                 </button>
               </div>
             </motion.div>
