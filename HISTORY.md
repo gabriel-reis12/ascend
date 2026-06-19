@@ -13,6 +13,11 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-19 — Polimento de Navegação e Códex
+- Substituída a navegação simples do Quadro de Missões por pills responsivas com ícones, hover, glow azul e indicador ativo animado.
+- Ampliado o painel “Diretrizes do Códex” para toda a largura disponível, alinhando-o aos accordions inferiores.
+- Atualizados título, subtítulo e texto introdutório do Códex com hierarquia mais legível e linguagem oficial do Sistema.
+
 ### 2026-06-19 — Quest Board Premium
 - Reformulado o status diário com progresso, total concluído, percentual, XP acumulado e mensagem operacional do Sistema.
 - Adicionada a seção Próxima Missão com horário, categoria, XP, atributo e ação contextual.

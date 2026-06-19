@@ -874,29 +874,42 @@ export function Quests() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex gap-2 border-b border-[#1E1E26] pb-px overflow-x-auto scrollbar-none flex-nowrap shrink-0">
+        <div className="grid grid-cols-1 gap-2 rounded-2xl border border-[#1E1E26] bg-[#0B0B0F] p-2 sm:grid-cols-3">
           {[
             { id: 'daily', label: 'Missões Diárias', icon: Sword },
             { id: 'manage', label: 'Quests Recorrentes', icon: RefreshCw },
             { id: 'codex', label: 'Códex do Caçador', icon: ScrollText },
-          ].map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id as typeof tab)}
-              className={`relative flex items-center gap-2 px-5 py-4 text-sm font-bold transition-all ${
-                tab === t.id ? 'text-blue-500' : 'text-gray-500 hover:text-gray-300'
-              }`}
-            >
-              <t.icon size={14} />
-              {t.label}
-              {tab === t.id && (
-                <motion.div
-                  layoutId="tab-active"
-                  className="absolute bottom-0 left-0 h-1 w-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]"
-                />
-              )}
-            </button>
-          ))}
+          ].map((t) => {
+            const TabIcon = t.icon;
+            const isActive = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id as typeof tab)}
+                className={`group relative flex min-h-16 items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-all duration-200 active:scale-[0.99] ${
+                  isActive
+                    ? 'border-blue-500/40 bg-blue-500/10 text-blue-200 shadow-[0_0_22px_rgba(59,130,246,0.12)]'
+                    : 'border-transparent bg-white/[0.025] text-gray-500 hover:border-white/10 hover:bg-white/[0.045] hover:text-gray-200'
+                }`}
+              >
+                <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl border transition-all ${
+                  isActive
+                    ? 'border-blue-400/25 bg-blue-500/15 text-blue-300 shadow-[0_0_14px_rgba(59,130,246,0.16)]'
+                    : 'border-white/5 bg-black/20 text-gray-600 group-hover:border-white/10 group-hover:text-gray-400'
+                }`}>
+                  <TabIcon className="size-5" strokeWidth={2.2} />
+                </span>
+                <span className="text-sm font-black" style={{ fontFamily: 'Orbitron, sans-serif' }}>{t.label}</span>
+                {isActive && (
+                  <motion.span
+                    layoutId="quest-tab-active"
+                    className="absolute inset-x-4 bottom-0 h-px rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.75)]"
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Content Area */}
@@ -1362,27 +1375,27 @@ export function Quests() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
-                  <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-[#0F0F13] p-6 shadow-[0_0_20px_rgba(59,130,246,0.05)]">
-                    <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-500/5 blur-3xl" />
+                  <div className="relative w-full overflow-hidden rounded-3xl border border-blue-500/25 bg-[#101016] p-6 shadow-[0_0_26px_rgba(59,130,246,0.07)] sm:p-8">
+                    <div className="absolute right-0 top-0 h-full w-80 bg-gradient-to-l from-blue-500/10 to-transparent" />
+                    <div className="absolute inset-x-12 bottom-0 h-px bg-gradient-to-r from-transparent via-blue-400/35 to-transparent" />
                     
-                    <div className="relative space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                          <ScrollText size={20} />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-black uppercase italic text-white tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            Diretrizes do Codex
-                          </h2>
-                          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
-                            Protocolo de Calibração e Atributos de RPG
-                          </p>
-                        </div>
+                    <div className="relative flex flex-col gap-5 md:flex-row md:items-start">
+                      <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-blue-500/25 bg-blue-500/10 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.16)]">
+                        <ScrollText className="size-8" strokeWidth={1.8} />
                       </div>
-
-                      <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">
-                        Este Codex define o impacto das suas atividades diárias nos seus atributos e progresso de Caçador. Cada tarefa executada no plano físico recalibra e fortalece sua versão RPG em tempo real. Mantenha a disciplina de caça ativa.
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-xl font-black uppercase text-white sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                          Diretrizes do Códex
+                        </h2>
+                        <p className="mt-1 text-sm font-semibold text-blue-300">
+                          Protocolo de calibração dos atributos do Caçador
+                        </p>
+                        <p className="mt-4 text-sm leading-7 text-gray-300 sm:text-[15px]">
+                          O Códex define como cada hábito, missão e atividade diária impacta sua evolução.
+                          Cada ação concluída recalibra seus atributos, fortalece seus domínios e registra progresso no Sistema.
+                          Mantenha a disciplina ativa para desbloquear novos títulos, recompensas e níveis de Caçador.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
