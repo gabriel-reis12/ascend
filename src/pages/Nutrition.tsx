@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Trash2,
   Clock,
+  CheckCircle2,
   Target,
   Gauge
 } from 'lucide-react';
@@ -89,10 +90,10 @@ function NutritionMetricCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">{label}</p>
-          <p className="mt-2 text-xl font-black text-white sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+          <p className="text-xs font-bold text-gray-400">{label}</p>
+          <p className="mt-2 text-2xl font-black text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             {consumed.toFixed(unit === 'kcal' ? 0 : 1)}
-            <span className={`ml-1 text-[10px] ${accent}`}>{unit}</span>
+            <span className={`ml-1 text-sm ${accent}`}>{unit}</span>
           </p>
         </div>
         <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5 ${accent}`}>
@@ -101,7 +102,7 @@ function NutritionMetricCard({
       </div>
 
       <div className="mt-4">
-        <div className="mb-2 flex items-center justify-between text-[8px] font-black uppercase tracking-wider">
+        <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold">
           <span className="text-gray-600">{target ? `Meta ${Math.round(target)} ${unit}` : 'Meta indisponível'}</span>
           <span className={`rounded-md border px-1.5 py-0.5 ${statusStyle}`}>{statusLabel}</span>
         </div>
@@ -113,7 +114,7 @@ function NutritionMetricCard({
             className={`h-full rounded-full ${bar}`}
           />
         </div>
-        <p className="mt-2 text-[9px] font-semibold text-gray-600">
+        <p className="mt-2 text-xs font-medium text-gray-500">
           {remaining === null
             ? 'Complete seu perfil para calibrar.'
             : remaining > 0
@@ -160,14 +161,18 @@ export function Nutrition() {
   const [iaMealType, setIaMealType] = useState('Almoço');
   const [iaLoading, setIaLoading] = useState(false);
   const [iaError, setIaError] = useState<string | null>(null);
-  const [iaSuccessAlert, setIaSuccessAlert] = useState<{
+  const [iaPreview, setIaPreview] = useState<{
     mealName: string;
     calories: number;
     protein: number;
     carbs: number;
     fat: number;
-    xp: number;
+    totalGrams: number;
+    confidence: number;
   } | null>(null);
+  const [iaEditing, setIaEditing] = useState(false);
+  const [iaRegistering, setIaRegistering] = useState(false);
+  const [iaRegistrationSuccess, setIaRegistrationSuccess] = useState<string | null>(null);
   const [expandedLogIds, setExpandedLogIds] = useState<Set<string>>(new Set());
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [mealPlanFeedback, setMealPlanFeedback] = useState<string | null>(null);
@@ -363,7 +368,9 @@ export function Nutrition() {
 
     setIaLoading(true);
     setIaError(null);
-    setIaSuccessAlert(null);
+    setIaPreview(null);
+    setIaEditing(false);
+    setIaRegistrationSuccess(null);
 
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
 
@@ -430,64 +437,68 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
         throw new Error('Formato de dados incompleto retornado pelo modelo de IA.');
       }
 
-      // 1. Converter valores para a base de 100g para salvar na tabela `foods`
-      const scaleFactor = 100 / total_grams;
-      const calories_per_100g = Math.round(calories * scaleFactor);
-      const protein_per_100g = Number((protein * scaleFactor).toFixed(1));
-      const carbs_per_100g = Number((carbs * scaleFactor).toFixed(1));
-      const fat_per_100g = Number((fat * scaleFactor).toFixed(1));
-
-      // 2. Inserir comida customizada na tabela `foods`
-      const { data: food, error: foodError } = await supabase
-        .from('foods')
-        .insert({
-          name: meal_name,
-          calories_per_100g,
-          protein_per_100g,
-          carbs_per_100g,
-          fat_per_100g,
-          category: 'Outros',
-          is_custom: true,
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (foodError) throw foodError;
-
-      // 3. Inserir log correspondente em `food_logs`
-      const { error: logError } = await supabase
-        .from('food_logs')
-        .insert({
-          user_id: user.id,
-          food_id: food.id,
-          quantity_grams: total_grams,
-          meal_type: iaMealType
-        });
-
-      if (logError) throw logError;
-
-      // 4. Configurar sucesso para o alert animado. XP nutricional e boss sao avaliados no fechamento diario.
-      setIaSuccessAlert({
+      const detailSignals = iaTextInput.match(/\b\d+(?:[.,]\d+)?\s*(?:g|gramas?|ml|unidades?|fatias?|colheres?)\b/gi)?.length ?? 0;
+      setIaPreview({
         mealName: meal_name,
         calories: Math.round(calories),
         protein: Math.round(protein),
         carbs: Math.round(carbs),
         fat: Math.round(fat),
-        xp: 0
+        totalGrams: Math.round(total_grams),
+        confidence: Math.min(96, 76 + detailSignals * 5),
       });
-
-      // Resetar campo de entrada de texto
-      setIaTextInput('');
-
-      // Recarregar os dados na tela
-      await fetchData();
 
     } catch (err: unknown) {
       console.error('[Códex IA] Erro ao processar:', err);
       setIaError(err instanceof Error ? err.message : 'Houve uma anomalia na calibração neural. Tente novamente.');
     } finally {
       setIaLoading(false);
+    }
+  }
+
+  async function handleRegisterIaMeal() {
+    if (!user || !iaPreview) return;
+    setIaRegistering(true);
+    setIaError(null);
+
+    try {
+      const scaleFactor = 100 / iaPreview.totalGrams;
+      const { data: food, error: foodError } = await supabase
+        .from('foods')
+        .insert({
+          name: iaPreview.mealName,
+          calories_per_100g: Math.round(iaPreview.calories * scaleFactor),
+          protein_per_100g: Number((iaPreview.protein * scaleFactor).toFixed(1)),
+          carbs_per_100g: Number((iaPreview.carbs * scaleFactor).toFixed(1)),
+          fat_per_100g: Number((iaPreview.fat * scaleFactor).toFixed(1)),
+          category: 'Outros',
+          is_custom: true,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (foodError) throw foodError;
+
+      const { error: logError } = await supabase.from('food_logs').insert({
+        user_id: user.id,
+        food_id: food.id,
+        quantity_grams: iaPreview.totalGrams,
+        meal_type: iaMealType,
+      });
+
+      if (logError) throw logError;
+
+      setIaRegistrationSuccess(`${iaPreview.mealName} foi registrado no diário.`);
+      setIaPreview(null);
+      setIaEditing(false);
+      setIaTextInput('');
+      await fetchData();
+    } catch (err: unknown) {
+      console.error('[Códex IA] Erro ao registrar:', err);
+      setIaError(err instanceof Error ? err.message : 'Não foi possível registrar a refeição. Tente novamente.');
+    } finally {
+      setIaRegistering(false);
     }
   }
 
@@ -550,7 +561,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <div className="h-1 w-4 bg-purple-500" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-purple-500">Resource Recovery</span>
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-500">Resource Recovery</span>
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tight text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             Recuperação de <span className="text-purple-500">Mana</span>
@@ -577,7 +588,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`relative flex items-center gap-2 px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+            className={`relative flex items-center gap-2 px-5 py-3.5 text-sm font-bold transition-all ${
               activeTab === tab.id ? 'text-orange-400' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -660,7 +671,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
               <div>
                 <div className="flex items-center gap-2 text-orange-400">
                   <Target className="size-4" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.24em]">Meta diária de recuperação</span>
+                  <span className="text-sm font-bold">Meta diária de recuperação</span>
                 </div>
                 <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
                   <h2 className="text-2xl font-black uppercase text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
@@ -681,7 +692,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                 </p>
 
                 <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                  <div className="mb-2 flex items-center justify-between text-sm font-semibold">
                     <span className="text-gray-500">Sincronização energética</span>
                     <span className="text-orange-300">{calorieProgress}%</span>
                   </div>
@@ -717,46 +728,46 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                 ].map(item => (
                   <div key={item.label} className="rounded-xl border border-white/5 bg-black/30 p-3">
                     <item.icon className={`size-3.5 ${item.tone}`} />
-                    <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">{item.label}</p>
-                    <p className={`mt-1 text-[10px] font-black uppercase ${item.tone}`}>{item.value}</p>
+                    <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
+                    <p className={`mt-1 text-sm font-bold ${item.tone}`}>{item.value}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <p className="relative mt-4 border-t border-white/5 pt-3 text-[9px] leading-relaxed text-gray-600">
+            <p className="relative mt-4 border-t border-white/5 pt-3 text-[13px] leading-relaxed text-gray-500">
               Referências de macros são estimativas visuais do Sistema. A recompensa real é processada pela avaliação nutricional diária.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-purple-500/15 bg-purple-500/[0.035] p-4">
-              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-purple-400">Suporte físico</p>
-              <p className="mt-2 text-xs font-bold text-white">Proteína em faixa de referência</p>
-              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Acompanha a preparação de FOR e RES sem conceder atributos automaticamente.</p>
+              <p className="text-xs font-bold text-purple-400">Suporte físico</p>
+              <p className="mt-2 text-sm font-bold text-white">Proteína em faixa de referência</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Acompanha a preparação de FOR e RES sem conceder atributos automaticamente.</p>
             </div>
             <div className="rounded-2xl border border-orange-500/15 bg-orange-500/[0.035] p-4">
-              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-orange-400">Recompensa diária</p>
-              <p className="mt-2 text-xs font-bold text-white">+60 XP · +2 VIT</p>
-              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Concedidos pelo Sistema no fechamento de um dia dentro da faixa recomendada.</p>
+              <p className="text-xs font-bold text-orange-400">Recompensa diária</p>
+              <p className="mt-2 text-sm font-bold text-white">+60 XP · +2 VIT</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Concedidos pelo Sistema no fechamento de um dia dentro da faixa recomendada.</p>
             </div>
             <div className="rounded-2xl border border-blue-500/15 bg-blue-500/[0.035] p-4">
-              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-400">Streak nutricional</p>
-              <p className="mt-2 text-xs font-bold text-white">{nutritionStreak} {nutritionStreak === 1 ? 'dia' : 'dias'}</p>
-              <p className="mt-1 text-[10px] leading-relaxed text-gray-500">Sequência real de avaliações concluídas dentro da meta energética.</p>
+              <p className="text-xs font-bold text-blue-400">Streak nutricional</p>
+              <p className="mt-2 text-sm font-bold text-white">{nutritionStreak} {nutritionStreak === 1 ? 'dia' : 'dias'}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Sequência real de avaliações concluídas dentro da meta energética.</p>
             </div>
           </div>
 
           {/* Layout de 2 Colunas */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             
             {/* Coluna Principal das Sub-Abas */}
-            <div className="lg:col-span-3 space-y-4">
+            <div className="space-y-4 lg:col-span-3">
               
               {/* Seletor Cyberpunk de Sub-Abas */}
               <div className="flex gap-2 rounded-xl bg-[#0F0F13] border border-[#1E1E26] p-1.5 w-fit">
                 <button
                   onClick={() => setSubTab('codex')}
-                  className={`flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all cursor-pointer ${
                     subTab === 'codex' 
                       ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]' 
                       : 'text-gray-500 hover:text-gray-300'
@@ -767,7 +778,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                 </button>
                 <button
                   onClick={() => setSubTab('library')}
-                  className={`flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all cursor-pointer ${
                     subTab === 'library' 
                       ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]' 
                       : 'text-gray-500 hover:text-gray-300'
@@ -780,36 +791,36 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
               {/* Conteúdo: Códex da Alimentação (IA) */}
               {subTab === 'codex' && (
-                <div className="rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-6 space-y-6 relative overflow-hidden">
+                <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-purple-500/5 blur-3xl" />
                   
                   <div className="space-y-1 relative z-10">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-purple-400">
                         <Brain size={16} className="animate-pulse" />
-                        <h2 className="text-sm font-black uppercase tracking-widest italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                        <h2 className="text-xl font-black uppercase sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                           CÓDEX DA ALIMENTAÇÃO
                         </h2>
                       </div>
-                      <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-emerald-300">
+                      <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-300">
                         IA ativa
                       </span>
                     </div>
-                    <p className="max-w-2xl text-sm leading-relaxed text-gray-400">
-                      Descreva sua refeição e o Sistema calculará os nutrientes.
+                    <p className="max-w-2xl text-sm leading-relaxed text-gray-300">
+                      Descreva sua refeição e o Sistema calculará calorias, macros e impacto na sua recuperação.
                     </p>
                   </div>
 
                   {/* Formulário do Códex */}
                   <div className="space-y-4 relative z-10">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Descrição Livre do Prato</label>
+                      <label className="text-sm font-semibold text-gray-300">Descrição da refeição</label>
                       <textarea
                         value={iaTextInput}
                         onChange={(e) => setIaTextInput(e.target.value)}
                         placeholder="Ex: Almocei 150g de filé de frango, 200g de arroz integral, 100g de feijão carioca e salada com uma colher de sopa de azeite..."
-                        rows={4}
-                        className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_15px_rgba(168,85,247,0.15)] focus:outline-none transition-all resize-none"
+                        rows={5}
+                        className="w-full resize-none rounded-2xl border border-[#252530] bg-[#0A0A0D] p-5 text-base leading-relaxed text-white placeholder:text-gray-600 transition-all focus:border-purple-500/50 focus:shadow-[0_0_18px_rgba(168,85,247,0.12)] focus:outline-none"
                       />
                       <div className="flex flex-wrap gap-2 pt-1">
                         {NUTRITION_PROMPTS.map(prompt => (
@@ -817,7 +828,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                             key={prompt.label}
                             type="button"
                             onClick={() => setIaTextInput(prompt.text)}
-                            className="rounded-lg border border-white/5 bg-white/[0.025] px-3 py-2 text-left text-[9px] font-semibold text-gray-500 transition-all hover:border-purple-500/30 hover:bg-purple-500/5 hover:text-purple-200"
+                            className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-[13px] font-medium text-gray-400 transition-all hover:border-purple-500/30 hover:bg-purple-500/5 hover:text-purple-200"
                           >
                             {prompt.label}
                           </button>
@@ -827,7 +838,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Período de Consumo</label>
+                        <label className="text-sm font-semibold text-gray-300">Período</label>
                         <select
                           value={iaMealType}
                           onChange={(e) => setIaMealType(e.target.value)}
@@ -835,9 +846,8 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                         >
                           <option value="Café da Manhã">Café da Manhã</option>
                           <option value="Almoço">Almoço</option>
-                          <option value="Café da Tarde">Café da Tarde</option>
-                          <option value="Jantar">Jantar</option>
                           <option value="Lanche">Lanche</option>
+                          <option value="Jantar">Jantar</option>
                         </select>
                       </div>
 
@@ -845,18 +855,18 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                         <button
                           onClick={handleAnalyzeMealIa}
                           disabled={iaLoading}
-                          className="flex min-h-13 w-full items-center justify-center gap-2 rounded-xl border border-purple-400/30 bg-gradient-to-r from-purple-700 via-purple-600 to-blue-600 px-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_24px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 hover:shadow-[0_0_30px_rgba(168,85,247,0.28)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
+                          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-purple-400/30 bg-gradient-to-r from-purple-700 via-purple-600 to-blue-600 px-4 text-sm font-black uppercase text-white shadow-[0_0_24px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 hover:shadow-[0_0_30px_rgba(168,85,247,0.28)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
                           style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
                           {iaLoading ? (
                             <>
                               <Cpu size={14} className="animate-spin text-purple-400" />
-                              Sistema analisando...
+                              Sistema analisando nutrientes...
                             </>
                           ) : (
                             <>
                               <Sparkles size={14} className="text-purple-300" />
-                              Analisar e registrar
+                              Analisar refeição
                             </>
                           )}
                         </button>
@@ -877,43 +887,101 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                       </motion.div>
                     )}
 
-                    {iaSuccessAlert && (
+                    {iaRegistrationSuccess && (
                       <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="relative z-10 space-y-4 overflow-hidden rounded-2xl border border-purple-500/30 bg-purple-500/5 p-5 shadow-[0_0_24px_rgba(168,85,247,0.08)]"
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="relative z-10 flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm font-semibold text-emerald-200"
                       >
-                        <div className="flex items-center gap-2 text-purple-400">
-                          <Zap size={16} className="animate-bounce" />
-                          <span className="font-black text-xs uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            ANÁLISE CONCLUÍDA
-                          </span>
+                        <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
+                        {iaRegistrationSuccess}
+                      </motion.div>
+                    )}
+
+                    {iaPreview && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="relative z-10 space-y-5 overflow-hidden rounded-2xl border border-purple-500/30 bg-[#0A0A0D] p-5 shadow-[0_0_24px_rgba(168,85,247,0.1)] sm:p-6"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 text-purple-400">
+                              <Zap size={18} />
+                              <span className="text-sm font-black uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                Análise concluída
+                              </span>
+                            </div>
+                            {iaEditing ? (
+                              <input
+                                value={iaPreview.mealName}
+                                onChange={event => setIaPreview(current => current ? { ...current, mealName: event.target.value } : current)}
+                                className="mt-3 w-full rounded-lg border border-purple-500/30 bg-black/40 px-3 py-2 text-base font-bold text-white outline-none focus:border-purple-400"
+                                aria-label="Nome da refeição"
+                              />
+                            ) : (
+                              <p className="mt-2 text-lg font-bold text-white">{iaPreview.mealName}</p>
+                            )}
+                          </div>
+                          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-right">
+                            <p className="text-xs font-medium text-gray-400">Confiança estimada</p>
+                            <p className="mt-1 text-lg font-black text-emerald-300">{iaPreview.confidence}%</p>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-300">
-                          <p className="font-bold text-white text-sm uppercase">{iaSuccessAlert.mealName}</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                            <div className="bg-[#0A0A0D] border border-[#1E1E26] p-2 rounded-lg text-center">
-                              <span className="text-[9px] text-gray-500 uppercase block font-black">Energia</span>
-                              <span className="text-sm font-bold text-orange-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>+{iaSuccessAlert.calories} kcal</span>
+
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                          {[
+                            { key: 'calories' as const, label: 'Energia', unit: 'kcal', tone: 'text-orange-400' },
+                            { key: 'protein' as const, label: 'Proteína', unit: 'g', tone: 'text-purple-400' },
+                            { key: 'carbs' as const, label: 'Carboidratos', unit: 'g', tone: 'text-green-400' },
+                            { key: 'fat' as const, label: 'Gorduras', unit: 'g', tone: 'text-blue-400' },
+                            { key: 'totalGrams' as const, label: 'Peso estimado', unit: 'g', tone: 'text-gray-300' },
+                          ].map(metric => (
+                            <div key={metric.key} className="rounded-xl border border-white/5 bg-white/[0.035] p-3">
+                              <p className="text-xs font-medium text-gray-500">{metric.label}</p>
+                              {iaEditing ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={iaPreview[metric.key]}
+                                  onChange={event => setIaPreview(current => current ? {
+                                    ...current,
+                                    [metric.key]: Math.max(0, Number(event.target.value)),
+                                  } : current)}
+                                  className={`mt-2 w-full rounded-md border border-white/10 bg-black/40 px-2 py-1.5 text-base font-bold outline-none focus:border-purple-500/50 ${metric.tone}`}
+                                  aria-label={metric.label}
+                                />
+                              ) : (
+                                <p className={`mt-2 text-lg font-black ${metric.tone}`}>
+                                  {iaPreview[metric.key]} <span className="text-xs font-semibold">{metric.unit}</span>
+                                </p>
+                              )}
                             </div>
-                            <div className="bg-[#0A0A0D] border border-[#1E1E26] p-2 rounded-lg text-center">
-                              <span className="text-[9px] text-gray-500 uppercase block font-black">Proteína</span>
-                              <span className="text-sm font-bold text-purple-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>+{iaSuccessAlert.protein}g</span>
-                            </div>
-                            <div className="bg-[#0A0A0D] border border-[#1E1E26] p-2 rounded-lg text-center">
-                              <span className="text-[9px] text-gray-500 uppercase block font-black">Carbos</span>
-                              <span className="text-sm font-bold text-green-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>+{iaSuccessAlert.carbs}g</span>
-                            </div>
-                            <div className="bg-[#0A0A0D] border border-[#1E1E26] p-2 rounded-lg text-center">
-                              <span className="text-[9px] text-gray-500 uppercase block font-black">Gordura</span>
-                              <span className="text-sm font-bold text-blue-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>+{iaSuccessAlert.fat}g</span>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex flex-col gap-1 rounded-lg border border-purple-500/20 bg-purple-500/10 px-3 py-2.5 text-[9px] font-black uppercase tracking-wider text-purple-300 sm:flex-row sm:items-center sm:justify-between">
-                            <span>Registro computado para a avaliação diária</span>
-                            <span>XP definido no fechamento do dia</span>
-                          </div>
+                          ))}
+                        </div>
+
+                        <p className="text-[13px] leading-relaxed text-gray-500">
+                          Valores estimados pela IA. Revise quantidades e ingredientes antes de registrar.
+                        </p>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() => setIaEditing(current => !current)}
+                            className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-bold text-gray-300 transition-colors hover:border-purple-500/30 hover:text-white"
+                          >
+                            {iaEditing ? 'Concluir edição' : 'Editar antes de salvar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleRegisterIaMeal()}
+                            disabled={iaRegistering || iaPreview.totalGrams <= 0 || !iaPreview.mealName.trim()}
+                            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 text-sm font-black uppercase text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_22px_rgba(168,85,247,0.25)] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {iaRegistering ? <Cpu className="size-4 animate-spin" /> : <BookOpen className="size-4" />}
+                            {iaRegistering ? 'Registrando...' : 'Registrar no diário'}
+                          </button>
                         </div>
                       </motion.div>
                     )}
@@ -974,11 +1042,11 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                               <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
                                 <Apple className="size-5" />
                               </div>
-                              <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">{food.calories_per_100g} KCAL</span>
+                              <span className="text-xs font-bold text-gray-500">{food.calories_per_100g} kcal</span>
                             </div>
                             <div>
                               <h3 className="font-bold text-white uppercase tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{food.name}</h3>
-                              <p className="mt-1 text-[10px] font-black text-purple-400 uppercase tracking-[0.2em] italic">
+                              <p className="mt-1 text-[13px] font-semibold text-purple-400">
                                 {food.category} • {food.protein_per_100g}g Prot.
                               </p>
                             </div>
@@ -990,10 +1058,10 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                         <table className="w-full text-left">
                           <thead>
                             <tr className="border-b border-[#1E1E26] bg-white/5">
-                              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Alimento</th>
-                              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Calorias (100g)</th>
-                              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Proteína (100g)</th>
-                              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Categoria</th>
+                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Alimento</th>
+                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Calorias (100g)</th>
+                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Proteína (100g)</th>
+                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Categoria</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#1E1E26]">
@@ -1030,10 +1098,10 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
             </div>
 
             {/* Coluna Lateral de Logs (Consumo Diário) */}
-            <div className="space-y-4">
+            <div className="space-y-4 lg:col-span-2">
               <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-lg">
                 <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-xs font-black uppercase tracking-widest text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  <h2 className="text-lg font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                     CONSUMO DIÁRIO
                   </h2>
                   <History className="size-4 text-purple-500" />
@@ -1045,12 +1113,12 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                       <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
                         <UtensilsCrossed className="size-5" />
                       </div>
-                      <p className="mt-4 text-xs font-black uppercase text-white">O Sistema ainda não detectou nutrientes hoje.</p>
-                      <p className="mt-2 text-[10px] leading-relaxed text-gray-500">Registre sua primeira refeição para recuperar mana.</p>
+                      <p className="mt-4 text-sm font-bold text-white">O Sistema ainda não detectou nutrientes hoje.</p>
+                      <p className="mt-2 text-[13px] leading-relaxed text-gray-500">Registre uma refeição para iniciar sua recuperação de mana.</p>
                       <button
                         type="button"
                         onClick={() => setSubTab('codex')}
-                        className="mt-5 rounded-xl bg-purple-600 px-4 py-2.5 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(168,85,247,0.25)]"
+                        className="mt-5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(168,85,247,0.25)]"
                       >
                         Registrar refeição
                       </button>
@@ -1082,18 +1150,18 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <span className="rounded-md border border-purple-500/15 bg-purple-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-purple-300">
+                                <span className="rounded-md border border-purple-500/15 bg-purple-500/10 px-2 py-1 text-xs font-semibold text-purple-300">
                                   {log.meal_type}
                                 </span>
-                                <p className="mt-2 truncate text-xs font-bold uppercase text-white">{log.food?.name}</p>
+                                <p className="mt-2 truncate text-sm font-bold text-white">{log.food?.name}</p>
                               </div>
                               <ChevronDown className={`mt-1 size-4 shrink-0 text-gray-600 transition-transform ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
                             </div>
                             <div className="mt-3 flex items-center justify-between gap-3">
-                              <p className="text-[10px] font-black uppercase tracking-wider text-orange-300">
+                              <p className="text-sm font-bold text-orange-300">
                                 {kcal.toFixed(0)} kcal
                               </p>
-                              <p className="flex items-center gap-1 text-[9px] font-bold uppercase text-gray-600">
+                              <p className="flex items-center gap-1 text-xs font-medium text-gray-500">
                                 <Clock className="size-3" />
                                 {new Date(log.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
@@ -1116,12 +1184,12 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                                       ['Gorduras', `${fat.toFixed(1)}g`],
                                     ].map(([label, value]) => (
                                       <div key={label} className="rounded-lg bg-black/25 p-2 text-center">
-                                        <p className="text-[7px] font-black uppercase tracking-wider text-gray-600">{label}</p>
-                                        <p className="mt-1 text-[10px] font-bold text-gray-300">{value}</p>
+                                        <p className="text-xs font-medium text-gray-500">{label}</p>
+                                        <p className="mt-1 text-sm font-bold text-gray-300">{value}</p>
                                       </div>
                                     ))}
                                   </div>
-                                  <div className="mt-3 flex items-center justify-between text-[9px]">
+                                  <div className="mt-3 flex items-center justify-between gap-3 text-xs">
                                     <span className="text-gray-500">{displayQty}{displayUnit} registrados</span>
                                     <span className="font-black uppercase text-purple-300">XP diário pendente</span>
                                   </div>
@@ -1129,14 +1197,14 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                                     <button
                                       type="button"
                                       onClick={() => handleEditLog(log)}
-                                      className="rounded-lg border border-white/10 bg-white/5 py-2 text-[8px] font-black uppercase tracking-wider text-gray-400 transition-colors hover:text-white"
+                                      className="rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-semibold text-gray-400 transition-colors hover:text-white"
                                     >
                                       Editar
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => void handleDeleteLog(log.id)}
-                                      className="flex items-center justify-center gap-1 rounded-lg border border-red-500/15 bg-red-500/5 py-2 text-[8px] font-black uppercase tracking-wider text-red-400 transition-colors hover:bg-red-500/10"
+                                      className="flex items-center justify-center gap-1 rounded-lg border border-red-500/15 bg-red-500/5 py-2.5 text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
                                     >
                                       <Trash2 className="size-3" />
                                       Remover
@@ -1203,7 +1271,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Tipo de Recurso</label>
+                  <label className="text-sm font-semibold text-gray-300">Tipo de recurso</label>
                   <select 
                     value={mealType}
                     onChange={(e) => setMealType(e.target.value)}
@@ -1218,7 +1286,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+                  <label className="text-sm font-semibold text-gray-300">
                     Quantidade ({selectedFood.serving_unit || 'Gramas'})
                   </label>
                   <input 
@@ -1231,7 +1299,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
                 <div className="rounded-xl bg-purple-500/5 p-4 border border-purple-500/20">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 italic">Conversão de Energia</span>
+                    <span className="text-sm font-semibold text-gray-400">Conversão de energia</span>
                     <span className="text-lg font-black text-purple-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                       {((selectedFood.calories_per_100g * ((selectedFood.serving_size ? quantity * (100 / selectedFood.serving_size) : quantity) / 100))).toFixed(0)} kcal
                     </span>
@@ -1289,7 +1357,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Nome do Item</label>
+                  <label className="text-sm font-semibold text-gray-300">Nome do item</label>
                   <input 
                     type="text" 
                     value={newFoodName}
@@ -1301,7 +1369,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Kcal (por porção/100g)</label>
+                    <label className="text-sm font-semibold text-gray-300">Kcal por porção/100g</label>
                     <input 
                       type="number" 
                       value={newFoodCals}
@@ -1310,7 +1378,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Proteína (g)</label>
+                    <label className="text-sm font-semibold text-gray-300">Proteína (g)</label>
                     <input 
                       type="number" 
                       value={newFoodProtein}
@@ -1322,7 +1390,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Carbos (g)</label>
+                    <label className="text-sm font-semibold text-gray-300">Carboidratos (g)</label>
                     <input 
                       type="number" 
                       value={newFoodCarbs}
@@ -1331,7 +1399,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Gorduras (g)</label>
+                    <label className="text-sm font-semibold text-gray-300">Gorduras (g)</label>
                     <input 
                       type="number" 
                       value={newFoodFat}
@@ -1343,7 +1411,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+                    <label className="text-sm font-semibold text-gray-300">
                       Porção (ex: 2)
                     </label>
                     <input 
@@ -1355,7 +1423,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+                    <label className="text-sm font-semibold text-gray-300">
                       Unidade (ex: fatias)
                     </label>
                     <input 
@@ -1369,7 +1437,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Categoria</label>
+                  <label className="text-sm font-semibold text-gray-300">Categoria</label>
                   <select 
                     value={newFoodCategory}
                     onChange={(e) => setNewFoodCategory(e.target.value)}

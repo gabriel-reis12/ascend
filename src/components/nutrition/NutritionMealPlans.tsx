@@ -33,8 +33,8 @@ function getPlanMetadata(plan: MealPlan, macros: ReturnType<typeof calcMealMacro
 function MacroBadge({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="flex flex-col items-center">
-      <span className={`text-xs font-black ${color}`} style={{ fontFamily: 'Orbitron, sans-serif' }}>{value}</span>
-      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600">{label}</span>
+      <span className={`text-sm font-black ${color}`} style={{ fontFamily: 'Orbitron, sans-serif' }}>{value}</span>
+      <span className="text-xs font-medium text-gray-500">{label}</span>
     </div>
   );
 }
@@ -52,7 +52,7 @@ function FoodSearchResult({ food, onAdd }: { food: Food; onAdd: (foodId: string,
     <div className="flex items-center gap-2 rounded-lg bg-white/5 p-2">
       <div className="flex-1 min-w-0">
         <span className="text-xs font-bold text-white uppercase truncate block">{food.name}</span>
-        <span className="text-[10px] text-gray-500">
+        <span className="text-xs text-gray-500">
            {isCustomUnit ? `${food.serving_size}g / ${food.serving_unit}` : `${food.calories_per_100g} kcal/100g`}
         </span>
       </div>
@@ -63,7 +63,7 @@ function FoodSearchResult({ food, onAdd }: { food: Food; onAdd: (foodId: string,
         className="w-14 rounded-lg border border-[#1E1E26] bg-black px-2 py-1 text-center text-xs text-white focus:outline-none"
         min={1}
       />
-      <span className="text-[10px] text-gray-600">{isCustomUnit ? food.serving_unit : 'g'}</span>
+      <span className="text-xs text-gray-500">{isCustomUnit ? food.serving_unit : 'g'}</span>
       <button
         onClick={handleAdd}
         className="rounded-lg bg-orange-600 p-1.5 text-white hover:bg-orange-500"
@@ -114,17 +114,17 @@ function MealPlanCard({
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black uppercase tracking-tight text-white"
+            <p className="truncate text-base font-black uppercase tracking-tight text-white"
               style={{ fontFamily: 'Orbitron, sans-serif' }}>
               {plan.name}
             </p>
-            <p className="mt-1 text-[10px] font-semibold text-gray-500">{metadata.objective}</p>
+            <p className="mt-1 text-[13px] font-medium text-gray-500">{metadata.objective}</p>
           </div>
 
           {confirmDel ? (
             <div className="flex gap-1">
-              <button onClick={() => onDelete(plan.id)} className="rounded-lg bg-red-500/20 px-2 py-1 text-[9px] font-black text-red-400 hover:bg-red-500/30">SIM</button>
-              <button onClick={() => setConfirmDel(false)} className="rounded-lg bg-white/5 px-2 py-1 text-[9px] font-black text-gray-500">NÃO</button>
+              <button onClick={() => onDelete(plan.id)} className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-bold text-red-400 hover:bg-red-500/30">Sim</button>
+              <button onClick={() => setConfirmDel(false)} className="rounded-lg bg-white/5 px-2 py-1 text-xs font-bold text-gray-500">Não</button>
             </div>
           ) : (
             <button onClick={() => setConfirmDel(true)} className="text-gray-700 hover:text-red-400 transition-colors">
@@ -142,15 +142,15 @@ function MealPlanCard({
           ].map(item => (
             <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3">
               <item.icon className={`size-3.5 ${item.tone}`} />
-              <p className="mt-2 text-[7px] font-black uppercase tracking-wider text-gray-600">{item.label}</p>
-              <p className="mt-1 text-[10px] font-bold text-gray-300">{item.value}</p>
+              <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
+              <p className="mt-1 text-sm font-bold text-gray-300">{item.value}</p>
             </div>
           ))}
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {metadata.tags.map(tag => (
-            <span key={tag} className="rounded-md border border-orange-500/15 bg-orange-500/5 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-orange-300">
+            <span key={tag} className="rounded-md border border-orange-500/15 bg-orange-500/5 px-2 py-1 text-xs font-semibold text-orange-300">
               {tag}
             </span>
           ))}
@@ -161,7 +161,7 @@ function MealPlanCard({
             type="button"
             onClick={() => void onUsePlan(plan)}
             disabled={isUsing || !plan.items?.length}
-            className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-[9px] font-black uppercase tracking-widest text-white transition-all hover:bg-orange-500 hover:shadow-[0_0_18px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-bold text-white transition-all hover:bg-orange-500 hover:shadow-[0_0_18px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isUsing ? <Clock className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
             {isUsing ? 'Adicionando...' : 'Adicionar ao dia'}
@@ -190,7 +190,7 @@ function MealPlanCard({
             <div className="p-4 space-y-4">
               {/* Itens da refeição */}
               {(plan.items ?? []).length === 0 ? (
-                <p className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-600 py-2">
+                <p className="py-2 text-center text-[13px] font-medium text-gray-500">
                   Nenhum alimento adicionado ainda.
                 </p>
               ) : (
@@ -207,7 +207,7 @@ function MealPlanCard({
                         <Apple size={12} className="shrink-0 text-orange-400" />
                         <div className="flex-1 min-w-0">
                           <span className="text-xs font-bold text-white uppercase truncate block">{item.food?.name}</span>
-                          <span className="text-[10px] text-gray-500">{displayQty} {displayUnit} · {Math.round(kcal)} kcal</span>
+                          <span className="text-xs text-gray-500">{displayQty} {displayUnit} · {Math.round(kcal)} kcal</span>
                         </div>
                         <button onClick={() => onRemoveItem(item.id, plan.id)} className="text-gray-700 hover:text-red-400">
                           <X size={12} />
@@ -230,7 +230,7 @@ function MealPlanCard({
 
               {/* Adicionar alimento */}
               <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">+ Adicionar Alimento</p>
+                <p className="text-sm font-semibold text-gray-400">Adicionar alimento</p>
                 <div className="relative">
                   <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
@@ -255,7 +255,7 @@ function MealPlanCard({
                       />
                     ))}
                     {filtered.length === 0 && (
-                      <p className="py-2 text-center text-[10px] text-gray-600">Nenhum alimento encontrado.</p>
+                      <p className="py-2 text-center text-[13px] text-gray-500">Nenhum alimento encontrado.</p>
                     )}
                   </div>
                 )}
@@ -315,7 +315,7 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-200"
+          className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm font-semibold text-emerald-200"
         >
           <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
           {feedback}
@@ -335,7 +335,7 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
                 <stat.icon className="size-5 sm:size-6" />
               </div>
               <div>
-                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-gray-500">{stat.label}</p>
+                <p className="text-xs font-medium text-gray-500">{stat.label}</p>
                 <p className="text-sm sm:text-xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>{stat.value}</p>
               </div>
             </div>
@@ -347,12 +347,12 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
       <div className="flex items-center gap-4 rounded-2xl border border-orange-500/20 bg-orange-500/5 px-5 py-3">
         <UtensilsCrossed size={18} className="text-orange-400 shrink-0" />
         <div className="flex-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Total Kcal do Cardápio</p>
+          <p className="text-sm font-semibold text-gray-400">Total energético dos cardápios</p>
           <p className="text-xl font-black text-orange-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             {Math.round(totals.kcal)} <span className="text-xs text-gray-600">kcal</span>
           </p>
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-black text-yellow-500 uppercase">
+        <div className="flex items-center gap-1 text-sm font-bold text-yellow-500">
           <Zap size={12} fill="currentColor" />
           {activeMealPlans.reduce((a, p) => a + p.xp_reward, 0)} XP
         </div>
@@ -360,12 +360,12 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
 
       {/* Header + botão */}
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
+        <p className="text-sm font-medium text-gray-500">
           {mealPlans.length} refeição(ões) definida(s)
         </p>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-white hover:bg-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
+          className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
         >
           <Plus size={14} strokeWidth={3} /> Nova Refeição
         </button>
@@ -435,13 +435,13 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
                   <h2 className="text-lg font-black uppercase italic text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                     Nova <span className="text-orange-400">Refeição</span>
                   </h2>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-600">Defina seu cardápio</p>
+                  <p className="text-[13px] text-gray-500">Defina seu cardápio</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Nome da Refeição</label>
+                  <label className="text-sm font-semibold text-gray-300">Nome da refeição</label>
                   <input
                     type="text"
                     placeholder="Ex: Café da Manhã, Ref. 1, Pré-Treino..."

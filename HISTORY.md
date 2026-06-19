@@ -13,6 +13,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-19 — Revisão e Legibilidade do Códex Nutricional
+- Elevada a escala tipográfica da Recuperação de Mana, reduzindo labels comprimidos e melhorando textos de apoio, números e ações.
+- O Códex agora separa análise e persistência: a IA gera uma prévia sem gravar dados automaticamente.
+- Adicionado card de revisão com kcal, macros, peso, confiança estimada, edição inline e confirmação explícita antes do registro.
+- Ampliada a coluna de Consumo Diário no desktop e refinados lista, empty state, macros, horário e ações.
+- Cards dos Cardápios do Caçador receberam tipografia mais confortável sem alterar seus dados ou fluxo de adição ao dia.
+
 ### 2026-06-19 — Recuperação de Mana Premium
 - **Dashboard nutricional:**
   - Reformulados os cards de energia e macros com metas de referência, consumido, restante, progresso animado e estados baixo/ideal/excedido.
