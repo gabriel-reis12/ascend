@@ -228,7 +228,7 @@ export function Dashboard() {
         events.push({
           id: `routine-${completion.id}`,
           title: routine?.name || 'Treino concluído',
-          reward: `+${completion.xp_awarded || 0} XP · ${attribute} +2`,
+          reward: `+${completion.xp_awarded || 0} XP · ${attribute} +2 · VIT +1 · DIS +1`,
           domain: statDomain(statTarget),
           color: 'text-purple-400',
           icon: Dumbbell,

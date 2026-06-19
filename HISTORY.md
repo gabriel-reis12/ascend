@@ -13,6 +13,19 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-18 — Training Center Premium
+- **Rotinas e Missão Física:**
+  - Criado destaque dinâmico para a rotina agendada do dia com duração, XP, atributos e acesso à sessão.
+  - Reformulado o empty state de rotinas com ações para criação manual ou importação de modelo.
+  - Conclusões de rotina agora evoluem o atributo principal, Vitalidade e Disciplina, além do XP e domínio Corpo.
+- **Modelos e Biblioteca:**
+  - Expandida a galeria para nove programas importáveis: Full Body, Upper/Lower, PPL 3x/6x, ABCD, ABCDE, Casa, Força Base e Recomposição.
+  - Enriquecidos cards com banner preparado para imagem, objetivo, nível, frequência, duração, divisão e atributos.
+  - Adicionados filtros de biblioteca por grupo muscular, equipamento e dificuldade, além de fluxo para adicionar exercícios a uma rotina.
+- **Evolução Física:**
+  - Adicionados treinos realizados, volume, streak, grupos mais treinados, últimos registros e empty state premium.
+  - Build de produção validado com `npm.cmd run build`.
+
 ### 2026-06-17 — Timeline Real e Sete Domínios no Status
 - **Histórico de Evolução:**
   - Substituído o histórico derivado da UI por eventos reais de tasks, hábitos, rotinas, refeições e registros financeiros do Supabase.

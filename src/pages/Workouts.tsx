@@ -21,7 +21,14 @@ import {
   ChevronDown,
   AlertTriangle,
   Trash2,
-  Timer
+  Timer,
+  Image as ImageIcon,
+  Eye,
+  Upload,
+  CalendarDays,
+  Gauge,
+  Trophy,
+  Flame
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -74,6 +81,34 @@ interface WorkoutLog {
   exercise?: Exercise;
 }
 
+const PROGRAM_META: Record<string, { objective: string; level: string; split: string; attributes: string }> = {
+  'full-body-3x': { objective: 'Base muscular e consistência', level: 'Iniciante', split: 'Corpo inteiro A/B/C', attributes: 'FOR · VIT · RES' },
+  'upper-lower-4x': { objective: 'Hipertrofia equilibrada', level: 'Intermediário', split: 'Upper / Lower 2x', attributes: 'FOR · RES · DIS' },
+  'ppl-3x': { objective: 'Hipertrofia com recuperação', level: 'Iniciante', split: 'Push / Pull / Legs', attributes: 'FOR · VIT · DIS' },
+  'ppl-6x': { objective: 'Volume e frequência máxima', level: 'Avançado', split: 'PPL repetido 2x', attributes: 'FOR · RES · DIS' },
+  'abcd-4x': { objective: 'Hipertrofia por grupamento', level: 'Intermediário', split: 'Peito / Costas / Pernas / Ombros', attributes: 'FOR · VIT · DIS' },
+  'abcde-5x': { objective: 'Especialização muscular', level: 'Avançado', split: 'Um grupamento por dia', attributes: 'FOR · DIS · RES' },
+  'casa-3x': { objective: 'Condicionamento sem academia', level: 'Iniciante', split: 'Superiores / Inferiores / Core', attributes: 'VIT · RES · DIS' },
+  'forca-base-3x': { objective: 'Progressão de força', level: 'Intermediário', split: 'Agachamento / Terra / Potência', attributes: 'FOR · RES · DIS' },
+  'recomposicao-4x': { objective: 'Massa magra e gasto energético', level: 'Intermediário', split: 'Upper / Lower / Full / Cardio', attributes: 'VIT · FOR · RES' },
+};
+
+function inferEquipment(exercise: Exercise) {
+  const name = exercise.name.toLowerCase();
+  if (name.includes('halter')) return 'Halteres';
+  if (name.includes('barra') || name.includes('terra') || name.includes('agachamento livre')) return 'Barra';
+  if (name.includes('polia') || name.includes('pulley') || name.includes('cadeira') || name.includes('leg press') || name.includes('mesa')) return 'Máquina';
+  if (name.includes('solo') || name.includes('prancha') || name.includes('flexão') || name.includes('polichinelo')) return 'Peso corporal';
+  return 'Outros';
+}
+
+function inferDifficulty(exercise: Exercise) {
+  const name = exercise.name.toLowerCase();
+  if (name.includes('terra') || name.includes('agachamento livre') || name.includes('desenvolvimento militar')) return 'Avançado';
+  if (exercise.category.toLowerCase().includes('flex') || exercise.category.toLowerCase().includes('mobil')) return 'Iniciante';
+  return 'Intermediário';
+}
+
 export function Workouts() {
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
@@ -86,6 +121,10 @@ export function Workouts() {
   const [routines, setRoutines] = useState<WorkoutRoutine[]>([]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [muscleFilter, setMuscleFilter] = useState('Todos');
+  const [equipmentFilter, setEquipmentFilter] = useState('Todos');
+  const [difficultyFilter, setDifficultyFilter] = useState('Todos');
+  const [exerciseToAdd, setExerciseToAdd] = useState<Exercise | null>(null);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -394,6 +433,8 @@ export function Workouts() {
 
       await addXp(xpReward, user.id);
       await updateStat(statTarget, 2, user.id);
+      await updateStat('vitality', 1, user.id);
+      await updateStat('discipline', 1, user.id);
       
       // Causar dano ao chefe ativo na Raid
       await useBossStore.getState().attackActiveBoss(user.id, xpReward, 'workout');
@@ -428,6 +469,31 @@ export function Workouts() {
       }
     } catch (err) {
       console.error('Error adding exercise to session:', err);
+    }
+  }
+
+  async function handleAddExerciseToRoutine(routine: WorkoutRoutine, exercise: Exercise) {
+    const alreadyExists = routine.exercises?.some(item => item.exercise_id === exercise.id);
+    if (alreadyExists) {
+      alert('Este exercício já faz parte da rotina selecionada.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('routine_exercises').insert({
+        routine_id: routine.id,
+        exercise_id: exercise.id,
+        sets: 3,
+        reps: 12,
+        weight_kg: 0,
+        order_index: routine.exercises?.length || 0,
+      });
+      if (error) throw error;
+      setExerciseToAdd(null);
+      await fetchData();
+    } catch (err) {
+      console.error('Error adding exercise to routine:', err);
+      alert('Não foi possível adicionar o exercício à rotina.');
     }
   }
 
@@ -642,10 +708,20 @@ export function Workouts() {
     }
   }
 
-  const filteredExercises = exercises.filter(ex => 
-    ex.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ex.muscle_group.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const muscleGroups = [...new Set(exercises.map(exercise => exercise.muscle_group))].sort();
+  const filteredExercises = exercises.filter(exercise => {
+    const matchesSearch =
+      exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      exercise.muscle_group.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesMuscle = muscleFilter === 'Todos' || exercise.muscle_group === muscleFilter;
+    const matchesEquipment = equipmentFilter === 'Todos' || inferEquipment(exercise) === equipmentFilter;
+    const matchesDifficulty = difficultyFilter === 'Todos' || inferDifficulty(exercise) === difficultyFilter;
+    return matchesSearch && matchesMuscle && matchesEquipment && matchesDifficulty;
+  });
+
+  const todayRoutine = routines.find(routine => routine.scheduled_days?.includes(new Date().getDay())) || null;
+  const todayRoutineIsCardio = todayRoutine?.exercises?.some(item => item.exercise?.category?.toLowerCase() === 'cardio') || false;
+  const todayRoutineDuration = todayRoutine ? Math.max(25, (todayRoutine.exercises?.length || 1) * 8) : 0;
 
   return (
     <div className="space-y-6 pb-12">
@@ -723,31 +799,38 @@ export function Workouts() {
         )}
         {activeTab === 'library' && (
           <>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-500" />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar missão de treinamento..."
-                    className="w-full rounded-xl border border-[#1E1E26] bg-[#0F0F13] py-3 pl-12 pr-4 text-sm text-white placeholder:text-gray-600 focus:border-blue-500/50 focus:outline-none"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+              <div className="space-y-3">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-500" />
+                    <input
+                      type="text"
+                      placeholder="Buscar exercício ou grupo muscular..."
+                      className="w-full rounded-xl border border-[#1E1E26] bg-[#0F0F13] py-3 pl-12 pr-4 text-sm text-white placeholder:text-gray-600 focus:border-blue-500/50 focus:outline-none"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 rounded-xl border border-[#1E1E26] bg-[#0F0F13] p-1">
+                    <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                      <LayoutGrid size={16} />
+                    </button>
+                    <button onClick={() => setViewMode('table')} className={`p-2 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                      <TableIcon size={16} />
+                    </button>
+                  </div>
                 </div>
-                
-                <div className="flex items-center gap-1 rounded-xl border border-[#1E1E26] bg-[#0F0F13] p-1">
-                  <button 
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
-                  >
-                    <LayoutGrid size={16} />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode('table')}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-white'}`}
-                  >
-                    <TableIcon size={16} />
-                  </button>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <select value={muscleFilter} onChange={(e) => setMuscleFilter(e.target.value)} className="rounded-xl border border-[#1E1E26] bg-[#0F0F13] px-4 py-3 text-xs font-bold text-gray-300 outline-none focus:border-blue-500/50">
+                    <option value="Todos">Todos os grupos</option>
+                    {muscleGroups.map(group => <option key={group} value={group}>{group}</option>)}
+                  </select>
+                  <select value={equipmentFilter} onChange={(e) => setEquipmentFilter(e.target.value)} className="rounded-xl border border-[#1E1E26] bg-[#0F0F13] px-4 py-3 text-xs font-bold text-gray-300 outline-none focus:border-blue-500/50">
+                    {['Todos', 'Barra', 'Halteres', 'Máquina', 'Peso corporal', 'Outros'].map(option => <option key={option} value={option}>{option === 'Todos' ? 'Todos os equipamentos' : option}</option>)}
+                  </select>
+                  <select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value)} className="rounded-xl border border-[#1E1E26] bg-[#0F0F13] px-4 py-3 text-xs font-bold text-gray-300 outline-none focus:border-blue-500/50">
+                    {['Todos', 'Iniciante', 'Intermediário', 'Avançado'].map(option => <option key={option} value={option}>{option === 'Todos' ? 'Todas as dificuldades' : option}</option>)}
+                  </select>
                 </div>
               </div>
 
@@ -761,28 +844,37 @@ export function Workouts() {
                 ) : viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {filteredExercises.map((ex) => (
-                      <button
-                        key={ex.id}
-                        onClick={() => {
-                          setSelectedExercise(ex);
-                          setIsModalOpen(true);
-                        }}
-                        className="flex flex-col gap-3 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all duration-150 ease-out hover:bg-[#16161D] hover:border-blue-500/50 hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(59,130,246,0.15)] cursor-pointer"
-                      >
+                      <div key={ex.id} className="group flex flex-col rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all duration-200 hover:-translate-y-1 hover:border-blue-500/40 hover:bg-[#16161D] hover:shadow-[0_0_18px_rgba(59,130,246,0.12)]">
                         <div className="flex items-center justify-between">
                           <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
                             <Dumbbell className="size-5" />
                           </div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">ID: {ex.id.slice(0, 4)}</span>
+                          <span className="rounded-md border border-white/5 bg-white/5 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500">{inferDifficulty(ex)}</span>
                         </div>
-                        <div>
+                        <div className="mt-4 flex-1">
                           <h3 className="font-bold text-white uppercase tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{ex.name}</h3>
                           <p className="mt-1 text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] italic">
-                            {ex.muscle_group} • {ex.category}
+                            {ex.muscle_group} · {ex.category}
                           </p>
+                          <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-gray-600">{inferEquipment(ex)}</p>
                         </div>
-                      </button>
+                        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[#1E1E26] pt-4">
+                          <button type="button" onClick={() => { setSelectedExercise(ex); setIsModalOpen(true); }} className="rounded-xl border border-[#252530] bg-white/5 py-2.5 text-[9px] font-black uppercase tracking-wider text-gray-400 transition-colors hover:text-white">
+                            Registrar
+                          </button>
+                          <button type="button" onClick={() => routines.length === 0 ? setIsNewRoutineModalOpen(true) : setExerciseToAdd(ex)} className="rounded-xl border border-blue-500/25 bg-blue-500/10 py-2.5 text-[9px] font-black uppercase tracking-wider text-blue-300 transition-all hover:border-blue-400/50 hover:bg-blue-500/20 hover:text-white">
+                            Adicionar ao treino
+                          </button>
+                        </div>
+                      </div>
                     ))}
+                    {filteredExercises.length === 0 && (
+                      <div className="col-span-full rounded-3xl border border-dashed border-[#252530] bg-[#0F0F13] p-10 text-center">
+                        <Search className="mx-auto h-7 w-7 text-gray-700" />
+                        <p className="mt-3 text-xs font-black uppercase tracking-wider text-gray-500">Nenhum exercício encontrado</p>
+                        <p className="mt-1 text-xs text-gray-600">Ajuste os filtros ou cadastre um novo exercício.</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13]">
@@ -851,72 +943,121 @@ export function Workouts() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {WORKOUT_PROGRAM_PRESETS
                   .filter(p => presetFilter === 'Todos' || p.frequency === presetFilter)
-                  .map((program) => (
+                  .map((program) => {
+                    const meta = PROGRAM_META[program.id] || {
+                      objective: 'Evolução física estruturada',
+                      level: 'Intermediário',
+                      split: program.routines.map(routine => routine.name).join(' / '),
+                      attributes: 'FOR · VIT · RES',
+                    };
+                    return (
                     <div
                       key={program.id}
-                      className="group relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-all duration-150 ease-out hover:border-amber-500/50 hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] flex flex-col justify-between"
+                      className="group relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] transition-all duration-200 hover:-translate-y-1 hover:border-amber-500/50 hover:shadow-[0_0_24px_rgba(245,158,11,0.12)] flex flex-col"
                     >
-                      <div className="absolute -right-4 -top-4 size-24 bg-amber-500/5 blur-3xl group-hover:bg-amber-500/10" />
+                      <div className="relative flex h-32 items-center justify-center overflow-hidden border-b border-[#1E1E26] bg-[radial-gradient(circle_at_70%_25%,rgba(245,158,11,0.14),transparent_34%),linear-gradient(135deg,#111118,#09090d)]">
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:26px_26px]" />
+                        <ImageIcon className="relative h-8 w-8 text-amber-500/35 transition-transform duration-500 group-hover:scale-110" />
+                        <span className="absolute bottom-3 right-3 text-[8px] font-black uppercase tracking-[0.18em] text-gray-700">Arte do programa</span>
+                      </div>
 
-                      <div>
-                        <div className="mb-4 flex items-center justify-between">
+                      <div className="flex flex-1 flex-col p-5">
+                        <div className="mb-4 flex items-center justify-between gap-2">
                           <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-amber-400 font-orbitron">
                             {program.frequency}
                           </span>
-                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-600 font-mono">
-                            {program.estimatedDuration}
+                          <span className="rounded-md border border-white/5 bg-white/5 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500">
+                            {meta.level}
                           </span>
                         </div>
 
                         <h3 className="text-lg font-black uppercase italic text-white tracking-tight leading-snug" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                           {program.title}
                         </h3>
-                        <p className="mt-2 text-xs text-gray-500 leading-relaxed min-h-[48px]">
-                          {program.description}
-                        </p>
+                        <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-amber-400">{meta.objective}</p>
+                        <p className="mt-3 text-xs text-gray-500 leading-relaxed line-clamp-2">{program.description}</p>
 
-                        <div className="mt-4 border-t border-[#1E1E26] pt-4 space-y-2">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600">Estrutura do Programa:</p>
-                          {program.routines.map((r, rIdx) => (
-                            <div key={rIdx} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5">
-                              <span className="text-[10px] font-bold text-gray-300 uppercase truncate">{r.name}</span>
-                              <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest font-mono">
-                                {r.exercises.length} Exs
-                              </span>
-                            </div>
-                          ))}
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <div className="rounded-xl border border-white/5 bg-black/25 p-3">
+                            <CalendarDays className="h-3.5 w-3.5 text-blue-400" />
+                            <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">Duração</p>
+                            <p className="mt-1 text-[10px] font-bold text-gray-300">{program.estimatedDuration.replace(' por sessão', '')}</p>
+                          </div>
+                          <div className="rounded-xl border border-white/5 bg-black/25 p-3">
+                            <Gauge className="h-3.5 w-3.5 text-purple-400" />
+                            <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">Atributos</p>
+                            <p className="mt-1 text-[10px] font-bold text-purple-300">{meta.attributes}</p>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="mt-6 flex gap-2">
+                        <div className="mt-4 rounded-xl border border-[#1E1E26] bg-black/20 p-3">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Divisão semanal</p>
+                          <p className="mt-1 text-[10px] font-semibold leading-relaxed text-gray-400">{meta.split}</p>
+                        </div>
+
+                      <div className="mt-auto flex gap-2 pt-5">
                         <button
                           onClick={() => {
                             setSelectedPreset(program);
                             setIsPresetModalOpen(true);
                           }}
-                          className="flex-1 rounded-xl border border-[#1E1E26] bg-white/5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 transition-all hover:bg-white/10 hover:text-white"
+                          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#1E1E26] bg-white/5 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 transition-all hover:bg-white/10 hover:text-white"
                           style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
+                          <Eye className="h-3.5 w-3.5" />
                           Visualizar
                         </button>
                         <button
                           onClick={() => handleImportProgram(program)}
                           disabled={loading}
-                          className="flex-1 rounded-xl bg-amber-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)] disabled:opacity-50"
+                          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)] disabled:opacity-50"
                           style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
+                          <Upload className="h-3.5 w-3.5" />
                           {loading && isImportingPreset ? 'Importando...' : 'Importar'}
                         </button>
                       </div>
                     </div>
-                  ))}
+                    </div>
+                  )})}
               </div>
             </div>
           )}
 
           {activeTab === 'routines' && (
             /* Rotinas UI */
-            <div className="space-y-4">
+            <div className="space-y-5">
+              {todayRoutine && (
+                <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(147,51,234,0.1)] sm:p-6">
+                  <div className="absolute right-0 top-0 h-full w-64 bg-gradient-to-l from-purple-500/10 to-transparent" />
+                  <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-purple-500/25 bg-purple-500/10 text-purple-300">
+                        <Trophy className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">Missão Física do Dia</p>
+                        <h2 className="mt-1 text-lg font-black uppercase tracking-tight text-white font-orbitron">{todayRoutine.name}</h2>
+                        <div className="mt-2 flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-wider">
+                          <span className="text-gray-400">{todayRoutineDuration} min</span>
+                          <span className="text-gray-700">•</span>
+                          <span className="text-amber-400">+{todayRoutineIsCardio ? 40 : 50} XP</span>
+                          <span className="text-gray-700">•</span>
+                          <span className="text-blue-300">{todayRoutineIsCardio ? 'RES +2' : 'FOR +2'} · VIT +1 · DIS +1 · Corpo</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleStartRoutine(todayRoutine)}
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/15 px-5 text-[10px] font-black uppercase tracking-widest text-purple-200 transition-all hover:bg-purple-600 hover:text-white hover:shadow-[0_0_20px_rgba(147,51,234,0.3)]"
+                    >
+                      <Zap className="h-4 w-4" />
+                      Iniciar missão
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {routines.map((routine) => {
                   const splitMatch = routine.name.match(/^[A-Z](?=\s*-|\s|$)/i);
@@ -1017,17 +1158,23 @@ export function Workouts() {
                 })}
 
                 {routines.length === 0 && (
-                  <div className="col-span-full flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[#1E1E26] py-20 text-center">
-                    <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-white/5 text-gray-700">
-                      <LayoutGrid size={32} strokeWidth={1} />
+                  <div className="relative col-span-full overflow-hidden rounded-3xl border border-dashed border-purple-500/20 bg-[#0F0F13] px-6 py-14 text-center">
+                    <div className="absolute left-1/2 top-0 h-40 w-80 -translate-x-1/2 bg-purple-500/8 blur-3xl" />
+                    <div className="relative mx-auto mb-5 flex size-16 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400 shadow-[0_0_24px_rgba(147,51,234,0.12)]">
+                      <Dumbbell size={30} strokeWidth={1.5} />
                     </div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Nenhuma rotina de treinamento configurada.</p>
-                    <button 
-                      onClick={() => setIsNewRoutineModalOpen(true)}
-                      className="mt-4 text-[10px] font-black uppercase tracking-widest text-purple-500 hover:text-purple-400 underline underline-offset-4"
-                    >
-                      Criar primeira rotina
-                    </button>
+                    <h3 className="relative text-base font-black uppercase tracking-tight text-white font-orbitron">Seu arsenal físico ainda está vazio</h3>
+                    <p className="relative mx-auto mt-2 max-w-md text-xs leading-relaxed text-gray-500">
+                      Crie um protocolo personalizado ou importe um modelo completo para iniciar sua evolução em FOR, VIT, RES e DIS.
+                    </p>
+                    <div className="relative mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+                      <button onClick={() => setIsNewRoutineModalOpen(true)} className="rounded-xl bg-purple-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(147,51,234,0.25)]">
+                        Criar rotina
+                      </button>
+                      <button onClick={() => setActiveTab('presets')} className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-amber-300 transition-all hover:border-amber-400/50 hover:bg-amber-500/15 hover:text-white">
+                        Importar modelo
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1040,6 +1187,49 @@ export function Workouts() {
             </div>
           )}
       </div>
+
+      <AnimatePresence>
+        {exerciseToAdd && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setExerciseToAdd(null)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 18 }}
+              className="relative w-full max-w-md rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-2xl"
+            >
+              <button onClick={() => setExerciseToAdd(null)} className="absolute right-5 top-5 text-gray-500 transition-colors hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-blue-400 font-orbitron">Adicionar ao treino</p>
+              <h2 className="mt-2 pr-8 text-lg font-black uppercase text-white font-orbitron">{exerciseToAdd.name}</h2>
+              <p className="mt-1 text-xs text-gray-500">Selecione a rotina que receberá este exercício.</p>
+              <div className="mt-5 max-h-72 space-y-2 overflow-y-auto pr-1">
+                {routines.map(routine => (
+                  <button
+                    key={routine.id}
+                    type="button"
+                    onClick={() => handleAddExerciseToRoutine(routine, exerciseToAdd)}
+                    className="flex w-full items-center justify-between rounded-xl border border-[#1E1E26] bg-black/30 p-4 text-left transition-all hover:border-blue-500/40 hover:bg-blue-500/5"
+                  >
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-white">{routine.name}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-600">{routine.exercises?.length || 0} exercícios</p>
+                    </div>
+                    <Plus className="h-4 w-4 text-blue-400" />
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Modal de Novo Exercício - ESTAVA FALTANDO */}
       <AnimatePresence>

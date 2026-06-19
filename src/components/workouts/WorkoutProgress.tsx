@@ -9,7 +9,9 @@ import {
   Flame,
   Zap,
   Target,
-  Trophy
+  Trophy,
+  Dumbbell,
+  BarChart3
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -114,11 +116,33 @@ export function WorkoutProgress() {
     );
   }
 
+  const trainingDates = [...new Set(logs.map(log => new Date(log.logged_at).toLocaleDateString('en-CA')))].sort().reverse();
+  let trainingStreak = 0;
+  if (trainingDates.length > 0) {
+    const cursor = new Date();
+    const today = cursor.toLocaleDateString('en-CA');
+    if (trainingDates[0] !== today) cursor.setDate(cursor.getDate() - 1);
+    for (const date of trainingDates) {
+      if (date !== cursor.toLocaleDateString('en-CA')) break;
+      trainingStreak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+
+  const muscleGroups = Array.from(
+    logs.reduce((map, log) => {
+      const group = log.exercise?.muscle_group || 'Geral';
+      map.set(group, (map.get(group) || 0) + 1);
+      return map;
+    }, new Map<string, number>()),
+  ).sort((a, b) => b[1] - a[1]);
+  const maxGroupLogs = muscleGroups[0]?.[1] || 1;
+
   return (
     <div className="space-y-8">
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <motion.div 
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 relative overflow-hidden"
@@ -137,7 +161,7 @@ export function WorkoutProgress() {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -149,18 +173,37 @@ export function WorkoutProgress() {
               <Zap size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Logs Realizados</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Treinos Realizados</p>
               <h3 className="text-2xl font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {logs.length} <span className="text-xs text-purple-500 uppercase not-italic">ENTRADAS</span>
+                {trainingDates.length} <span className="text-xs text-purple-500 uppercase not-italic">DIAS</span>
               </h3>
             </div>
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="rounded-3xl border border-orange-500/20 bg-orange-500/5 p-6 relative overflow-hidden"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-400">
+              <Flame size={24} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Streak de Treino</p>
+              <h3 className="text-2xl font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                {trainingStreak} <span className="text-xs text-orange-400 uppercase not-italic">DIAS</span>
+              </h3>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
           className="rounded-3xl border border-blue-500/20 bg-blue-500/5 p-6 relative overflow-hidden"
         >
           <div className="flex items-center gap-4">
@@ -176,6 +219,45 @@ export function WorkoutProgress() {
           </div>
         </motion.div>
       </div>
+
+      {logs.length === 0 && (
+        <div className="rounded-3xl border border-dashed border-blue-500/20 bg-[#0F0F13] p-10 text-center">
+          <TrendingUp className="mx-auto h-8 w-8 text-blue-500/35" />
+          <h3 className="mt-4 text-sm font-black uppercase tracking-wider text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+            O Sistema ainda não registrou evolução física
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-gray-500">
+            Conclua sua primeira sessão para revelar volume, streak, recordes e grupos musculares mais treinados.
+          </p>
+        </div>
+      )}
+
+      {logs.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 px-2">
+            <BarChart3 className="size-5 text-cyan-400" />
+            <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+              Grupos Mais <span className="text-cyan-400">Treinados</span>
+            </h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {muscleGroups.slice(0, 6).map(([group, count]) => (
+              <div key={group} className="rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Dumbbell className="h-4 w-4 text-cyan-400" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white">{group}</span>
+                  </div>
+                  <span className="text-[9px] font-black text-gray-500">{count} registros</span>
+                </div>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/50">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${(count / maxGroupLogs) * 100}%` }} className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Personal Records */}
       <div className="space-y-4">
@@ -221,7 +303,7 @@ export function WorkoutProgress() {
             </motion.div>
           ))}
 
-          {prs.length === 0 && (
+          {prs.length === 0 && logs.length > 0 && (
             <div className="col-span-full py-12 text-center rounded-3xl border-2 border-dashed border-[#1E1E26]">
               <p className="text-[10px] font-black uppercase tracking-widest text-gray-700">Inicie seu treinamento para capturar dados de evolução.</p>
             </div>
@@ -238,7 +320,7 @@ export function WorkoutProgress() {
           </h2>
         </div>
 
-        <div className="overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13]">
+        <div className="overflow-x-auto rounded-3xl border border-[#1E1E26] bg-[#0F0F13]">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-[#1E1E26] bg-white/5">

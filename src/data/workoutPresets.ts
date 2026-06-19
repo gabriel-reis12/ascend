@@ -25,7 +25,7 @@ export interface WorkoutProgramPreset {
 export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'ppl-3x',
-    title: 'Push Pull Legs (PPL)',
+    title: 'Push Pull Legs 3x',
     frequency: '3x na semana',
     description: 'A divisão clássica e mais eficiente para hipertrofia e força. Ideal para quem treina segundas, quartas e sextas.',
     estimatedDuration: '50-60 min por sessão',
@@ -67,7 +67,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   },
   {
     id: 'abcd-4x',
-    title: 'Divisão ABCD',
+    title: 'ABCD Hipertrofia',
     frequency: '4x na semana',
     description: 'Divisão que permite maior volume semanal por grupo muscular e maior tempo de descanso. Excelente para intermediários.',
     estimatedDuration: '45-55 min por sessão',
@@ -120,7 +120,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   },
   {
     id: 'abcde-5x',
-    title: 'Divisão ABCDE',
+    title: 'ABCDE Clássico',
     frequency: '5x na semana',
     description: 'Foco em altíssima intensidade por grupo muscular com uma sessão por dia de segunda a sexta. Recomendado para caçadores avançados.',
     estimatedDuration: '40-50 min por sessão',
@@ -181,7 +181,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   },
   {
     id: 'ppl-6x',
-    title: 'Push Pull Legs 2x',
+    title: 'Push Pull Legs 6x',
     frequency: '6x na semana',
     description: 'Volume e frequência máximos para atletas com rotina de treino dedicada. Duplica a divisão PPL cobrindo de segunda a sábado.',
     estimatedDuration: '50-60 min por sessão',
@@ -289,6 +289,175 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
           { name: 'Mountain Climbers', muscle_group: 'Abdômen', category: 'Força', sets: 3, reps: 30, weight_kg: 0 },
           { name: 'Abdominal Remador', muscle_group: 'Abdômen', category: 'Força', sets: 3, reps: 20, weight_kg: 0 },
           { name: 'Polichinelos', muscle_group: 'Cardio', category: 'Cardio', sets: 3, reps: 50, weight_kg: 0 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'full-body-3x',
+    title: 'Full Body 3x',
+    frequency: '3x na semana',
+    description: 'Treino completo de corpo inteiro com progressão simples, alta frequência e excelente recuperação.',
+    estimatedDuration: '45-55 min por sessão',
+    routines: [
+      {
+        name: 'Full Body A',
+        scheduled_days: ['seg'],
+        exercises: [
+          { name: 'Agachamento Livre', muscle_group: 'Quadríceps', category: 'Força', sets: 4, reps: 8, weight_kg: 40 },
+          { name: 'Supino Reto com Barra', muscle_group: 'Peito', category: 'Força', sets: 4, reps: 8, weight_kg: 30 },
+          { name: 'Remada Curvada com Barra', muscle_group: 'Costas', category: 'Força', sets: 3, reps: 10, weight_kg: 25 },
+          { name: 'Prancha Abdominal', muscle_group: 'Abdômen', category: 'Força', sets: 3, reps: 40, weight_kg: 0 }
+        ]
+      },
+      {
+        name: 'Full Body B',
+        scheduled_days: ['qua'],
+        exercises: [
+          { name: 'Levantamento Terra', muscle_group: 'Costas', category: 'Força', sets: 3, reps: 6, weight_kg: 50 },
+          { name: 'Desenvolvimento Militar', muscle_group: 'Ombros', category: 'Força', sets: 4, reps: 8, weight_kg: 18 },
+          { name: 'Avanço / Passada', muscle_group: 'Pernas', category: 'Força', sets: 3, reps: 10, weight_kg: 12 },
+          { name: 'Puxada Alta (Pulley)', muscle_group: 'Costas', category: 'Força', sets: 3, reps: 10, weight_kg: 35 }
+        ]
+      },
+      {
+        name: 'Full Body C',
+        scheduled_days: ['sex'],
+        exercises: [
+          { name: 'Leg Press 45º', muscle_group: 'Pernas', category: 'Força', sets: 4, reps: 10, weight_kg: 90 },
+          { name: 'Supino Inclinado com Halteres', muscle_group: 'Peito', category: 'Força', sets: 3, reps: 10, weight_kg: 14 },
+          { name: 'Remada Unilateral com Halter', muscle_group: 'Costas', category: 'Força', sets: 3, reps: 12, weight_kg: 16 },
+          { name: 'Elevação Lateral', muscle_group: 'Ombros', category: 'Força', sets: 3, reps: 12, weight_kg: 6 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'upper-lower-4x',
+    title: 'Upper/Lower 4x',
+    frequency: '4x na semana',
+    description: 'Alternância eficiente entre membros superiores e inferiores para força e hipertrofia equilibradas.',
+    estimatedDuration: '50-60 min por sessão',
+    routines: [
+      {
+        name: 'Upper A - Força',
+        scheduled_days: ['seg'],
+        exercises: [
+          { name: 'Supino Reto com Barra', muscle_group: 'Peito', category: 'Força', sets: 4, reps: 6, weight_kg: 45 },
+          { name: 'Remada Curvada com Barra', muscle_group: 'Costas', category: 'Força', sets: 4, reps: 6, weight_kg: 40 },
+          { name: 'Desenvolvimento Militar', muscle_group: 'Ombros', category: 'Força', sets: 3, reps: 8, weight_kg: 20 },
+          { name: 'Rosca Direta com Barra W', muscle_group: 'Bíceps', category: 'Força', sets: 3, reps: 10, weight_kg: 16 }
+        ]
+      },
+      {
+        name: 'Lower A - Força',
+        scheduled_days: ['ter'],
+        exercises: [
+          { name: 'Agachamento Livre', muscle_group: 'Quadríceps', category: 'Força', sets: 4, reps: 6, weight_kg: 55 },
+          { name: 'Stiff com Barra', muscle_group: 'Posteriores', category: 'Força', sets: 4, reps: 8, weight_kg: 35 },
+          { name: 'Leg Press 45º', muscle_group: 'Pernas', category: 'Força', sets: 3, reps: 10, weight_kg: 110 },
+          { name: 'Panturrilhas em Pé', muscle_group: 'Panturrilhas', category: 'Força', sets: 4, reps: 15, weight_kg: 25 }
+        ]
+      },
+      {
+        name: 'Upper B - Volume',
+        scheduled_days: ['qui'],
+        exercises: [
+          { name: 'Supino Inclinado com Halteres', muscle_group: 'Peito', category: 'Força', sets: 4, reps: 10, weight_kg: 18 },
+          { name: 'Puxada Alta (Pulley)', muscle_group: 'Costas', category: 'Força', sets: 4, reps: 10, weight_kg: 40 },
+          { name: 'Elevação Lateral', muscle_group: 'Ombros', category: 'Força', sets: 4, reps: 12, weight_kg: 8 },
+          { name: 'Tríceps Pulley (Corda)', muscle_group: 'Tríceps', category: 'Força', sets: 3, reps: 12, weight_kg: 15 }
+        ]
+      },
+      {
+        name: 'Lower B - Volume',
+        scheduled_days: ['sex'],
+        exercises: [
+          { name: 'Agachamento Sumô com Halter', muscle_group: 'Pernas', category: 'Força', sets: 4, reps: 10, weight_kg: 24 },
+          { name: 'Cadeira Extensora', muscle_group: 'Quadríceps', category: 'Força', sets: 3, reps: 12, weight_kg: 35 },
+          { name: 'Mesa Flexora', muscle_group: 'Posteriores', category: 'Força', sets: 3, reps: 12, weight_kg: 25 },
+          { name: 'Elevação Pélvica (Solo)', muscle_group: 'Posteriores', category: 'Força', sets: 4, reps: 12, weight_kg: 30 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'forca-base-3x',
+    title: 'Força Base 3x',
+    frequency: '3x na semana',
+    description: 'Fundamentos de força com foco nos grandes levantamentos e progressão consistente de carga.',
+    estimatedDuration: '55-65 min por sessão',
+    routines: [
+      {
+        name: 'Força A - Agachamento',
+        scheduled_days: ['seg'],
+        exercises: [
+          { name: 'Agachamento Livre', muscle_group: 'Quadríceps', category: 'Força', sets: 5, reps: 5, weight_kg: 60 },
+          { name: 'Supino Reto com Barra', muscle_group: 'Peito', category: 'Força', sets: 5, reps: 5, weight_kg: 45 },
+          { name: 'Remada Curvada com Barra', muscle_group: 'Costas', category: 'Força', sets: 4, reps: 6, weight_kg: 40 }
+        ]
+      },
+      {
+        name: 'Força B - Terra',
+        scheduled_days: ['qua'],
+        exercises: [
+          { name: 'Levantamento Terra', muscle_group: 'Costas', category: 'Força', sets: 5, reps: 3, weight_kg: 70 },
+          { name: 'Desenvolvimento Militar', muscle_group: 'Ombros', category: 'Força', sets: 5, reps: 5, weight_kg: 25 },
+          { name: 'Puxada Alta (Pulley)', muscle_group: 'Costas', category: 'Força', sets: 4, reps: 8, weight_kg: 45 }
+        ]
+      },
+      {
+        name: 'Força C - Potência',
+        scheduled_days: ['sex'],
+        exercises: [
+          { name: 'Agachamento Livre', muscle_group: 'Quadríceps', category: 'Força', sets: 4, reps: 5, weight_kg: 55 },
+          { name: 'Supino Reto com Barra', muscle_group: 'Peito', category: 'Força', sets: 4, reps: 5, weight_kg: 42 },
+          { name: 'Stiff com Barra', muscle_group: 'Posteriores', category: 'Força', sets: 4, reps: 6, weight_kg: 45 }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'recomposicao-4x',
+    title: 'Recomposição Corporal',
+    frequency: '4x na semana',
+    description: 'Combina musculação e condicionamento para aumentar massa magra enquanto melhora o gasto energético.',
+    estimatedDuration: '45-60 min por sessão',
+    routines: [
+      {
+        name: 'A - Superiores Metabólico',
+        scheduled_days: ['seg'],
+        exercises: [
+          { name: 'Supino Reto com Halteres', muscle_group: 'Peito', category: 'Força', sets: 4, reps: 12, weight_kg: 16 },
+          { name: 'Remada Baixa (Triângulo)', muscle_group: 'Costas', category: 'Força', sets: 4, reps: 12, weight_kg: 35 },
+          { name: 'Elevação Lateral', muscle_group: 'Ombros', category: 'Força', sets: 3, reps: 15, weight_kg: 6 }
+        ]
+      },
+      {
+        name: 'B - Inferiores Metabólico',
+        scheduled_days: ['ter'],
+        exercises: [
+          { name: 'Agachamento Livre', muscle_group: 'Quadríceps', category: 'Força', sets: 4, reps: 12, weight_kg: 40 },
+          { name: 'Stiff com Halteres', muscle_group: 'Posteriores', category: 'Força', sets: 4, reps: 12, weight_kg: 14 },
+          { name: 'Avanço / Passada', muscle_group: 'Pernas', category: 'Força', sets: 3, reps: 12, weight_kg: 10 }
+        ]
+      },
+      {
+        name: 'C - Full Body',
+        scheduled_days: ['qui'],
+        exercises: [
+          { name: 'Leg Press 45º', muscle_group: 'Pernas', category: 'Força', sets: 3, reps: 15, weight_kg: 90 },
+          { name: 'Supino Inclinado com Halteres', muscle_group: 'Peito', category: 'Força', sets: 3, reps: 12, weight_kg: 14 },
+          { name: 'Puxada Alta (Pulley)', muscle_group: 'Costas', category: 'Força', sets: 3, reps: 12, weight_kg: 35 }
+        ]
+      },
+      {
+        name: 'D - Condicionamento',
+        scheduled_days: ['sab'],
+        exercises: [
+          { name: 'Mountain Climbers', muscle_group: 'Abdômen', category: 'Cardio', sets: 4, reps: 30, weight_kg: 0 },
+          { name: 'Polichinelos', muscle_group: 'Cardio', category: 'Cardio', sets: 4, reps: 50, weight_kg: 0 },
+          { name: 'Prancha Abdominal', muscle_group: 'Abdômen', category: 'Força', sets: 4, reps: 45, weight_kg: 0 }
         ]
       }
     ]
