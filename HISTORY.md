@@ -13,6 +13,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-21 - Raid Semanal Premium
+- Header da raid ampliado com boss ativo, HP restante, dano acumulado, prazo e recompensa principal.
+- Painel estrategico ganhou fraqueza, fontes de dano e regeneracao, multiplicador ativo e leitura de risco.
+- Acao de teste foi contextualizada como ataque de treino, com preview claro da mecanica de dano.
+- Historico da sessao registra ataques, criticos e regeneracao sem inventar persistencia no backend.
+- Recompensa de purificacao e galeria de bosses receberam maior destaque, estados visuais e microinteracoes.
+
 ### 2026-06-21 - Refinamento de Descanso & Lazer
 - Navegacao convertida em pills premium com icones, subtitulos, glow contextual e transicao entre abas.
 - Header ampliado com sono atual, meditacao acumulada, lazer offline e estado de equilibrio calculado.

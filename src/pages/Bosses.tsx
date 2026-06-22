@@ -11,11 +11,18 @@ import {
   RotateCcw,
   Info,
   CheckCircle2,
-  Calendar,
   Brain,
   Scale,
   Compass,
-  Heart
+  Heart,
+  Timer,
+  Activity,
+  Gift,
+  Lock,
+  Swords,
+  TrendingDown,
+  TrendingUp,
+  Trophy
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
@@ -37,6 +44,13 @@ export function Bosses() {
   const [showAttackFeed, setShowAttackFeed] = useState(false);
   const [feedDamage, setFeedDamage] = useState(0);
   const [feedCritical, setFeedCritical] = useState(false);
+  const [raidReferenceTime] = useState(() => Date.now());
+  const [combatEvents, setCombatEvents] = useState<Array<{
+    id: number;
+    damage: number;
+    critical: boolean;
+    time: string;
+  }>>([]);
 
   // Carrega a batalha ativa quando o componente monta
   useEffect(() => {
@@ -47,13 +61,29 @@ export function Bosses() {
 
   // Monitora alterações de dano recente para exibir animação de floating numbers
   useEffect(() => {
-    if (recentDamage) {
+    if (!recentDamage) return;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const frame = window.requestAnimationFrame(() => {
       setFeedDamage(recentDamage.damage);
       setFeedCritical(recentDamage.isCritical);
       setShowAttackFeed(true);
-      const timer = setTimeout(() => setShowAttackFeed(false), 2000);
-      return () => clearTimeout(timer);
-    }
+      setCombatEvents((current) => [
+        {
+          id: Date.now(),
+          damage: recentDamage.damage,
+          critical: recentDamage.isCritical,
+          time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        },
+        ...current,
+      ].slice(0, 5));
+      timer = setTimeout(() => setShowAttackFeed(false), 2000);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (timer) clearTimeout(timer);
+    };
   }, [recentDamage]);
 
   if (!user) {
@@ -66,6 +96,14 @@ export function Bosses() {
 
   const bossDef = activeBattle ? BOSS_LIST.find(b => b.id === activeBattle.boss_id) : null;
   const hpPercent = activeBattle ? (activeBattle.current_hp / activeBattle.max_hp) * 100 : 0;
+  const damageDealt = activeBattle ? activeBattle.max_hp - activeBattle.current_hp : 0;
+  const raidDeadline = activeBattle
+    ? new Date(new Date(activeBattle.started_at).getTime() + 7 * 24 * 60 * 60 * 1000)
+    : null;
+  const remainingMs = raidDeadline ? Math.max(0, raidDeadline.getTime() - raidReferenceTime) : 0;
+  const remainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
+  const remainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const raidRisk = hpPercent > 70 ? 'Alto' : hpPercent > 30 ? 'Moderado' : 'Controlado';
 
   // Handler para simular um ataque leve (para testes do usuário)
   const handleTestAttack = async () => {
@@ -116,39 +154,54 @@ export function Bosses() {
   return (
     <div className="space-y-8 pb-12">
       {/* Cabeçalho da Fenda */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-xl relative overflow-hidden">
+      <div className="relative overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-6 shadow-[0_0_28px_rgba(168,85,247,0.07)]">
         <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="space-y-1 z-10">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-purple-500/10 text-purple-400 border border-purple-500/20">
-              Módulo de Raid Semanal
-            </span>
-            <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Fenda Ativa
-            </span>
+        <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_1.2fr] xl:items-center">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-xs font-bold text-purple-300">
+                Raid semanal ativa
+              </span>
+              <span className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-300">
+                Fenda sincronizada
+              </span>
+            </div>
+            <h1 className="mt-3 text-2xl font-black uppercase tracking-wider text-white sm:text-3xl font-orbitron">
+              Chefes Finais <span className="text-purple-400">& Provações</span>
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-gray-400">
+              Caçador <span className="font-bold text-white">{hunterStore.fullName || hunterStore.username}</span> · Rank <span className="text-amber-300">{hunterStore.rank}</span> · Classe <span className="text-purple-300">{hunterStore.hunterClass || 'Nenhuma'}</span>
+            </p>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white font-orbitron">
-            Chefes Finais <span className="text-purple-400">& Provações de Consistência</span>
-          </h1>
-          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 leading-relaxed">
-            Caçador: <span className="text-white font-orbitron">{hunterStore.fullName || hunterStore.username}</span> | Rank: <span className="text-amber-400 font-orbitron">{hunterStore.rank}</span> | Classe: <span className="text-purple-400 font-orbitron">{hunterStore.hunterClass || 'Nenhuma'}</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-3 z-10">
-          {activeBattle && activeBattle.current_hp > 0 && (
-            <button
-              onClick={() => void resetBattle(user.id)}
-              disabled={bossLoading}
-              title="Resetar HP do Boss atual"
-              className="flex size-9 items-center justify-center rounded-xl bg-black/40 border border-[#1e1e26] text-gray-400 hover:text-white hover:border-gray-500/50 transition cursor-pointer disabled:opacity-40"
-            >
-              <RotateCcw size={15} className={bossLoading ? 'animate-spin' : ''} />
-            </button>
-          )}
-          <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
-            <Sword size={18} />
+
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Boss da semana', value: bossDef?.name || 'Sincronizando', icon: Crown, tone: 'text-purple-300' },
+              { label: 'HP restante', value: activeBattle ? `${activeBattle.current_hp} / ${activeBattle.max_hp}` : '--', icon: Heart, tone: 'text-rose-300' },
+              { label: 'Dano acumulado', value: activeBattle ? `${damageDealt} de dano` : '--', icon: Swords, tone: 'text-amber-300' },
+              { label: 'Prazo restante', value: activeBattle ? `${remainingDays}d ${remainingHours}h` : '--', icon: Timer, tone: 'text-blue-300' },
+              { label: 'Recompensa', value: bossDef ? `+${bossDef.xpReward} XP` : '--', icon: Gift, tone: 'text-emerald-300' },
+              { label: 'Título', value: bossDef?.titleReward || '--', icon: Award, tone: 'text-yellow-300' },
+            ].map(item => (
+              <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3 transition-colors hover:border-white/10">
+                <item.icon className={`size-4 ${item.tone}`} />
+                <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
+                <p className={`mt-1 truncate text-sm font-bold ${item.tone}`}>{item.value}</p>
+              </div>
+            ))}
           </div>
         </div>
+
+        {activeBattle && activeBattle.current_hp > 0 && (
+          <button
+            onClick={() => void resetBattle(user.id)}
+            disabled={bossLoading}
+            title="Resetar HP do Boss atual"
+            className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-xl border border-[#1e1e26] bg-black/50 text-gray-500 transition hover:border-gray-500/50 hover:text-white disabled:opacity-40"
+          >
+            <RotateCcw size={15} className={bossLoading ? 'animate-spin' : ''} />
+          </button>
+        )}
       </div>
 
       {/* Área Principal da Batalha */}
@@ -190,7 +243,7 @@ export function Bosses() {
               }}
             >
               {/* Imagem do Chefe */}
-              <div 
+              <motion.div
                 className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-105"
                 style={{ 
                   backgroundImage: `url('${bossDef.image}')` 
@@ -368,10 +421,10 @@ export function Bosses() {
                     
                     {/* Descrição Lore */}
                     <div className="space-y-2">
-                      <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 font-orbitron flex items-center gap-1.5">
-                        <Info size={14} style={{ color: bossDef.color }} /> Descrição do Arquivo
+                      <h3 className="flex items-center gap-2 text-sm font-black text-white font-orbitron">
+                        <Info size={16} style={{ color: bossDef.color }} /> Descrição do Boss
                       </h3>
-                      <p className="text-[11px] text-gray-400 leading-relaxed">
+                      <p className="text-sm leading-relaxed text-gray-400">
                         {bossDef.lore}
                       </p>
                     </div>
@@ -381,50 +434,65 @@ export function Bosses() {
 
                     {/* Mecânica de Fraqueza */}
                     <div className="space-y-2">
-                      <h3 className="text-xs font-black uppercase tracking-wider text-yellow-400 font-orbitron flex items-center gap-1.5">
+                      <h3 className="flex items-center gap-2 text-sm font-black text-yellow-400 font-orbitron">
                         <ShieldAlert size={14} className="text-yellow-400" /> Fraqueza Identificada
                       </h3>
-                      <p className="text-[11px] text-gray-300 font-semibold leading-relaxed">
+                      <p className="text-sm font-semibold leading-relaxed text-gray-300">
                         {bossDef.weakness}
                       </p>
                       <div className="flex items-center gap-2 mt-1 bg-yellow-500/5 border border-yellow-500/10 rounded-xl p-2.5">
                         <div className="size-6 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400 shrink-0">
                           {getBossIcon(bossDef.weaknessCategory)}
                         </div>
-                        <span className="text-[9px] uppercase font-black text-yellow-500 tracking-widest leading-none">
-                          2.0x Dano Crítico ativado por atividades do tipo: {bossDef.weaknessCategory}
+                        <span className="text-xs font-bold text-yellow-400">
+                          Multiplicador 2.0x para ações do tipo {bossDef.weaknessCategory}
                         </span>
                       </div>
                     </div>
 
-                    {/* Loss Aversion Warning */}
-                    <div className="rounded-xl border border-red-500/10 bg-red-500/5 p-3 text-[10px] text-gray-400 leading-relaxed">
-                      <span className="text-red-400 font-black uppercase tracking-widest font-orbitron flex items-center gap-1 mr-1 mb-1">
-                        ⚠️ Alerta de Regeneração (Loss Aversion)
-                      </span>
-                      Se você quebrar suas streaks diárias de hábitos ou deixar tarefas pendentes ao virar o dia, o Boss irá regenerar <span className="text-red-400 font-bold">15 HP</span> devido à procrastinação acumulada.
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-3">
+                        <TrendingDown className="size-4 text-emerald-400" />
+                        <p className="mt-2 text-xs font-bold text-white">Fontes de dano</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">Quests, treinos, nutrição, finanças e hábitos concluídos.</p>
+                      </div>
+                      <div className="rounded-xl border border-red-500/10 bg-red-500/5 p-3">
+                        <TrendingUp className="size-4 text-red-400" />
+                        <p className="mt-2 text-xs font-bold text-white">Regeneração</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">Tarefas ignoradas ou streaks quebradas podem restaurar 15 HP.</p>
+                      </div>
+                      <div className="rounded-xl border border-purple-500/10 bg-purple-500/5 p-3">
+                        <Activity className="size-4 text-purple-400" />
+                        <p className="mt-2 text-xs font-bold text-white">Multiplicador ativo</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">2.0x em {bossDef.weaknessCategory}; sinergias especiais podem aplicar 1.5x.</p>
+                      </div>
+                      <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-3">
+                        <ShieldAlert className="size-4 text-amber-400" />
+                        <p className="mt-2 text-xs font-bold text-white">Risco atual</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">{raidRisk} · {activeBattle.current_hp} HP ainda precisam ser removidos.</p>
+                      </div>
                     </div>
                   </div>
 
                   {/* Painel de Interação de Ataque / Teste */}
                   <div className="space-y-3 pt-6 border-t border-[#1e1e26] border-dashed">
-                    <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                      <span>Mecanismo de Dano Ativo</span>
-                      <span>1 XP = 1 de Dano</span>
+                    <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+                      <span>Preview de ataque</span>
+                      <span>Treino base: 15 · crítico: 30</span>
                     </div>
                     
                     <div className="grid grid-cols-1 gap-2">
                       <button
                         onClick={handleTestAttack}
-                        className="py-3 rounded-2xl bg-black/40 border border-[#1e1e26] hover:border-gray-500/30 hover:text-white text-gray-400 font-black text-[10px] uppercase tracking-widest transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                        className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/10 text-sm font-black text-purple-200 transition hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(168,85,247,0.18)] active:scale-[0.98]"
                       >
-                        <Zap size={12} className="text-yellow-400" />
-                        Simular Ataque de Treino (15 de Dano)
+                        <Swords size={16} className="text-yellow-400" />
+                        Executar ataque de treino
                       </button>
                     </div>
                     
-                    <p className="text-[9px] text-gray-600 text-center uppercase tracking-widest leading-relaxed">
-                      *O verdadeiro dano é desferido de forma passiva ao concluir suas tarefas, rotinas de musculação e refeições no aplicativo.
+                    <p className="text-xs text-center leading-relaxed text-gray-600">
+                      O dano principal é aplicado automaticamente ao concluir atividades nos módulos do Ascend.
                     </p>
                   </div>
                 </div>
@@ -435,6 +503,74 @@ export function Bosses() {
       ) : (
         <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-12 text-center shadow-xl">
           <p className="text-gray-500 font-orbitron uppercase tracking-widest">Nenhuma raid ativa encontrada na fenda.</p>
+        </div>
+      )}
+
+      {activeBattle && bossDef && (
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black text-white font-orbitron">Histórico de Dano</h3>
+                <p className="mt-1 text-xs text-gray-500">Eventos recentes registrados durante esta sessão de raid.</p>
+              </div>
+              <Activity className="size-5 text-purple-400" />
+            </div>
+            <div className="mt-5 space-y-2">
+              {combatEvents.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-purple-500/20 bg-purple-500/[0.025] p-5 text-center">
+                  <p className="text-sm font-semibold text-gray-400">Nenhum impacto registrado nesta sessão.</p>
+                  <p className="mt-1 text-xs text-gray-600">Conclua atividades ou execute o preview de ataque para gerar o primeiro evento.</p>
+                </div>
+              ) : (
+                combatEvents.map(event => (
+                  <motion.div
+                    layout
+                    key={event.id}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.025] px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex size-9 items-center justify-center rounded-lg ${event.damage < 0 ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                        {event.damage < 0 ? <TrendingUp className="size-4" /> : <Swords className="size-4" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          {event.damage < 0 ? `Regeneração de ${Math.abs(event.damage)} HP` : `${event.damage} de dano aplicado`}
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-500">{event.critical ? 'Golpe crítico · multiplicador ativo' : 'Ataque registrado pelo Sistema'}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-600">{event.time}</span>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-[#0F0F13] p-6 shadow-[0_0_22px_rgba(245,158,11,0.06)]">
+            <div className="absolute right-0 top-0 h-full w-40 bg-gradient-to-l from-amber-500/10 to-transparent" />
+            <div className="relative">
+              <div className="flex size-11 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
+                <Trophy className="size-5" />
+              </div>
+              <p className="mt-4 text-xs font-bold text-amber-300">Recompensa da purificação</p>
+              <h3 className="mt-1 text-xl font-black text-white font-orbitron">{bossDef.titleReward}</h3>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-white/5 bg-black/25 p-3">
+                  <Zap className="size-4 text-yellow-400" />
+                  <p className="mt-2 text-xs text-gray-500">Experiência</p>
+                  <p className="mt-1 text-sm font-bold text-white">+{bossDef.xpReward} XP</p>
+                </div>
+                <div className="rounded-xl border border-white/5 bg-black/25 p-3">
+                  <Award className="size-4 text-purple-400" />
+                  <p className="mt-2 text-xs text-gray-500">Relíquia</p>
+                  <p className="mt-1 text-sm font-bold text-white">Insígnia do Boss</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -450,7 +586,7 @@ export function Bosses() {
         </div>
 
         {/* Grid de Bosses */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
           {BOSS_LIST.map((boss) => {
             const status = getBossStatus(boss.id);
             const isDefeated = status === 'defeated';
@@ -458,35 +594,36 @@ export function Bosses() {
             const isLocked = status === 'locked';
 
             return (
-              <div 
+              <motion.div
                 key={boss.id}
-                className={`relative rounded-2xl p-4 border flex flex-col items-center justify-center text-center space-y-2.5 transition-all overflow-hidden ${
-                  isDefeated 
-                    ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' 
-                    : isActive 
-                      ? 'bg-purple-500/10 border-purple-500/30 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.1)]' 
-                      : 'bg-black/30 border-[#1e1e26] text-gray-600'
+                whileHover={{ y: -3 }}
+                className={`relative flex min-h-36 flex-col items-center justify-center space-y-3 overflow-hidden rounded-2xl border p-4 text-center transition-all ${
+                  isDefeated
+                    ? 'bg-emerald-500/5 border-emerald-500/25 text-emerald-400 hover:shadow-[0_0_16px_rgba(16,185,129,0.1)]'
+                    : isActive
+                      ? 'bg-purple-500/10 border-purple-500/45 text-purple-300 shadow-[0_0_22px_rgba(168,85,247,0.16)]'
+                      : 'bg-black/40 border-[#252530] text-gray-600 hover:border-gray-700'
                 }`}
               >
                 {/* Imagem em miniatura do boss */}
                 <div 
-                  className={`size-12 rounded-xl bg-cover bg-center border ${
-                    isDefeated 
-                      ? 'border-emerald-500/20 grayscale-50 opacity-40' 
-                      : isActive 
-                        ? 'border-purple-500/30 animate-pulse' 
-                        : 'border-[#1e1e26] grayscale opacity-10'
+                  className={`size-14 rounded-xl bg-cover bg-center border transition-all ${
+                    isDefeated
+                      ? 'border-emerald-500/25 opacity-65'
+                      : isActive
+                        ? 'border-purple-500/40'
+                        : 'border-[#1e1e26] grayscale opacity-20'
                   }`}
                   style={{ backgroundImage: `url('${boss.image}')` }}
                 />
 
                 {/* Info Text */}
                 <div className="space-y-0.5">
-                  <p className="text-[9px] font-black uppercase tracking-widest leading-none font-orbitron truncate max-w-full">
-                    {boss.name.split(' ').slice(-1)[0]}
+                  <p className="max-w-full truncate text-xs font-black leading-tight font-orbitron">
+                    {boss.name}
                   </p>
-                  <p className="text-[7px] font-bold uppercase tracking-widest text-gray-500">
-                    {isDefeated ? 'PURIFICADO' : isActive ? 'EM COMBATE' : 'BLOQUEADO'}
+                  <p className={`text-[10px] font-bold ${isDefeated ? 'text-emerald-400' : isActive ? 'text-purple-300' : 'text-gray-600'}`}>
+                    {isDefeated ? 'Purificado' : isActive ? 'Em combate' : 'Bloqueado'}
                   </p>
                 </div>
                 
@@ -494,8 +631,9 @@ export function Bosses() {
                 <div className="absolute top-2 right-2">
                   {isDefeated && <CheckCircle2 size={10} className="text-emerald-400" />}
                   {isActive && <Zap size={10} className="text-purple-400 animate-bounce" />}
+                  {isLocked && <Lock size={10} className="text-gray-600" />}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
