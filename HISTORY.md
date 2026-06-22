@@ -13,6 +13,11 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-22 — Correção e Internacionalização do Tutorial Interativo (Product Tour)
+- Ajustado o posicionamento do highlighter de foco e do card explicativo para `fixed` (viewport-relative), eliminando deslocamento visual durante a rolagem de página no Dashboard.
+- Adicionada a animação `@keyframes pulse-purple` e a classe `.animate-pulse-purple` no `index.css` para a iluminação neon do highlighter.
+- Integrado o suporte completo de tradução (Português/Inglês) para todas as etapas e controles do tutorial, consumindo dinamicamente o contexto de preferências da aplicação.
+
 ### 2026-06-22 — Balanceamento de Chefes e Progressão v3
 - Restaurado o ataque manual na aba de Chefes, agora limitado a uma utilização diária por batalha para complementar, sem substituir, o dano automático das atividades.
 - Chefes foram recalibrados para campanhas de aproximadamente 3 a 10 dias, com HP progressivo, dano normalizado e multiplicadores de fraqueza reduzidos.
@@ -41,28 +46,20 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - O registro por IA remove o alimento customizado recém-criado caso a gravação do consumo falhe, evitando dados órfãos.
 - Adicionada a migration `20260621_meal_completion_food_logs.sql` e atribuição da fonte de dados em `THIRD_PARTY_NOTICES.md`.
 
-### 2026-06-21 - Raid Semanal Premium
+### 2026-06-21 — Raid Semanal Premium
 - Header da raid ampliado com boss ativo, HP restante, dano acumulado, prazo e recompensa principal.
-- Painel estrategico ganhou fraqueza, fontes de dano e regeneracao, multiplicador ativo e leitura de risco.
-- Acao de teste foi contextualizada como ataque de treino, com preview claro da mecanica de dano.
-- Historico da sessao registra ataques, criticos e regeneracao sem inventar persistencia no backend.
-- Recompensa de purificacao e galeria de bosses receberam maior destaque, estados visuais e microinteracoes.
-- Nomes longos dos bosses agora quebram em multiplas linhas sem cortar ou invadir os cards vizinhos.
+- Painel estratégico ganhou fraqueza, fontes de dano e regeneração, multiplicador ativo e leitura de risco.
+- Ação de teste foi contextualizada como ataque de treino, com preview claro da mecânica de dano.
+- Histórico da sessão registra ataques, críticos e regeneração sem inventar persistência no backend.
+- Recompensa de purificação e galeria de bosses receberam maior destaque, estados visuais e microinterações.
+- Nomes longos dos bosses agora quebram em múltiplas linhas sem cortar ou invadir os cards vizinhos.
 
-### 2026-06-21 - Refinamento de Descanso & Lazer
-- Navegacao convertida em pills premium com icones, subtitulos, glow contextual e transicao entre abas.
-- Header ampliado com sono atual, meditacao acumulada, lazer offline e estado de equilibrio calculado.
-- Cards de recuperacao receberam metas diarias, progresso animado, status e microcopy mais clara.
-- Formularios de sono e lazer foram refinados com orientacao, labels maiores e CTAs mais fortes.
-- Historico ganhou empty state premium e o Templo da Mente recebeu melhorias de timer, duracao e legibilidade.
-
-### 2026-06-19 — Premiumização do Módulo Fortuna
-- O header financeiro passou a exibir saldo líquido, status do fluxo, meta principal e streak real de meses com aporte.
-- Cards de ganhos, gastos, aportes e proteção de renda ganharam comparativos reais com o mês anterior e microcopy contextual.
-- O registro de fluxo foi reorganizado em entrada rápida e opções avançadas, com ação principal mais forte.
-- Metas personalizadas agora destacam a principal, valor restante, previsão estimada e progresso animado.
-- Registros mensais receberam ícones e estados visuais distintos para receitas, gastos e aportes.
-- Provérbios da Sabedoria foram convertidos em um painel de lore mais legível e refinado.
+### 2026-06-21 — Refinamento de Descanso & Lazer
+- Navegação convertida em pills premium com ícones, subtítulos, glow contextual e transição entre abas.
+- Header ampliado com sono atual, meditação acumulada, lazer offline e estado de equilíbrio calculado.
+- Cards de recuperação receberam metas diárias, progresso animado, status e microcopy mais clara.
+- Formulários de sono e lazer foram refinados com orientação, labels maiores e CTAs mais fortes.
+- Histórico ganhou empty state premium e o Templo da Mente recebeu melhorias de timer, duração e legibilidade.
 
 ### 2026-06-19 — Polimento de Navegação e Códex
 - Substituída a navegação simples do Quadro de Missões por pills responsivas com ícones, hover, glow azul e indicador ativo animado.

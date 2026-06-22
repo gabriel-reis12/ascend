@@ -573,7 +573,7 @@ export function Onboarding() {
                   value={form.birthday}
                   onChange={e => setField('birthday', e.target.value)}
                   className="w-full bg-[#13131A] border border-purple-900/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all"
-                  style={{ colorScheme: 'dark' }}
+                  style={{ colorScheme: 'inherit' }}
                 />
               </div>
 

@@ -145,7 +145,7 @@ function TimeBadgeInput({ time, onChange }: { time: string | null; onChange: (t:
           ? 'bg-gray-800/80 text-gray-300 hover:bg-gray-700/80' 
           : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300 w-[70px]'
       }`}
-      style={{ colorScheme: 'dark' }}
+      style={{ colorScheme: 'inherit' }}
     />
   );
 }

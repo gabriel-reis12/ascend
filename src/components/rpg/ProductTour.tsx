@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, Zap, Play } from 'lucide-react';
+import { usePreferences } from '../../contexts/preferences';
 
 interface TourStep {
   title: string;
@@ -9,50 +10,75 @@ interface TourStep {
   position?: 'top' | 'bottom' | 'center';
 }
 
-const TOUR_STEPS: TourStep[] = [
+const getTourSteps = (l: (pt: string, en: string) => string): TourStep[] => [
   {
-    title: 'SISTEMA DESPERTO',
-    lore: 'O Sistema de Caçador foi recalibrado e integrado com sucesso. A partir de agora, suas ações no plano real moldarão sua força RPG. Vamos calibrar seus módulos vitais para iniciar a subida de Rank.',
+    title: l('SISTEMA DESPERTO', 'SYSTEM AWAKENED'),
+    lore: l(
+      'O Sistema de Caçador foi recalibrado e integrado com sucesso. A partir de agora, suas ações no plano real moldarão sua força RPG. Vamos calibrar seus módulos vitais para iniciar a subida de Rank.',
+      'The Hunter System has been successfully recalibrated and integrated. From now on, your real-life actions will shape your RPG strength. Let us calibrate your vital modules to begin the Rank climb.'
+    ),
     position: 'center',
   },
   {
-    title: 'HUD DE RESTRUTURAÇÃO VITAL',
-    lore: 'Aqui são exibidos sua classe de caçador, sua sequência de consistência (Streak) e seu Rank atual. Purifique quests e acumule pontos de experiência para preencher a barra de XP e subir de nível!',
+    title: l('HUD DE RESTRUTURAÇÃO VITAL', 'VITAL RESTRUCTURING HUD'),
+    lore: l(
+      'Aqui são exibidos sua classe de caçador, sua sequência de consistência (Streak) e seu Rank atual. Purifique quests e acumule pontos de experiência para preencher a barra de XP e subir de nível!',
+      'Here your hunter class, consistency streak, and current Rank are displayed. Purify quests and accumulate experience points to fill the XP bar and level up!'
+    ),
     target: 'tour-hud',
     position: 'bottom',
   },
   {
-    title: 'DOMÍNIOS DE EVOLUÇÃO',
-    lore: 'Corpo, Mente, Fortuna, Carreira e Equilíbrio revelam onde sua progressão está forte e quais áreas precisam de novas ações.',
+    title: l('DOMÍNIOS DE EVOLUÇÃO', 'EVOLUTION DOMAINS'),
+    lore: l(
+      'Corpo, Mente, Fortuna, Carreira e Equilíbrio revelam onde sua progressão está forte e quais áreas precisam de novas ações.',
+      'Body, Mind, Fortune, Career, and Balance reveal where your progression is strong and which areas need new actions.'
+    ),
     target: 'tour-domains',
     position: 'bottom',
   },
   {
-    title: 'HISTÓRICO DE EVOLUÇÃO',
-    lore: 'Cada missão, treino, atualização financeira e streak deixa um registro visível. Esta linha do tempo mostra como suas ações alteraram a ficha.',
+    title: l('HISTÓRICO DE EVOLUÇÃO', 'EVOLUTION HISTORY'),
+    lore: l(
+      'Cada missão, treino, atualização financeira e streak deixa um registro visível. Esta linha do tempo mostra como suas ações alteraram a ficha.',
+      'Each mission, training, financial update, and streak leaves a visible record. This timeline shows how your actions altered your profile.'
+    ),
     target: 'tour-history',
     position: 'top',
   },
   {
-    title: 'JANELA DE STATUS HOLOGRÁFICA',
-    lore: 'A representação visual da sua assinatura atual. Compare os sete atributos, identifique seu perfil dominante e veja o foco recomendado pelo Sistema.',
+    title: l('JANELA DE STATUS HOLOGRÁFICA', 'HOLOGRAPHIC STATUS WINDOW'),
+    lore: l(
+      'A representação visual da sua assinatura atual. Compare os sete atributos, identifique seu perfil dominante e veja o foco recomendado pelo Sistema.',
+      'The visual representation of your current signature. Compare the seven attributes, identify your dominant profile, and see the focus recommended by the System.'
+    ),
     target: 'tour-status',
     position: 'top',
   },
   {
-    title: 'RECURSOS DO DIA',
-    lore: 'Uma leitura compacta da Mana consumida, volume de treino, ritmo diário e streak atual. Os detalhes completos continuam em seus módulos especializados.',
+    title: l('RECURSOS DO DIA', 'RESOURCES OF THE DAY'),
+    lore: l(
+      'Uma leitura compacta da Mana consumida, volume de treino, ritmo diário e streak atual. Os detalhes completos continuam em seus módulos especializados.',
+      'A compact readout of Mana consumed, training volume, daily pace, and current streak. The full details continue in their specialized modules.'
+    ),
     target: 'tour-biometrics',
     position: 'top',
   },
   {
-    title: 'EVOLUÇÃO LIBERADA',
-    lore: 'A calibração do sistema está completa. O portal do Rank E ao Rank S está livre de barreiras. Mostre sua determinação, enfrente seus deveres diários e alcance o ápice do seu poder. Ascenda!',
+    title: l('EVOLUÇÃO LIBERADA', 'EVOLUTION UNLEASHED'),
+    lore: l(
+      'A calibração do sistema está completa. O portal do Rank E ao Rank S está livre de barreiras. Mostre sua determinação, enfrente seus deveres diários e alcance o ápice do seu poder. Ascenda!',
+      'System calibration is complete. The rift gate from Rank E to Rank S is free of barriers. Show your determination, face your daily duties, and reach the pinnacle of your power. Ascend!'
+    ),
     position: 'center',
   },
 ];
 
 export function ProductTour() {
+  const { language } = usePreferences();
+  const l = (pt: string, en: string) => (language === 'pt-BR' ? pt : en);
+  const steps = getTourSteps(l);
+
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
@@ -88,7 +114,7 @@ export function ProductTour() {
   // Atualização dinâmica de âncora/highlighter
   const updateHighlight = useCallback(() => {
     if (!open) return;
-    const step = TOUR_STEPS[currentStep];
+    const step = steps[currentStep];
     if (step && step.target) {
       let targetId = step.target;
 
@@ -137,7 +163,7 @@ export function ProductTour() {
   }, [open, updateHighlight]);
 
   const handleNext = () => {
-    if (currentStep < TOUR_STEPS.length - 1) {
+    if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
       handleClose();
@@ -157,7 +183,7 @@ export function ProductTour() {
 
   if (!open) return null;
 
-  const step = TOUR_STEPS[currentStep];
+  const step = steps[currentStep];
 
   // Cálculo de Posição do Card (Desktop e Mobile com posicionamento anti-sobreposição inteligente)
   const getCardStyle = () => {
@@ -203,7 +229,7 @@ export function ProductTour() {
     if (!highlightRect) {
       if (step.position === 'center') {
         return {
-          position: 'absolute' as const,
+          position: 'fixed' as const,
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
@@ -220,7 +246,7 @@ export function ProductTour() {
 
     if (step.position === 'top') {
       return {
-        position: 'absolute' as const,
+        position: 'fixed' as const,
         top: `${Math.max(20, highlightRect.top - spacing)}px`,
         left: `${leftPos}px`,
         transform: 'translateY(-100%)',
@@ -230,7 +256,7 @@ export function ProductTour() {
 
     // Default: bottom
     return {
-      position: 'absolute' as const,
+      position: 'fixed' as const,
       top: `${highlightRect.bottom + spacing}px`,
       left: `${leftPos}px`,
       width: `${cardWidth}px`,
@@ -264,7 +290,7 @@ export function ProductTour() {
             }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute rounded-2xl border-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)] z-[1000] pointer-events-none animate-pulse-purple"
+            className="fixed rounded-2xl border-2 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)] z-[1000] pointer-events-none animate-pulse-purple"
             style={{
               boxShadow: '0 0 20px rgba(168, 85, 247, 0.4), inset 0 0 10px rgba(168, 85, 247, 0.2)'
             }}
@@ -319,18 +345,18 @@ export function ProductTour() {
             <div className="relative border-t border-purple-500/20 pt-4 flex items-center justify-between">
               {/* Step Counter */}
               <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 font-orbitron">
-                Sistema <span className="text-purple-500">{currentStep + 1}</span> / {TOUR_STEPS.length}
+                {l('Sistema', 'System')} <span className="text-purple-500">{currentStep + 1}</span> / {steps.length}
               </span>
 
               {/* Controls */}
               <div className="flex items-center gap-2">
                 {/* Skip Button */}
-                {currentStep < TOUR_STEPS.length - 1 && (
+                {currentStep < steps.length - 1 && (
                   <button
                     onClick={handleClose}
                     className="rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
                   >
-                    Pular
+                    {l('Pular', 'Skip')}
                   </button>
                 )}
 
@@ -351,14 +377,14 @@ export function ProductTour() {
                   onClick={handleNext}
                   className="flex items-center justify-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-[10px] font-black uppercase italic tracking-widest text-white hover:bg-purple-500 transition-all shadow-md"
                 >
-                  {currentStep === TOUR_STEPS.length - 1 ? (
+                  {currentStep === steps.length - 1 ? (
                     <>
-                      <span>Despertar</span>
+                      <span>{l('Despertar', 'Awaken')}</span>
                       <Play size={10} className="fill-current" />
                     </>
                   ) : (
                     <>
-                      <span>Avançar</span>
+                      <span>{l('Avançar', 'Next')}</span>
                       <ChevronRight size={10} strokeWidth={3} />
                     </>
                   )}

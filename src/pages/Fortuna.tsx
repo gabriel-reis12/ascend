@@ -2,21 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
+  TrendingUp, 
+  TrendingDown, 
   Coins, 
   Trash2, 
   History, 
   Sparkles, 
+  Lock, 
   Target, 
+  Briefcase, 
+  ShoppingCart, 
   ShieldAlert,
   ArrowUpRight,
   ArrowDownLeft,
   DollarSign,
-  Trophy,
-  Activity,
-  CalendarDays,
-  ChevronDown,
-  Gauge,
-  Landmark
+  Trophy
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,8 +51,6 @@ export function Fortuna() {
   const bossStore = useBossStore();
 
   const [logs, setLogs] = useState<FinancialLog[]>([]);
-  const [previousMonthLogs, setPreviousMonthLogs] = useState<FinancialLog[]>([]);
-  const [investmentDates, setInvestmentDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +74,6 @@ export function Fortuna() {
 
   // Feedbacks
   const [formLoading, setFormLoading] = useState(false);
-  const [showAdvancedFlow, setShowAdvancedFlow] = useState(false);
   const [successAlert, setSuccessAlert] = useState<{
     desc: string;
     amount: number;
@@ -90,6 +87,10 @@ export function Fortuna() {
     expense: ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Lazer', 'Assinaturas', 'Outros'],
     investment: ['Ações', 'FIIs', 'Renda Fixa', 'Criptomoedas', 'Reserva de Emergência', 'Outros']
   };
+
+  useEffect(() => {
+    setCategory(categoriesByType[type][0]);
+  }, [type]);
 
   useEffect(() => {
     fetchFinancialData();
@@ -108,41 +109,20 @@ export function Fortuna() {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-CA');
 
-      const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString('en-CA');
-      const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0).toLocaleDateString('en-CA');
+      const { data, error: fetchErr } = await supabase
+        .from('financial_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      const [currentResult, previousResult, investmentResult] = await Promise.all([
-        supabase
-          .from('financial_logs')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('date', startOfMonth)
-          .lte('date', endOfMonth)
-          .order('date', { ascending: false })
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('financial_logs')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('date', startOfPreviousMonth)
-          .lte('date', endOfPreviousMonth),
-        supabase
-          .from('financial_logs')
-          .select('date')
-          .eq('user_id', user.id)
-          .eq('type', 'investment')
-          .order('date', { ascending: false }),
-      ]);
-
-      if (currentResult.error) throw currentResult.error;
-      if (previousResult.error) throw previousResult.error;
-      if (investmentResult.error) throw investmentResult.error;
-      setLogs(currentResult.data || []);
-      setPreviousMonthLogs(previousResult.data || []);
-      setInvestmentDates((investmentResult.data || []).map(item => item.date));
-    } catch (err: unknown) {
+      if (fetchErr) throw fetchErr;
+      setLogs(data || []);
+    } catch (err: any) {
       console.error('[Fortuna] Erro ao buscar dados financeiros:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao sincronizar com o banco.');
+      setError(err.message || 'Erro ao sincronizar com o banco.');
     } finally {
       setLoading(false);
     }
@@ -161,7 +141,7 @@ export function Fortuna() {
     setSuccessAlert(null);
 
     try {
-      const { error: insertErr } = await supabase
+      const { data, error: insertErr } = await supabase
         .from('financial_logs')
         .insert({
           user_id: user.id,
@@ -177,7 +157,7 @@ export function Fortuna() {
       if (insertErr) throw insertErr;
 
       // Ganhar XP e Sabedoria
-      const xpGained = 10;
+      let xpGained = 10;
       let wisGained = 0;
 
       if (type === 'investment') {
@@ -206,9 +186,9 @@ export function Fortuna() {
 
       // Recarregar logs
       await fetchFinancialData();
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('[Fortuna] Erro ao cadastrar transação:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao registrar transação no Supabase.');
+      setError(err.message || 'Erro ao registrar transação no Supabase.');
     } finally {
       setFormLoading(false);
     }
@@ -227,9 +207,9 @@ export function Fortuna() {
 
       // Recarregar logs
       await fetchFinancialData();
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('[Fortuna] Erro ao deletar transação:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao excluir a transação.');
+      setError(err.message || 'Erro ao excluir a transação.');
     }
   }
 
@@ -248,7 +228,7 @@ export function Fortuna() {
 
       if (fetchErr) throw fetchErr;
       setGoals(data || []);
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('[Fortuna] Erro ao buscar metas financeiras:', err);
     } finally {
       setLoadingGoals(false);
@@ -309,9 +289,9 @@ export function Fortuna() {
       setGoalType('one_time');
       setShowNewGoalForm(false);
       await fetchGoals();
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('[Fortuna] Erro ao criar meta:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao registrar a meta.');
+      setError(err.message || 'Erro ao registrar a meta.');
     }
   }
 
@@ -349,9 +329,9 @@ export function Fortuna() {
       setEditingGoalId(null);
       setTempGoalProgress('');
       await fetchGoals();
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('[Fortuna] Erro ao atualizar progresso da meta:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar o progresso.');
+      setError(err.message || 'Erro ao atualizar o progresso.');
     }
   }
 
@@ -366,9 +346,9 @@ export function Fortuna() {
 
       if (deleteErr) throw deleteErr;
       await fetchGoals();
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('[Fortuna] Erro ao deletar meta:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao excluir a meta.');
+      setError(err.message || 'Erro ao excluir a meta.');
     }
   }
 
@@ -392,70 +372,31 @@ export function Fortuna() {
   const investmentRate = monthlySummary.income > 0 
     ? (monthlySummary.investment / monthlySummary.income) * 100 
     : 0;
-  const previousSummary = previousMonthLogs.reduce((acc, log) => {
-    acc[log.type] += Number(log.amount);
-    return acc;
-  }, { income: 0, expense: 0, investment: 0 });
-  const netBalance = monthlySummary.income - totalOutflow;
-  const previousNetBalance = previousSummary.income - previousSummary.expense - previousSummary.investment;
-  const flowStatus = netBalance > 0 ? 'Fluxo positivo' : netBalance < 0 ? 'Fluxo sob atenção' : 'Fluxo equilibrado';
-  const primaryGoal = goals.find(goal => !goal.completed) || goals[0] || null;
-  const primaryGoalRemaining = primaryGoal ? Math.max(0, primaryGoal.target_amount - primaryGoal.current_amount) : 0;
-  const primaryGoalPct = primaryGoal ? Math.min(100, (primaryGoal.current_amount / primaryGoal.target_amount) * 100) : 0;
-  const estimatedGoalMonths = primaryGoal && monthlySummary.investment > 0
-    ? Math.max(1, Math.ceil(primaryGoalRemaining / monthlySummary.investment))
-    : null;
-  const monthlyInvestmentKeys = new Set(investmentDates.map(value => value.slice(0, 7)));
-  let contributionStreak = 0;
-  const streakCursor = new Date();
-  while (monthlyInvestmentKeys.has(`${streakCursor.getFullYear()}-${String(streakCursor.getMonth() + 1).padStart(2, '0')}`)) {
-    contributionStreak++;
-    streakCursor.setMonth(streakCursor.getMonth() - 1);
-  }
-
-  const variationLabel = (current: number, previous: number, inverse = false) => {
-    if (previous <= 0) return current > 0 ? 'Primeiro registro comparável' : 'Sem registros no período';
-    const variation = ((current - previous) / previous) * 100;
-    const favorable = inverse ? variation <= 0 : variation >= 0;
-    return `${variation >= 0 ? '+' : ''}${variation.toFixed(0)}% vs mês anterior${favorable ? '' : ' · atenção'}`;
-  };
 
   return (
     <div className="space-y-8 pb-12">
       {/* Cabeçalho */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-[#0F0F13] p-6 shadow-[0_0_28px_rgba(245,158,11,0.07)]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_1.15fr] xl:items-center">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400">
-                Central financeira do Sistema
-              </span>
-              <span className="rounded-md border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-400">
-                WIS · Sabedoria
-              </span>
-            </div>
-            <h1 className="mt-3 text-2xl font-black uppercase tracking-wider text-white sm:text-3xl font-orbitron">
-              Módulo <span className="text-amber-400">Fortuna</span>
-            </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-400">
-              Controle seu fluxo, proteja recursos e transforme consistência financeira em evolução de Sabedoria.
-            </p>
+        <div className="space-y-1 z-10">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
+              Gestão de Recursos
+            </span>
+            <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              Atributo: WIS (Sabedoria)
+            </span>
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: 'Saldo líquido', value: `R$ ${netBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: Landmark, tone: netBalance >= 0 ? 'text-emerald-300' : 'text-rose-300' },
-              { label: 'Status do fluxo', value: `${flowStatus} · ${netBalance >= previousNetBalance ? 'evoluindo' : 'recalibrar'}`, icon: Activity, tone: netBalance >= 0 ? 'text-emerald-300' : 'text-amber-300' },
-              { label: 'Meta principal', value: primaryGoal ? `${primaryGoal.title} · ${primaryGoalPct.toFixed(0)}%${estimatedGoalMonths ? ` · ${estimatedGoalMonths}m` : ''}` : 'Defina um objetivo', icon: Target, tone: 'text-amber-300' },
-              { label: 'Consistência', value: `${contributionStreak} ${contributionStreak === 1 ? 'mês com aporte' : 'meses com aporte'}`, icon: CalendarDays, tone: 'text-blue-300' },
-            ].map(item => (
-              <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3 transition-colors hover:border-white/10">
-                <item.icon className={`size-4 ${item.tone}`} />
-                <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
-                <p className={`mt-1 truncate text-sm font-bold ${item.tone}`}>{item.value}</p>
-              </div>
-            ))}
+          <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white font-orbitron">
+            Módulo <span className="text-amber-400">Fortuna</span>
+          </h1>
+          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 leading-relaxed">
+            Controle de fluxo de moedas e rito de investimentos para purificação de dívidas.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 z-10">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+            <Coins size={18} />
           </div>
         </div>
       </div>
@@ -463,7 +404,7 @@ export function Fortuna() {
       {/* Visores de Resumo Financeiro (Topo) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Receita */}
-        <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg transition-colors hover:border-emerald-500/20">
+        <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
           <div className="absolute right-4 top-4 size-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
             <ArrowUpRight size={16} />
           </div>
@@ -471,11 +412,10 @@ export function Fortuna() {
           <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             R$ {monthlySummary.income.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
-          <p className="mt-3 text-xs text-gray-500">{variationLabel(monthlySummary.income, previousSummary.income)}</p>
-        </motion.div>
+        </div>
 
         {/* Despesa */}
-        <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg transition-colors hover:border-rose-500/20">
+        <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
           <div className="absolute right-4 top-4 size-9 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center">
             <ArrowDownLeft size={16} />
           </div>
@@ -483,13 +423,10 @@ export function Fortuna() {
           <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             R$ {monthlySummary.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
-          <p className="mt-3 text-xs text-gray-500">
-            {monthlySummary.expense === 0 ? 'Sem saídas registradas' : variationLabel(monthlySummary.expense, previousSummary.expense, true)}
-          </p>
-        </motion.div>
+        </div>
 
         {/* Investimento */}
-        <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg transition-colors hover:border-amber-500/25">
+        <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
           <div className="absolute right-4 top-4 size-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
             <Coins size={16} />
           </div>
@@ -497,11 +434,10 @@ export function Fortuna() {
           <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             R$ {monthlySummary.investment.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
-          <p className="mt-3 text-xs text-gray-500">{investmentRate >= 20 ? 'Meta de proteção atingida' : variationLabel(monthlySummary.investment, previousSummary.investment)}</p>
-        </motion.div>
+        </div>
 
         {/* Taxas de Economia */}
-        <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg transition-colors hover:border-blue-500/20">
+        <div className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-lg">
           <div className="absolute right-4 top-4 size-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
             <DollarSign size={16} />
           </div>
@@ -509,8 +445,7 @@ export function Fortuna() {
           <h3 className="mt-2 text-lg sm:text-xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             {investmentRate.toFixed(0)}% <span className="text-xs text-gray-600">/</span> {savingsRate.toFixed(0)}%
           </h3>
-          <p className="mt-3 text-xs text-gray-500">{investmentRate.toFixed(0)}% da renda protegida em aportes</p>
-        </motion.div>
+        </div>
       </div>
 
       {/* Grid de 2 Colunas */}
@@ -520,44 +455,18 @@ export function Fortuna() {
         <div className="lg:col-span-8 space-y-6">
           
           {/* Formulário de Nova Transação */}
-          <div className="space-y-5 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-lg">
-            <div className="flex items-center gap-3 border-b border-[#1E1E26] pb-4 text-amber-400">
-              <div className="flex size-10 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
-                <Plus size={18} />
-              </div>
-              <div>
-                <h2 className="text-base font-black font-orbitron">Registrar fluxo</h2>
-                <p className="mt-1 text-xs text-gray-500">Entrada rápida no livro financeiro do Sistema.</p>
-              </div>
+          <div className="rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-6 space-y-4">
+            <div className="flex items-center gap-2 border-b border-[#1E1E26] pb-3 text-amber-400">
+              <Plus size={16} />
+              <h2 className="text-xs font-black uppercase tracking-widest font-orbitron">
+                Registrar Fluxo de Recurso
+              </h2>
             </div>
 
             <form onSubmit={handleAddTransaction} className="space-y-4">
-              <div className="grid grid-cols-3 gap-2 rounded-xl border border-[#1E1E26] bg-black/25 p-1.5">
-                {[
-                  { value: 'income' as const, label: 'Receita', icon: ArrowUpRight, tone: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' },
-                  { value: 'expense' as const, label: 'Gasto', icon: ArrowDownLeft, tone: 'border-rose-500/30 bg-rose-500/10 text-rose-300' },
-                  { value: 'investment' as const, label: 'Aporte', icon: Coins, tone: 'border-amber-500/30 bg-amber-500/10 text-amber-300' },
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setType(option.value);
-                      setCategory(categoriesByType[option.value][0]);
-                    }}
-                    className={`flex min-h-11 items-center justify-center gap-2 rounded-lg border text-sm font-bold transition-all ${
-                      type === option.value ? option.tone : 'border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'
-                    }`}
-                  >
-                    <option.icon className="size-4" />
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">Descrição</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Descrição</label>
                   <input 
                     type="text" 
                     value={description}
@@ -568,7 +477,7 @@ export function Fortuna() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">Valor (R$)</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Valor (R$)</label>
                   <input 
                     type="number" 
                     step="0.01"
@@ -580,55 +489,48 @@ export function Fortuna() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowAdvancedFlow(current => !current)}
-                className="flex items-center gap-2 text-sm font-semibold text-gray-500 transition-colors hover:text-gray-300"
-              >
-                <ChevronDown className={`size-4 transition-transform ${showAdvancedFlow ? 'rotate-180' : ''}`} />
-                Opções avançadas
-              </button>
-
-              <AnimatePresence initial={false}>
-                {showAdvancedFlow && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Tipo</label>
+                  <select 
+                    value={type}
+                    onChange={(e) => setType(e.target.value as any)}
+                    className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-amber-500/40 focus:outline-none appearance-none cursor-pointer"
                   >
-                    <div className="grid grid-cols-1 gap-4 rounded-xl border border-white/5 bg-black/20 p-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-300">Categoria</label>
-                        <select
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value)}
-                          className="w-full cursor-pointer appearance-none rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-amber-500/40 focus:outline-none"
-                        >
-                          {categoriesByType[type].map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      </div>
+                    <option value="expense">Despesa (Saída)</option>
+                    <option value="income">Receita (Entrada)</option>
+                    <option value="investment">Investimento / Aporte</option>
+                  </select>
+                </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-300">Data</label>
-                        <input
-                          type="date"
-                          value={date}
-                          onChange={(e) => setDate(e.target.value)}
-                          className="w-full cursor-pointer rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-amber-500/40 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Categoria</label>
+                  <select 
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-amber-500/40 focus:outline-none appearance-none cursor-pointer"
+                  >
+                    {categoriesByType[type].map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Data</label>
+                  <input 
+                    type="date" 
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-amber-500/40 focus:outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
 
               <button
                 type="submit"
                 disabled={formLoading}
-                className="flex min-h-13 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-gradient-to-r from-amber-700 via-amber-600 to-orange-600 px-4 text-sm font-black uppercase text-white shadow-[0_0_22px_rgba(245,158,11,0.14)] transition-all hover:brightness-110 hover:shadow-[0_0_28px_rgba(245,158,11,0.22)] active:scale-[0.98] disabled:bg-amber-900/40 disabled:text-gray-500"
+                className="w-full rounded-xl bg-amber-600/90 hover:bg-amber-500 disabled:bg-amber-900/40 disabled:text-gray-500 text-white font-black uppercase tracking-widest text-xs py-4 px-4 border border-amber-500/30 transition-all cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.05)] active:scale-[0.98] flex items-center justify-center gap-2"
                 style={{ fontFamily: 'Orbitron, sans-serif' }}
               >
                 {formLoading ? 'Registrando no Codex...' : 'Registrar Transação'}
@@ -719,27 +621,13 @@ export function Fortuna() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1E1E26] text-xs">
-                      {logs.map((log) => {
-                        const LogIcon = log.type === 'income' ? ArrowUpRight : log.type === 'expense' ? ArrowDownLeft : Coins;
-                        const logTone = log.type === 'income'
-                          ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                          : log.type === 'expense'
-                            ? 'text-rose-400 bg-rose-500/10 border-rose-500/20'
-                            : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-                        return (
-                        <tr key={log.id} className="group hover:bg-white/5 transition-colors">
+                      {logs.map((log) => (
+                        <tr key={log.id} className="hover:bg-white/5 transition-colors">
                           <td className="px-5 py-3">
-                            <div className="flex items-center gap-3">
-                              <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg border ${logTone}`}>
-                                <LogIcon className="size-4" />
-                              </span>
-                              <div>
-                                <span className="font-bold text-white">{log.description}</span>
-                                <span className="block text-xs text-gray-600 font-semibold mt-0.5">
-                                  {new Date(log.date).toLocaleDateString('pt-BR')}
-                                </span>
-                              </div>
-                            </div>
+                            <span className="font-bold text-white uppercase">{log.description}</span>
+                            <span className="block text-[9px] text-gray-600 font-bold uppercase mt-0.5">
+                              {new Date(log.date).toLocaleDateString('pt-BR')}
+                            </span>
                           </td>
                           <td className="px-5 py-3">
                             <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-gray-500/10 border border-gray-500/25 text-gray-400">
@@ -747,7 +635,13 @@ export function Fortuna() {
                             </span>
                           </td>
                           <td className="px-5 py-3">
-                            <span className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold ${logTone}`}>
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${
+                              log.type === 'income' 
+                                ? 'text-emerald-400' 
+                                : log.type === 'expense' 
+                                  ? 'text-rose-400' 
+                                  : 'text-amber-400'
+                            }`}>
                               {log.type === 'income' ? 'Receita' : log.type === 'expense' ? 'Despesa' : 'Aporte'}
                             </span>
                           </td>
@@ -770,8 +664,7 @@ export function Fortuna() {
                             </button>
                           </td>
                         </tr>
-                        );
-                      })}
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -850,7 +743,7 @@ export function Fortuna() {
                     <label className="text-[9px] font-black uppercase text-gray-500">Tipo de Objetivo</label>
                     <select
                       value={goalType}
-                      onChange={(e) => setGoalType(e.target.value as 'one_time' | 'recurring_monthly')}
+                      onChange={(e) => setGoalType(e.target.value as any)}
                       className="w-full rounded-lg border border-[#1E1E26] bg-[#0F0F13] py-2 px-3 text-xs text-white focus:outline-none"
                     >
                       <option value="one_time">Meta Única (Ex: Comprar Carro)</option>
@@ -959,21 +852,14 @@ export function Fortuna() {
                     goals.map((goal) => {
                       const pct = Math.min(100, (goal.current_amount / goal.target_amount) * 100);
                       const isCompleted = goal.completed || pct >= 100;
-                      const isPrimary = primaryGoal?.id === goal.id;
-                      const remaining = Math.max(0, goal.target_amount - goal.current_amount);
-                      const forecastMonths = monthlySummary.investment > 0 && remaining > 0
-                        ? Math.ceil(remaining / monthlySummary.investment)
-                        : null;
 
                       return (
                         <div 
                           key={goal.id} 
-                          className={`relative overflow-hidden rounded-xl border p-4 bg-[#0A0A0D] transition-all hover:-translate-y-0.5 ${
+                          className={`relative overflow-hidden rounded-xl border p-4 bg-[#0A0A0D] transition-all ${
                             isCompleted 
                               ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-[0_0_15px_rgba(245,158,11,0.08)]' 
-                              : isPrimary
-                                ? 'border-blue-500/35 shadow-[0_0_18px_rgba(59,130,246,0.08)]'
-                                : 'border-[#1E1E26] hover:border-white/10'
+                              : 'border-[#1E1E26]'
                           }`}
                         >
                           <div className="flex justify-between items-start gap-2">
@@ -985,11 +871,6 @@ export function Fortuna() {
                               }`}>
                                 {goal.type === 'recurring_monthly' ? 'Mensal Recorrente' : 'Objetivo Único'}
                               </span>
-                              {isPrimary && !isCompleted && (
-                                <span className="ml-1.5 rounded border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-blue-300">
-                                  Meta principal
-                                </span>
-                              )}
                               <h3 className={`text-xs font-bold mt-2 uppercase ${isCompleted ? 'text-amber-400 line-through opacity-85' : 'text-white'}`}>
                                 {goal.title}
                               </h3>
@@ -1038,29 +919,14 @@ export function Fortuna() {
 
                             {/* Barra */}
                             <div className="h-2 w-full bg-black/55 rounded-full border border-white/5 p-[1px] overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${pct}%` }}
-                                transition={{ duration: 0.55, ease: 'easeOut' }}
+                              <div 
                                 className={`h-full rounded-full transition-all duration-500 ${
                                   isCompleted 
                                     ? 'bg-gradient-to-r from-amber-600 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
                                     : 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
                                 }`}
+                                style={{ width: `${pct}%` }}
                               />
-                            </div>
-
-                            <div className="mt-3 grid grid-cols-2 gap-2">
-                              <div className="rounded-lg border border-white/5 bg-white/[0.025] p-2.5">
-                                <p className="text-[9px] font-semibold text-gray-500">Valor restante</p>
-                                <p className="mt-1 text-xs font-bold text-white">R$ {remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                              </div>
-                              <div className="rounded-lg border border-white/5 bg-white/[0.025] p-2.5">
-                                <p className="text-[9px] font-semibold text-gray-500">Previsão estimada</p>
-                                <p className="mt-1 text-xs font-bold text-blue-300">
-                                  {isCompleted ? 'Concluída' : forecastMonths ? `${forecastMonths} ${forecastMonths === 1 ? 'mês' : 'meses'}` : 'Aguardando aportes'}
-                                </p>
-                              </div>
                             </div>
 
                             {/* Editor de progresso */}
@@ -1092,36 +958,26 @@ export function Fortuna() {
           </div>
 
           {/* Dicas do Códex */}
-          <div className="relative space-y-5 overflow-hidden rounded-2xl border border-blue-500/20 bg-[#101016] p-6 shadow-[0_0_24px_rgba(59,130,246,0.06)]">
-            <div className="absolute right-0 top-0 h-full w-40 bg-gradient-to-l from-blue-500/8 to-transparent pointer-events-none" />
+          <div className="rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-6 space-y-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mr-12 -mt-12 w-28 h-28 rounded-full bg-blue-500/5 blur-2xl pointer-events-none" />
             
-            <div className="relative flex items-center gap-3 border-b border-[#1E1E26] pb-4 text-blue-400">
-              <div className="flex size-10 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10">
-                <Sparkles size={18} />
-              </div>
-              <div>
-              <h2 className="text-base font-black font-orbitron">
+            <div className="flex items-center gap-2 text-blue-400 border-b border-[#1E1E26] pb-3">
+              <Sparkles size={16} />
+              <h2 className="text-xs font-black uppercase tracking-widest font-orbitron">
                 Provérbios da Sabedoria (WIS)
               </h2>
-              <p className="mt-1 text-xs text-gray-500">Orientações do Sistema para proteger e evoluir recursos.</p>
-              </div>
             </div>
 
-            <div className="relative space-y-3">
-              {[
-                { title: 'Aporte de proteção', text: 'A consistência reduz a vulnerabilidade ao Mercador das Dívidas e fortalece sua reserva.', icon: ShieldAlert, tone: 'text-blue-300' },
-                { title: 'Taxa de aporte saudável', text: 'A referência do Sistema é proteger 20% da receita mensal sempre que sua realidade permitir.', icon: Gauge, tone: 'text-amber-300' },
-                { title: 'Sabedoria como escudo', text: 'Planejamento e revisão frequente aumentam sua resistência a decisões impulsivas.', icon: Sparkles, tone: 'text-purple-300' },
-              ].map(proverb => (
-                <div key={proverb.title} className="rounded-xl border border-white/5 bg-black/20 p-4 transition-colors hover:border-white/10">
-                  <div className="flex items-start gap-3">
-                    <proverb.icon className={`mt-0.5 size-4 shrink-0 ${proverb.tone}`} />
-                    <p className="text-sm leading-relaxed text-gray-400">
-                      <span className="font-bold text-white">{proverb.title}:</span> {proverb.text}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-3 text-xs text-gray-400 leading-relaxed font-semibold">
+              <p>
+                🛡️ <span className="text-white">Aporte de Proteção:</span> Investidores consistentes mitigam o poder do <span className="text-rose-400">Mercador das Dívidas</span>. Cada aporte causa dano crítico!
+              </p>
+              <p>
+                ⚖️ <span className="text-white">Taxa de Aporte Saudável:</span> Procure direcionar pelo menos <span className="text-amber-400 font-bold">20%</span> da sua receita mensal para aportes/investimentos para purificar seu fluxo energético.
+              </p>
+              <p>
+                🧠 <span className="text-white">Wisdom Stat:</span> O atributo de Sabedoria aumenta sua resiliência a impulsos de gratificação imediata. A Sabedoria é seu escudo!
+              </p>
             </div>
           </div>
 

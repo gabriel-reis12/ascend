@@ -63,6 +63,27 @@ const ALL_POSSIBLE_ACHIEVEMENTS = [
   { key: 'boss_07', title: 'O Reflexo da Autossabotagem Purificado', desc: 'Superou a si mesmo e purificou o Reflexo da Autossabotagem', icon: 'Crown', titleReward: 'O Purificado', xp: 400 },
 ];
 
+const EN_ACHIEVEMENT_COPY: Record<string, { title: string; desc: string }> = {
+  '3d': { title: 'Consistency Initiate', desc: 'Maintain a 3-day streak' },
+  '7d': { title: 'Daily Warrior', desc: 'Maintain a 7-day streak' },
+  '15d': { title: 'Routine Master', desc: 'Maintain a 15-day streak' },
+  '30d': { title: 'Active Legend', desc: 'Maintain a 30-day streak' },
+  strength: { title: 'Absolute Strength', desc: 'Reach 20 Strength points' },
+  intelligence: { title: 'Brilliant Mind', desc: 'Reach 20 Intelligence points' },
+  endurance: { title: 'Unbreakable', desc: 'Reach 20 Endurance points' },
+  vitality: { title: 'Eternal Vigor', desc: 'Reach 20 Vitality points' },
+  discipline: { title: 'Iron Mind', desc: 'Reach 20 Discipline points' },
+  wisdom: { title: 'Keen Insight', desc: 'Reach 20 Wisdom points' },
+  balance: { title: 'Zenith', desc: 'Reach 20 Balance points' },
+  boss_01: { title: 'Lord of Procrastination Defeated', desc: 'Purified the Lord of Procrastination' },
+  boss_02: { title: 'King of Sloth Defeated', desc: 'Purified the King of Sloth' },
+  boss_03: { title: 'Siren of Distraction Defeated', desc: 'Purified the Siren of Distraction' },
+  boss_04: { title: 'Devourer of Progress Defeated', desc: 'Purified the Devourer of Progress' },
+  boss_05: { title: 'Merchant of Debt Defeated', desc: 'Purified the Merchant of Debt' },
+  boss_06: { title: 'Herald of Chaos Defeated', desc: 'Purified the Herald of Chaos' },
+  boss_07: { title: 'Reflection of Self-Sabotage Purified', desc: 'Overcame yourself and purified the final reflection' },
+};
+
 const getAchievementIcon = (iconName: string, size = 20, className = '') => {
   switch (iconName) {
     case 'Flame': return <Flame size={size} className={className} />;
@@ -84,6 +105,7 @@ export function Settings() {
   const { user } = useAuth();
   const hunterStore = useHunterStore();
   const { theme, language, setTheme, setLanguage, t } = usePreferences();
+  const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
   
   // Estado local dos formulários
   const [fullName, setFullName] = useState(hunterStore.fullName || '');
@@ -114,7 +136,10 @@ export function Settings() {
 
     const safetyTimer = setTimeout(() => {
       setLoadingAchievements(false);
-      setAchievementsError('A sincronização do Codex expirou. O banco de dados pode estar lento ou inacessível.');
+      setAchievementsError(l(
+        'A sincronização do Codex expirou. O banco de dados pode estar lento ou inacessível.',
+        'Codex synchronization timed out. The database may be slow or unavailable.'
+      ));
       console.warn('[Settings] Safety timeout disparado para conquistas.');
     }, 15000); // Aumentado para 15 segundos para cold starts do Supabase
 
@@ -189,7 +214,14 @@ export function Settings() {
       let active = true;
       const safetyTimer = setTimeout(() => {
         if (active) {
-          setTelemetry(prev => ({ ...prev, loading: false, error: 'A conexão de telemetria expirou. O banco de dados pode estar lento ou inacessível.' }));
+          setTelemetry(prev => ({
+            ...prev,
+            loading: false,
+            error: l(
+              'A conexão de telemetria expirou. O banco de dados pode estar lento ou inacessível.',
+              'Telemetry connection timed out. The database may be slow or unavailable.'
+            )
+          }));
           console.warn('[Settings] Safety timeout disparado para telemetria.');
         }
       }, 15000); // Aumentado para 15 segundos para cold starts do Supabase
@@ -378,7 +410,7 @@ export function Settings() {
 
       default:
         return {
-          title: 'CAÇADOR DESPERTO',
+          title: l('CAÇADOR DESPERTO', 'AWAKENED HUNTER'),
           glow: 'shadow-[0_0_30px_rgba(168,85,247,0.3)]',
           border: 'border-purple-500/30',
           bgGlow: 'bg-purple-500/5',
@@ -396,7 +428,10 @@ export function Settings() {
     try {
       await hunterStore.equipTitle(titleName, user.id);
       setProfileMsg({
-        text: `TÍTULO EQUIPADO: "${titleName.toUpperCase()}" agora é o seu título oficial de prestígio.`,
+        text: l(
+          `TÍTULO EQUIPADO: "${titleName.toUpperCase()}" agora é o seu título oficial de prestígio.`,
+          `TITLE EQUIPPED: "${titleName.toUpperCase()}" is now your official prestige title.`
+        ),
         type: 'success'
       });
     } catch (err) {
@@ -435,13 +470,19 @@ export function Settings() {
       await hunterStore.loadProfile(user.id);
       
       setProfileMsg({
-        text: 'REGISTRO ATUALIZADO: Sua identidade no Codex foi gravada com sucesso.',
+        text: l(
+          'REGISTRO ATUALIZADO: Sua identidade no Codex foi gravada com sucesso.',
+          'PROFILE UPDATED: Your Codex identity was saved successfully.'
+        ),
         type: 'success'
       });
     } catch (err: any) {
       console.error(err);
       setProfileMsg({
-        text: `ERRO DE GRAVAÇÃO: ${err.message || 'Erro inesperado.'}`,
+        text: l(
+          `ERRO DE GRAVAÇÃO: ${err.message || 'Erro inesperado.'}`,
+          `SAVE ERROR: ${err.message || 'Unexpected error.'}`
+        ),
         type: 'error'
       });
     } finally {
@@ -455,7 +496,13 @@ export function Settings() {
     if (!user) return;
     
     if (password && password !== confirmPassword) {
-      setSecurityMsg({ text: 'VALIDAÇÃO FALHOU: As senhas digitadas não coincidem.', type: 'error' });
+      setSecurityMsg({
+        text: l(
+          'VALIDAÇÃO FALHOU: As senhas digitadas não coincidem.',
+          'VALIDATION FAILED: The passwords do not match.'
+        ),
+        type: 'error'
+      });
       return;
     }
     
@@ -468,7 +515,10 @@ export function Settings() {
       if (password) updates.password = password;
       
       if (Object.keys(updates).length === 0) {
-        setSecurityMsg({ text: 'Nenhuma credencial nova foi informada.', type: 'error' });
+        setSecurityMsg({
+          text: l('Nenhuma credencial nova foi informada.', 'No new credentials were provided.'),
+          type: 'error'
+        });
         setSecurityLoading(false);
         return;
       }
@@ -477,7 +527,10 @@ export function Settings() {
       if (error) throw error;
       
       setSecurityMsg({
-        text: 'SISTEMA DE SEGURANÇA ATUALIZADO: Suas novas chaves de acesso foram sincronizadas.',
+        text: l(
+          'SISTEMA DE SEGURANÇA ATUALIZADO: Suas novas chaves de acesso foram sincronizadas.',
+          'SECURITY UPDATED: Your new access credentials were synchronized.'
+        ),
         type: 'success'
       });
       setPassword('');
@@ -485,7 +538,10 @@ export function Settings() {
     } catch (err: any) {
       console.error(err);
       setSecurityMsg({
-        text: `ERRO DE SEGURANÇA: ${err.message || 'Erro de autenticação.'}`,
+        text: l(
+          `ERRO DE SEGURANÇA: ${err.message || 'Erro de autenticação.'}`,
+          `SECURITY ERROR: ${err.message || 'Authentication error.'}`
+        ),
         type: 'error'
       });
     } finally {
@@ -522,13 +578,19 @@ export function Settings() {
       
       // Feedback Épico
       setProfileMsg({
-        text: 'FALHA DE REGISTRO CORRIGIDA: Seus atributos bônus e níveis de caçador foram purificados de volta ao Nível 1. Suas missões permanecem intactas.',
+        text: l(
+          'FALHA DE REGISTRO CORRIGIDA: Seus atributos bônus e níveis de caçador foram purificados de volta ao Nível 1. Suas missões permanecem intactas.',
+          'PROGRESSION RESET: Your bonus attributes and Hunter level returned to Level 1. Your quests remain intact.'
+        ),
         type: 'success'
       });
     } catch (err: any) {
       console.error(err);
       setProfileMsg({
-        text: `ERRO DE REDEFINIÇÃO: ${err.message || 'Não foi possível redefinir atributos.'}`,
+        text: l(
+          `ERRO DE REDEFINIÇÃO: ${err.message || 'Não foi possível redefinir atributos.'}`,
+          `RESET ERROR: ${err.message || 'Could not reset attributes.'}`
+        ),
         type: 'error'
       });
     } finally {
@@ -538,7 +600,8 @@ export function Settings() {
 
   // 4. Reset Geral - Limpar App do Zero
   const handleResetAll = async () => {
-    if (!user || resetConfirmText.toLowerCase() !== 'destruir') return;
+    const requiredConfirmation = language === 'en-US' ? 'delete' : 'destruir';
+    if (!user || resetConfirmText.trim().toLowerCase() !== requiredConfirmation) return;
     setResetAllLoading(true);
     setShowResetAllModal(false);
     
@@ -607,7 +670,10 @@ export function Settings() {
     } catch (err: any) {
       console.error(err);
       setProfileMsg({
-        text: `ERRO DE RESET COMPLETO: ${err.message || 'Falha crítica ao limpar dados.'}`,
+        text: l(
+          `ERRO DE RESET COMPLETO: ${err.message || 'Falha crítica ao limpar dados.'}`,
+          `FULL RESET ERROR: ${err.message || 'Critical failure while clearing data.'}`
+        ),
         type: 'error'
       });
     } finally {
@@ -640,10 +706,10 @@ export function Settings() {
             navigate('/');
           }}
           className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/5 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-purple-400 transition-all cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.1)] self-start sm:self-auto"
-          title="Ver Tutorial Interativo"
+          title={l('Ver Tutorial Interativo', 'View interactive tutorial')}
         >
           <HelpCircle size={16} className="animate-pulse" />
-          <span>Ver Tutorial</span>
+          <span>{l('Ver Tutorial', 'View Tutorial')}</span>
         </motion.button>
       </div>
 
@@ -733,7 +799,11 @@ export function Settings() {
             className={`relative overflow-hidden rounded-3xl border ${classConfig.border} bg-[#0F0F13] p-5 sm:p-6 text-center ${classConfig.glow}`}
           >
             {/* Glow centralizador */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0f0f13] via-transparent to-[#0f0f13] z-10" />
+            <div className={`absolute inset-0 z-10 bg-gradient-to-b ${
+              theme === 'light'
+                ? 'from-white/20 via-transparent to-white/95'
+                : 'from-[#0f0f13] via-transparent to-[#0f0f13]'
+            }`} />
             
             {/* Imagem de classe com blur de entrada */}
             <div className="relative w-full h-56 sm:h-72 rounded-2xl overflow-hidden mb-5 sm:mb-6 group border border-[#1e1e26]">
@@ -759,16 +829,19 @@ export function Settings() {
                 </h3>
               </div>
               <p className="text-[10px] font-black text-amber-400 uppercase tracking-[0.25em] font-orbitron animate-pulse">
-                🏆 Título: {hunterStore.activeTitle || 'Iniciante'}
+                🏆 {l('Título', 'Title')}: {hunterStore.activeTitle || l('Iniciante', 'Beginner')}
               </p>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-wide mt-1">
-                Nível {hunterStore.level} Caçador
+                {l('Nível', 'Level')} {hunterStore.level} {l('Caçador', 'Hunter')}
               </p>
               <div className="h-px w-2/3 mx-auto bg-gray-800/80 my-4" />
               
               {/* Descrição temática */}
               <p className="text-xs text-gray-500 italic max-w-xs mx-auto leading-relaxed">
-                "Esta é a sua arte de vocação selada nas fendas profundas. Seu progresso, conquistas e reputação são espelhados em seus atributos de batalha diária."
+                “{l(
+                  'Esta é a sua arte de vocação selada nas fendas profundas. Seu progresso, conquistas e reputação são espelhados em seus atributos de batalha diária.',
+                  'This is your calling, sealed within the deepest rifts. Your progress, achievements, and reputation are reflected in your daily battle attributes.'
+                )}”
               </p>
             </div>
           </motion.div>
@@ -787,10 +860,14 @@ export function Settings() {
             <div className="mb-5 sm:mb-6 flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
-                  Perfil de <span className="text-blue-500">Caçador</span>
+                  {language === 'en-US' ? (
+                    <>Hunter <span className="text-blue-500">Profile</span></>
+                  ) : (
+                    <>Perfil de <span className="text-blue-500">Caçador</span></>
+                  )}
                 </h2>
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                  Dados de Identidade Opcionais no Codex
+                  {l('Dados de Identidade Opcionais no Codex', 'Optional identity data stored in the Codex')}
                 </p>
               </div>
               <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
@@ -814,7 +891,7 @@ export function Settings() {
                 {/* Nome Completo */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
-                    Nome de Batismo (Codinome Real)
+                    {l('Nome de Batismo (Codinome Real)', 'Hunter Name (Real Codename)')}
                   </label>
                   <div className="relative">
                     <input
@@ -831,14 +908,14 @@ export function Settings() {
                 {/* Data de Nascimento */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
-                    Data de Nascimento (Ciclo Solar)
+                    {l('Data de Nascimento (Ciclo Solar)', 'Date of Birth (Solar Cycle)')}
                   </label>
                   <div className="relative">
                     <input
                       type="date"
                       value={birthday}
                       onChange={(e) => setBirthday(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white placeholder-gray-600 transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none focus:shadow-[0_0_15px_rgba(59,130,246,0.15)] [color-scheme:dark]"
+                      className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white placeholder-gray-600 transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none focus:shadow-[0_0_15px_rgba(59,130,246,0.15)]"
                     />
                     <Calendar className="absolute left-3.5 top-3 sm:top-3.5 w-4 h-4 text-gray-600" />
                   </div>
@@ -852,10 +929,10 @@ export function Settings() {
               {/* Subtítulo Seção 2: Biometria */}
               <div className="space-y-1 mb-4">
                 <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 font-orbitron">
-                  Parâmetros Biométricos & Gênero
+                  {l('Parâmetros Biométricos & Gênero', 'Biometrics & Gender')}
                 </h3>
                 <p className="text-[8px] font-bold uppercase tracking-widest text-gray-600">
-                  Calibração de Atributos Físicos e Imagem no Perfil do Caçador
+                  {l('Calibração de Atributos Físicos e Imagem no Perfil do Caçador', 'Physical attribute and Hunter profile calibration')}
                 </p>
               </div>
 
@@ -863,17 +940,17 @@ export function Settings() {
                 {/* Sexo */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
-                    Sexo (Gênero)
+                    {l('Sexo (Gênero)', 'Gender')}
                   </label>
                   <div className="relative">
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value as HunterGender)}
-                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none cursor-pointer"
                     >
-                      <option value="">Selecione...</option>
-                      <option value="male">Masculino</option>
-                      <option value="female">Feminino</option>
+                      <option value="">{l('Selecione...', 'Select...')}</option>
+                      <option value="male">{l('Masculino', 'Male')}</option>
+                      <option value="female">{l('Feminino', 'Female')}</option>
                     </select>
                     <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
                       <ChevronDown size={14} className="text-gray-500" />
@@ -884,7 +961,7 @@ export function Settings() {
                 {/* Registro Biométrico (Altura, Peso, Peso Meta) */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
-                    <Ruler className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Altura (cm)
+                    <Ruler className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {l('Altura', 'Height')} (cm)
                   </label>
                   <input
                     type="number"
@@ -897,7 +974,7 @@ export function Settings() {
 
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
-                    <Weight className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Peso (kg)
+                    <Weight className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {l('Peso', 'Weight')} (kg)
                   </label>
                   <input
                     type="number"
@@ -910,7 +987,7 @@ export function Settings() {
 
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1 whitespace-nowrap">
-                    <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Meta (kg)
+                    <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {l('Meta', 'Target')} (kg)
                   </label>
                   <input
                     type="number"
@@ -928,10 +1005,10 @@ export function Settings() {
               {/* Subtítulo Seção 3: Objetivos */}
               <div className="space-y-1 mb-4">
                 <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 font-orbitron">
-                  Diretrizes & Foco de Evolução
+                  {l('Diretrizes & Foco de Evolução', 'Growth Guidelines & Focus')}
                 </h3>
                 <p className="text-[8px] font-bold uppercase tracking-widest text-gray-600">
-                  Definições de Metas de Treino, Carreira e Nível de Experiência
+                  {l('Definições de Metas de Treino, Carreira e Nível de Experiência', 'Training, career, and experience-level goals')}
                 </p>
               </div>
 
@@ -939,21 +1016,21 @@ export function Settings() {
                 {/* Foco de Treino */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                    <Dumbbell className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Foco de Treino
+                    <Dumbbell className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {l('Foco de Treino', 'Training Focus')}
                   </label>
                   <div className="relative">
                     <select
                       value={trainingFocus}
                       onChange={(e) => setTrainingFocus(e.target.value)}
-                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none cursor-pointer"
                     >
-                      <option value="">Selecione um foco...</option>
-                      <option value="Musculação">Musculação</option>
-                      <option value="Funcional">Funcional</option>
+                      <option value="">{l('Selecione um foco...', 'Select a focus...')}</option>
+                      <option value="Musculação">{l('Musculação', 'Strength Training')}</option>
+                      <option value="Funcional">{l('Funcional', 'Functional Training')}</option>
                       <option value="Cardio / Endurance">Cardio / Endurance</option>
-                      <option value="Esportes de Combate">Esportes de Combate</option>
-                      <option value="Calistenia">Calistenia</option>
-                      <option value="Flexibilidade / Yoga">Flexibilidade / Yoga</option>
+                      <option value="Esportes de Combate">{l('Esportes de Combate', 'Combat Sports')}</option>
+                      <option value="Calistenia">{l('Calistenia', 'Calisthenics')}</option>
+                      <option value="Flexibilidade / Yoga">{l('Flexibilidade / Yoga', 'Flexibility / Yoga')}</option>
                     </select>
                     <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
                       <ChevronDown size={14} className="text-gray-500" />
@@ -964,17 +1041,17 @@ export function Settings() {
                 {/* Objetivo Nutricional */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                    <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Objetivo Nutricional
+                    <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {l('Objetivo Nutricional', 'Nutrition Goal')}
                   </label>
                   <div className="relative">
                     <select
                       value={nutritionGoal}
                       onChange={(e) => setNutritionGoal(e.target.value)}
-                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none cursor-pointer"
                     >
-                      <option value="lose">Perder peso</option>
-                      <option value="maintain">Manter peso</option>
-                      <option value="gain">Ganhar peso</option>
+                      <option value="lose">{l('Perder peso', 'Lose weight')}</option>
+                      <option value="maintain">{l('Manter peso', 'Maintain weight')}</option>
+                      <option value="gain">{l('Ganhar peso', 'Gain weight')}</option>
                     </select>
                     <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
                       <ChevronDown size={14} className="text-gray-500" />
@@ -985,19 +1062,19 @@ export function Settings() {
                 {/* Objetivo Principal */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                    <Brain className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Objetivo Principal
+                    <Brain className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {l('Objetivo Principal', 'Main Goal')}
                   </label>
                   <div className="relative">
                     <select
                       value={mainGoal}
                       onChange={(e) => setMainGoal(e.target.value)}
-                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none cursor-pointer"
                     >
-                      <option value="">Selecione um objetivo...</option>
-                      <option value="general">Evolução Geral</option>
-                      <option value="health">Performance & Saúde</option>
-                      <option value="finance">Independência Financeira</option>
-                      <option value="career">Carreira & Habilidades</option>
+                      <option value="">{l('Selecione um objetivo...', 'Select a goal...')}</option>
+                      <option value="general">{l('Evolução Geral', 'Overall Growth')}</option>
+                      <option value="health">{l('Performance & Saúde', 'Performance & Health')}</option>
+                      <option value="finance">{l('Independência Financeira', 'Financial Independence')}</option>
+                      <option value="career">{l('Carreira & Habilidades', 'Career & Skills')}</option>
                     </select>
                     <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
                       <ChevronDown size={14} className="text-gray-500" />
@@ -1008,18 +1085,18 @@ export function Settings() {
                 {/* Nível de Experiência */}
                 <div className="space-y-1.5">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Experiência (Rank)
+                    <Zap className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {l('Experiência', 'Experience')} (Rank)
                   </label>
                   <div className="relative">
                     <select
                       value={experienceLevel}
                       onChange={(e) => setExperienceLevel(e.target.value)}
-                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none [color-scheme:dark] cursor-pointer"
+                      className="w-full pl-3 pr-10 py-2.5 sm:py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs sm:text-sm font-semibold text-white transition-all focus:border-blue-500 focus:bg-black/60 focus:outline-none appearance-none cursor-pointer"
                     >
-                      <option value="">Selecione a experiência...</option>
-                      <option value="beginner">Iniciante [Rank E]</option>
-                      <option value="intermediate">Intermediário [Rank C]</option>
-                      <option value="advanced">Avançado [Rank S]</option>
+                      <option value="">{l('Selecione a experiência...', 'Select experience level...')}</option>
+                      <option value="beginner">{l('Iniciante', 'Beginner')} [Rank E]</option>
+                      <option value="intermediate">{l('Intermediário', 'Intermediate')} [Rank C]</option>
+                      <option value="advanced">{l('Avançado', 'Advanced')} [Rank S]</option>
                     </select>
                     <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center w-10 border-l border-[#1e1e26] pointer-events-none text-gray-500">
                       <ChevronDown size={14} className="text-gray-500" />
@@ -1035,7 +1112,7 @@ export function Settings() {
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl bg-blue-600 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/30 active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {profileLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  Atualizar Registro
+                  {l('Atualizar Registro', 'Update Profile')}
                 </button>
               </div>
             </form>
@@ -1053,10 +1130,14 @@ export function Settings() {
             <div className="mb-5 sm:mb-6 flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
-                  Codex de <span className="text-amber-400">Títulos & Conquistas</span>
+                  {language === 'en-US' ? (
+                    <>Titles & Achievements <span className="text-amber-400">Codex</span></>
+                  ) : (
+                    <>Codex de <span className="text-amber-400">Títulos & Conquistas</span></>
+                  )}
                 </h2>
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                  Desbloqueie Desafios e Equipe Títulos de Prestígio
+                  {l('Desbloqueie Desafios e Equipe Títulos de Prestígio', 'Unlock challenges and equip prestige titles')}
                 </p>
               </div>
               <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
@@ -1068,10 +1149,13 @@ export function Settings() {
               {/* Seção 1: Títulos Equipáveis */}
               <div className="space-y-3">
                 <h3 className="text-xs font-black uppercase tracking-wider text-amber-400 font-orbitron flex items-center gap-1.5">
-                  <Crown size={14} /> Títulos Desbloqueados
+                  <Crown size={14} /> {l('Títulos Desbloqueados', 'Unlocked Titles')}
                 </h3>
                 <p className="text-[9px] text-gray-500 uppercase tracking-widest leading-relaxed">
-                  Títulos liberados ao conquistar marcos importantes. Escolha um para exibir no seu perfil.
+                  {l(
+                    'Títulos liberados ao conquistar marcos importantes. Escolha um para exibir no seu perfil.',
+                    'Titles earned through major milestones. Choose one to display on your profile.'
+                  )}
                 </p>
 
                 {/* Grid de títulos obtidos */}
@@ -1087,6 +1171,9 @@ export function Settings() {
 
                     return unlockedList.map((titleName) => {
                       const isEquipped = hunterStore.activeTitle === titleName;
+                      const displayTitle = language === 'en-US' && titleName === 'Iniciante'
+                        ? 'Beginner'
+                        : titleName;
                       return (
                         <button
                           key={titleName}
@@ -1098,7 +1185,7 @@ export function Settings() {
                               : 'bg-black/30 border border-[#1e1e26] text-gray-400 hover:border-gray-500/40 hover:text-white'
                           }`}
                         >
-                          {titleName} {isEquipped && '✓'}
+                          {displayTitle} {isEquipped && '✓'}
                         </button>
                       );
                     });
@@ -1112,13 +1199,15 @@ export function Settings() {
               {/* Seção 2: Medalhas/Badges de Conquistas */}
               <div className="space-y-4">
                 <h3 className="text-xs font-black uppercase tracking-wider text-blue-400 font-orbitron flex items-center gap-1.5">
-                  <Award size={14} /> Medalhas da Fenda
+                  <Award size={14} /> {l('Medalhas da Fenda', 'Rift Medals')}
                 </h3>
 
                 {loadingAchievements ? (
                   <div className="py-6 flex items-center justify-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                    <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">Acessando Codex...</span>
+                    <span className="text-[10px] font-black uppercase text-gray-600 tracking-wider">
+                      {l('Acessando Codex...', 'Accessing Codex...')}
+                    </span>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1131,6 +1220,7 @@ export function Settings() {
                     {ALL_POSSIBLE_ACHIEVEMENTS.map((item) => {
                       const matchingUnlock = achievements.find(a => a.title === item.title);
                       const isUnlocked = !!matchingUnlock;
+                      const localizedAchievement = language === 'en-US' ? EN_ACHIEVEMENT_COPY[item.key] : null;
                       
                       return (
                         <div
@@ -1154,7 +1244,7 @@ export function Settings() {
                               <p className={`text-[10px] font-black uppercase tracking-wider font-orbitron truncate ${
                                 isUnlocked ? 'text-amber-300' : 'text-gray-500'
                               }`}>
-                                {item.title}
+                                {localizedAchievement?.title || item.title}
                               </p>
                               {isUnlocked && (
                                 <span className="text-[8px] font-black text-amber-500 tracking-widest shrink-0 font-orbitron">
@@ -1163,11 +1253,11 @@ export function Settings() {
                               )}
                             </div>
                             <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-normal">
-                              {item.desc}
+                              {localizedAchievement?.desc || item.desc}
                             </p>
                             {isUnlocked && matchingUnlock.unlocked_at && (
                               <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">
-                                Desbloqueado: {new Date(matchingUnlock.unlocked_at).toLocaleDateString('pt-BR')}
+                                {l('Desbloqueado', 'Unlocked')}: {new Date(matchingUnlock.unlocked_at).toLocaleDateString(language)}
                               </p>
                             )}
                           </div>
@@ -1191,10 +1281,14 @@ export function Settings() {
             <div className="mb-5 sm:mb-6 flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
-                  Credenciais de <span className="text-purple-500">Acesso</span>
+                  {language === 'en-US' ? (
+                    <>Access <span className="text-purple-500">Credentials</span></>
+                  ) : (
+                    <>Credenciais de <span className="text-purple-500">Acesso</span></>
+                  )}
                 </h2>
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                  Modificação de Chaves Criptográficas
+                  {l('Modificação de Chaves Criptográficas', 'Update authentication credentials')}
                 </p>
               </div>
               <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
@@ -1218,7 +1312,7 @@ export function Settings() {
                 {/* E-mail */}
                 <div className="space-y-1.5 md:col-span-1">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
-                    E-mail do Sistema
+                    {l('E-mail do Sistema', 'System Email')}
                   </label>
                   <div className="relative">
                     <input
@@ -1235,7 +1329,7 @@ export function Settings() {
                 {/* Nova Senha */}
                 <div className="space-y-1.5 md:col-span-1">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
-                    Nova Senha
+                    {l('Nova Senha', 'New Password')}
                   </label>
                   <div className="relative">
                     <input
@@ -1252,7 +1346,7 @@ export function Settings() {
                 {/* Confirmar Senha */}
                 <div className="space-y-1.5 md:col-span-1">
                   <label className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-500">
-                    Confirmar Senha
+                    {l('Confirmar Senha', 'Confirm Password')}
                   </label>
                   <div className="relative">
                     <input
@@ -1275,7 +1369,7 @@ export function Settings() {
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl bg-purple-600 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-purple-600/20 transition-all hover:bg-purple-500 hover:shadow-purple-500/30 active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {securityLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  Atualizar Segurança
+                  {l('Atualizar Segurança', 'Update Security')}
                 </button>
               </div>
             </form>
@@ -1293,10 +1387,14 @@ export function Settings() {
             <div className="mb-5 sm:mb-6 flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
-                  Diretrizes de <span className="text-purple-400">Sistema</span>
+                  {language === 'en-US' ? (
+                    <>System <span className="text-purple-400">Guidelines</span></>
+                  ) : (
+                    <>Diretrizes de <span className="text-purple-400">Sistema</span></>
+                  )}
                 </h2>
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                  Calibração de Interface e Guias Virtuais
+                  {l('Calibração de Interface e Guias Virtuais', 'Interface calibration and virtual guides')}
                 </p>
               </div>
               <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
@@ -1306,7 +1404,10 @@ export function Settings() {
 
             <div className="space-y-4">
               <p className="text-xs sm:text-sm text-gray-400 leading-relaxed font-semibold italic">
-                "Se você deseja recalibrar seus sensores cognitivos e rever a apresentação holográfica das seções e módulos vitais do aplicativo, re-inicie o protocolo de guia do caçador."
+                “{l(
+                  'Se você deseja recalibrar seus sensores cognitivos e rever a apresentação holográfica das seções e módulos vitais do aplicativo, re-inicie o protocolo de guia do caçador.',
+                  'To recalibrate the interface and review the app’s essential modules, restart the Hunter guide protocol.'
+                )}”
               </p>
               
               <div className="flex justify-end">
@@ -1320,7 +1421,7 @@ export function Settings() {
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl border border-purple-500/30 bg-purple-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-purple-400 transition-all hover:bg-purple-500/20 hover:border-purple-500 active:scale-95 cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Reiniciar Guia do Caçador
+                  {l('Reiniciar Guia do Caçador', 'Restart Hunter Guide')}
                 </button>
               </div>
             </div>
@@ -1338,10 +1439,10 @@ export function Settings() {
             <div className="mb-5 sm:mb-6 flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
-                  Telemetria & <span className="text-blue-400">Diagnóstico</span>
+                  {l('Telemetria &', 'Telemetry &')} <span className="text-blue-400">{l('Diagnóstico', 'Diagnostics')}</span>
                 </h2>
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                  Status de Conectividade do Caçador com a Fenda
+                  {l('Status de Conectividade do Caçador com a Fenda', 'Hunter connectivity status with the Rift')}
                 </p>
               </div>
               <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
@@ -1355,15 +1456,15 @@ export function Settings() {
                 <div className="p-4 rounded-2xl border border-[#1e1e26] bg-black/40 flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">
-                      Conexão Supabase
+                      {l('Conexão Supabase', 'Supabase Connection')}
                     </p>
                     <p className="text-xs font-black uppercase tracking-widest font-orbitron text-white">
                       {telemetry.loading ? (
-                        <span className="text-gray-400 animate-pulse">Consultando...</span>
+                        <span className="text-gray-400 animate-pulse">{l('Consultando...', 'Checking...')}</span>
                       ) : telemetry.error ? (
-                        <span className="text-rose-500">Falhou</span>
+                        <span className="text-rose-500">{l('Falhou', 'Failed')}</span>
                       ) : (
-                        <span className="text-emerald-400 text-glow-emerald">Conectado</span>
+                        <span className="text-emerald-400 text-glow-emerald">{l('Conectado', 'Connected')}</span>
                       )}
                     </p>
                   </div>
@@ -1378,10 +1479,10 @@ export function Settings() {
 
                 <div className="p-4 rounded-2xl border border-[#1e1e26] bg-black/40 space-y-1 md:col-span-2">
                   <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">
-                    ID do Caçador Ativo
+                    {l('ID do Caçador Ativo', 'Active Hunter ID')}
                   </p>
                   <p className="text-[10px] font-semibold text-gray-400 font-mono break-all leading-none py-1 selection:bg-blue-500/30 selection:text-white">
-                    {user?.id || 'Desconectado'}
+                    {user?.id || l('Desconectado', 'Disconnected')}
                   </p>
                 </div>
               </div>
@@ -1391,12 +1492,17 @@ export function Settings() {
                 <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/5 text-xs text-rose-400 space-y-1 flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="font-black uppercase tracking-wider text-rose-500">Anomalia de Conexão Detectada</p>
+                    <p className="font-black uppercase tracking-wider text-rose-500">
+                      {l('Anomalia de Conexão Detectada', 'Connection Anomaly Detected')}
+                    </p>
                     <p className="font-semibold font-mono text-[11px] leading-relaxed break-all bg-black/40 p-2 rounded-lg border border-rose-950/40">
                       {telemetry.error}
                     </p>
                     <p className="text-[10px] text-gray-500">
-                      * Dica: Verifique se suas chaves do Supabase no Vercel/Ambiente de Produção estão preenchidas corretamente e possuem permissão nas tabelas.
+                      {l(
+                        '* Dica: Verifique se suas chaves do Supabase no Vercel/Ambiente de Produção estão preenchidas corretamente e possuem permissão nas tabelas.',
+                        '* Tip: Check that your Supabase keys are correctly configured in Vercel/production and have table permissions.'
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1405,7 +1511,7 @@ export function Settings() {
               {/* Contagem de Linhas */}
               <div className="p-5 rounded-2xl border border-[#1e1e26] bg-black/20">
                 <h4 className="text-xs font-black uppercase tracking-wider text-white mb-4 flex items-center gap-2">
-                  Registros na Nuvem (Sincronização)
+                  {l('Registros na Nuvem (Sincronização)', 'Cloud Records (Synchronization)')}
                 </h4>
                 {telemetry.loading ? (
                   <div className="flex justify-center py-4">
@@ -1414,19 +1520,19 @@ export function Settings() {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Cardápios</p>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{l('Cardápios', 'Meal Plans')}</p>
                       <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.meals}</p>
                     </div>
                     <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Rotinas</p>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{l('Rotinas', 'Routines')}</p>
                       <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.routines}</p>
                     </div>
                     <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Hábitos</p>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{l('Hábitos', 'Habits')}</p>
                       <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.habits}</p>
                     </div>
                     <div className="p-3 rounded-xl border border-[#1a1a22] bg-black/40 text-center space-y-1">
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Tarefas</p>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{l('Tarefas', 'Tasks')}</p>
                       <p className="text-lg font-black font-orbitron text-blue-400">{telemetry.tasks}</p>
                     </div>
                   </div>
@@ -1441,7 +1547,7 @@ export function Settings() {
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl border border-blue-500/30 bg-blue-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-400 transition-all hover:bg-blue-500/20 hover:border-blue-500 active:scale-95 cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Sincronização Forçada
+                  {l('Sincronização Forçada', 'Force Synchronization')}
                 </button>
               </div>
             </div>
@@ -1459,10 +1565,14 @@ export function Settings() {
             <div className="mb-5 sm:mb-6 flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
-                  Zona de <span className="text-rose-500">Perigo</span>
+                  {language === 'en-US' ? (
+                    <>Danger <span className="text-rose-500">Zone</span></>
+                  ) : (
+                    <>Zona de <span className="text-rose-500">Perigo</span></>
+                  )}
                 </h2>
                 <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
-                  Ações Irreversíveis de Modificação de Matriz
+                  {l('Ações Irreversíveis de Modificação de Matriz', 'Irreversible system actions')}
                 </p>
               </div>
               <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
@@ -1477,11 +1587,19 @@ export function Settings() {
                 <div className="space-y-1.5">
                   <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                     <RefreshCw className="w-3.5 h-3.5 text-orange-400" />
-                    Zerar RPG (Atributos & XP)
+                    {l('Zerar RPG (Atributos & XP)', 'Reset RPG (Attributes & XP)')}
                   </h4>
                   <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed">
-                    Purifica seu progresso para o **Nível 1** e redefine todos os status base (FOR, INT, RES, VIT, DIS) para **10**. 
-                    <span className="text-orange-400/90 font-bold block mt-1">⚠️ Mantém intocados seus treinos, dietas, hábitos e tarefas.</span>
+                    {l(
+                      'Retorna seu progresso ao Nível 1 e redefine todos os atributos base (FOR, INT, RES, VIT, DIS) para 10.',
+                      'Returns your progress to Level 1 and resets every base attribute (STR, INT, END, VIT, DIS) to 10.'
+                    )}
+                    <span className="text-orange-400/90 font-bold block mt-1">
+                      ⚠️ {l(
+                        'Seus treinos, dietas, hábitos e tarefas permanecem intactos.',
+                        'Your workouts, meal plans, habits, and tasks remain untouched.'
+                      )}
+                    </span>
                   </p>
                 </div>
                 <button
@@ -1491,7 +1609,7 @@ export function Settings() {
                   className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border border-orange-500/30 bg-orange-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-orange-400 transition-all hover:bg-orange-500/20 hover:border-orange-500 active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {resetRpgLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                  Zerar Atributos
+                  {l('Zerar Atributos', 'Reset Attributes')}
                 </button>
               </div>
 
@@ -1500,12 +1618,16 @@ export function Settings() {
                 <div className="space-y-1.5">
                   <h4 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                     <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                    Destruir Registro (Reset Geral)
+                    {l('Destruir Registro (Reset Geral)', 'Destroy Record (Full Reset)')}
                   </h4>
                   <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed">
-                    Apaga permanentemente **todas as fichas de treino, refeições, tarefas, hábitos e históricos**. 
-                    Redefine sua classe para **nulo** para obrigá-lo a recomeçar do onboarding.
-                    <span className="text-rose-500 font-bold block mt-1">💀 Ação totalmente irreversível!</span>
+                    {l(
+                      'Apaga permanentemente todos os treinos, refeições, tarefas, hábitos e históricos. Sua classe também será removida e o onboarding será reiniciado.',
+                      'Permanently deletes all workouts, meals, tasks, habits, and history. Your class is also removed and onboarding starts again.'
+                    )}
+                    <span className="text-rose-500 font-bold block mt-1">
+                      💀 {l('Ação totalmente irreversível!', 'This action cannot be undone!')}
+                    </span>
                   </p>
                 </div>
                 <button
@@ -1515,7 +1637,7 @@ export function Settings() {
                   className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl border border-rose-500/30 bg-rose-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-rose-500 transition-all hover:bg-rose-500/20 hover:border-rose-500 active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {resetAllLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  Zerar Sistema do App
+                  {l('Zerar Sistema do App', 'Reset Entire App')}
                 </button>
               </div>
 
@@ -1543,13 +1665,19 @@ export function Settings() {
                   <AlertTriangle className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-black font-orbitron uppercase text-white tracking-wide">
-                  Purificar Atributos?
+                  {l('Purificar Atributos?', 'Reset Attributes?')}
                 </h3>
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  Você está prestes a redefinir seu nível de Caçador para **1**, seu XP para **0** e todos os seus atributos RPG base para **10**. 
+                  {l(
+                    'Você está prestes a redefinir seu nível de Caçador para 1, seu XP para 0 e todos os atributos RPG base para 10.',
+                    'You are about to reset your Hunter level to 1, XP to 0, and every base RPG attribute to 10.'
+                  )}
                 </p>
                 <div className="p-4 rounded-xl bg-orange-950/20 border border-orange-500/10 text-xs text-orange-300 font-semibold leading-relaxed">
-                  💡 Seus hábitos, treinos cadastrados, tarefas criadas e planos alimentares **NÃO** serão afetados!
+                  💡 {l(
+                    'Seus hábitos, treinos, tarefas e planos alimentares NÃO serão afetados!',
+                    'Your habits, workouts, tasks, and meal plans will NOT be affected!'
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 w-full mt-4">
@@ -1558,14 +1686,14 @@ export function Settings() {
                     onClick={() => setShowResetRpgModal(false)}
                     className="py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs font-black uppercase tracking-widest text-gray-400 transition-all hover:bg-black/60 active:scale-95 cursor-pointer"
                   >
-                    Abortar
+                    {l('Abortar', 'Cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={handleResetRPG}
                     className="py-3 rounded-xl bg-orange-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-600/20 transition-all hover:bg-orange-500 active:scale-95 cursor-pointer"
                   >
-                    Confirmar Reset
+                    {l('Confirmar Reset', 'Confirm Reset')}
                   </button>
                 </div>
               </div>
@@ -1591,19 +1719,24 @@ export function Settings() {
                   <Trash2 className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-black font-orbitron uppercase text-white tracking-wide">
-                  Destruição da Matriz!
+                  {l('Destruição da Matriz!', 'Destroy System Record!')}
                 </h3>
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  Isso irá deletar de forma definitiva todos os seus treinos, rotinas, hábitos, tarefas, logs de comida e conquistas do servidor. Sua classe de caçador será apagada e você recomeçará do zero.
+                  {l(
+                    'Isso irá deletar de forma definitiva todos os seus treinos, rotinas, hábitos, tarefas, registros de comida e conquistas. Sua classe será apagada e você recomeçará do zero.',
+                    'This permanently deletes all workouts, routines, habits, tasks, food logs, and achievements. Your Hunter class will be removed and you will start over.'
+                  )}
                 </p>
                 
                 <div className="w-full space-y-2 mt-2">
                   <label className="text-[10px] font-black uppercase tracking-wider text-rose-400">
-                    Digite <span className="font-extrabold underline">DESTRUIR</span> para confirmar
+                    {l('Digite', 'Type')}{' '}
+                    <span className="font-extrabold underline">{language === 'en-US' ? 'DELETE' : 'DESTRUIR'}</span>{' '}
+                    {l('para confirmar', 'to confirm')}
                   </label>
                   <input
                     type="text"
-                    placeholder="DESTRUIR"
+                    placeholder={language === 'en-US' ? 'DELETE' : 'DESTRUIR'}
                     value={resetConfirmText}
                     onChange={(e) => setResetConfirmText(e.target.value)}
                     className="w-full py-3 rounded-xl border border-rose-500/30 bg-black/60 text-center text-sm font-black tracking-widest text-rose-500 uppercase placeholder-rose-950 focus:border-rose-500 focus:outline-none focus:bg-black/80"
@@ -1619,15 +1752,15 @@ export function Settings() {
                     }}
                     className="py-3 rounded-xl border border-[#1e1e26] bg-black/40 text-xs font-black uppercase tracking-widest text-gray-400 transition-all hover:bg-black/60 active:scale-95 cursor-pointer"
                   >
-                    Cancelar
+                    {l('Cancelar', 'Cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={handleResetAll}
-                    disabled={resetConfirmText.toLowerCase() !== 'destruir'}
+                    disabled={resetConfirmText.trim().toLowerCase() !== (language === 'en-US' ? 'delete' : 'destruir')}
                     className="py-3 rounded-xl bg-rose-600 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-500 active:scale-95 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                   >
-                    Confirmar Destruição
+                    {l('Confirmar Destruição', 'Confirm Deletion')}
                   </button>
                 </div>
               </div>

@@ -32,7 +32,7 @@ export function RPGLayout() {
   useEffect(() => {
     async function checkConnection() {
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        setSupabaseError('Chaves de API do Supabase ausentes no ambiente (.env).');
+        setSupabaseError(t('errors.supabaseKeysMissing'));
         return;
       }
       try {
@@ -45,7 +45,7 @@ export function RPGLayout() {
       }
     }
     void checkConnection();
-  }, []);
+  }, [t]);
 
   // Se o username não estiver preenchido, talvez o profile ainda esteja carregando
   // Mas vamos deixar renderizar com fallback se necessário.
@@ -184,7 +184,9 @@ export function RPGLayout() {
           </p>
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-end">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Status: {t('common.active')}</span>
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">
+                {t('common.status')}: {t('common.active')}
+              </span>
               <span className="text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</span>
             </div>
             <div className="size-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,1)] animate-pulse" />
@@ -198,10 +200,10 @@ export function RPGLayout() {
               <div className="flex items-center gap-3 p-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 text-rose-400 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.05)]">
                 <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0" />
                 <span className="flex-1 font-orbitron text-[11px] leading-relaxed">
-                  Aviso: Falha de conexão com a fenda Supabase ({supabaseError}). Os seus dados dinâmicos podem não ser exibidos.
+                  {t('common.warning')}: {t('errors.supabaseConnection')} ({supabaseError})
                 </span>
                 <Link to="/settings" className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 font-black transition-all active:scale-95 text-[10px] uppercase tracking-wider border border-rose-500/20 shrink-0">
-                  Diagnosticar
+                  {t('common.diagnose')}
                 </Link>
               </div>
             </div>

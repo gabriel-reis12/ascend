@@ -17,11 +17,22 @@ export const translations = {
   'nav.rest': { 'pt-BR': 'Descanso', 'en-US': 'Recovery' },
   'nav.settings': { 'pt-BR': 'Ajustes', 'en-US': 'Settings' },
   'common.active': { 'pt-BR': 'Ativo', 'en-US': 'Active' },
+  'common.status': { 'pt-BR': 'Status', 'en-US': 'Status' },
+  'common.warning': { 'pt-BR': 'Aviso', 'en-US': 'Warning' },
+  'common.diagnose': { 'pt-BR': 'Diagnosticar', 'en-US': 'Diagnose' },
   'common.disconnect': { 'pt-BR': 'Desconectar', 'en-US': 'Sign out' },
   'common.level': { 'pt-BR': 'Nível', 'en-US': 'Level' },
   'common.rank': { 'pt-BR': 'Rank', 'en-US': 'Rank' },
   'common.systemXp': { 'pt-BR': 'XP do Sistema', 'en-US': 'System XP' },
   'common.classUndefined': { 'pt-BR': 'Classe não definida', 'en-US': 'Class not selected' },
+  'errors.supabaseKeysMissing': {
+    'pt-BR': 'Chaves de API do Supabase ausentes no ambiente (.env).',
+    'en-US': 'Supabase API keys are missing from the environment (.env).',
+  },
+  'errors.supabaseConnection': {
+    'pt-BR': 'Falha de conexão com a fenda Supabase. Seus dados dinâmicos podem não ser exibidos.',
+    'en-US': 'The Supabase Rift connection failed. Dynamic data may not be displayed.',
+  },
   'settings.title': { 'pt-BR': 'Ajustes de Sistema', 'en-US': 'System Settings' },
   'settings.subtitle': {
     'pt-BR': 'Modificação e controle central da fenda do caçador',
