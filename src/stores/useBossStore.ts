@@ -11,6 +11,7 @@ export interface BossDefinition {
   achievementDescription: string;
   achievementIcon: string;
   maxHp: number;
+  targetDays: number;
   image: string;
   lore: string;
   victoryLore: string;
@@ -43,14 +44,15 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementTitle: 'O Senhor da Procrastinação Derrotado',
     achievementDescription: 'Purificou o Senhor da Procrastinação',
     achievementIcon: 'Sword',
-    maxHp: 100,
+    maxHp: 160,
+    targetDays: 3,
     image: '/Bosses/O Senhor da Procrastinação.jpeg',
     lore: 'Uma entidade gigantesca feita de correntes, relógios quebrados e fumaça negra. Ao seu redor existem centenas de missões abandonadas, projetos inacabados e metas esquecidas.',
     victoryLore: 'Com foco inabalável, você cortou as correntes e destruiu os relógios quebrados. O tempo agora pertence a você. Você se tornou um Executor Implacável!',
     weakness: 'Completar tarefas diárias comuns e quests.',
     weaknessCategory: 'task',
     color: '#8b5cf6', // Roxo
-    xpReward: 300,
+    xpReward: 100,
   },
   {
     id: 'boss_02',
@@ -60,14 +62,15 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementTitle: 'O Rei da Preguiça Derrotado',
     achievementDescription: 'Purificou o Rei da Preguiça',
     achievementIcon: 'Flame',
-    maxHp: 100,
+    maxHp: 210,
+    targetDays: 4,
     image: '/Bosses/O Rei da Preguiça.jpeg',
     lore: 'Uma criatura colossal sentada em um trono gigantesco de pedra e lodo. Ela não luta; apenas permanece imóvel. Correntes negras se espalham pelo chão, drenando a energia vital e a motivação de qualquer um que ouse se aproximar.',
     victoryLore: 'Seus treinos intensos e constância física fizeram o trono desmoronar e a letargia se dissipar. Nada pode parar o seu avanço!',
     weakness: 'Concluir treinos na aba Musculação (Workouts).',
     weaknessCategory: 'workout',
     color: '#ef4444', // Vermelho
-    xpReward: 350,
+    xpReward: 130,
   },
   {
     id: 'boss_03',
@@ -77,14 +80,15 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementTitle: 'A Sereia da Distração Derrotada',
     achievementDescription: 'Purificou a Sereia da Distração',
     achievementIcon: 'Brain',
-    maxHp: 120,
+    maxHp: 260,
+    targetDays: 5,
     image: '/Bosses/A Sereia da Distração.jpeg',
     lore: 'Uma entidade etérea que flutua acima de um oceano digital formado por telas luminosas. Ao seu redor brilham notificações, redes sociais e vídeos curtos. Os caçadores hipnotizados ficam presos olhando para as telas enquanto sua energia vital é sugada.',
     victoryLore: 'Você silenciou o ruído digital e recuperou sua atenção profunda. As luzes vazias não têm mais poder sobre a sua mente.',
     weakness: 'Hábitos e tarefas de Leitura, Estudo e Foco Profundo.',
     weaknessCategory: 'foco',
     color: '#3b82f6', // Azul
-    xpReward: 400,
+    xpReward: 160,
   },
   {
     id: 'boss_04',
@@ -94,14 +98,15 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementTitle: 'O Devorador do Progresso Derrotado',
     achievementDescription: 'Purificou o Devorador do Progresso',
     achievementIcon: 'Heart',
-    maxHp: 120,
+    maxHp: 310,
+    targetDays: 6,
     image: '/Bosses/O Devorador do Progresso.jpeg',
     lore: 'Uma criatura colossal e insaciável formada por energia escura e fragmentos de excessos, impulsos e gratificação imediata. Ele não destrói os caçadores por combate direto, mas os convence a abandonar seu potencial em troca de prazeres rápidos.',
     victoryLore: 'Sua rotina nutricional perfeita, controle calórico e hidratação enfraqueceram a criatura até que ela ficasse em silêncio. A disciplina é seu novo escudo.',
     weakness: 'Marcar refeições, manter metas nutricionais de calorias/água e sono no horário.',
     weaknessCategory: 'nutrition',
     color: '#10b981', // Verde
-    xpReward: 450,
+    xpReward: 200,
   },
   {
     id: 'boss_05',
@@ -111,14 +116,15 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementTitle: 'O Mercador das Dívidas Derrotado',
     achievementDescription: 'Purificou o Mercador das Dívidas',
     achievementIcon: 'Scale',
-    maxHp: 150,
+    maxHp: 360,
+    targetDays: 7,
     image: '/Bosses/O Mercador das Dívidas.jpeg',
     lore: 'Sentado dentro de um mercado dimensional infinito cheio de ouro e armaduras lendárias, o Mercador domina pela sedução. Ele nunca obriga ninguém; ele apenas oferece. Mas atrás de cada item fácil existe uma corrente invisível que prende sua liberdade futura.',
     victoryLore: 'Ao registrar seus gastos e controlar suas compras por impulso, você quebrou o contrato dourado do Mercador e conquistou sua verdadeira liberdade.',
     weakness: 'Hábitos de Finanças, controle de despesas e aportes de investimento.',
     weaknessCategory: 'finance',
     color: '#f59e0b', // Âmbar
-    xpReward: 500,
+    xpReward: 240,
   },
   {
     id: 'boss_06',
@@ -128,14 +134,15 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementTitle: 'O Arauto do Caos Derrotado',
     achievementDescription: 'Purificou o Arauto do Caos',
     achievementIcon: 'Compass',
-    maxHp: 150,
+    maxHp: 410,
+    targetDays: 8,
     image: '/Bosses/O Arauto do Caos.jpeg',
     lore: 'Uma catástrofe silenciosa. Ele não ataca com força física, mas transforma toda a sua vida em ruído e confusão. Sob sua influência, as prioridades somem, os planos se misturam e você acorda muito ocupado, mas nunca produtivo.',
     victoryLore: 'Ao definir metas claras, planejar suas semanas e organizar sua rotina, o nevoeiro do Arauto se dissipou. O caminho agora está limpo.',
     weakness: 'Planejamento semanal, metas de prioridade e organização de ambiente.',
     weaknessCategory: 'organization',
     color: '#06b6d4', // Ciano
-    xpReward: 550,
+    xpReward: 300,
   },
   {
     id: 'boss_07',
@@ -145,14 +152,15 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementTitle: 'O Reflexo da Autossabotagem Purificado',
     achievementDescription: 'Superou a si mesmo e purificou o Reflexo da Autossabotagem',
     achievementIcon: 'Crown',
-    maxHp: 200,
+    maxHp: 500,
+    targetDays: 10,
     image: '/Bosses/O Reflexo da Autossabotagem.jpeg',
     lore: 'A origem de todos os males. Após derrotar todos os chefes anteriores, você alcança o último portal e encontra apenas um espelho. Dentro dele está você mesmo: a soma de todas as versões de você que desistiram no passado.',
     victoryLore: 'Ao manter sua consistência e não desistir diante das dificuldades, você purificou a versão mais fraca de si mesmo. O sistema foi totalmente dominado.',
     weakness: 'Manter a consistência diária ativa e streaks consecutivas longas.',
     weaknessCategory: 'streak',
     color: '#ec4899', // Rosa
-    xpReward: 800,
+    xpReward: 400,
   },
 ];
 
@@ -211,6 +219,11 @@ const normalizeActionType = (actionType: string) => {
   return 'task';
 };
 
+const normalizeCombatDamage = (baseDamage: number) => {
+  const magnitude = Math.max(1, Math.abs(baseDamage));
+  return Math.max(3, Math.round(Math.sqrt(magnitude) * 1.6));
+};
+
 const withTimeout = async <T,>(promise: PromiseLike<T>, label: string, ms = 12000): Promise<T> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -221,6 +234,20 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, label: string, ms = 1200
     return await Promise.race([promise, timeout]);
   } finally {
     if (timer) clearTimeout(timer);
+  }
+};
+
+const persistCombatEvent = (
+  userId: string,
+  event: { id: string; damage: number; critical: boolean; occurredAt: string; bossName: string }
+) => {
+  if (typeof window === 'undefined') return;
+  const key = `ascend_boss_combat_events_${userId}`;
+  try {
+    const current = JSON.parse(window.localStorage.getItem(key) || '[]') as typeof event[];
+    window.localStorage.setItem(key, JSON.stringify([event, ...current.filter(item => item.id !== event.id)].slice(0, 8)));
+  } catch {
+    window.localStorage.setItem(key, JSON.stringify([event]));
   }
 };
 
@@ -266,7 +293,33 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
       const defeatedBossIds = [...new Set(completedIds)];
 
       if (active) {
-        set({ activeBattle: active, defeatedBossIds, loading: false });
+        const activeDefinition = BOSS_LIST.find(boss => boss.id === active.boss_id);
+        let normalizedBattle = active;
+
+        if (activeDefinition && active.current_hp > 0 && active.max_hp !== activeDefinition.maxHp) {
+          const remainingRatio = active.max_hp > 0 ? active.current_hp / active.max_hp : 1;
+          const scaledCurrentHp = Math.max(1, Math.round(activeDefinition.maxHp * remainingRatio));
+          const { data: scaledBattle, error: scaleError } = await supabase
+            .from('boss_battles')
+            .update({
+              current_hp: scaledCurrentHp,
+              max_hp: activeDefinition.maxHp,
+            })
+            .eq('id', active.id)
+            .eq('user_id', userId)
+            .select()
+            .single();
+
+          if (scaleError) throw scaleError;
+          normalizedBattle = scaledBattle;
+        }
+
+        set({ activeBattle: normalizedBattle, defeatedBossIds, loading: false });
+        if (active.current_hp <= 0) {
+          queueMicrotask(() => {
+            void get().purifyActiveBoss(userId);
+          });
+        }
         return;
       }
 
@@ -322,22 +375,22 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
     const bossDef = BOSS_LIST.find(b => b.id === activeBattle.boss_id);
     const normalizedActionType = normalizeActionType(actionType);
     const direction = baseDamage < 0 ? -1 : 1;
-    let finalDamage = Math.abs(baseDamage);
+    let finalDamage = normalizeCombatDamage(baseDamage);
     let isCritical = false;
 
-    if (bossDef && direction > 0) {
-      // Se a categoria da ação bater com a categoria de fraqueza do chefe, aplica dano crítico
+    if (bossDef) {
+      // O mesmo multiplicador é usado na reversão para impedir farm ao marcar/desmarcar.
       if (normalizedActionType === bossDef.weaknessCategory) {
-        finalDamage = Math.round(finalDamage * 2.0); // 2x Dano Crítico
-        isCritical = true;
+        finalDamage = Math.round(finalDamage * 1.75);
+        isCritical = direction > 0;
       } else if (
         // Algumas sinergias adicionais de classes ou categorias gerais
         (bossDef.id === 'boss_01' && normalizedActionType === 'task') ||
         (bossDef.id === 'boss_03' && normalizedActionType === 'foco') ||
         (bossDef.id === 'boss_07' && normalizedActionType === 'streak')
       ) {
-        finalDamage = Math.round(finalDamage * 1.5);
-        isCritical = true;
+        finalDamage = Math.round(finalDamage * 1.35);
+        isCritical = direction > 0;
       }
     }
 
@@ -349,6 +402,13 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
 
     // Atualiza estado local de forma otimista
     const damageEventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    persistCombatEvent(userId, {
+      id: damageEventId,
+      damage: actualDamage,
+      critical: isCritical,
+      occurredAt: new Date().toISOString(),
+      bossName: activeBattle.name,
+    });
     set({
       activeBattle: {
         ...activeBattle,
@@ -375,6 +435,10 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         })
         .eq('id', activeBattle.id);
       if (updateError) throw updateError;
+
+      if (newHp === 0) {
+        await get().purifyActiveBoss(userId);
+      }
     } catch (err) {
       console.error('[useBossStore] Erro ao persistir ataque ao boss:', err);
       set({ error: 'O ataque não pôde ser persistido. Sincronizando novamente...' });
@@ -391,19 +455,28 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
       const now = new Date().toISOString();
       
       // 1. Atualizar o status da batalha no Supabase para derrotada
-      const { error: updateErr } = await supabase
+      const { data: finalizedBattles, error: updateErr } = await supabase
         .from('boss_battles')
         .update({
           defeated: true,
           defeated_at: now
         })
-        .eq('id', activeBattle.id);
+        .eq('id', activeBattle.id)
+        .eq('user_id', userId)
+        .eq('defeated', false)
+        .lte('current_hp', 0)
+        .select('id');
 
       if (updateErr) throw updateErr;
+      if (!finalizedBattles?.length) {
+        set({ activeBattle: null, loading: false });
+        await get().loadActiveBattle(userId);
+        return;
+      }
 
       // 2. Encontrar a recompensa definida do Boss
       const bossDef = BOSS_LIST.find(b => b.id === activeBattle.boss_id);
-      const xpReward = bossDef ? bossDef.xpReward : 300;
+      const xpReward = bossDef ? bossDef.xpReward : 100;
       const titleReward = bossDef ? bossDef.titleReward : 'Vencedor';
       const achievementTitle = bossDef ? bossDef.achievementTitle : `${activeBattle.name} Derrotado`;
       const achievementDescription = bossDef

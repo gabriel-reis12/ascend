@@ -41,26 +41,26 @@ import { usePreferences } from '../contexts/preferences';
 
 const ALL_POSSIBLE_ACHIEVEMENTS = [
   // Streak
-  { key: '3d', title: 'Iniciante da Consistência', desc: 'Mantenha uma streak de 3 dias seguidos', icon: 'Flame', titleReward: 'Constante', xp: 50 },
-  { key: '7d', title: 'Guerreiro Diário', desc: 'Mantenha uma streak de 7 dias seguidos', icon: 'Calendar', titleReward: 'Persistente', xp: 150 },
-  { key: '15d', title: 'Mestre da Rotina', desc: 'Mantenha uma streak de 15 dias seguidos', icon: 'Shield', titleReward: 'Inabalável', xp: 300 },
-  { key: '30d', title: 'Lenda Ativa', desc: 'Mantenha uma streak de 30 dias seguidos', icon: 'Crown', titleReward: 'Monarca da Rotina', xp: 600 },
+  { key: '3d', title: 'Iniciante da Consistência', desc: 'Mantenha uma streak de 3 dias seguidos', icon: 'Flame', titleReward: 'Constante', xp: 30 },
+  { key: '7d', title: 'Guerreiro Diário', desc: 'Mantenha uma streak de 7 dias seguidos', icon: 'Calendar', titleReward: 'Persistente', xp: 70 },
+  { key: '15d', title: 'Mestre da Rotina', desc: 'Mantenha uma streak de 15 dias seguidos', icon: 'Shield', titleReward: 'Inabalável', xp: 140 },
+  { key: '30d', title: 'Lenda Ativa', desc: 'Mantenha uma streak de 30 dias seguidos', icon: 'Crown', titleReward: 'Monarca da Rotina', xp: 250 },
   // Atributos
-  { key: 'strength', title: 'Força Absoluta', desc: 'Alcance 20 pontos de Força', icon: 'Sword', titleReward: 'Colosso', xp: 100 },
-  { key: 'intelligence', title: 'Mente Brilhante', desc: 'Alcance 20 pontos de Inteligência', icon: 'Book', titleReward: 'Arquimago', xp: 100 },
-  { key: 'endurance', title: 'Inquebrável', desc: 'Alcance 20 pontos de Resistência', icon: 'Shield', titleReward: 'Bastião', xp: 100 },
-  { key: 'vitality', title: 'Vigor Eterno', desc: 'Alcance 20 pontos de Vitalidade', icon: 'Heart', titleReward: 'Imortal', xp: 100 },
-  { key: 'discipline', title: 'Mente de Ferro', desc: 'Alcance 20 pontos de Disciplina', icon: 'Brain', titleReward: 'Focado', xp: 100 },
-  { key: 'wisdom', title: 'Olhar Aguçado', desc: 'Alcance 20 pontos de Sabedoria', icon: 'Compass', titleReward: 'Eremita', xp: 100 },
-  { key: 'balance', title: 'Zenith', desc: 'Alcance 20 pontos de Equilíbrio', icon: 'Scale', titleReward: 'Harmônico', xp: 100 },
+  { key: 'strength', title: 'Força Absoluta', desc: 'Alcance 20 pontos de Força', icon: 'Sword', titleReward: 'Colosso', xp: 50 },
+  { key: 'intelligence', title: 'Mente Brilhante', desc: 'Alcance 20 pontos de Inteligência', icon: 'Book', titleReward: 'Arquimago', xp: 50 },
+  { key: 'endurance', title: 'Inquebrável', desc: 'Alcance 20 pontos de Resistência', icon: 'Shield', titleReward: 'Bastião', xp: 50 },
+  { key: 'vitality', title: 'Vigor Eterno', desc: 'Alcance 20 pontos de Vitalidade', icon: 'Heart', titleReward: 'Imortal', xp: 50 },
+  { key: 'discipline', title: 'Mente de Ferro', desc: 'Alcance 20 pontos de Disciplina', icon: 'Brain', titleReward: 'Focado', xp: 50 },
+  { key: 'wisdom', title: 'Olhar Aguçado', desc: 'Alcance 20 pontos de Sabedoria', icon: 'Compass', titleReward: 'Eremita', xp: 50 },
+  { key: 'balance', title: 'Zenith', desc: 'Alcance 20 pontos de Equilíbrio', icon: 'Scale', titleReward: 'Harmônico', xp: 50 },
   // Chefes Finais
-  { key: 'boss_01', title: 'O Senhor da Procrastinação Derrotado', desc: 'Purificou o Senhor da Procrastinação', icon: 'Sword', titleReward: 'Executor Implacável', xp: 300 },
-  { key: 'boss_02', title: 'O Rei da Preguiça Derrotado', desc: 'Purificou o Rei da Preguiça', icon: 'Flame', titleReward: 'O Incansável', xp: 350 },
-  { key: 'boss_03', title: 'A Sereia da Distração Derrotada', desc: 'Purificou a Sereia da Distração', icon: 'Brain', titleReward: 'Mestre do Foco', xp: 400 },
-  { key: 'boss_04', title: 'O Devorador do Progresso Derrotado', desc: 'Purificou o Devorador do Progresso', icon: 'Heart', titleReward: 'Mestre da Disciplina', xp: 450 },
-  { key: 'boss_05', title: 'O Mercador das Dívidas Derrotado', desc: 'Purificou o Mercador das Dívidas', icon: 'Scale', titleReward: 'Guardião da Liberdade', xp: 500 },
-  { key: 'boss_06', title: 'O Arauto do Caos Derrotado', desc: 'Purificou o Arauto do Caos', icon: 'Compass', titleReward: 'Mestre da Clareza', xp: 550 },
-  { key: 'boss_07', title: 'O Reflexo da Autossabotagem Purificado', desc: 'Superou a si mesmo e purificou o Reflexo da Autossabotagem', icon: 'Crown', titleReward: 'O Purificado', xp: 800 },
+  { key: 'boss_01', title: 'O Senhor da Procrastinação Derrotado', desc: 'Purificou o Senhor da Procrastinação', icon: 'Sword', titleReward: 'Executor Implacável', xp: 100 },
+  { key: 'boss_02', title: 'O Rei da Preguiça Derrotado', desc: 'Purificou o Rei da Preguiça', icon: 'Flame', titleReward: 'O Incansável', xp: 130 },
+  { key: 'boss_03', title: 'A Sereia da Distração Derrotada', desc: 'Purificou a Sereia da Distração', icon: 'Brain', titleReward: 'Mestre do Foco', xp: 160 },
+  { key: 'boss_04', title: 'O Devorador do Progresso Derrotado', desc: 'Purificou o Devorador do Progresso', icon: 'Heart', titleReward: 'Mestre da Disciplina', xp: 200 },
+  { key: 'boss_05', title: 'O Mercador das Dívidas Derrotado', desc: 'Purificou o Mercador das Dívidas', icon: 'Scale', titleReward: 'Guardião da Liberdade', xp: 240 },
+  { key: 'boss_06', title: 'O Arauto do Caos Derrotado', desc: 'Purificou o Arauto do Caos', icon: 'Compass', titleReward: 'Mestre da Clareza', xp: 300 },
+  { key: 'boss_07', title: 'O Reflexo da Autossabotagem Purificado', desc: 'Superou a si mesmo e purificou o Reflexo da Autossabotagem', icon: 'Crown', titleReward: 'O Purificado', xp: 400 },
 ];
 
 const getAchievementIcon = (iconName: string, size = 20, className = '') => {

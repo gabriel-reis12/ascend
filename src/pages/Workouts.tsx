@@ -435,7 +435,7 @@ export function Workouts() {
            activeRoutine.exercises?.some(ex => ex.exercise?.category?.toLowerCase() === 'cardio'))
         : false;
 
-      const xpReward = isCardio ? 40 : 50;
+      const xpReward = isCardio ? 25 : 30;
       const statTarget = isCardio ? 'endurance' : 'strength';
 
       await supabase.from('routine_completions').upsert({

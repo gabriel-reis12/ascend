@@ -16,9 +16,9 @@ interface AwardHandlers {
   attackBoss: (userId: string, amount: number, actionType: string) => Promise<void>;
 }
 
-const SUCCESS_XP = 60;
+const SUCCESS_XP = 35;
 const SUCCESS_VITALITY = 2;
-const FAILURE_XP = -20;
+const FAILURE_XP = -10;
 
 function previousLocalDate() {
   const date = new Date();

@@ -13,6 +13,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-22 — Balanceamento de Chefes e Progressão v3
+- Restaurado o ataque manual na aba de Chefes, agora limitado a uma utilização diária por batalha para complementar, sem substituir, o dano automático das atividades.
+- Chefes foram recalibrados para campanhas de aproximadamente 3 a 10 dias, com HP progressivo, dano normalizado e multiplicadores de fraqueza reduzidos.
+- Batalhas antigas ainda ativas passam a preservar o percentual de vida ao receber os novos valores de HP; chefes presos em `0 HP` são finalizados automaticamente e liberam o próximo confronto.
+- O histórico de dano agora persiste entre navegações, evita eventos duplicados e registra impactos causados fora da tela de Chefes.
+- A curva de nível, ranks, anti-farm e recompensas de treinos, nutrição, conquistas e chefes foram endurecidas sem remover conquistas existentes.
+
 ### 2026-06-22 — Finalização: Nutrição, Chefes, Preferências e Progressão
 - Nutrição passou a normalizar relacionamentos `foods` retornados como objeto ou array pelo Supabase, evitando totais zerados e detalhes quebrados.
 - Logs originados de cardápios agora preservam integridade: edição direciona ao cardápio, remoção desfaz a conclusão completa e reverte o dano nutricional.

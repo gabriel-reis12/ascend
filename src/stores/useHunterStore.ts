@@ -439,10 +439,10 @@ export const useHunterStore = create<HunterState>()(
         let changed = false;
 
         const milestones = [
-          { key: '3d', days: 3, title: 'Iniciante da Consistência', desc: 'Mantenha uma streak de 3 dias seguidos', icon: 'Flame', xp: 50 },
-          { key: '7d', days: 7, title: 'Guerreiro Diário', desc: 'Mantenha uma streak de 7 dias seguidos', icon: 'Calendar', xp: 150 },
-          { key: '15d', days: 15, title: 'Mestre da Rotina', desc: 'Mantenha uma streak de 15 dias seguidos', icon: 'Shield', xp: 300 },
-          { key: '30d', days: 30, title: 'Lenda Ativa', desc: 'Mantenha uma streak de 30 dias seguidos', icon: 'Crown', xp: 600 }
+          { key: '3d', days: 3, title: 'Iniciante da Consistência', desc: 'Mantenha uma streak de 3 dias seguidos', icon: 'Flame', xp: 30 },
+          { key: '7d', days: 7, title: 'Guerreiro Diário', desc: 'Mantenha uma streak de 7 dias seguidos', icon: 'Calendar', xp: 70 },
+          { key: '15d', days: 15, title: 'Mestre da Rotina', desc: 'Mantenha uma streak de 15 dias seguidos', icon: 'Shield', xp: 140 },
+          { key: '30d', days: 30, title: 'Lenda Ativa', desc: 'Mantenha uma streak de 30 dias seguidos', icon: 'Crown', xp: 250 }
         ];
 
         for (const m of milestones) {
@@ -487,13 +487,13 @@ export const useHunterStore = create<HunterState>()(
         const existingTitles = existingAch ? existingAch.map(a => a.title) : [];
 
         const attrMilestones = [
-          { attr: 'strength', val: state.stats.strength, title: 'Força Absoluta', desc: 'Alcance 20 pontos de Força', icon: 'Sword', xp: 100 },
-          { attr: 'intelligence', val: state.stats.intelligence, title: 'Mente Brilhante', desc: 'Alcance 20 pontos de Inteligência', icon: 'Book', xp: 100 },
-          { attr: 'endurance', val: state.stats.endurance, title: 'Inquebrável', desc: 'Alcance 20 pontos de Resistência', icon: 'Shield', xp: 100 },
-          { attr: 'vitality', val: state.stats.vitality, title: 'Vigor Eterno', desc: 'Alcance 20 pontos de Vitalidade', icon: 'Heart', xp: 100 },
-          { attr: 'discipline', val: state.stats.discipline, title: 'Mente de Ferro', desc: 'Alcance 20 pontos de Disciplina', icon: 'Brain', xp: 100 },
-          { attr: 'wisdom', val: state.stats.wisdom, title: 'Olhar Aguçado', desc: 'Alcance 20 pontos de Sabedoria', icon: 'Compass', xp: 100 },
-          { attr: 'balance', val: state.stats.balance, title: 'Zenith', desc: 'Alcance 20 pontos de Equilíbrio', icon: 'Scale', xp: 100 },
+          { attr: 'strength', val: state.stats.strength, title: 'Força Absoluta', desc: 'Alcance 20 pontos de Força', icon: 'Sword', xp: 50 },
+          { attr: 'intelligence', val: state.stats.intelligence, title: 'Mente Brilhante', desc: 'Alcance 20 pontos de Inteligência', icon: 'Book', xp: 50 },
+          { attr: 'endurance', val: state.stats.endurance, title: 'Inquebrável', desc: 'Alcance 20 pontos de Resistência', icon: 'Shield', xp: 50 },
+          { attr: 'vitality', val: state.stats.vitality, title: 'Vigor Eterno', desc: 'Alcance 20 pontos de Vitalidade', icon: 'Heart', xp: 50 },
+          { attr: 'discipline', val: state.stats.discipline, title: 'Mente de Ferro', desc: 'Alcance 20 pontos de Disciplina', icon: 'Brain', xp: 50 },
+          { attr: 'wisdom', val: state.stats.wisdom, title: 'Olhar Aguçado', desc: 'Alcance 20 pontos de Sabedoria', icon: 'Compass', xp: 50 },
+          { attr: 'balance', val: state.stats.balance, title: 'Zenith', desc: 'Alcance 20 pontos de Equilíbrio', icon: 'Scale', xp: 50 },
         ];
 
         for (const am of attrMilestones) {
@@ -527,7 +527,7 @@ export const useHunterStore = create<HunterState>()(
     }),
     {
       name: 'hunter-storage',
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const persisted = persistedState as Partial<HunterState>;
         const level = Number(persisted.level) || 1;

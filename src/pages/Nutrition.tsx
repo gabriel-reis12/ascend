@@ -724,7 +724,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
         ? 'ideal'
         : 'exceeded';
   const isInsideRecommendedRange = calorieStatus === 'ideal';
-  const projectedNutritionXp = 60;
+  const projectedNutritionXp = 35;
 
   return (
     <div className="space-y-6 pb-12">
@@ -955,7 +955,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
             </div>
             <div className="rounded-2xl border border-orange-500/15 bg-orange-500/[0.035] p-4">
               <p className="text-xs font-bold text-orange-400">Recompensa diária</p>
-              <p className="mt-2 text-sm font-bold text-white">+60 XP · +2 VIT</p>
+              <p className="mt-2 text-sm font-bold text-white">+35 XP · +2 VIT</p>
               <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Concedidos pelo Sistema no fechamento de um dia dentro da faixa recomendada.</p>
             </div>
             <div className="rounded-2xl border border-blue-500/15 bg-blue-500/[0.035] p-4">

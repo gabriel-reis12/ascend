@@ -70,7 +70,7 @@ const CODEX_CATEGORIES: Array<{ category: string; icon: LucideIcon; color: strin
     icon: Dumbbell,
     color: '#A855F7',
     entries: [
-      { activity: 'Treino de Força', icon: Dumbbell, iconColor: '#A855F7', stat: 'Força (FOR)', statColor: 'text-red-400', xp: '+50 XP', lore: 'Eleva a capacidade física e consolida progressão de cargas.', statBonus: '+2 FOR', route: '/workouts' },
+      { activity: 'Treino de Força', icon: Dumbbell, iconColor: '#A855F7', stat: 'Força (FOR)', statColor: 'text-red-400', xp: '+30 XP', lore: 'Eleva a capacidade física e consolida progressão de cargas.', statBonus: '+2 FOR', route: '/workouts' },
     ],
   },
   {
@@ -78,7 +78,7 @@ const CODEX_CATEGORIES: Array<{ category: string; icon: LucideIcon; color: strin
     icon: Heart,
     color: '#EF4444',
     entries: [
-      { activity: 'Cardio', icon: Heart, iconColor: '#EF4444', stat: 'Resistência (RES)', statColor: 'text-green-400', xp: '+40 XP', lore: 'Aprimora condicionamento e capacidade de sustentar esforço.', statBonus: '+2 RES', route: '/workouts' },
+      { activity: 'Cardio', icon: Heart, iconColor: '#EF4444', stat: 'Resistência (RES)', statColor: 'text-green-400', xp: '+25 XP', lore: 'Aprimora condicionamento e capacidade de sustentar esforço.', statBonus: '+2 RES', route: '/workouts' },
     ],
   },
   {
@@ -1528,7 +1528,7 @@ export function Quests() {
                               iconColor: '#A855F7',
                               stat: 'Força (FOR)',
                               statColor: 'text-red-400',
-                              xp: '+50 XP',
+                              xp: '+30 XP',
                               lore: 'Eleva o dano físico bruto e a densidade miofibrilar.',
                               statBonus: '+2 FOR',
                               isModule: true,
@@ -1540,7 +1540,7 @@ export function Quests() {
                               iconColor: '#EF4444',
                               stat: 'Resistência (RES)',
                               statColor: 'text-green-400',
-                              xp: '+40 XP',
+                              xp: '+25 XP',
                               lore: 'Otimiza o fluxo de oxigênio e a capacidade cardiovascular.',
                               statBonus: '+2 RES',
                               isModule: true,
@@ -1764,7 +1764,7 @@ export function Quests() {
                           iconColor: '#A855F7',
                           stat: 'Força (FOR)',
                           statColor: 'text-red-400',
-                          xp: '+50 XP',
+                          xp: '+30 XP',
                           lore: 'Eleva o dano físico bruto e a densidade miofibrilar.',
                           statBonus: '+2 FOR',
                           isModule: true,
@@ -1776,7 +1776,7 @@ export function Quests() {
                           iconColor: '#EF4444',
                           stat: 'Resistência (RES)',
                           statColor: 'text-green-400',
-                          xp: '+40 XP',
+                          xp: '+25 XP',
                           lore: 'Otimiza o fluxo de oxigênio e a capacidade cardiovascular.',
                           statBonus: '+2 RES',
                           isModule: true,

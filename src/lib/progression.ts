@@ -1,4 +1,4 @@
-export const INITIAL_XP_REQUIREMENT = 250;
+export const INITIAL_XP_REQUIREMENT = 300;
 export type ProgressionRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'National' | 'Monarch';
 
 export function getRankForLevel(level: number): ProgressionRank {
@@ -17,7 +17,7 @@ export function getXpRequiredForLevel(level: number) {
   const levelOffset = normalizedLevel - 1;
   return Math.round(
     INITIAL_XP_REQUIREMENT
-    + levelOffset * 35
-    + Math.pow(levelOffset, 1.35) * 5
+    + levelOffset * 45
+    + Math.pow(levelOffset, 1.38) * 7
   );
 }

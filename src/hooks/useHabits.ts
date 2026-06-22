@@ -287,7 +287,7 @@ export function useHabits() {
           isCompleted: completedRoutineIds.has(r.id),
           scheduled_time: r.scheduled_time ? r.scheduled_time.slice(0, 5) : null,
           scheduled_end_time: r.scheduled_end_time ? r.scheduled_end_time.slice(0, 5) : null,
-          xp_reward: isCardio ? 40 : 50,
+          xp_reward: isCardio ? 25 : 30,
           stat_target: isCardio ? 'endurance' as const : 'strength' as const,
           stat_reward: 2,
         };

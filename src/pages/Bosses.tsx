@@ -43,7 +43,10 @@ export function Bosses() {
   const resetBattle = useBossStore((state) => state.resetBattle);
   const { language, t } = usePreferences();
   const reduceMotion = useReducedMotion();
-  const canUseTestAttack = import.meta.env.DEV;
+  const manualAttackKey = user?.id && activeBattle
+    ? `ascend_manual_boss_attack_${user.id}_${activeBattle.id}`
+    : null;
+  const [manualAttackUsedToday, setManualAttackUsedToday] = useState(false);
   const [purifying, setPurifying] = useState(false);
   const [showAttackFeed, setShowAttackFeed] = useState(false);
   const [feedDamage, setFeedDamage] = useState(0);
@@ -68,6 +71,35 @@ export function Bosses() {
     }
   }, [user?.id, loadActiveBattle]);
 
+  useEffect(() => {
+    if (!manualAttackKey) {
+      setManualAttackUsedToday(false);
+      return;
+    }
+    setManualAttackUsedToday(localStorage.getItem(manualAttackKey) === new Date().toLocaleDateString('en-CA'));
+  }, [manualAttackKey]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const key = `ascend_boss_combat_events_${user.id}`;
+    try {
+      const persisted = JSON.parse(localStorage.getItem(key) || '[]') as Array<{
+        id: string;
+        damage: number;
+        critical: boolean;
+        occurredAt: string;
+      }>;
+      setCombatEvents(persisted.slice(0, 5).map(event => ({
+        id: event.id,
+        damage: event.damage,
+        critical: event.critical,
+        time: new Date(event.occurredAt).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' }),
+      })));
+    } catch {
+      setCombatEvents([]);
+    }
+  }, [language, user?.id]);
+
   // Monitora alterações de dano recente para exibir animação de floating numbers
   useEffect(() => {
     if (!recentDamage) return;
@@ -84,7 +116,7 @@ export function Bosses() {
           critical: recentDamage.isCritical,
           time: new Date().toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' }),
         },
-        ...current,
+        ...current.filter(event => event.id !== recentDamage.id),
       ].slice(0, 5));
       timer = setTimeout(() => setShowAttackFeed(false), 2000);
     });
@@ -107,7 +139,7 @@ export function Bosses() {
   const hpPercent = activeBattle ? (activeBattle.current_hp / activeBattle.max_hp) * 100 : 0;
   const damageDealt = activeBattle ? activeBattle.max_hp - activeBattle.current_hp : 0;
   const raidDeadline = activeBattle
-    ? new Date(new Date(activeBattle.started_at).getTime() + 7 * 24 * 60 * 60 * 1000)
+    ? new Date(new Date(activeBattle.started_at).getTime() + (bossDef?.targetDays ?? 7) * 24 * 60 * 60 * 1000)
     : null;
   const remainingMs = raidDeadline ? Math.max(0, raidDeadline.getTime() - raidReferenceTime) : 0;
   const remainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
@@ -116,9 +148,12 @@ export function Bosses() {
 
   // Handler para simular um ataque leve (para testes do usuário)
   const handleTestAttack = async () => {
-    if (!user.id || !activeBattle || activeBattle.current_hp <= 0) return;
-    // Simula um ataque de treino de 15 de dano
+    if (!user.id || !activeBattle || activeBattle.current_hp <= 0 || manualAttackUsedToday) return;
     await attackActiveBoss(user.id, 15, 'workout');
+    if (manualAttackKey) {
+      localStorage.setItem(manualAttackKey, new Date().toLocaleDateString('en-CA'));
+      setManualAttackUsedToday(true);
+    }
   };
 
   // Handler para purificar o boss derrotado
@@ -458,7 +493,7 @@ export function Bosses() {
                           {getBossIcon(bossDef.weaknessCategory)}
                         </div>
                         <span className="text-xs font-bold text-yellow-400">
-                          Multiplicador 2.0x para ações do tipo {bossDef.weaknessCategory}
+                          Multiplicador 1.75x para ações do tipo {bossDef.weaknessCategory}
                         </span>
                       </div>
                     </div>
@@ -472,12 +507,12 @@ export function Bosses() {
                       <div className="rounded-xl border border-red-500/10 bg-red-500/5 p-3">
                         <TrendingUp className="size-4 text-red-400" />
                         <p className="mt-2 text-xs font-bold text-white">Regeneração</p>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-500">Tarefas ignoradas ou streaks quebradas podem restaurar 15 HP.</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">Desfazer atividades restaura o mesmo dano aplicado, impedindo farm de golpes.</p>
                       </div>
                       <div className="rounded-xl border border-purple-500/10 bg-purple-500/5 p-3">
                         <Activity className="size-4 text-purple-400" />
                         <p className="mt-2 text-xs font-bold text-white">Multiplicador ativo</p>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-500">2.0x em {bossDef.weaknessCategory}; sinergias especiais podem aplicar 1.5x.</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">1.75x em {bossDef.weaknessCategory}; sinergias especiais aplicam 1.35x.</p>
                       </div>
                       <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-3">
                         <ShieldAlert className="size-4 text-amber-400" />
@@ -489,24 +524,21 @@ export function Bosses() {
 
                   {/* Painel de Interação de Ataque / Teste */}
                   <div className="space-y-3 pt-6 border-t border-[#1e1e26] border-dashed">
-                    {canUseTestAttack && (
-                      <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-                        <span>Preview de ataque</span>
-                        <span>Treino base: 15 · crítico: 30</span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+                      <span>Ataque manual diário</span>
+                      <span>{manualAttackUsedToday ? 'Disponível amanhã' : '1 uso disponível'}</span>
+                    </div>
                     
-                    {canUseTestAttack && (
-                      <div className="grid grid-cols-1 gap-2">
-                        <button
-                          onClick={handleTestAttack}
-                          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/10 text-sm font-black text-purple-200 transition hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(168,85,247,0.18)] active:scale-[0.98]"
-                        >
-                          <Swords size={16} className="text-yellow-400" />
-                          Executar ataque de treino (DEV)
-                        </button>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-1 gap-2">
+                      <button
+                        onClick={handleTestAttack}
+                        disabled={manualAttackUsedToday}
+                        className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/10 text-sm font-black text-purple-200 transition hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(168,85,247,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Swords size={16} className="text-yellow-400" />
+                        {manualAttackUsedToday ? 'Ataque diário utilizado' : 'Executar ataque de treino'}
+                      </button>
+                    </div>
                     
                     <p className="text-xs text-center leading-relaxed text-gray-600">
                       O dano principal é aplicado automaticamente ao concluir atividades nos módulos do Ascend.
@@ -537,7 +569,7 @@ export function Bosses() {
               {combatEvents.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-purple-500/20 bg-purple-500/[0.025] p-5 text-center">
                   <p className="text-sm font-semibold text-gray-400">Nenhum impacto registrado nesta sessão.</p>
-                  <p className="mt-1 text-xs text-gray-600">Conclua atividades ou execute o preview de ataque para gerar o primeiro evento.</p>
+                  <p className="mt-1 text-xs text-gray-600">Conclua atividades ou use o ataque manual diário para gerar o primeiro evento.</p>
                 </div>
               ) : (
                 combatEvents.map(event => (

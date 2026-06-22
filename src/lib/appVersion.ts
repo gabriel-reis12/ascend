@@ -1,6 +1,6 @@
 const VERSION_KEY = 'ascend_app_version';
 const PROFILE_SCHEMA_KEY = 'ascend_profile_schema_version';
-const PROFILE_SCHEMA_VERSION = '2026-06-16-nutrition-goal-v2';
+const PROFILE_SCHEMA_VERSION = '2026-06-22-progression-v3';
 
 const LOCAL_CACHE_PREFIXES = [
   'ascend_tasks_',
