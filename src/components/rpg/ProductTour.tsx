@@ -12,63 +12,54 @@ interface TourStep {
 
 const getTourSteps = (l: (pt: string, en: string) => string): TourStep[] => [
   {
-    title: l('SISTEMA DESPERTO', 'SYSTEM AWAKENED'),
+    title: l('PORTAL DE COMANDO', 'COMMAND PORTAL'),
     lore: l(
-      'O Sistema de Caçador foi recalibrado e integrado com sucesso. A partir de agora, suas ações no plano real moldarão sua força RPG. Vamos calibrar seus módulos vitais para iniciar a subida de Rank.',
-      'The Hunter System has been successfully recalibrated and integrated. From now on, your real-life actions will shape your RPG strength. Let us calibrate your vital modules to begin the Rank climb.'
+      'Bem-vindo ao Portal de Comando. A partir daqui, suas ações diárias no mundo real moldarão sua força RPG. Vamos calibrar seus módulos de evolução.',
+      'Welcome to the Command Portal. From here on, your daily real-world actions will shape your RPG strength. Let us calibrate your evolution modules.'
     ),
     position: 'center',
   },
   {
-    title: l('HUD DE RESTRUTURAÇÃO VITAL', 'VITAL RESTRUCTURING HUD'),
+    title: l('FICHA DE INTEGRAÇÃO', 'NEURAL INTEGRATION'),
     lore: l(
-      'Aqui são exibidos sua classe de caçador, sua sequência de consistência (Streak) e seu Rank atual. Purifique quests e acumule pontos de experiência para preencher a barra de XP e subir de nível!',
-      'Here your hunter class, consistency streak, and current Rank are displayed. Purify quests and accumulate experience points to fill the XP bar and level up!'
+      'Aqui são exibidos seu Rank ativo, seu nome de caçador, sua classe despertada, nível e o progresso reativo de XP. Acumule XP para subir de nível e aumentar sua força!',
+      'Here your active Rank, hunter name, awakened class, level, and reactive XP progress are displayed. Accumulate XP to level up and increase your strength!'
     ),
-    target: 'tour-hud',
+    target: 'tour-portal-header',
     position: 'bottom',
   },
   {
-    title: l('DOMÍNIOS DE EVOLUÇÃO', 'EVOLUTION DOMAINS'),
+    title: l('MISSÕES RECOMENDADAS', 'RECOMMENDED MISSIONS'),
     lore: l(
-      'Corpo, Mente, Fortuna, Carreira e Equilíbrio revelam onde sua progressão está forte e quais áreas precisam de novas ações.',
-      'Body, Mind, Fortune, Career, and Balance reveal where your progression is strong and which areas need new actions.'
+      'Esta seção destaca a próxima missão prioritária recomendada pelo Sistema para que você mantenha sua consistência e ganhe recompensas imediatas.',
+      'This section highlights the next priority mission recommended by the System to keep your consistency and earn immediate rewards.'
     ),
-    target: 'tour-domains',
+    target: 'tour-portal-recommended',
     position: 'bottom',
   },
   {
-    title: l('HISTÓRICO DE EVOLUÇÃO', 'EVOLUTION HISTORY'),
+    title: l('PORTAIS PRINCIPAIS', 'PRIMARY PORTALS'),
     lore: l(
-      'Cada missão, treino, atualização financeira e streak deixa um registro visível. Esta linha do tempo mostra como suas ações alteraram a ficha.',
-      'Each mission, training, financial update, and streak leaves a visible record. This timeline shows how your actions altered your profile.'
+      'Estes portais dão acesso à sua Ficha de Status detalhada, Quadro de Missões e ao seu Centro de Treinamento físico. São as ferramentas centrais da sua evolução.',
+      'These portals grant access to your detailed Status Sheet, Quest Board, and Physical Training Center. They are the core tools for your evolution.'
     ),
-    target: 'tour-history',
+    target: 'tour-portal-primary',
     position: 'top',
   },
   {
-    title: l('JANELA DE STATUS HOLOGRÁFICA', 'HOLOGRAPHIC STATUS WINDOW'),
+    title: l('MÓDULOS EXPANDIDOS', 'COMPLEMENTARY MODULES'),
     lore: l(
-      'A representação visual da sua assinatura atual. Compare os sete atributos, identifique seu perfil dominante e veja o foco recomendado pelo Sistema.',
-      'The visual representation of your current signature. Compare the seven attributes, identify your dominant profile, and see the focus recommended by the System.'
+      'Eixos de suporte como Recuperação & Nutrição, Módulo Fortuna (Financeiro), Portal dos Chefes e Santuário do Descanso. Evolua essas áreas para equilibrar seus atributos.',
+      'Support axes like Recovery & Nutrition, Fortune (Finance) Module, Boss Portal, and Sanctuary of Rest. Evolve these areas to balance your attributes.'
     ),
-    target: 'tour-status',
+    target: 'tour-portal-secondary',
     position: 'top',
   },
   {
-    title: l('RECURSOS DO DIA', 'RESOURCES OF THE DAY'),
+    title: l('ASCENSÃO DO CAÇADOR', 'HUNTER ASCENSION'),
     lore: l(
-      'Uma leitura compacta da Mana consumida, volume de treino, ritmo diário e streak atual. Os detalhes completos continuam em seus módulos especializados.',
-      'A compact readout of Mana consumed, training volume, daily pace, and current streak. The full details continue in their specialized modules.'
-    ),
-    target: 'tour-biometrics',
-    position: 'top',
-  },
-  {
-    title: l('EVOLUÇÃO LIBERADA', 'EVOLUTION UNLEASHED'),
-    lore: l(
-      'A calibração do sistema está completa. O portal do Rank E ao Rank S está livre de barreiras. Mostre sua determinação, enfrente seus deveres diários e alcance o ápice do seu poder. Ascenda!',
-      'System calibration is complete. The rift gate from Rank E to Rank S is free of barriers. Show your determination, face your daily duties, and reach the pinnacle of your power. Ascend!'
+      'A calibração do portal está concluída. Purifique suas fendas, complete seus objetivos e conquiste a subida do Rank E ao Rank S. Ascenda!',
+      'Portal calibration is complete. Purify your rifts, complete your goals, and conquer the climb from Rank E to Rank S. Ascend!'
     ),
     position: 'center',
   },

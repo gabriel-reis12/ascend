@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { useHunterStore, type HunterStats } from '@/stores/useHunterStore';
 import { RadarChart } from '@/components/ui/RadarChart';
-import { ProductTour } from '@/components/rpg/ProductTour';
 import { useHabits } from '@/hooks/useHabits';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -863,8 +862,6 @@ export function Dashboard() {
           </div>
         )}
       </AnimatePresence>
-
-      <ProductTour />
     </div>
   );
 }

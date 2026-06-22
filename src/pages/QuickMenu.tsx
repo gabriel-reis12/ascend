@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useHunterStore } from '../stores/useHunterStore';
 import { usePreferences } from '@/contexts/preferences';
+import { ProductTour } from '@/components/rpg/ProductTour';
 
 type PortalBadge =
   | 'SISTEMA ATIVO'
@@ -236,7 +237,7 @@ export function QuickMenu() {
 
   return (
     <div className="space-y-8 pb-16 text-silver">
-      <section className="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-[#0F0F13] p-5 shadow-[0_0_25px_rgba(59,130,246,0.05)] sm:p-6">
+      <section id="tour-portal-header" className="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-[#0F0F13] p-5 shadow-[0_0_25px_rgba(59,130,246,0.05)] sm:p-6">
         <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-500/5 blur-3xl" />
 
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -287,7 +288,7 @@ export function QuickMenu() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-[#0F0F13] px-5 py-4 shadow-[0_0_24px_rgba(124,58,237,0.06)]">
+      <section id="tour-portal-recommended" className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-[#0F0F13] px-5 py-4 shadow-[0_0_24px_rgba(124,58,237,0.06)]">
         <div className="absolute right-0 top-0 h-full w-40 bg-gradient-to-l from-purple-500/8 to-transparent" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
@@ -320,7 +321,7 @@ export function QuickMenu() {
           </div>
           <span className="hidden text-[9px] font-bold uppercase tracking-widest text-gray-600 sm:block">3 módulos prioritários</span>
         </div>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div id="tour-portal-primary" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {cards.filter(card => card.priority === 'primary').map(card => (
             <PortalCard key={card.title} card={card} onOpen={() => navigate(card.path)} />
           ))}
@@ -334,12 +335,13 @@ export function QuickMenu() {
             Módulos complementares
           </h2>
         </div>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div id="tour-portal-secondary" className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           {cards.filter(card => card.priority === 'secondary').map(card => (
             <PortalCard key={card.title} card={card} onOpen={() => navigate(card.path)} />
           ))}
         </div>
       </section>
+      <ProductTour />
     </div>
   );
 }

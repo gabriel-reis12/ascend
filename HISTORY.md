@@ -13,10 +13,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
-### 2026-06-22 — Correção e Internacionalização do Tutorial Interativo (Product Tour)
-- Ajustado o posicionamento do highlighter de foco e do card explicativo para `fixed` (viewport-relative), eliminando deslocamento visual durante a rolagem de página no Dashboard.
-- Adicionada a animação `@keyframes pulse-purple` e a classe `.animate-pulse-purple` no `index.css` para a iluminação neon do highlighter.
-- Integrado o suporte completo de tradução (Português/Inglês) para todas as etapas e controles do tutorial, consumindo dinamicamente o contexto de preferências da aplicação.
+### 2026-06-22 — Refatoração e Correção do Tutorial Interativo (Product Tour) no Quick Menu
+- Transferida a execução do Product Tour da tela de Dashboard (/status) para a nova tela inicial do Portal de Comando (/ - Quick Menu), onde os caçadores pousam após o onboarding ou ao solicitar o tour.
+- Redefinidas as etapas e âncoras do tutorial no [QuickMenu.tsx](file:///d:/Área de Trabalho/App/src/pages/QuickMenu.tsx) para focar na apresentação do cabeçalho de status, missão recomendada, portais principais e módulos de expansão.
+- Removidas as referências de importação e montagem do tutorial do [Dashboard.tsx](file:///d:/Área de Trabalho/App/src/pages/Dashboard.tsx) para evitar duplicidades.
+- Corrigido o posicionamento do highlighter e do card explicativo no [ProductTour.tsx](file:///d:/Área de Trabalho/App/src/components/rpg/ProductTour.tsx) para `fixed` (viewport-relative), corrigindo o bug de desalinhamento sob rolagem de tela.
+- Implementado suporte dinâmico a multi-idiomas (Português/Inglês) em todos os textos do tutorial utilizando `usePreferences`.
+- Adicionada a animação `@keyframes pulse-purple` no [index.css](file:///d:/Área de Trabalho/App/src/index.css) para iluminação neon do highlighter.
 
 ### 2026-06-22 — Balanceamento de Chefes e Progressão v3
 - Restaurado o ataque manual na aba de Chefes, agora limitado a uma utilização diária por batalha para complementar, sem substituir, o dano automático das atividades.
