@@ -13,6 +13,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-21 - Refinamento de Descanso & Lazer
+- Navegacao convertida em pills premium com icones, subtitulos, glow contextual e transicao entre abas.
+- Header ampliado com sono atual, meditacao acumulada, lazer offline e estado de equilibrio calculado.
+- Cards de recuperacao receberam metas diarias, progresso animado, status e microcopy mais clara.
+- Formularios de sono e lazer foram refinados com orientacao, labels maiores e CTAs mais fortes.
+- Historico ganhou empty state premium e o Templo da Mente recebeu melhorias de timer, duracao e legibilidade.
+
 ### 2026-06-19 — Premiumização do Módulo Fortuna
 - O header financeiro passou a exibir saldo líquido, status do fluxo, meta principal e streak real de meses com aporte.
 - Cards de ganhos, gastos, aportes e proteção de renda ganharam comparativos reais com o mês anterior e microcopy contextual.
