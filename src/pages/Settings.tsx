@@ -28,11 +28,16 @@ import {
   Crown,
   Heart,
   Compass,
-  Scale
+  Scale,
+  Languages,
+  MoonStar,
+  Sun
 } from 'lucide-react';
 import { useHunterStore, type HunterClass, type HunterGender } from '../stores/useHunterStore';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { INITIAL_XP_REQUIREMENT } from '../lib/progression';
+import { usePreferences } from '../contexts/preferences';
 
 const ALL_POSSIBLE_ACHIEVEMENTS = [
   // Streak
@@ -78,6 +83,7 @@ export function Settings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const hunterStore = useHunterStore();
+  const { theme, language, setTheme, setLanguage, t } = usePreferences();
   
   // Estado local dos formulários
   const [fullName, setFullName] = useState(hunterStore.fullName || '');
@@ -499,7 +505,7 @@ export function Settings() {
         .update({
           level: 1,
           xp: 0,
-          xp_to_next_level: 100,
+          xp_to_next_level: INITIAL_XP_REQUIREMENT,
           rank: 'E',
           strength: 10,
           intelligence: 10,
@@ -573,7 +579,7 @@ export function Settings() {
           class: null,
           level: 1,
           xp: 0,
-          xp_to_next_level: 100,
+          xp_to_next_level: INITIAL_XP_REQUIREMENT,
           rank: 'E',
           strength: 10,
           intelligence: 10,
@@ -617,10 +623,10 @@ export function Settings() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-l-2 border-blue-500 pl-4 py-1">
         <div className="space-y-1.5">
           <h1 className="text-2xl sm:text-3xl font-black uppercase italic tracking-wider text-white font-orbitron text-glow-blue">
-            Ajustes de <span className="text-blue-500">Sistema</span>
+            {t('settings.title')}
           </h1>
           <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            Modificação e Controle Central da Fenda do Caçador
+            {t('settings.subtitle')}
           </p>
         </div>
 
@@ -640,6 +646,82 @@ export function Settings() {
           <span>Ver Tutorial</span>
         </motion.button>
       </div>
+
+      <section className="rounded-3xl border border-blue-500/20 bg-[#0F0F13] p-5 shadow-xl sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-blue-400">
+              <Languages className="size-4" />
+              <h2 className="text-sm font-black uppercase tracking-wider font-orbitron">
+                {t('settings.preferences')}
+              </h2>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">{t('settings.preferencesHint')}</p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[520px]">
+            <div className="rounded-2xl border border-white/5 bg-black/25 p-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                {t('settings.theme')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={`flex min-h-10 items-center justify-center gap-2 rounded-xl border text-xs font-bold transition ${
+                    theme === 'dark'
+                      ? 'border-purple-500/40 bg-purple-500/15 text-purple-300'
+                      : 'border-white/5 bg-white/5 text-gray-500 hover:text-white'
+                  }`}
+                >
+                  <MoonStar className="size-4" /> {t('settings.dark')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  className={`flex min-h-10 items-center justify-center gap-2 rounded-xl border text-xs font-bold transition ${
+                    theme === 'light'
+                      ? 'border-amber-500/40 bg-amber-500/15 text-amber-500'
+                      : 'border-white/5 bg-white/5 text-gray-500 hover:text-white'
+                  }`}
+                >
+                  <Sun className="size-4" /> {t('settings.light')}
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/5 bg-black/25 p-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                {t('settings.language')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLanguage('pt-BR')}
+                  className={`min-h-10 rounded-xl border text-xs font-bold transition ${
+                    language === 'pt-BR'
+                      ? 'border-blue-500/40 bg-blue-500/15 text-blue-400'
+                      : 'border-white/5 bg-white/5 text-gray-500 hover:text-white'
+                  }`}
+                >
+                  {t('settings.portuguese')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en-US')}
+                  className={`min-h-10 rounded-xl border text-xs font-bold transition ${
+                    language === 'en-US'
+                      ? 'border-blue-500/40 bg-blue-500/15 text-blue-400'
+                      : 'border-white/5 bg-white/5 text-gray-500 hover:text-white'
+                  }`}
+                >
+                  {t('settings.english')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         

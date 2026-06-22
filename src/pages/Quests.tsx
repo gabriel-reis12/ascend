@@ -24,7 +24,8 @@ import {
   ChevronDown,
   Play,
   Edit3,
-  CalendarDays
+  CalendarDays,
+  AlertTriangle
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +41,7 @@ import { useHunterStore } from '@/stores/useHunterStore';
 import { useNavigate } from 'react-router-dom';
 import type { Habit, CreateHabitInput, WorkoutMission, MealMission } from '@/hooks/useHabits';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
+import { usePreferences } from '@/contexts/preferences';
 
 type CodexEntry = {
   activity: string;
@@ -479,6 +481,7 @@ function ManageQuestRow({
 }
 
 export function Quests() {
+  const { t } = usePreferences();
   const { 
     activeHabits, 
     habits, 
@@ -590,6 +593,12 @@ export function Quests() {
     const countsTowardDailyTotal = meal.source === 'food_log' || meal.isCompleted;
     return countsTowardDailyTotal ? sum + (meal.totalKcal || 0) : sum;
   }, 0);
+  const caloriesExceeded = nutritionTargets.maxCalories
+    ? caloriesLoggedToday > nutritionTargets.maxCalories
+    : false;
+  const calorieExcess = nutritionTargets.maxCalories
+    ? Math.max(0, caloriesLoggedToday - nutritionTargets.maxCalories)
+    : 0;
   // Busca se já gerou a quest extra diária da IA hoje
   const bonusQuestToday = tasks.find(t => t.title.startsWith('[BÔNUS IA] ') && isToday(t.created_at));
 
@@ -780,7 +789,7 @@ export function Quests() {
               className="text-4xl font-black italic uppercase tracking-tighter text-white"
               style={{ fontFamily: 'Orbitron, sans-serif' }}
             >
-              Quadro de <span className="text-blue-500">Missões</span>
+              {t('pages.quests')}
             </h1>
           </div>
           
@@ -933,19 +942,25 @@ export function Quests() {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_0_20px_rgba(249,115,22,0.08)]"
+                      className={`relative overflow-hidden rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${
+                        caloriesExceeded
+                          ? 'border-2 border-red-500 bg-red-500/15 shadow-[0_0_24px_rgba(239,68,68,0.2)]'
+                          : 'border-orange-500/30 bg-orange-500/5 shadow-[0_0_20px_rgba(249,115,22,0.08)]'
+                      }`}
                     >
                       <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-2xl" />
                       <div className="relative flex items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
-                          <UtensilsCrossed size={20} className="animate-pulse" />
+                          {caloriesExceeded ? <AlertTriangle size={20} className="text-red-400" /> : <UtensilsCrossed size={20} className="animate-pulse" />}
                         </div>
                         <div>
                           <h4 className="text-xs font-black uppercase text-white tracking-[0.15em] font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                             Meta Calorica do Dia
                           </h4>
                           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                            {nutritionTargets.targetCalories
+                            {caloriesExceeded
+                              ? `ATENÇÃO: limite excedido em ${Math.round(calorieExcess)} kcal. Consumido: ${Math.round(caloriesLoggedToday)} kcal.`
+                              : nutritionTargets.targetCalories
                               ? `Objetivo: ${nutritionTargets.goalLabel}. Alvo de ${nutritionTargets.targetCalories} kcal com tolerancia diaria.`
                               : `Faltam no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados fisicos'}.`}
                           </p>
@@ -958,7 +973,11 @@ export function Quests() {
                             ? `${Math.round(caloriesLoggedToday)} / ${nutritionTargets.targetCalories}`
                             : `${Math.round(caloriesLoggedToday)} / --`}
                         </span>
-                        {nutritionTargets.targetCalories && Math.abs(caloriesLoggedToday - nutritionTargets.targetCalories) <= (nutritionTargets.toleranceCalories ?? 0) ? (
+                        {caloriesExceeded ? (
+                          <span className="rounded-lg border border-red-500/50 bg-red-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-red-300">
+                            EXCEDIDO
+                          </span>
+                        ) : nutritionTargets.targetCalories && Math.abs(caloriesLoggedToday - nutritionTargets.targetCalories) <= (nutritionTargets.toleranceCalories ?? 0) ? (
                           <span className="text-[9px] font-black uppercase tracking-widest text-green-400 border border-green-500/30 bg-green-500/10 px-2 py-0.5 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.15)]">NO ALVO</span>
                         ) : (
                           <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 bg-white/5 px-2 py-0.5 rounded-lg">PENDENTE</span>

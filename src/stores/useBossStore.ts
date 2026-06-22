@@ -161,7 +161,7 @@ interface BossStoreState {
   defeatedBossIds: string[];
   loading: boolean;
   error: string | null;
-  recentDamage: { damage: number; isCritical: boolean } | null;
+  recentDamage: { id: string; damage: number; isCritical: boolean } | null;
 
   loadActiveBattle: (userId: string) => Promise<void>;
   attackActiveBoss: (userId: string, baseDamage: number, actionType: string) => Promise<void>;
@@ -348,31 +348,37 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
     const actualDamage = activeBattle.current_hp - newHp;
 
     // Atualiza estado local de forma otimista
+    const damageEventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     set({
       activeBattle: {
         ...activeBattle,
         current_hp: newHp,
         last_attack_at: new Date().toISOString()
       },
-      recentDamage: { damage: actualDamage, isCritical }
+      recentDamage: { id: damageEventId, damage: actualDamage, isCritical }
     });
 
     // Limpa o indicador de dano recente após 2 segundos
     setTimeout(() => {
-      set({ recentDamage: null });
+      if (get().recentDamage?.id === damageEventId) {
+        set({ recentDamage: null });
+      }
     }, 2500);
 
     try {
       // Atualiza o banco de dados de forma silenciosa em background
-      await supabase
+      const { error: updateError } = await supabase
         .from('boss_battles')
         .update({
           current_hp: newHp,
           last_attack_at: new Date().toISOString()
         })
         .eq('id', activeBattle.id);
+      if (updateError) throw updateError;
     } catch (err) {
       console.error('[useBossStore] Erro ao persistir ataque ao boss:', err);
+      set({ error: 'O ataque não pôde ser persistido. Sincronizando novamente...' });
+      await get().loadActiveBattle(userId);
     }
   },
 

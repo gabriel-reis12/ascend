@@ -21,7 +21,8 @@ import {
   Clock,
   CheckCircle2,
   Target,
-  Gauge
+  Gauge,
+  AlertTriangle
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -34,6 +35,7 @@ import { useBossStore } from '@/stores/useBossStore';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 import type { MealPlan } from '@/hooks/useMealPlans';
 import { calculateMealFromTaco } from '@/lib/taco';
+import { usePreferences } from '@/contexts/preferences';
 
 interface FoodLog {
   id: string;
@@ -41,7 +43,23 @@ interface FoodLog {
   quantity_grams: number;
   meal_type: string;
   logged_at: string;
-  food?: Food;
+  food?: Food | Food[];
+  source?: string;
+  meal_plan_id?: string | null;
+  meal_completion_id?: string | null;
+}
+
+function normalizeFoodLog(log: FoodLog): FoodLog {
+  const food = Array.isArray(log.food) ? log.food[0] : log.food;
+  return {
+    ...log,
+    quantity_grams: Number(log.quantity_grams) || 0,
+    food,
+  };
+}
+
+function foodFromLog(log: FoodLog) {
+  return Array.isArray(log.food) ? log.food[0] : log.food;
 }
 
 interface NutritionScore {
@@ -143,6 +161,7 @@ function NutritionMetricCard({
 export function Nutrition() {
   const { user } = useAuth();
   const hunterProfile = useHunterStore();
+  const { language, t } = usePreferences();
 
   const [activeTab, setActiveTab] = useState<'diario' | 'cardapios'>('diario');
   const [subTab, setSubTab] = useState<'codex' | 'library'>('codex');
@@ -248,7 +267,7 @@ export function Nutrition() {
       setFoods(foodData || []);
  
       if (logError) throw logError;
-      setLogs(logData || []);
+      setLogs(((logData || []) as FoodLog[]).map(normalizeFoodLog));
       if (scoreError) throw scoreError;
 
       const scoresByDate = new Map((scoreData as NutritionScore[] || []).map(score => [score.date, score.success]));
@@ -298,10 +317,16 @@ export function Nutrition() {
   }
 
   function handleEditLog(log: FoodLog) {
-    if (!log.food) return;
-    const displayQuantity = gramsToQuantity(log.food, log.quantity_grams);
+    if (log.source === 'meal_plan') {
+      setDataError('Refeições do Cardápio do Caçador devem ser ajustadas no próprio cardápio. Desmarque a missão antes de alterar os itens.');
+      return;
+    }
 
-    setSelectedFood(log.food);
+    const food = foodFromLog(log);
+    if (!food) return;
+    const displayQuantity = gramsToQuantity(food, log.quantity_grams);
+
+    setSelectedFood(food);
     setQuantity(Number(displayQuantity.toFixed(2)));
     setMealType(log.meal_type);
     setEditingLogId(log.id);
@@ -310,12 +335,49 @@ export function Nutrition() {
 
   async function handleDeleteLog(logId: string) {
     if (!user) return;
+    const targetLog = logs.find(log => log.id === logId);
+    if (targetLog?.source === 'meal_plan' && targetLog.meal_completion_id) {
+      const { data: deleted, error: completionError } = await supabase
+        .from('meal_completions')
+        .delete()
+        .eq('id', targetLog.meal_completion_id)
+        .eq('user_id', user.id)
+        .select('id');
+
+      if (completionError) {
+        setDataError(completionError.message);
+        return;
+      }
+
+      setLogs(current => current.filter(log => log.meal_completion_id !== targetLog.meal_completion_id));
+      if ((deleted ?? []).length > 0) {
+        await useBossStore.getState().attackActiveBoss(user.id, -15, 'nutrition');
+      }
+      return;
+    }
+
     const { error } = await supabase.from('food_logs').delete().eq('id', logId).eq('user_id', user.id);
     if (error) {
       setDataError(error.message);
       return;
     }
     setLogs(current => current.filter(log => log.id !== logId));
+
+    if (targetLog?.source === 'ai' && targetLog.food_id) {
+      const { count } = await supabase
+        .from('food_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('food_id', targetLog.food_id);
+
+      if ((count ?? 0) === 0) {
+        await supabase
+          .from('foods')
+          .delete()
+          .eq('id', targetLog.food_id)
+          .eq('created_by', user.id);
+      }
+    }
   }
 
   async function handleUseMealPlan(plan: MealPlan) {
@@ -616,13 +678,14 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
   );
 
   const dailyMacros = logs.reduce((acc, log) => {
-    if (!log.food) return acc;
+    const food = foodFromLog(log);
+    if (!food) return acc;
     const ratio = log.quantity_grams / 100;
     return {
-      kcal: acc.kcal + (log.food.calories_per_100g || 0) * ratio,
-      protein: acc.protein + (log.food.protein_per_100g || 0) * ratio,
-      carbs: acc.carbs + (log.food.carbs_per_100g || 0) * ratio,
-      fat: acc.fat + (log.food.fat_per_100g || 0) * ratio,
+      kcal: acc.kcal + (Number(food.calories_per_100g) || 0) * ratio,
+      protein: acc.protein + (Number(food.protein_per_100g) || 0) * ratio,
+      carbs: acc.carbs + (Number(food.carbs_per_100g) || 0) * ratio,
+      fat: acc.fat + (Number(food.fat_per_100g) || 0) * ratio,
     };
   }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
 
@@ -670,10 +733,10 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <div className="h-1 w-4 bg-purple-500" />
-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-500">Resource Recovery</span>
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-500">{t('nutrition.eyebrow')}</span>
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tight text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            Recuperação de <span className="text-purple-500">Mana</span>
+            {t('nutrition.title')}
           </h1>
         </div>
         
@@ -691,8 +754,8 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
       {/* Tab Navigation */}
       <div className="flex gap-1 border-b border-[#1E1E26] pb-px">
         {[
-          { id: 'diario', label: 'Diário e Códex', icon: BookOpen },
-          { id: 'cardapios', label: 'Cardápios do Caçador', icon: UtensilsCrossed },
+          { id: 'diario', label: t('nutrition.diary'), icon: BookOpen },
+          { id: 'cardapios', label: t('nutrition.mealPlans'), icon: UtensilsCrossed },
         ].map(tab => (
           <button
             key={tab.id}
@@ -730,6 +793,42 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
               <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
               {dataError}
             </div>
+          )}
+          {calorieStatus === 'exceeded' && nutritionTargets.maxCalories && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              role="alert"
+              aria-live="assertive"
+              className="relative overflow-hidden rounded-2xl border-2 border-red-500 bg-red-500/15 p-5 shadow-[0_0_28px_rgba(239,68,68,0.22)]"
+            >
+              <div className="absolute inset-y-0 left-0 w-1.5 bg-red-500" />
+              <div className="flex items-start gap-4">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-red-500/40 bg-red-500/20 text-red-400">
+                  <AlertTriangle className="size-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.16em] text-red-400 font-orbitron">
+                    {t('nutrition.exceeded')}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-red-100">
+                    {language === 'en-US' ? (
+                      <>
+                        {t('nutrition.exceededBody')} You consumed <strong>{Math.round(dailyMacros.kcal)} kcal</strong>,
+                        exceeding the recommended limit of <strong>{nutritionTargets.maxCalories} kcal</strong> by{' '}
+                        <strong>{Math.round(dailyMacros.kcal - nutritionTargets.maxCalories)} kcal</strong>.
+                      </>
+                    ) : (
+                      <>
+                        {t('nutrition.exceededBody')} Você consumiu <strong>{Math.round(dailyMacros.kcal)} kcal</strong>,
+                        ultrapassando o limite recomendado de <strong>{nutritionTargets.maxCalories} kcal</strong> em{' '}
+                        <strong>{Math.round(dailyMacros.kcal - nutritionTargets.maxCalories)} kcal</strong>.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <NutritionMetricCard
@@ -883,7 +982,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                   }`}
                 >
                   <Sparkles size={12} className={subTab === 'codex' ? "animate-pulse" : ""} />
-                  Códex da Alimentação
+                  {t('nutrition.codex')}
                 </button>
                 <button
                   onClick={() => setSubTab('library')}
@@ -894,7 +993,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                   }`}
                 >
                   <BookOpen size={12} />
-                  Biblioteca de Itens
+                  {t('nutrition.library')}
                 </button>
               </div>
 
@@ -1247,14 +1346,15 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                     </div>
                   ) : (
                     logs.map((log) => {
-                      const isCustom = !!log.food?.serving_unit && !!log.food?.serving_size;
-                      const displayQty = isCustom ? Number(gramsToQuantity(log.food!, log.quantity_grams).toFixed(2)) : log.quantity_grams;
-                      const displayUnit = isCustom ? log.food!.serving_unit : 'G';
+                      const food = foodFromLog(log);
+                      const isCustom = !!food?.serving_unit && !!food?.serving_size;
+                      const displayQty = isCustom && food ? Number(gramsToQuantity(food, log.quantity_grams).toFixed(2)) : log.quantity_grams;
+                      const displayUnit = isCustom ? food?.serving_unit : 'G';
                       const ratio = log.quantity_grams / 100;
-                      const kcal = (log.food?.calories_per_100g || 0) * ratio;
-                      const protein = (log.food?.protein_per_100g || 0) * ratio;
-                      const carbs = (log.food?.carbs_per_100g || 0) * ratio;
-                      const fat = (log.food?.fat_per_100g || 0) * ratio;
+                      const kcal = (Number(food?.calories_per_100g) || 0) * ratio;
+                      const protein = (Number(food?.protein_per_100g) || 0) * ratio;
+                      const carbs = (Number(food?.carbs_per_100g) || 0) * ratio;
+                      const fat = (Number(food?.fat_per_100g) || 0) * ratio;
                       const isExpanded = expandedLogIds.has(log.id);
 
                       return (
@@ -1275,7 +1375,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                                 <span className="rounded-md border border-purple-500/15 bg-purple-500/10 px-2 py-1 text-xs font-semibold text-purple-300">
                                   {log.meal_type}
                                 </span>
-                                <p className="mt-2 truncate text-sm font-bold text-white">{log.food?.name}</p>
+                                <p className="mt-2 truncate text-sm font-bold text-white">{food?.name || 'Alimento indisponível'}</p>
                               </div>
                               <ChevronDown className={`mt-1 size-4 shrink-0 text-gray-600 transition-transform ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
                             </div>

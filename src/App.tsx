@@ -15,6 +15,7 @@ import { Bosses } from './pages/Bosses';
 import { Fortuna } from './pages/Fortuna';
 import { Rest } from './pages/Rest';
 import { useHunterStore } from './stores/useHunterStore';
+import { PreferencesProvider } from './contexts/PreferencesContext';
 
 function HunterGuard({ children }: { children: React.ReactNode }) {
   const hunterClass = useHunterStore((s) => s.hunterClass);
@@ -29,8 +30,9 @@ function HunterGuard({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <PreferencesProvider>
+      <BrowserRouter>
+        <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -64,8 +66,9 @@ function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+        </AuthProvider>
+      </BrowserRouter>
+    </PreferencesProvider>
   );
 }
 

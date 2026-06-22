@@ -14,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useHunterStore } from '../stores/useHunterStore';
+import { usePreferences } from '@/contexts/preferences';
 
 type PortalBadge =
   | 'SISTEMA ATIVO'
@@ -226,6 +227,7 @@ function PortalCard({ card, onOpen }: { card: CommandCard; onOpen: () => void })
 }
 
 export function QuickMenu() {
+  const { t } = usePreferences();
   const navigate = useNavigate();
   const state = useHunterStore();
   const xpPct = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
@@ -246,7 +248,7 @@ export function QuickMenu() {
               </span>
             </div>
             <h1 className="text-2xl font-black uppercase italic tracking-wider text-white font-orbitron text-glow-blue sm:text-3xl">
-              Portal de <span className="text-blue-500">Comando</span>
+              {t('pages.portal')}
             </h1>
             <p className="max-w-xl text-[11px] font-semibold uppercase leading-relaxed tracking-widest text-gray-500 sm:text-xs">
               Selecione um portal para acessar seu próximo eixo de evolução.

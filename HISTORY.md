@@ -13,6 +13,15 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-22 — Finalização: Nutrição, Chefes, Preferências e Progressão
+- Nutrição passou a normalizar relacionamentos `foods` retornados como objeto ou array pelo Supabase, evitando totais zerados e detalhes quebrados.
+- Logs originados de cardápios agora preservam integridade: edição direciona ao cardápio, remoção desfaz a conclusão completa e reverte o dano nutricional.
+- Exclusão do último consumo criado pela IA também remove o alimento customizado órfão.
+- Excesso calórico ganhou alerta vermelho explícito em Nutrição e no Quadro de Missões, mostrando consumo, limite e quantidade excedida.
+- Corrigidas corridas nas animações de dano dos Chefes, atualização do prazo da raid e persistência de ataques; o ataque de teste ficou restrito ao ambiente de desenvolvimento.
+- Adicionados tema claro persistente e alternância Português/Inglês nas preferências, com tradução do shell principal e módulos críticos.
+- Progressão recalibrada com curva de XP crescente, ranks mais espaçados, bônus de streak limitado e anti-farm mais rígido, preservando todas as conquistas existentes.
+
 ### 2026-06-21 — Nutrição Híbrida, TACO e Dano de Cardápios
 - O Códex da Alimentação passou a usar a IA somente para interpretar ingredientes e quantidades; calorias e macronutrientes agora são calculados localmente a partir de 597 alimentos da Tabela TACO.
 - A revisão da IA exibe cobertura dos ingredientes, alimentos TACO utilizados e itens não localizados antes do registro.

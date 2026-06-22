@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
   Sword, 
   Flame, 
@@ -27,6 +27,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore, BOSS_LIST } from '@/stores/useBossStore';
+import { usePreferences } from '@/contexts/preferences';
 
 export function Bosses() {
   const { user } = useAuth();
@@ -40,17 +41,25 @@ export function Bosses() {
   const attackActiveBoss = useBossStore((state) => state.attackActiveBoss);
   const purifyActiveBoss = useBossStore((state) => state.purifyActiveBoss);
   const resetBattle = useBossStore((state) => state.resetBattle);
+  const { language, t } = usePreferences();
+  const reduceMotion = useReducedMotion();
+  const canUseTestAttack = import.meta.env.DEV;
   const [purifying, setPurifying] = useState(false);
   const [showAttackFeed, setShowAttackFeed] = useState(false);
   const [feedDamage, setFeedDamage] = useState(0);
   const [feedCritical, setFeedCritical] = useState(false);
-  const [raidReferenceTime] = useState(() => Date.now());
+  const [raidReferenceTime, setRaidReferenceTime] = useState(() => Date.now());
   const [combatEvents, setCombatEvents] = useState<Array<{
-    id: number;
+    id: string;
     damage: number;
     critical: boolean;
     time: string;
   }>>([]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setRaidReferenceTime(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Carrega a batalha ativa quando o componente monta
   useEffect(() => {
@@ -70,10 +79,10 @@ export function Bosses() {
       setShowAttackFeed(true);
       setCombatEvents((current) => [
         {
-          id: Date.now(),
+          id: recentDamage.id,
           damage: recentDamage.damage,
           critical: recentDamage.isCritical,
-          time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          time: new Date().toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' }),
         },
         ...current,
       ].slice(0, 5));
@@ -84,7 +93,7 @@ export function Bosses() {
       window.cancelAnimationFrame(frame);
       if (timer) clearTimeout(timer);
     };
-  }, [recentDamage]);
+  }, [language, recentDamage]);
 
   if (!user) {
     return (
@@ -103,7 +112,7 @@ export function Bosses() {
   const remainingMs = raidDeadline ? Math.max(0, raidDeadline.getTime() - raidReferenceTime) : 0;
   const remainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
   const remainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const raidRisk = hpPercent > 70 ? 'Alto' : hpPercent > 30 ? 'Moderado' : 'Controlado';
+  const raidRisk = hpPercent > 70 ? t('bosses.high') : hpPercent > 30 ? t('bosses.moderate') : t('bosses.controlled');
 
   // Handler para simular um ataque leve (para testes do usuário)
   const handleTestAttack = async () => {
@@ -160,14 +169,14 @@ export function Bosses() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-xs font-bold text-purple-300">
-                Raid semanal ativa
+                {t('bosses.weeklyRaid')}
               </span>
               <span className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-300">
-                Fenda sincronizada
+                {t('bosses.synced')}
               </span>
             </div>
             <h1 className="mt-3 text-2xl font-black uppercase tracking-wider text-white sm:text-3xl font-orbitron">
-              Chefes Finais <span className="text-purple-400">& Provações</span>
+              {t('bosses.title')}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-gray-400">
               Caçador <span className="font-bold text-white">{hunterStore.fullName || hunterStore.username}</span> · Rank <span className="text-amber-300">{hunterStore.rank}</span> · Classe <span className="text-purple-300">{hunterStore.hunterClass || 'Nenhuma'}</span>
@@ -176,12 +185,12 @@ export function Bosses() {
 
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Boss da semana', value: bossDef?.name || 'Sincronizando', icon: Crown, tone: 'text-purple-300' },
-              { label: 'HP restante', value: activeBattle ? `${activeBattle.current_hp} / ${activeBattle.max_hp}` : '--', icon: Heart, tone: 'text-rose-300' },
-              { label: 'Dano acumulado', value: activeBattle ? `${damageDealt} de dano` : '--', icon: Swords, tone: 'text-amber-300' },
-              { label: 'Prazo restante', value: activeBattle ? `${remainingDays}d ${remainingHours}h` : '--', icon: Timer, tone: 'text-blue-300' },
-              { label: 'Recompensa', value: bossDef ? `+${bossDef.xpReward} XP` : '--', icon: Gift, tone: 'text-emerald-300' },
-              { label: 'Título', value: bossDef?.titleReward || '--', icon: Award, tone: 'text-yellow-300' },
+              { label: t('bosses.weekBoss'), value: bossDef?.name || '...', icon: Crown, tone: 'text-purple-300' },
+              { label: t('bosses.hpRemaining'), value: activeBattle ? `${activeBattle.current_hp} / ${activeBattle.max_hp}` : '--', icon: Heart, tone: 'text-rose-300' },
+              { label: t('bosses.damageDealt'), value: activeBattle ? `${damageDealt} HP` : '--', icon: Swords, tone: 'text-amber-300' },
+              { label: t('bosses.deadline'), value: activeBattle ? `${remainingDays}d ${remainingHours}h` : '--', icon: Timer, tone: 'text-blue-300' },
+              { label: t('bosses.reward'), value: bossDef ? `+${bossDef.xpReward} XP` : '--', icon: Gift, tone: 'text-emerald-300' },
+              { label: t('bosses.titleReward'), value: bossDef?.titleReward || '--', icon: Award, tone: 'text-yellow-300' },
             ].map(item => (
               <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3 transition-colors hover:border-white/10">
                 <item.icon className={`size-4 ${item.tone}`} />
@@ -262,13 +271,14 @@ export function Bosses() {
               />
 
               {/* Feed de Dano Flutuante */}
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 {showAttackFeed && (
                   <motion.div
+                    key={recentDamage?.id ?? `${feedDamage}-${feedCritical}`}
                     initial={{ opacity: 0, y: 50, scale: 0.5 }}
                     animate={{ opacity: 1, y: -80, scale: feedCritical ? 1.5 : 1 }}
                     exit={{ opacity: 0, y: -150, scale: 0.8 }}
-                    transition={{ duration: 1.5, ease: 'easeOut' }}
+                    transition={{ duration: reduceMotion ? 0.01 : 1.5, ease: 'easeOut' }}
                     className="absolute inset-x-0 bottom-40 flex justify-center pointer-events-none z-20"
                   >
                     <div 
@@ -341,19 +351,22 @@ export function Bosses() {
                   
                   {/* Container da Barra */}
                   <div className="h-3.5 w-full bg-black/50 rounded-full border border-[#1e1e26] p-[2px] overflow-hidden relative">
-                    <motion.div 
-                      className="h-full rounded-full transition-all duration-300 relative"
+                    <motion.div
+                      className="h-full rounded-full relative"
                       style={{
-                        width: `${hpPercent}%`,
                         backgroundColor: bossDef.color,
                         boxShadow: `0 0 15px ${bossDef.color}`
                       }}
                       animate={{
-                        opacity: activeBattle.current_hp > 0 && hpPercent < 25 ? [0.6, 1, 0.6] : 1
+                        width: `${hpPercent}%`,
+                        opacity: activeBattle.current_hp > 0 && hpPercent < 25 && !reduceMotion ? [0.6, 1, 0.6] : 1
                       }}
                       transition={{
-                        repeat: Infinity,
-                        duration: 1
+                        width: { duration: reduceMotion ? 0.01 : 0.45, ease: 'easeOut' },
+                        opacity: {
+                          repeat: activeBattle.current_hp > 0 && hpPercent < 25 && !reduceMotion ? Infinity : 0,
+                          duration: 1
+                        }
                       }}
                     />
                     {/* Efeito Glow Interno */}
@@ -476,20 +489,24 @@ export function Bosses() {
 
                   {/* Painel de Interação de Ataque / Teste */}
                   <div className="space-y-3 pt-6 border-t border-[#1e1e26] border-dashed">
-                    <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-                      <span>Preview de ataque</span>
-                      <span>Treino base: 15 · crítico: 30</span>
-                    </div>
+                    {canUseTestAttack && (
+                      <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+                        <span>Preview de ataque</span>
+                        <span>Treino base: 15 · crítico: 30</span>
+                      </div>
+                    )}
                     
-                    <div className="grid grid-cols-1 gap-2">
-                      <button
-                        onClick={handleTestAttack}
-                        className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/10 text-sm font-black text-purple-200 transition hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(168,85,247,0.18)] active:scale-[0.98]"
-                      >
-                        <Swords size={16} className="text-yellow-400" />
-                        Executar ataque de treino
-                      </button>
-                    </div>
+                    {canUseTestAttack && (
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          onClick={handleTestAttack}
+                          className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/10 text-sm font-black text-purple-200 transition hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(168,85,247,0.18)] active:scale-[0.98]"
+                        >
+                          <Swords size={16} className="text-yellow-400" />
+                          Executar ataque de treino (DEV)
+                        </button>
+                      </div>
+                    )}
                     
                     <p className="text-xs text-center leading-relaxed text-gray-600">
                       O dano principal é aplicado automaticamente ao concluir atividades nos módulos do Ascend.

@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { localDateString } from '@/lib/date';
 import { WORKOUT_PROGRAM_PRESETS } from '@/data/workoutPresets';
 import type { WorkoutProgramPreset, PresetRoutine } from '@/data/workoutPresets';
+import { usePreferences } from '@/contexts/preferences';
 
 
 interface Exercise {
@@ -118,6 +119,7 @@ const TRAINING_TABS = [
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export function Workouts() {
+  const { t } = usePreferences();
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
   const [activeTab, setActiveTab] = useState<'library' | 'routines' | 'progress' | 'presets'>('routines');
@@ -776,7 +778,7 @@ export function Workouts() {
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">Training Center</span>
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tight text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            Centro de <span className="text-blue-500">Treinamento</span>
+            {t('pages.workouts')}
           </h1>
         </div>
         

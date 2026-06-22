@@ -21,6 +21,12 @@
   --font-inter: 'Inter', sans-serif;
 }
 
+.theme-light {
+  --bg-obsidian: #eef2f7;
+  --bg-graphite: #dbe3ef;
+  --text-silver: #334155;
+}
+
 /*
   CRÍTICO: Resets dentro de @layer base para que utilidades Tailwind
   (dentro de @layer utilities) SEMPRE tenham prioridade sobre resets globais.
@@ -47,6 +53,64 @@
   .font-orbitron {
     font-family: var(--font-orbitron);
     letter-spacing: 0.1em;
+  }
+}
+
+/* Tema claro global: mantém os acentos neon, mas converte superfícies e textos hardcoded. */
+.theme-light body {
+  background: #eef2f7;
+  color: #334155;
+}
+
+.theme-light [class~="bg-[#0B0B0F]"],
+.theme-light [class~="bg-[#0F0F13]"],
+.theme-light [class~="bg-[#0c0c0f]"],
+.theme-light [class~="bg-[#0A0A0D]"],
+.theme-light [class~="bg-[#101016]"],
+.theme-light [class~="bg-[#1C1C24]"] {
+  background-color: #ffffff !important;
+}
+
+.theme-light [class~="bg-black/20"],
+.theme-light [class~="bg-black/25"],
+.theme-light [class~="bg-black/30"],
+.theme-light [class~="bg-black/40"],
+.theme-light [class~="bg-black/50"],
+.theme-light [class~="bg-black/60"],
+.theme-light [class~="bg-white/5"] {
+  background-color: rgba(226, 232, 240, 0.72) !important;
+}
+
+.theme-light .text-white { color: #0f172a !important; }
+.theme-light [class~="text-[#C9CED6]"] { color: #334155 !important; }
+.theme-light .text-gray-300 { color: #334155 !important; }
+.theme-light .text-gray-400 { color: #475569 !important; }
+.theme-light .text-gray-500 { color: #64748b !important; }
+.theme-light .text-gray-600 { color: #64748b !important; }
+.theme-light .text-gray-700 { color: #475569 !important; }
+.theme-light [class~="border-white/5"],
+.theme-light [class~="border-[#1E1E26]"],
+.theme-light [class~="border-[#1e1e26]"],
+.theme-light [class~="border-[#252530]"] {
+  border-color: #d8e0eb !important;
+}
+
+.theme-light input,
+.theme-light textarea,
+.theme-light select {
+  color: #0f172a !important;
+}
+
+.theme-light ::placeholder {
+  color: #94a3b8 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/preferences';
 
 interface MobileMenuProps {
   open: boolean;
@@ -12,21 +13,22 @@ interface MobileMenuProps {
 }
 
 const navItems = [
-  { path: '/',        label: 'Portal',       icon: LayoutGrid },
-  { path: '/status',  label: 'Status',      icon: LayoutDashboard },
-  { path: '/quests',  label: 'Missões',     icon: CheckSquare },
-  { path: '/bosses',  label: 'Bosses',      icon: Skull },
-  { path: '/workouts',label: 'Treinamento', icon: Dumbbell },
-  { path: '/nutrition',label: 'Nutrição',    icon: Apple },
-  { path: '/fortuna',  label: 'Fortuna',     icon: Coins },
-  { path: '/rest',     label: 'Descanso',    icon: Moon },
-  { path: '/settings',label: 'Ajustes',     icon: Settings },
+  { path: '/', labelKey: 'nav.portal' as const, icon: LayoutGrid },
+  { path: '/status', labelKey: 'nav.status' as const, icon: LayoutDashboard },
+  { path: '/quests', labelKey: 'nav.quests' as const, icon: CheckSquare },
+  { path: '/bosses', labelKey: 'nav.bosses' as const, icon: Skull },
+  { path: '/workouts', labelKey: 'nav.workouts' as const, icon: Dumbbell },
+  { path: '/nutrition', labelKey: 'nav.nutrition' as const, icon: Apple },
+  { path: '/fortuna', labelKey: 'nav.fortuna' as const, icon: Coins },
+  { path: '/rest', labelKey: 'nav.rest' as const, icon: Moon },
+  { path: '/settings', labelKey: 'nav.settings' as const, icon: Settings },
 ];
 
 export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const location = useLocation();
   const state = useHunterStore();
   const { signOut } = useAuth();
+  const { t } = usePreferences();
 
   const lastPath = useRef(location.pathname);
 
@@ -50,7 +52,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
   const xpPct = Math.min(100, (state.xp / Math.max(state.xpRequired, 1)) * 100);
   const hunterName = state.username || state.fullName || 'Hunter';
-  const hunterClass = state.hunterClass || 'Classe não definida';
+  const hunterClass = state.hunterClass || t('common.classUndefined');
 
   const classGlowMap: Record<string, string> = {
     mage: 'glow-mage',
@@ -126,7 +128,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                       )}
                     >
                       <Icon size={18} className={isActive ? 'text-blue-500' : ''} />
-                      {item.label}
+                      {t(item.labelKey)}
                     </Link>
                   </motion.div>
                 );
@@ -144,13 +146,13 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                   <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.08em] text-gray-400">
                     {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank}
                   </p>
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">Level {state.level}</p>
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">{t('common.level')} {state.level}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
-                  <span>XP do Sistema</span>
+                  <span>{t('common.systemXp')}</span>
                   <span>{state.xp} / {state.xpRequired}</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
@@ -168,7 +170,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
               >
                 <LogOut size={18} />
-                Desconectar
+                {t('common.disconnect')}
               </button>
             </div>
           </motion.aside>

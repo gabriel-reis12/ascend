@@ -7,17 +7,18 @@ import { useHunterStore } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileMenu } from './MobileMenu';
 import { supabase } from '@/lib/supabase';
+import { usePreferences } from '@/contexts/preferences';
 
 const navItems = [
-  { path: '/', label: 'Portal', icon: LayoutGrid },
-  { path: '/status', label: 'Status', icon: LayoutDashboard },
-  { path: '/quests', label: 'Missões', icon: CheckSquare },
-  { path: '/bosses', label: 'Bosses', icon: Skull },
-  { path: '/workouts', label: 'Treinamento', icon: Dumbbell },
-  { path: '/nutrition', label: 'Nutrição', icon: Apple },
-  { path: '/fortuna', label: 'Fortuna', icon: Coins },
-  { path: '/rest', label: 'Descanso', icon: Moon },
-  { path: '/settings', label: 'Ajustes', icon: Settings },
+  { path: '/', labelKey: 'nav.portal' as const, icon: LayoutGrid },
+  { path: '/status', labelKey: 'nav.status' as const, icon: LayoutDashboard },
+  { path: '/quests', labelKey: 'nav.quests' as const, icon: CheckSquare },
+  { path: '/bosses', labelKey: 'nav.bosses' as const, icon: Skull },
+  { path: '/workouts', labelKey: 'nav.workouts' as const, icon: Dumbbell },
+  { path: '/nutrition', labelKey: 'nav.nutrition' as const, icon: Apple },
+  { path: '/fortuna', labelKey: 'nav.fortuna' as const, icon: Coins },
+  { path: '/rest', labelKey: 'nav.rest' as const, icon: Moon },
+  { path: '/settings', labelKey: 'nav.settings' as const, icon: Settings },
 ];
 
 export function RPGLayout() {
@@ -26,6 +27,7 @@ export function RPGLayout() {
   const { signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
+  const { language, t } = usePreferences();
 
   useEffect(() => {
     async function checkConnection() {
@@ -49,7 +51,7 @@ export function RPGLayout() {
   // Mas vamos deixar renderizar com fallback se necessário.
   const xpPct = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
   const hunterName = state.username || state.fullName || 'Hunter';
-  const hunterClass = state.hunterClass || 'Classe não definida';
+  const hunterClass = state.hunterClass || t('common.classUndefined');
 
   return (
     <div className="flex h-screen bg-[#0B0B0F] text-[#C9CED6] overflow-hidden">
@@ -102,7 +104,7 @@ export function RPGLayout() {
                     isActive ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-200'
                   )}
                 />
-                <span className="uppercase tracking-widest text-[11px]">{item.label}</span>
+                <span className="uppercase tracking-widest text-[11px]">{t(item.labelKey)}</span>
               </Link>
             );
           })}
@@ -120,14 +122,14 @@ export function RPGLayout() {
               <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.08em] text-gray-400">
                 {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank}
               </p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">Level {state.level}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">{t('common.level')} {state.level}</p>
             </div>
           </div>
 
           {/* XP Bar */}
           <div className="px-1">
             <div className="mb-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
-              <span>XP do Sistema</span>
+              <span>{t('common.systemXp')}</span>
               <span>{state.xp} / {state.xpRequired}</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
@@ -146,7 +148,7 @@ export function RPGLayout() {
             className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
           >
             <LogOut size={16} />
-            Desconectar
+            {t('common.disconnect')}
           </button>
         </div>
       </aside>
@@ -178,11 +180,11 @@ export function RPGLayout() {
         {/* Desktop top bar */}
         <div className="hidden md:flex items-center justify-between border-b border-white/5 bg-[#0B0B0F] px-8 py-4 shrink-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">
-            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {new Date().toLocaleDateString(language, { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-end">
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Status: Ativo</span>
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Status: {t('common.active')}</span>
               <span className="text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</span>
             </div>
             <div className="size-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,1)] animate-pulse" />

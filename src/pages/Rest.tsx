@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useHunterStore } from '../stores/useHunterStore';
 import { useBossStore } from '../stores/useBossStore';
+import { usePreferences } from '../contexts/preferences';
 
 interface RestLog {
   id: string;
@@ -27,6 +28,7 @@ interface RestLog {
 }
 
 export function Rest() {
+  const { t } = usePreferences();
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
   const [activeSubTab, setActiveSubTab] = useState<'sleep_lazer' | 'meditation'>('sleep_lazer');
@@ -280,7 +282,7 @@ export function Rest() {
               <span className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-400">Rest & Recharge</span>
             </div>
             <h1 className="mt-2 text-3xl font-black uppercase tracking-tight text-white italic font-orbitron">
-              Descanso & <span className="text-indigo-400">Lazer</span>
+              {t('pages.rest')}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-gray-400">Regenere sua mana e calibre o atributo Equilíbrio (EQU).</p>
           </div>

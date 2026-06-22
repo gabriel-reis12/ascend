@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
+import { getRankForLevel, getXpRequiredForLevel, INITIAL_XP_REQUIREMENT } from '../lib/progression';
 
 export type HunterRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'National' | 'Monarch';
 export type HunterClass = 'Warrior' | 'Scholar' | 'Creator' | 'Monk' | 'Leader';
@@ -69,7 +70,7 @@ const INITIAL_STATS: HunterStats = {
 const INITIAL_STATE = {
   level: 1,
   xp: 0,
-  xpRequired: 100,
+  xpRequired: INITIAL_XP_REQUIREMENT,
   rank: 'E' as HunterRank,
   hunterClass: null as HunterClass | null,
   username: '',
@@ -91,49 +92,28 @@ const INITIAL_STATE = {
   activeTitle: 'Iniciante',
 };
 
-const getRankForLevel = (level: number): HunterRank => {
-  if (level < 10) return 'E';
-  if (level < 20) return 'D';
-  if (level < 35) return 'C';
-  if (level < 50) return 'B';
-  if (level < 70) return 'A';
-  if (level < 100) return 'S';
-  if (level < 150) return 'National';
-  return 'Monarch';
-};
-
-/**
- * Calcula o XP necessário para o próximo nível.
- * Curva linear: 100 + (level-1) * 10
- * Total de XP para Level 100: ~60,000 XP
- * Com 150 XP/dia (média de quests + bônus de streak), leva ~400 dias.
- */
-const getXpRequiredForLevel = (level: number): number => {
-  return 100 + (level - 1) * 10;
-};
-
 const calculateAntiFarmXp = (currentGainedToday: number, amount: number): { addedXp: number; newGainedToday: number } => {
   let remaining = amount;
   let current = currentGainedToday;
   let added = 0;
 
   while (remaining > 0) {
-    if (current < 200) {
+    if (current < 150) {
       // 100% ganho
-      const chunk = Math.min(remaining, 200 - current);
+      const chunk = Math.min(remaining, 150 - current);
       added += chunk;
       current += chunk;
       remaining -= chunk;
-    } else if (current < 400) {
-      // 50% ganho (Soft Cap)
-      const chunk = Math.min(remaining, 400 - current);
-      const realChunk = chunk * 0.5;
+    } else if (current < 300) {
+      // 35% ganho (Soft Cap)
+      const chunk = Math.min(remaining, 300 - current);
+      const realChunk = chunk * 0.35;
       added += realChunk;
       current += realChunk;
       remaining -= chunk;
     } else {
-      // 10% ganho (Hard Cap)
-      const realChunk = remaining * 0.1;
+      // 5% ganho (Hard Cap)
+      const realChunk = remaining * 0.05;
       added += realChunk;
       current += realChunk;
       remaining = 0;
@@ -188,8 +168,8 @@ export const useHunterStore = create<HunterState>()(
           return;
         }
 
-        // Bônus de Streak: +2% por dia de streak, limitado a +100%
-        const streakBonus = Math.min(state.streak.current * 0.02, 1.0);
+        // Consistência ajuda, mas não elimina a dificuldade da progressão.
+        const streakBonus = Math.min(state.streak.current * 0.01, 0.3);
         const finalAmount = Math.floor(amount * (1 + streakBonus));
 
         // Aplicar Anti-Farm
@@ -269,7 +249,7 @@ export const useHunterStore = create<HunterState>()(
               id: userId,
               level: 1,
               xp: 0,
-              xp_to_next_level: 100,
+              xp_to_next_level: INITIAL_XP_REQUIREMENT,
               rank: 'E',
               strength: 10,
               intelligence: 10,
@@ -348,11 +328,14 @@ export const useHunterStore = create<HunterState>()(
           const currentDiscipline = Number(data.discipline) || 10;
           const updatedDiscipline = currentDiscipline + bonusDiscipline;
 
+          const recalibratedXpRequired = getXpRequiredForLevel(level);
+          const recalibratedRank = getRankForLevel(level);
+
           set({
             level,
             xp: data.xp || 0,
-            xpRequired: data.xp_to_next_level || getXpRequiredForLevel(level),
-            rank: (data.rank as HunterRank) || getRankForLevel(level),
+            xpRequired: recalibratedXpRequired,
+            rank: recalibratedRank,
             hunterClass: data.class as HunterClass,
             username: data.username || '',
             fullName: data.full_name || '',
@@ -383,7 +366,11 @@ export const useHunterStore = create<HunterState>()(
             activeTitle: data.title || 'Iniciante',
           });
 
-          if (shouldUpdateProfileInDb) {
+          if (
+            shouldUpdateProfileInDb
+            || data.xp_to_next_level !== recalibratedXpRequired
+            || data.rank !== recalibratedRank
+          ) {
             await supabase
               .from('profiles')
               .update({
@@ -392,6 +379,8 @@ export const useHunterStore = create<HunterState>()(
                 last_check_in: now.toISOString(),
                 xp_gained_today: xpGainedToday,
                 discipline: updatedDiscipline,
+                xp_to_next_level: recalibratedXpRequired,
+                rank: recalibratedRank,
               })
               .eq('id', userId);
           }
@@ -536,6 +525,18 @@ export const useHunterStore = create<HunterState>()(
 
       reset: () => set(INITIAL_STATE),
     }),
-    { name: 'hunter-storage' }
+    {
+      name: 'hunter-storage',
+      version: 2,
+      migrate: (persistedState) => {
+        const persisted = persistedState as Partial<HunterState>;
+        const level = Number(persisted.level) || 1;
+        return {
+          ...persisted,
+          xpRequired: getXpRequiredForLevel(level),
+          rank: getRankForLevel(level),
+        };
+      },
+    }
   )
 );
