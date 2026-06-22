@@ -13,6 +13,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-22 — Integração de Fontes Nutricionais na IA e Painel de Comparação Premium
+- Atualizado o Codex de Alimentação (IA de Nutrição) em [Nutrition.tsx](file:///d:/Área%20de%20Trabalho/App/src/pages/Nutrition.tsx) para consultar e comparar os valores nutricionais de cada ingrediente em três bases distintas: Tabela TACO, FatSecret e Estimativa da própria IA (fallback).
+- Reformulado o prompt do sistema para a API do Groq (Llama 3.1) para extrair os macronutrientes e calorias de cada uma das fontes por 100g e calcular o consolidado final priorizando TACO > FatSecret > IA Fallback.
+- Implementado um painel comparativo premium na tela de revisão de refeições da IA: cada ingrediente agora é exibido como um card expansível que revela uma tabela contendo os valores de energia, proteínas, carboidratos e gorduras de cada base lado a lado.
+- Adicionado badge de indicação de fonte ativa e botões com transições suaves do framer-motion para navegação.
+- Validada a compatibilidade de tipos no TypeScript e o empacotamento completo de produção via npm run build.
+
 ### 2026-06-22 — Refatoração e Correção do Tutorial Interativo (Product Tour) no Quick Menu
 - Transferida a execução do Product Tour da tela de Dashboard (/status) para a nova tela inicial do Portal de Comando (/ - Quick Menu), onde os caçadores pousam após o onboarding ou ao solicitar o tour.
 - Redefinidas as etapas e âncoras do tutorial no [QuickMenu.tsx](file:///d:/Área de Trabalho/App/src/pages/QuickMenu.tsx) para focar na apresentação do cabeçalho de status, missão recomendada, portais principais e módulos de expansão.

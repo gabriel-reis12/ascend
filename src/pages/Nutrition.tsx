@@ -194,6 +194,29 @@ export function Nutrition() {
   const [iaMealType, setIaMealType] = useState('Almoço');
   const [iaLoading, setIaLoading] = useState(false);
   const [iaError, setIaError] = useState<string | null>(null);
+  interface IaIngredientSourceData {
+    found: boolean;
+    kcal: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  }
+  
+  interface IaIngredient {
+    name: string;
+    grams: number;
+    taco: IaIngredientSourceData;
+    fatsecret: IaIngredientSourceData;
+    ia_fallback: Omit<IaIngredientSourceData, 'found'> & { reason?: string };
+    final: {
+      source_used: 'taco' | 'fatsecret' | 'ia_fallback';
+      kcal: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    };
+  }
+
   const [iaPreview, setIaPreview] = useState<{
     mealName: string;
     calories: number;
@@ -202,10 +225,22 @@ export function Nutrition() {
     fat: number;
     totalGrams: number;
     confidence: number;
-    tacoCoverage: number;
-    tacoFoods: string[];
-    unmatchedFoods: string[];
+    ingredients: IaIngredient[];
   } | null>(null);
+  const [expandedIaIngs, setExpandedIaIngs] = useState<Set<number>>(new Set());
+  
+  const toggleIaIngExpanded = (index: number) => {
+    setExpandedIaIngs(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
   const [iaEditing, setIaEditing] = useState(false);
   const [iaRegistering, setIaRegistering] = useState(false);
   const [iaRegistrationSuccess, setIaRegistrationSuccess] = useState<string | null>(null);
@@ -524,6 +559,7 @@ export function Nutrition() {
     setIaPreview(null);
     setIaEditing(false);
     setIaRegistrationSuccess(null);
+    setExpandedIaIngs(new Set());
 
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
 
@@ -546,22 +582,59 @@ export function Nutrition() {
             {
               role: 'system',
               content: `Você é o Códex da Alimentação, um assistente neural de nutrição integrado a um sistema ciberpunk de RPG de vida real.
-Sua tarefa é decompor a descrição livre da refeição em ingredientes e estimar somente o peso em gramas de cada item. Os valores nutricionais serão calculados posteriormente pela tabela TACO, portanto NÃO estime calorias ou macronutrientes.
-Não insira nenhuma introdução, conclusão ou texto explicativo. Retorne apenas o JSON.
+Sua tarefa é decompor a descrição livre da refeição em ingredientes, estimar o peso em gramas de cada item e obter as informações nutricionais por 100g de 3 fontes distintas:
+1. Tabela TACO (Tabela Brasileira de Composição de Alimentos)
+2. FatSecret (Base de dados muito utilizada em aplicativos de nutrição)
+3. Estimativa de fallback própria da IA (caso falte informações em um ou nos dois anteriores)
+
+Regras para obter os dados de cada fonte por 100g:
+- Para a fonte 'taco', verifique se o ingrediente existe na Tabela TACO. Se sim, defina 'found' como true e forneça os valores (kcal, protein, carbs, fat). Se não, defina 'found' como false e coloque os valores zerados.
+- Para a fonte 'fatsecret', verifique se o ingrediente existe na base FatSecret. Se sim, defina 'found' como true e forneça os valores (kcal, protein, carbs, fat). Se não, defina 'found' como false e coloque os valores zerados.
+- Para a fonte 'ia_fallback', estime com base no seu conhecimento os valores médios ideais por 100g para o alimento.
+- No campo 'final', defina qual fonte foi a escolhida para ser a principal de acordo com a disponibilidade (prioridade: taco > fatsecret > ia_fallback) e forneça os valores consolidados por 100g desse ingrediente no campo correspondente, além do nome da fonte usada no campo 'source_used'.
+
+Retorne APENAS um objeto JSON válido sem qualquer introdução, conclusão ou blocos de código markdown.
 
 Formato do JSON esperado:
 {
   "meal_name": "Nome descritivo em português, curto, em caixa alta (ex: PRATO DE ARROZ, FEIJÃO E FRANGO GRELHADO)",
+  "confidence_percentage": 90,
   "ingredients": [
     {
       "name": "arroz branco cozido",
-      "taco_description": "Arroz, tipo 1, cozido",
-      "grams": 150
+      "grams": 150,
+      "taco": {
+        "found": true,
+        "kcal": 130,
+        "protein": 2.5,
+        "carbs": 28.2,
+        "fat": 0.2
+      },
+      "fatsecret": {
+        "found": true,
+        "kcal": 130,
+        "protein": 2.7,
+        "carbs": 28.0,
+        "fat": 0.3
+      },
+      "ia_fallback": {
+        "kcal": 130,
+        "protein": 2.6,
+        "carbs": 28.1,
+        "fat": 0.25
+      },
+      "final": {
+        "source_used": "taco",
+        "kcal": 130,
+        "protein": 2.5,
+        "carbs": 28.2,
+        "fat": 0.2
+      }
     }
   ]
 }
 
-Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas com uma estimativa realista. Preserve o estado de preparo: cru, cozido, assado, frito ou grelhado. Em "taco_description", use a descrição mais provável no padrão da Tabela Brasileira de Composição de Alimentos (TACO). Não invente ingredientes que não estejam no texto.`
+Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas com uma estimativa realista. Preserve o estado de preparo: cru, cozido, assado, frito ou grelhado. Não invente ingredientes que não estejam no texto.`
             },
             {
               role: 'user',
@@ -586,29 +659,40 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
       }
 
       const parsedData = JSON.parse(content);
-      const { meal_name, ingredients } = parsedData;
+      const { meal_name, ingredients, confidence_percentage } = parsedData;
 
       if (!meal_name || !Array.isArray(ingredients) || ingredients.length === 0) {
         throw new Error('Formato de dados incompleto retornado pelo modelo de IA.');
       }
 
-      const tacoMeal = calculateMealFromTaco(ingredients);
-      if (tacoMeal.matched.length === 0 || tacoMeal.totalGrams <= 0) {
-        throw new Error('Nenhum ingrediente pôde ser localizado na tabela TACO. Descreva os alimentos e quantidades com mais detalhes.');
-      }
+      let totalKcal = 0;
+      let totalProtein = 0;
+      let totalCarbs = 0;
+      let totalFat = 0;
+      let totalGrams = 0;
+
+      ingredients.forEach((ing: any) => {
+        const grams = Number(ing.grams) || 0;
+        const ratio = grams / 100;
+        totalKcal += (Number(ing.final?.kcal) || 0) * ratio;
+        totalProtein += (Number(ing.final?.protein) || 0) * ratio;
+        totalCarbs += (Number(ing.final?.carbs) || 0) * ratio;
+        totalFat += (Number(ing.final?.fat) || 0) * ratio;
+        totalGrams += grams;
+      });
 
       const detailSignals = iaTextInput.match(/\b\d+(?:[.,]\d+)?\s*(?:g|gramas?|ml|unidades?|fatias?|colheres?)\b/gi)?.length ?? 0;
+      const confidence = confidence_percentage || Math.min(98, Math.round(80 + detailSignals * 2));
+
       setIaPreview({
         mealName: meal_name,
-        calories: tacoMeal.calories,
-        protein: tacoMeal.protein,
-        carbs: tacoMeal.carbs,
-        fat: tacoMeal.fat,
-        totalGrams: tacoMeal.totalGrams,
-        confidence: Math.min(98, Math.round(tacoMeal.coverage * 0.75 + 18 + detailSignals * 2)),
-        tacoCoverage: tacoMeal.coverage,
-        tacoFoods: tacoMeal.matched.map(item => item.food.description),
-        unmatchedFoods: tacoMeal.unmatched.map(item => item.name),
+        calories: Math.round(totalKcal),
+        protein: Number(totalProtein.toFixed(1)),
+        carbs: Number(totalCarbs.toFixed(1)),
+        fat: Number(totalFat.toFixed(1)),
+        totalGrams: Math.round(totalGrams),
+        confidence: confidence,
+        ingredients: ingredients
       });
 
     } catch (err: unknown) {
@@ -1169,21 +1253,122 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                           ))}
                         </div>
 
-                        <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.035] p-3">
-                          <p className="text-xs font-black uppercase tracking-widest text-emerald-300">
-                            Base nutricional TACO · {iaPreview.tacoCoverage}% dos ingredientes localizados
+                        <div className="space-y-3">
+                          <p className="text-xs font-black uppercase tracking-widest text-purple-400 font-orbitron">
+                            Ingredientes & Comparação de Fontes (TACO vs FatSecret vs IA)
                           </p>
-                          <p className="mt-2 text-[13px] leading-relaxed text-gray-400">
-                            {iaPreview.tacoFoods.join(' · ')}
-                          </p>
-                          {iaPreview.unmatchedFoods.length > 0 && (
-                            <p className="mt-2 text-xs text-amber-300">
-                              Não localizados e fora do cálculo: {iaPreview.unmatchedFoods.join(', ')}.
-                            </p>
-                          )}
+                          <div className="space-y-2">
+                            {iaPreview.ingredients.map((ing, idx) => (
+                              <div key={idx} className="overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] transition-all hover:border-white/10">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleIaIngExpanded(idx)}
+                                  className="flex w-full items-center justify-between p-3.5 text-left transition-colors hover:bg-white/[0.04]"
+                                >
+                                  <div>
+                                    <span className="font-bold text-white text-sm">{ing.name}</span>
+                                    <span className="ml-2 text-xs font-semibold text-gray-500">({ing.grams}g)</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className={`rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                                      ing.final.source_used === 'taco' 
+                                        ? 'border-purple-500/35 bg-purple-500/10 text-purple-400' 
+                                        : ing.final.source_used === 'fatsecret'
+                                          ? 'border-orange-500/35 bg-orange-500/10 text-orange-400'
+                                          : 'border-amber-500/35 bg-amber-500/10 text-amber-400'
+                                    }`}>
+                                      Fonte: {ing.final.source_used === 'taco' ? 'TACO' : ing.final.source_used === 'fatsecret' ? 'FatSecret' : 'IA Fallback'}
+                                    </span>
+                                    <ChevronDown className={`size-4 text-gray-500 transition-transform duration-200 ${expandedIaIngs.has(idx) ? 'rotate-180' : ''}`} />
+                                  </div>
+                                </button>
+                                
+                                <AnimatePresence>
+                                  {expandedIaIngs.has(idx) && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="border-t border-white/5 bg-black/40 px-4 py-3"
+                                    >
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs text-gray-400">
+                                          <thead>
+                                            <tr className="border-b border-white/5 text-[9px] uppercase font-black tracking-widest text-gray-500">
+                                              <th className="pb-2">Fonte (por 100g)</th>
+                                              <th className="pb-2 text-right">Energia</th>
+                                              <th className="pb-2 text-right">Prot.</th>
+                                              <th className="pb-2 text-right">Carb.</th>
+                                              <th className="pb-2 text-right">Gord.</th>
+                                              <th className="pb-2 text-right">Status</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-white/5">
+                                            {/* Linha TACO */}
+                                            <tr className={ing.final.source_used === 'taco' ? 'text-purple-300 font-bold' : ''}>
+                                              <td className="py-2.5 flex items-center gap-1.5">
+                                                <span className={`size-1.5 rounded-full ${ing.taco.found ? 'bg-purple-500' : 'bg-gray-700'}`} />
+                                                Tabela TACO
+                                              </td>
+                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.kcal} kcal` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.protein}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.carbs}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.fat}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                  ing.taco.found ? 'bg-purple-500/10 border border-purple-500/20 text-purple-400' : 'bg-white/5 text-gray-600'
+                                                }`}>
+                                                  {ing.taco.found ? 'Disponível' : 'N/D'}
+                                                </span>
+                                              </td>
+                                            </tr>
+                                            {/* Linha FatSecret */}
+                                            <tr className={ing.final.source_used === 'fatsecret' ? 'text-orange-300 font-bold' : ''}>
+                                              <td className="py-2.5 flex items-center gap-1.5">
+                                                <span className={`size-1.5 rounded-full ${ing.fatsecret.found ? 'bg-orange-500' : 'bg-gray-700'}`} />
+                                                FatSecret
+                                              </td>
+                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.kcal} kcal` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.protein}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.carbs}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.fat}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">
+                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                  ing.fatsecret.found ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-white/5 text-gray-600'
+                                                }`}>
+                                                  {ing.fatsecret.found ? 'Disponível' : 'N/D'}
+                                                </span>
+                                              </td>
+                                            </tr>
+                                            {/* Linha IA Fallback */}
+                                            <tr className={ing.final.source_used === 'ia_fallback' ? 'text-amber-300 font-bold' : ''}>
+                                              <td className="py-2.5 flex items-center gap-1.5">
+                                                <span className="size-1.5 rounded-full bg-amber-500" />
+                                                IA Fallback
+                                              </td>
+                                              <td className="py-2.5 text-right">{ing.ia_fallback.kcal} kcal</td>
+                                              <td className="py-2.5 text-right">{ing.ia_fallback.protein}g</td>
+                                              <td className="py-2.5 text-right">{ing.ia_fallback.carbs}g</td>
+                                              <td className="py-2.5 text-right">{ing.ia_fallback.fat}g</td>
+                                              <td className="py-2.5 text-right">
+                                                <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                                                  Ativo
+                                                </span>
+                                              </td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <p className="text-[13px] leading-relaxed text-gray-500">
-                          A IA interpreta ingredientes e quantidades; energia e macros são calculados com os valores por 100 g da TACO. Revise antes de registrar.
+                          Os macronutrientes da refeição foram calculados de forma consolidada comparando a Tabela TACO, base do FatSecret e estimativa da IA (fallback) para cada item individual. Revise os dados antes de registrar.
                         </p>
 
                         <div className="grid gap-3 sm:grid-cols-2">
