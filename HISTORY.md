@@ -19,6 +19,7 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 - Acao de teste foi contextualizada como ataque de treino, com preview claro da mecanica de dano.
 - Historico da sessao registra ataques, criticos e regeneracao sem inventar persistencia no backend.
 - Recompensa de purificacao e galeria de bosses receberam maior destaque, estados visuais e microinteracoes.
+- Nomes longos dos bosses agora quebram em multiplas linhas sem cortar ou invadir os cards vizinhos.
 
 ### 2026-06-21 - Refinamento de Descanso & Lazer
 - Navegacao convertida em pills premium com icones, subtitulos, glow contextual e transicao entre abas.

@@ -618,8 +618,8 @@ export function Bosses() {
                 />
 
                 {/* Info Text */}
-                <div className="space-y-0.5">
-                  <p className="max-w-full truncate text-xs font-black leading-tight font-orbitron">
+                <div className="flex min-h-16 w-full flex-col items-center justify-center gap-1">
+                  <p className="w-full whitespace-normal break-words text-[10px] font-black leading-4 font-orbitron [overflow-wrap:anywhere] sm:text-[11px]">
                     {boss.name}
                   </p>
                   <p className={`text-[10px] font-bold ${isDefeated ? 'text-emerald-400' : isActive ? 'text-purple-300' : 'text-gray-600'}`}>
