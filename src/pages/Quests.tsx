@@ -586,11 +586,10 @@ export function Quests() {
     weightCurrent: hunterProfile.weightCurrent,
     nutritionGoal: hunterProfile.nutritionGoal,
   });
-  const caloriesLoggedToday = mealMissions.reduce((sum, meal) => sum + (meal.totalKcal || 0), 0);
-  const caloriesRemaining = nutritionTargets.targetCalories
-    ? Math.max(0, nutritionTargets.targetCalories - caloriesLoggedToday)
-    : null;
-
+  const caloriesLoggedToday = mealMissions.reduce((sum, meal) => {
+    const countsTowardDailyTotal = meal.source === 'food_log' || meal.isCompleted;
+    return countsTowardDailyTotal ? sum + (meal.totalKcal || 0) : sum;
+  }, 0);
   // Busca se já gerou a quest extra diária da IA hoje
   const bonusQuestToday = tasks.find(t => t.title.startsWith('[BÔNUS IA] ') && isToday(t.created_at));
 
@@ -956,7 +955,7 @@ export function Quests() {
                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Calorias:</span>
                         <span className="text-xs font-black text-orange-500 font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                           {nutritionTargets.targetCalories
-                            ? `${Math.round(caloriesRemaining ?? 0)} / ${nutritionTargets.targetCalories}`
+                            ? `${Math.round(caloriesLoggedToday)} / ${nutritionTargets.targetCalories}`
                             : `${Math.round(caloriesLoggedToday)} / --`}
                         </span>
                         {nutritionTargets.targetCalories && Math.abs(caloriesLoggedToday - nutritionTargets.targetCalories) <= (nutritionTargets.toleranceCalories ?? 0) ? (

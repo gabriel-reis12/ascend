@@ -13,6 +13,18 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-21 — Nutrição Híbrida, TACO e Dano de Cardápios
+- O Códex da Alimentação passou a usar a IA somente para interpretar ingredientes e quantidades; calorias e macronutrientes agora são calculados localmente a partir de 597 alimentos da Tabela TACO.
+- A revisão da IA exibe cobertura dos ingredientes, alimentos TACO utilizados e itens não localizados antes do registro.
+- Concluir uma refeição do Cardápio do Caçador nas Missões agora cria `food_logs` vinculados e reversíveis, fazendo o consumo aparecer no painel de Nutrição e na avaliação diária.
+- Desmarcar a refeição remove os logs sincronizados sem apagar registros manuais ou da IA.
+- Cardápios concluídos aplicam 15 de dano nutricional ao boss ativo; a desmarcação reverte o mesmo dano base.
+- O HUD calórico das Missões agora mostra calorias consumidas sobre a meta e soma apenas cardápios concluídos com registros independentes do diário.
+- Corrigida a conversão de porções personalizadas: unidades agora são multiplicadas pelo peso da porção, mantendo registro, edição e prévia calórica consistentes.
+- A reparação de cardápios concluídos passou a detectar itens individuais ausentes, evitando diários parcialmente sincronizados sem duplicar os itens já existentes.
+- O registro por IA remove o alimento customizado recém-criado caso a gravação do consumo falhe, evitando dados órfãos.
+- Adicionada a migration `20260621_meal_completion_food_logs.sql` e atribuição da fonte de dados em `THIRD_PARTY_NOTICES.md`.
+
 ### 2026-06-21 - Raid Semanal Premium
 - Header da raid ampliado com boss ativo, HP restante, dano acumulado, prazo e recompensa principal.
 - Painel estrategico ganhou fraqueza, fontes de dano e regeneracao, multiplicador ativo e leitura de risco.

@@ -5,8 +5,7 @@ import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
 import { localDateString, localDayBounds } from '@/lib/date';
 
-const ALL_MEALS_XP_BONUS = 50;
-const ALL_MEALS_VITALITY_BONUS = 2;
+const MEAL_BOSS_DAMAGE = 15;
 
 
 export interface Habit {
@@ -59,6 +58,7 @@ export interface MealMission {
   id: string; // meal_plan_id com prefixo para evitar colisão
   meal_plan_id: string;
   source?: 'plan' | 'food_log';
+  completionId?: string | null;
   title: string;
   totalKcal: number;
   xp_reward: number;
@@ -66,6 +66,11 @@ export interface MealMission {
   isCompleted: boolean;
   scheduled_time: string | null;
   scheduled_end_time: string | null;
+  planItems?: Array<{
+    id: string;
+    food_id: string;
+    quantity_grams: number;
+  }>;
 }
 
 function todayStr() {
@@ -222,6 +227,8 @@ export function useHabits() {
             scheduled_time, 
             scheduled_end_time,
             items:meal_plan_items(
+              id,
+              food_id,
               quantity_grams,
               food:foods(calories_per_100g)
             )
@@ -231,7 +238,7 @@ export function useHabits() {
           .order('order_index', { ascending: true }),
         supabase
           .from('meal_completions')
-          .select('meal_plan_id')
+          .select('id, meal_plan_id')
           .eq('user_id', user.id)
           .eq('completed_at', today),
         supabase
@@ -241,6 +248,10 @@ export function useHabits() {
             quantity_grams,
             logged_at,
             meal_type,
+            source,
+            meal_plan_id,
+            meal_plan_item_id,
+            meal_completion_id,
             food:foods(name, calories_per_100g)
           `)
           .eq('user_id', user.id)
@@ -282,7 +293,38 @@ export function useHabits() {
         };
       });
 
-      const completedMealIds = new Set((mealCompletionsRes.data ?? []).map((mc: any) => mc.meal_plan_id));
+      const completionByPlan = new Map<string, string>(
+        (mealCompletionsRes.data ?? []).map((completion: any) => [completion.meal_plan_id, completion.id])
+      );
+      const completedMealIds = new Set(completionByPlan.keys());
+      const syncedCompletionItems = new Set(
+        (foodLogsRes.data ?? [])
+          .filter((log: any) => log.meal_completion_id && log.meal_plan_item_id)
+          .map((log: any) => `${log.meal_completion_id}:${log.meal_plan_item_id}`)
+      );
+      const missingPlanLogs = (mealPlansRes.data ?? []).flatMap((plan: any) => {
+        const completionId = completionByPlan.get(plan.id);
+        if (!completionId) return [];
+
+        return (plan.items ?? [])
+          .filter((item: any) => !syncedCompletionItems.has(`${completionId}:${item.id}`))
+          .map((item: any) => ({
+            user_id: user.id,
+            food_id: item.food_id,
+            quantity_grams: item.quantity_grams,
+            meal_type: plan.name,
+            source: 'meal_plan',
+            meal_plan_id: plan.id,
+            meal_plan_item_id: item.id,
+            meal_completion_id: completionId,
+          }));
+      });
+
+      if (missingPlanLogs.length > 0) {
+        const { error: syncError } = await supabase.from('food_logs').insert(missingPlanLogs);
+        if (syncError && syncError.code !== '23505') throw syncError;
+      }
+
       const computedMeals = (mealPlansRes.data ?? []).map((plan: any) => {
         const totalKcal = (plan.items ?? []).reduce((sum: number, item: any) => {
           const foodObj = Array.isArray(item.food) ? item.food[0] : item.food;
@@ -294,6 +336,7 @@ export function useHabits() {
           id: `meal_mission_${plan.id}`,
           meal_plan_id: plan.id,
           source: 'plan' as const,
+          completionId: completionByPlan.get(plan.id) ?? null,
           title: plan.name,
           totalKcal: Math.round(totalKcal),
           xp_reward: plan.xp_reward,
@@ -301,10 +344,17 @@ export function useHabits() {
           isCompleted: completedMealIds.has(plan.id),
           scheduled_time: plan.scheduled_time ? plan.scheduled_time.slice(0, 5) : null,
           scheduled_end_time: plan.scheduled_end_time ? plan.scheduled_end_time.slice(0, 5) : null,
+          planItems: (plan.items ?? []).map((item: any) => ({
+            id: item.id,
+            food_id: item.food_id,
+            quantity_grams: item.quantity_grams,
+          })),
         };
       });
 
-      const loggedMeals = (foodLogsRes.data ?? []).map((log: any) => {
+      const loggedMeals = (foodLogsRes.data ?? [])
+        .filter((log: any) => log.source !== 'meal_plan' && !log.meal_plan_id)
+        .map((log: any) => {
         const foodObj = Array.isArray(log.food) ? log.food[0] : log.food;
         const totalKcal = Math.round(((foodObj?.calories_per_100g ?? 0) * (log.quantity_grams ?? 0)) / 100);
         const loggedAt = new Date(log.logged_at);
@@ -321,7 +371,7 @@ export function useHabits() {
           scheduled_time: loggedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           scheduled_end_time: null,
         };
-      });
+        });
 
       const completedHabitIds = (completionsRes.data ?? []).map((c) => c.habit_id);
 
@@ -406,32 +456,66 @@ export function useHabits() {
     if (mission.source === 'food_log') return;
 
     const done = mission.isCompleted;
-    const completedCount = mealMissions.filter((m) => m.isCompleted).length;
 
     if (done) {
-      const { error } = await supabase
+      const { data: deletedCompletions, error } = await supabase
         .from('meal_completions')
         .delete()
         .eq('meal_plan_id', mealPlanId)
         .eq('user_id', user.id)
-        .eq('completed_at', todayStr());
+        .eq('completed_at', todayStr())
+        .select('id');
 
       if (!error) {
-        updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: false } : m));
-        
-        // Se todas as refeições estavam completas antes, remove o bônus consolidado
+        updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId
+          ? { ...m, isCompleted: false, completionId: null }
+          : m));
+        if ((deletedCompletions ?? []).length > 0) {
+          const bossStore = useBossStore.getState();
+          await bossStore.attackActiveBoss(user.id, -MEAL_BOSS_DAMAGE, 'nutrition');
+        }
+      } else {
+        setError(error.message);
       }
     } else {
-      const { error } = await supabase.from('meal_completions').insert({
-        meal_plan_id: mealPlanId,
-        user_id: user.id,
-        completed_at: todayStr(),
-      });
+      const { data: completion, error } = await supabase
+        .from('meal_completions')
+        .insert({
+          meal_plan_id: mealPlanId,
+          user_id: user.id,
+          completed_at: todayStr(),
+        })
+        .select('id')
+        .single();
 
-      if (!error) {
-        updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId ? { ...m, isCompleted: true } : m));
-        
-        // Se agora todas as refeições estão completas, concede o bônus consolidado
+      if (!error && completion) {
+        const logs = (mission.planItems ?? []).map(item => ({
+          user_id: user.id,
+          food_id: item.food_id,
+          quantity_grams: item.quantity_grams,
+          meal_type: mission.title,
+          source: 'meal_plan',
+          meal_plan_id: mealPlanId,
+          meal_plan_item_id: item.id,
+          meal_completion_id: completion.id,
+        }));
+
+        if (logs.length > 0) {
+          const { error: logError } = await supabase.from('food_logs').insert(logs);
+          if (logError) {
+            await supabase.from('meal_completions').delete().eq('id', completion.id);
+            setError(`Não foi possível sincronizar a refeição com o diário: ${logError.message}`);
+            return;
+          }
+        }
+
+        updateMealMissionsState((prev) => prev.map(m => m.meal_plan_id === mealPlanId
+          ? { ...m, isCompleted: true, completionId: completion.id }
+          : m));
+        const bossStore = useBossStore.getState();
+        await bossStore.attackActiveBoss(user.id, MEAL_BOSS_DAMAGE, 'nutrition');
+      } else if (error) {
+        setError(error.message);
       }
     }
   };

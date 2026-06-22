@@ -7,6 +7,7 @@
 - **Profile cache control:** `hunter-storage` entrou na limpeza por versao/schema para impedir perfil antigo sem campos nutricionais.
 - **Nutrition scoring:** Regras de XP nutricional migradas de recompensa instantanea/cardapio completo para avaliacao diaria por TMB + objetivo nutricional, com tabela idempotente `nutrition_daily_scores`.
 - **Nutrition UX:** Missoes exibe calorias restantes/objetivo diario; Recuperacao mostra TMB, manutencao estimada, meta calorica e faixa de tolerancia.
+- **Nutrition hybrid sync (2026-06-21):** Códex usa valores locais da TACO; conclusões de cardápios geram logs nutricionais reversíveis, entram no total diário e causam dano no boss. Auditoria posterior validou o contrato remoto e corrigiu porções customizadas e sincronizações parciais.
 - **Validation:** `npm.cmd run build` aprovado.
 
 ## Phase 1: Foundation & UI/UX Base

@@ -30,8 +30,10 @@ import { NutritionMealPlans } from '@/components/nutrition/NutritionMealPlans';
 import type { Food } from '@/types/nutrition';
 import { localDateString, localDayBounds } from '@/lib/date';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { useBossStore } from '@/stores/useBossStore';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 import type { MealPlan } from '@/hooks/useMealPlans';
+import { calculateMealFromTaco } from '@/lib/taco';
 
 interface FoodLog {
   id: string;
@@ -45,6 +47,18 @@ interface FoodLog {
 interface NutritionScore {
   date: string;
   success: boolean;
+}
+
+function quantityToGrams(food: Food, quantity: number) {
+  return food.serving_size && food.serving_unit
+    ? quantity * food.serving_size
+    : quantity;
+}
+
+function gramsToQuantity(food: Food, grams: number) {
+  return food.serving_size && food.serving_unit
+    ? grams / food.serving_size
+    : grams;
 }
 
 type NutritionStatus = 'low' | 'ideal' | 'exceeded';
@@ -169,6 +183,9 @@ export function Nutrition() {
     fat: number;
     totalGrams: number;
     confidence: number;
+    tacoCoverage: number;
+    tacoFoods: string[];
+    unmatchedFoods: string[];
   } | null>(null);
   const [iaEditing, setIaEditing] = useState(false);
   const [iaRegistering, setIaRegistering] = useState(false);
@@ -199,7 +216,7 @@ export function Nutrition() {
     }, 5000);
     
     try {
-      const { startIso } = localDayBounds();
+      const { startIso, endIso } = localDayBounds();
       const [
         { data: foodData, error: foodError },
         { data: logData, error: logError },
@@ -217,6 +234,7 @@ export function Nutrition() {
           `)
           .eq('user_id', user.id)
           .gte('logged_at', startIso)
+          .lte('logged_at', endIso)
           .order('logged_at', { ascending: false }),
         supabase
           .from('nutrition_daily_scores')
@@ -255,8 +273,7 @@ export function Nutrition() {
     if (!user || !selectedFood) return;
 
     try {
-      const isCustomUnit = !!selectedFood.serving_unit && !!selectedFood.serving_size;
-      const finalGrams = isCustomUnit ? quantity * (100 / selectedFood.serving_size!) : quantity;
+      const finalGrams = quantityToGrams(selectedFood, quantity);
 
       const payload = {
         user_id: user.id,
@@ -282,10 +299,7 @@ export function Nutrition() {
 
   function handleEditLog(log: FoodLog) {
     if (!log.food) return;
-    const isCustom = !!log.food.serving_unit && !!log.food.serving_size;
-    const displayQuantity = isCustom
-      ? log.quantity_grams / (100 / log.food.serving_size!)
-      : log.quantity_grams;
+    const displayQuantity = gramsToQuantity(log.food, log.quantity_grams);
 
     setSelectedFood(log.food);
     setQuantity(Number(displayQuantity.toFixed(2)));
@@ -308,21 +322,98 @@ export function Nutrition() {
     if (!user || !plan.items?.length) return;
     setMealPlanFeedback(null);
 
-    const { error } = await supabase.from('food_logs').insert(
+    const today = localDateString();
+    const { data: existingCompletion, error: lookupError } = await supabase
+      .from('meal_completions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('meal_plan_id', plan.id)
+      .eq('completed_at', today)
+      .maybeSingle();
+
+    if (lookupError) {
+      setDataError(lookupError.message);
+      return;
+    }
+
+    if (existingCompletion) {
+      const { data: syncedItems, error: syncedItemsError } = await supabase
+        .from('food_logs')
+        .select('meal_plan_item_id')
+        .eq('user_id', user.id)
+        .eq('meal_completion_id', existingCompletion.id);
+
+      if (syncedItemsError) {
+        setDataError(syncedItemsError.message);
+        return;
+      }
+
+      const syncedItemIds = new Set(
+        (syncedItems ?? []).map(log => log.meal_plan_item_id).filter(Boolean)
+      );
+      const missingItems = plan.items.filter(item => !syncedItemIds.has(item.id));
+
+      if (missingItems.length > 0) {
+        const { error: repairError } = await supabase.from('food_logs').insert(
+          missingItems.map(item => ({
+            user_id: user.id,
+            food_id: item.food_id,
+            quantity_grams: item.quantity_grams,
+            meal_type: plan.name,
+            source: 'meal_plan',
+            meal_plan_id: plan.id,
+            meal_plan_item_id: item.id,
+            meal_completion_id: existingCompletion.id,
+          }))
+        );
+
+        if (repairError && repairError.code !== '23505') {
+          setDataError(repairError.message);
+          return;
+        }
+      }
+
+      setMealPlanFeedback(`${plan.name} já está contabilizado e sincronizado no diário de hoje.`);
+      await fetchData();
+      return;
+    }
+
+    const { data: completion, error: completionError } = await supabase
+      .from('meal_completions')
+      .insert({
+        user_id: user.id,
+        meal_plan_id: plan.id,
+        completed_at: today,
+      })
+      .select('id')
+      .single();
+
+    if (completionError || !completion) {
+      setDataError(completionError?.message ?? 'Não foi possível concluir a refeição.');
+      return;
+    }
+
+    const { error: logError } = await supabase.from('food_logs').insert(
       plan.items.map(item => ({
         user_id: user.id,
         food_id: item.food_id,
         quantity_grams: item.quantity_grams,
         meal_type: plan.name,
+        source: 'meal_plan',
+        meal_plan_id: plan.id,
+        meal_plan_item_id: item.id,
+        meal_completion_id: completion.id,
       }))
     );
 
-    if (error) {
-      setDataError(error.message);
+    if (logError) {
+      await supabase.from('meal_completions').delete().eq('id', completion.id);
+      setDataError(logError.message);
       return;
     }
 
-    setMealPlanFeedback(`${plan.name} foi adicionado ao diário de hoje.`);
+    await useBossStore.getState().attackActiveBoss(user.id, 15, 'nutrition');
+    setMealPlanFeedback(`${plan.name} foi concluído e adicionado ao diário de hoje.`);
     await fetchData();
   }
 
@@ -393,20 +484,22 @@ export function Nutrition() {
             {
               role: 'system',
               content: `Você é o Códex da Alimentação, um assistente neural de nutrição integrado a um sistema ciberpunk de RPG de vida real.
-Sua tarefa é analisar a descrição livre da refeição do caçador e retornar EXCLUSIVAMENTE um objeto JSON estruturado contendo a estimativa de macronutrientes do prato inteiro.
+Sua tarefa é decompor a descrição livre da refeição em ingredientes e estimar somente o peso em gramas de cada item. Os valores nutricionais serão calculados posteriormente pela tabela TACO, portanto NÃO estime calorias ou macronutrientes.
 Não insira nenhuma introdução, conclusão ou texto explicativo. Retorne apenas o JSON.
 
 Formato do JSON esperado:
 {
   "meal_name": "Nome descritivo em português, curto, em caixa alta (ex: PRATO DE ARROZ, FEIJÃO E FRANGO GRELHADO)",
-  "calories": 450, // número inteiro de calorias totais
-  "protein": 32,   // gramas totais de proteína (número)
-  "carbs": 48,     // gramas totais de carboidratos (número)
-  "fat": 11,       // gramas totais de gordura (número)
-  "total_grams": 350 // estimativa do peso total da refeição em gramas (número)
+  "ingredients": [
+    {
+      "name": "arroz branco cozido",
+      "taco_description": "Arroz, tipo 1, cozido",
+      "grams": 150
+    }
+  ]
 }
 
-Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente estimar ou assuma uma refeição padrão simples baseada nas palavras que encontrar.`
+Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas com uma estimativa realista. Preserve o estado de preparo: cru, cozido, assado, frito ou grelhado. Em "taco_description", use a descrição mais provável no padrão da Tabela Brasileira de Composição de Alimentos (TACO). Não invente ingredientes que não estejam no texto.`
             },
             {
               role: 'user',
@@ -431,21 +524,29 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
       }
 
       const parsedData = JSON.parse(content);
-      const { meal_name, calories, protein, carbs, fat, total_grams } = parsedData;
+      const { meal_name, ingredients } = parsedData;
 
-      if (!meal_name || !calories || !total_grams) {
+      if (!meal_name || !Array.isArray(ingredients) || ingredients.length === 0) {
         throw new Error('Formato de dados incompleto retornado pelo modelo de IA.');
+      }
+
+      const tacoMeal = calculateMealFromTaco(ingredients);
+      if (tacoMeal.matched.length === 0 || tacoMeal.totalGrams <= 0) {
+        throw new Error('Nenhum ingrediente pôde ser localizado na tabela TACO. Descreva os alimentos e quantidades com mais detalhes.');
       }
 
       const detailSignals = iaTextInput.match(/\b\d+(?:[.,]\d+)?\s*(?:g|gramas?|ml|unidades?|fatias?|colheres?)\b/gi)?.length ?? 0;
       setIaPreview({
         mealName: meal_name,
-        calories: Math.round(calories),
-        protein: Math.round(protein),
-        carbs: Math.round(carbs),
-        fat: Math.round(fat),
-        totalGrams: Math.round(total_grams),
-        confidence: Math.min(96, 76 + detailSignals * 5),
+        calories: tacoMeal.calories,
+        protein: tacoMeal.protein,
+        carbs: tacoMeal.carbs,
+        fat: tacoMeal.fat,
+        totalGrams: tacoMeal.totalGrams,
+        confidence: Math.min(98, Math.round(tacoMeal.coverage * 0.75 + 18 + detailSignals * 2)),
+        tacoCoverage: tacoMeal.coverage,
+        tacoFoods: tacoMeal.matched.map(item => item.food.description),
+        unmatchedFoods: tacoMeal.unmatched.map(item => item.name),
       });
 
     } catch (err: unknown) {
@@ -485,9 +586,17 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
         food_id: food.id,
         quantity_grams: iaPreview.totalGrams,
         meal_type: iaMealType,
+        source: 'ai',
       });
 
-      if (logError) throw logError;
+      if (logError) {
+        await supabase
+          .from('foods')
+          .delete()
+          .eq('id', food.id)
+          .eq('created_by', user.id);
+        throw logError;
+      }
 
       setIaRegistrationSuccess(`${iaPreview.mealName} foi registrado no diário.`);
       setIaPreview(null);
@@ -961,8 +1070,21 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                           ))}
                         </div>
 
+                        <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.035] p-3">
+                          <p className="text-xs font-black uppercase tracking-widest text-emerald-300">
+                            Base nutricional TACO · {iaPreview.tacoCoverage}% dos ingredientes localizados
+                          </p>
+                          <p className="mt-2 text-[13px] leading-relaxed text-gray-400">
+                            {iaPreview.tacoFoods.join(' · ')}
+                          </p>
+                          {iaPreview.unmatchedFoods.length > 0 && (
+                            <p className="mt-2 text-xs text-amber-300">
+                              Não localizados e fora do cálculo: {iaPreview.unmatchedFoods.join(', ')}.
+                            </p>
+                          )}
+                        </div>
                         <p className="text-[13px] leading-relaxed text-gray-500">
-                          Valores estimados pela IA. Revise quantidades e ingredientes antes de registrar.
+                          A IA interpreta ingredientes e quantidades; energia e macros são calculados com os valores por 100 g da TACO. Revise antes de registrar.
                         </p>
 
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -1126,7 +1248,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                   ) : (
                     logs.map((log) => {
                       const isCustom = !!log.food?.serving_unit && !!log.food?.serving_size;
-                      const displayQty = isCustom ? Number((log.quantity_grams / (100 / log.food!.serving_size!)).toFixed(2)) : log.quantity_grams;
+                      const displayQty = isCustom ? Number(gramsToQuantity(log.food!, log.quantity_grams).toFixed(2)) : log.quantity_grams;
                       const displayUnit = isCustom ? log.food!.serving_unit : 'G';
                       const ratio = log.quantity_grams / 100;
                       const kcal = (log.food?.calories_per_100g || 0) * ratio;
@@ -1301,7 +1423,7 @@ Caso o texto do caçador não contenha comida válida ou seja sem sentido, tente
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-semibold text-gray-400">Conversão de energia</span>
                     <span className="text-lg font-black text-purple-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                      {((selectedFood.calories_per_100g * ((selectedFood.serving_size ? quantity * (100 / selectedFood.serving_size) : quantity) / 100))).toFixed(0)} kcal
+                      {((selectedFood.calories_per_100g * quantityToGrams(selectedFood, quantity)) / 100).toFixed(0)} kcal
                     </span>
                   </div>
                 </div>
