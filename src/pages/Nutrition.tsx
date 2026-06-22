@@ -587,6 +587,9 @@ Sua tarefa é decompor a descrição livre da refeição em ingredientes, estima
 2. FatSecret (Base de dados muito utilizada em aplicativos de nutrição)
 3. Estimativa de fallback própria da IA (caso falte informações em um ou nos dois anteriores)
 
+Regras especiais para alimentos comerciais e de marcas:
+- **Alimentos Comerciais, Fast-Food e Pratos Prontos de Marcas**: Se o usuário descrever um alimento comercial de marca, item de fast-food (ex: "Big Mac", "Whopper", "McFritas", "Subway de Frango", etc.) ou prato industrializado consolidado (ex: "Lasanha Sadia"), você **NÃO deve decompô-lo** em ingredientes primários separados. Em vez disso, retorne-o como um único ingrediente contendo o nome do produto oficial com a respectiva marca (ex: "Big Mac (McDonald's)") e o peso total estimado dele. Para as informações nutricionais por 100g das fontes (especialmente FatSecret e IA Fallback), utilize os dados nutricionais oficiais do produto inteiro (ex: para o Big Mac, o valor oficial de ~222 kcal por 100g, que equivale a ~524 kcal por sanduíche de 236g). Não tente estimar os ingredientes do sanduíche separados se o item completo possui tabela oficial consolidada.
+
 Regras para obter os dados de cada fonte por 100g:
 - Para a fonte 'taco', verifique se o ingrediente existe na Tabela TACO. Se sim, defina 'found' como true e forneça os valores (kcal, protein, carbs, fat). Se não, defina 'found' como false e coloque os valores zerados.
 - Para a fonte 'fatsecret', verifique se o ingrediente existe na base FatSecret. Se sim, defina 'found' como true e forneça os valores (kcal, protein, carbs, fat). Se não, defina 'found' como false e coloque os valores zerados.
