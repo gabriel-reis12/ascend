@@ -445,13 +445,20 @@ export function Workouts() {
         xp_awarded: xpReward,
       }, { onConflict: 'user_id,routine_id,completed_date' });
 
-      await addXp(xpReward, user.id);
-      await updateStat(statTarget, 2, user.id);
-      await updateStat('vitality', 1, user.id);
-      await updateStat('discipline', 1, user.id);
+      const completionDate = localDateString();
+      const xpResult = await addXp(xpReward, user.id, {
+        eventId: `workout-routine:${sessionRoutineId}:${completionDate}`,
+      });
+      if (xpResult.awardedXp > 0) {
+        await updateStat(statTarget, 2, user.id);
+        await updateStat('vitality', 1, user.id);
+        await updateStat('discipline', 1, user.id);
+      }
       
       // Causar dano ao chefe ativo na Raid
-      await useBossStore.getState().attackActiveBoss(user.id, xpReward, 'workout');
+      if (xpResult.awardedXp > 0) {
+        await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'workout');
+      }
       
       setIsRoutineSessionOpen(false);
       setSessionRoutineId(null);
@@ -670,21 +677,25 @@ export function Workouts() {
     if (!user || !selectedExercise) return;
 
     try {
-      const { error } = await supabase.from('workout_logs').insert({
+      const { data: workoutLog, error } = await supabase.from('workout_logs').insert({
         user_id: user.id,
         exercise_id: selectedExercise.id,
         sets,
         reps,
         weight_kg: weight,
-      });
+      }).select('id').single();
 
       if (error) throw error;
       
       // Add XP Reward for individual logging
-      await addXp(10, user.id);
+      const xpResult = await addXp(10, user.id, {
+        eventId: `workout-log:${workoutLog.id}`,
+      });
       
       // Causar dano ao chefe ativo na Raid (menor intensidade)
-      await useBossStore.getState().attackActiveBoss(user.id, 10, 'workout');
+      if (xpResult.awardedXp > 0) {
+        await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'workout');
+      }
 
       setIsModalOpen(false);
       setSelectedExercise(null);

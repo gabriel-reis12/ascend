@@ -851,3 +851,15 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Removidas sombras decorativas dos cards e reduzido o overlay escuro a um degradê inferior, preservando contraste do texto sem ocultar as ilustrações.
   - Cards marcados como superfície escura preservada para não perder contraste quando o tema claro está ativo.
   - Build de produção validado com `npm.cmd run build`.
+
+### 2026-06-22
+- **Progressão de XP v2 e proteção de retenção:**
+  - Redesenhada a curva para entregar o nível 2 com 100 XP, acelerar a primeira semana e aumentar gradualmente a exigência até o nível máximo 100.
+  - Redistribuídos os ranks: D 20, C 40, B 60, A 75, S 85, National 95 e Monarch 100.
+  - XP comum limitado a 180 pontos em taxa integral, mais uma faixa reduzida de 30%, totalizando no máximo 201 XP efetivos por dia.
+  - Bosses, conquistas e marcos de streak agora usam XP bônus separado, limitado a 750 XP semanais.
+  - Adicionado ledger local idempotente para impedir que o mesmo evento conceda XP mais de uma vez e permitir reversões pelo valor realmente recebido.
+  - Dano de atividades contra bosses passou a usar o XP efetivamente concedido após limites e bônus.
+  - Tarefas e hábitos personalizados passaram a aceitar entre 5 e 50 XP, com sanitização no frontend e constraint na migration `20260622_progression_v2.sql`.
+  - Dashboard e Quests agora exibem os limites de XP comum e bônus de forma explícita.
+  - Build de produção validado com `npm.cmd run build`.

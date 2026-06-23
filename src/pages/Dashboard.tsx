@@ -29,6 +29,13 @@ import { useHabits } from '@/hooks/useHabits';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { localDayBounds } from '@/lib/date';
+import {
+  DAILY_COMMON_XP_EFFECTIVE_MAX,
+  MAX_LEVEL,
+  RANK_PROMOTION_LEVELS,
+  RANK_START_LEVELS,
+  WEEKLY_BONUS_XP_CAP,
+} from '@/lib/progression';
 
 type StatKey = keyof HunterStats;
 
@@ -57,17 +64,6 @@ const STAT_META: Array<{
   { key: 'wisdom', label: 'SAB', name: 'Sabedoria', color: 'text-cyan-400', border: 'hover:border-cyan-500/35' },
   { key: 'balance', label: 'EQU', name: 'Equilíbrio', color: 'text-pink-400', border: 'hover:border-pink-500/35' },
 ];
-
-const RANK_LEVELS: Record<string, number> = {
-  E: 10,
-  D: 20,
-  C: 35,
-  B: 50,
-  A: 70,
-  S: 100,
-  National: 150,
-  Monarch: 150,
-};
 
 const NEXT_RANK: Record<string, string> = {
   E: 'D',
@@ -441,9 +437,16 @@ export function Dashboard() {
     return events;
   }, [evolutionHistory, state.streak.current]);
 
-  const xpPercent = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
-  const nextRankLevel = RANK_LEVELS[state.rank] || 150;
-  const rankProgress = state.rank === 'Monarch' ? 100 : Math.min(100, (state.level / nextRankLevel) * 100);
+  const xpPercent = state.level >= MAX_LEVEL
+    ? 100
+    : state.xpRequired > 0
+      ? Math.min(100, (state.xp / state.xpRequired) * 100)
+      : 0;
+  const nextRankLevel = RANK_PROMOTION_LEVELS[state.rank] || 100;
+  const currentRankStart = RANK_START_LEVELS[state.rank] || 1;
+  const rankProgress = state.rank === 'Monarch'
+    ? 100
+    : Math.min(100, ((state.level - currentRankStart) / Math.max(1, nextRankLevel - currentRankStart)) * 100);
   const NextMissionIcon = nextMission.icon;
 
   return (
@@ -494,7 +497,9 @@ export function Dashboard() {
               <div className="mb-2 flex items-end justify-between gap-4">
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.22em] text-gray-600">Experiência do Hunter</p>
-                  <p className="mt-1 text-sm font-black uppercase text-white font-orbitron">Level {state.level}</p>
+                  <p className="mt-1 text-sm font-black uppercase text-white font-orbitron">
+                    Level {state.level}{state.level >= MAX_LEVEL ? ' · MAX' : ''}
+                  </p>
                 </div>
                 <span className="text-[11px] font-black text-blue-300 font-orbitron">{state.xp} / {state.xpRequired} XP</span>
               </div>
@@ -523,7 +528,12 @@ export function Dashboard() {
             <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-4">
               <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Resumo de Hoje</p>
               <p className="mt-2 text-lg font-black text-white font-orbitron">{dailySummary.completed}/{dailySummary.total || 0}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-orange-300">{state.xpGainedToday || xpEarnedToday} XP ganhos</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-orange-300">
+                {state.xpGainedToday || xpEarnedToday} / {DAILY_COMMON_XP_EFFECTIVE_MAX} XP diário
+              </p>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-600">
+                Bônus semanal {state.bonusXpGainedWeek} / {WEEKLY_BONUS_XP_CAP}
+              </p>
             </div>
           </div>
         </div>

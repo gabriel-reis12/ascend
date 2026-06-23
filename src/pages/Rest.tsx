@@ -115,22 +115,26 @@ export function Rest() {
     setIsSubmitting(true);
     try {
       const durationMin = Math.round(sleepHours * 60);
-      const { error } = await supabase.from('rest_logs').insert({
+      const { data: restLog, error } = await supabase.from('rest_logs').insert({
         user_id: user.id,
         type: 'sleep',
         duration_min: durationMin,
         quality: sleepQuality,
         notes: `Qualidade: ${sleepQuality}/5`
-      });
+      }).select('id').single();
 
       if (error) throw error;
 
       // Recompensas RPG: +20 XP e +2 Equilíbrio (BAL)
-      await addXp(20, user.id);
+      const xpResult = await addXp(20, user.id, {
+        eventId: `rest:${restLog.id}`,
+      });
       await updateStat('balance', 2, user.id);
       
       // Dano ao Boss ativo na fenda
-      await useBossStore.getState().attackActiveBoss(user.id, 15, 'Estudo'); // Atrelado a equilíbrio mental
+      if (xpResult.awardedXp > 0) {
+        await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'Estudo');
+      }
 
       setShowReward({ xp: 20, stat: 'EQUILÍBRIO', val: 2 });
       setTimeout(() => setShowReward(null), 4000);
@@ -148,21 +152,25 @@ export function Rest() {
     if (!user || hobbyDuration <= 0) return;
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('rest_logs').insert({
+      const { data: restLog, error } = await supabase.from('rest_logs').insert({
         user_id: user.id,
         type: 'hobby',
         duration_min: hobbyDuration,
         notes: hobbyNotes.trim() || null
-      });
+      }).select('id').single();
 
       if (error) throw error;
 
       // Recompensas RPG: +15 XP e +1 Equilíbrio (BAL)
-      await addXp(15, user.id);
+      const xpResult = await addXp(15, user.id, {
+        eventId: `rest:${restLog.id}`,
+      });
       await updateStat('balance', 1, user.id);
 
       // Dano ao Boss ativo na fenda
-      await useBossStore.getState().attackActiveBoss(user.id, 10, 'Estudo');
+      if (xpResult.awardedXp > 0) {
+        await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'Estudo');
+      }
 
       setShowReward({ xp: 15, stat: 'EQUILÍBRIO', val: 1 });
       setTimeout(() => setShowReward(null), 4000);
@@ -181,22 +189,26 @@ export function Rest() {
     if (!user) return;
     setIsMeditationActive(false);
     try {
-      const { error } = await supabase.from('rest_logs').insert({
+      const { data: restLog, error } = await supabase.from('rest_logs').insert({
         user_id: user.id,
         type: 'meditation',
         duration_min: mins,
         quality: 5,
         notes: 'Sessão de Meditação Cronometrada Concluída'
-      });
+      }).select('id').single();
 
       if (error) throw error;
 
       // Recompensas RPG: +15 XP e +2 Equilíbrio (BAL)
-      await addXp(15, user.id);
+      const xpResult = await addXp(15, user.id, {
+        eventId: `rest:${restLog.id}`,
+      });
       await updateStat('balance', 2, user.id);
 
       // Dano Crítico de Estudo/Calma ao Boss
-      await useBossStore.getState().attackActiveBoss(user.id, 20, 'Estudo');
+      if (xpResult.awardedXp > 0) {
+        await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'Estudo');
+      }
 
       setShowReward({ xp: 15, stat: 'EQUILÍBRIO', val: 2 });
       setTimeout(() => setShowReward(null), 4000);

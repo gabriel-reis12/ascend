@@ -1,11 +1,42 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
-import { getRankForLevel, getXpRequiredForLevel, INITIAL_XP_REQUIREMENT } from '../lib/progression';
+import {
+  DAILY_COMMON_XP_EFFECTIVE_MAX,
+  DAILY_COMMON_XP_FULL_CAP,
+  DAILY_COMMON_XP_SOFT_RATE,
+  getIsoWeekKey,
+  getRankForLevel,
+  getTotalXpForLevel,
+  getXpRequiredForLevel,
+  INITIAL_XP_REQUIREMENT,
+  MAX_LEVEL,
+  WEEKLY_BONUS_XP_CAP,
+} from '../lib/progression';
 
 export type HunterRank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'National' | 'Monarch';
 export type HunterClass = 'Warrior' | 'Scholar' | 'Creator' | 'Monk' | 'Leader';
 export type HunterGender = 'male' | 'female';
+export type XpSource = 'common' | 'bonus';
+
+export interface XpAwardOptions {
+  source?: XpSource;
+  eventId?: string;
+  applyStreakBonus?: boolean;
+  checkAchievements?: boolean;
+}
+
+export interface XpAwardResult {
+  requestedXp: number;
+  awardedXp: number;
+  source: XpSource;
+  capped: boolean;
+}
+
+interface XpAwardLedgerEntry {
+  amount: number;
+  awardedAt: string;
+}
 
 export interface HunterStats {
   strength: number;
@@ -41,11 +72,14 @@ export interface HunterState {
   };
   pendingLevelUp: number | null;
   xpGainedToday: number;
+  bonusXpGainedWeek: number;
+  bonusXpWeekKey: string;
+  xpAwardLedger: Record<string, XpAwardLedgerEntry>;
   streakMilestonesClaimed: string[];
   activeTitle: string;
 
   // Actions
-  addXp: (amount: number, userId?: string) => Promise<void>;
+  addXp: (amount: number, userId?: string, options?: XpAwardOptions) => Promise<XpAwardResult>;
   updateStat: (stat: keyof HunterStats, amount: number, userId?: string) => Promise<void>;
   setHunterClass: (hClass: HunterClass, userId?: string) => Promise<void>;
   loadProfile: (userId: string) => Promise<void>;
@@ -88,45 +122,38 @@ const INITIAL_STATE = {
   streak: { current: 0, best: 0 },
   pendingLevelUp: null as number | null,
   xpGainedToday: 0,
+  bonusXpGainedWeek: 0,
+  bonusXpWeekKey: getIsoWeekKey(),
+  xpAwardLedger: {} as Record<string, XpAwardLedgerEntry>,
   streakMilestonesClaimed: [] as string[],
   activeTitle: 'Iniciante',
 };
 
-const calculateAntiFarmXp = (currentGainedToday: number, amount: number): { addedXp: number; newGainedToday: number } => {
-  let remaining = amount;
-  let current = currentGainedToday;
-  let added = 0;
+const calculateCommonXp = (currentGainedToday: number, amount: number) => {
+  let remaining = Math.max(0, amount);
+  let addedXp = 0;
 
-  while (remaining > 0) {
-    if (current < 150) {
-      // 100% ganho
-      const chunk = Math.min(remaining, 150 - current);
-      added += chunk;
-      current += chunk;
-      remaining -= chunk;
-    } else if (current < 300) {
-      // 35% ganho (Soft Cap)
-      const chunk = Math.min(remaining, 300 - current);
-      const realChunk = chunk * 0.35;
-      added += realChunk;
-      current += realChunk;
-      remaining -= chunk;
-    } else {
-      // 5% ganho (Hard Cap)
-      const realChunk = remaining * 0.05;
-      added += realChunk;
-      current += realChunk;
-      remaining = 0;
-    }
-  }
+  const fullRateCapacity = Math.max(0, DAILY_COMMON_XP_FULL_CAP - currentGainedToday);
+  const fullRateAward = Math.min(remaining, fullRateCapacity);
+  addedXp += fullRateAward;
+  remaining -= fullRateAward;
+
+  const currentAfterFullRate = currentGainedToday + addedXp;
+  const softEffectiveCapacity = Math.max(0, DAILY_COMMON_XP_EFFECTIVE_MAX - currentAfterFullRate);
+  const softRateAward = Math.min(remaining * DAILY_COMMON_XP_SOFT_RATE, softEffectiveCapacity);
+  addedXp += softRateAward;
 
   return {
-    addedXp: Math.round(added),
-    newGainedToday: Math.round(current)
+    addedXp: Math.round(addedXp),
+    newGainedToday: Math.min(
+      DAILY_COMMON_XP_EFFECTIVE_MAX,
+      Math.round(currentGainedToday + addedXp),
+    ),
   };
 };
 
 const subtractXp = (state: HunterState, amount: number) => {
+  const totalBefore = getTotalXpForLevel(state.level) + state.xp;
   let newLevel = state.level;
   let newXp = state.xp - amount;
 
@@ -139,11 +166,47 @@ const subtractXp = (state: HunterState, amount: number) => {
     newXp = 0;
   }
 
+  const totalAfter = getTotalXpForLevel(newLevel) + newXp;
+
   return {
     xp: newXp,
     level: newLevel,
     xpRequired: getXpRequiredForLevel(newLevel),
     rank: getRankForLevel(newLevel),
+    removedXp: Math.max(0, totalBefore - totalAfter),
+  };
+};
+
+const pruneXpLedger = (ledger: Record<string, XpAwardLedgerEntry>) => {
+  const entries = Object.entries(ledger);
+  if (entries.length <= 500) return ledger;
+
+  return Object.fromEntries(
+    entries
+      .sort(([, left], [, right]) => right.awardedAt.localeCompare(left.awardedAt))
+      .slice(0, 500),
+  );
+};
+
+const normalizeStoredProgress = (levelValue: number, xpValue: number) => {
+  let level = Math.min(MAX_LEVEL, Math.max(1, Math.floor(levelValue || 1)));
+  let xp = Math.max(0, Math.round(xpValue || 0));
+
+  while (level < MAX_LEVEL && xp >= getXpRequiredForLevel(level)) {
+    xp -= getXpRequiredForLevel(level);
+    level += 1;
+  }
+
+  if (level >= MAX_LEVEL) {
+    level = MAX_LEVEL;
+    xp = Math.min(xp, getXpRequiredForLevel(MAX_LEVEL));
+  }
+
+  return {
+    level,
+    xp,
+    xpRequired: getXpRequiredForLevel(level),
+    rank: getRankForLevel(level),
   };
 };
 
@@ -152,40 +215,97 @@ export const useHunterStore = create<HunterState>()(
     (set, get) => ({
       ...INITIAL_STATE,
 
-      addXp: async (amount, userId) => {
+      addXp: async (amount, userId, options = {}) => {
         const state = get();
+        const source = options.source ?? 'common';
+        const eventId = options.eventId;
+        const requestedXp = Math.round(amount);
 
-        if (amount < 0) {
-          const removedXp = Math.abs(amount);
+        if (!requestedXp) {
+          return { requestedXp, awardedXp: 0, source, capped: false };
+        }
+
+        if (requestedXp < 0) {
+          const ledgerAward = eventId ? state.xpAwardLedger[eventId]?.amount : undefined;
+          const requestedRemoval = Math.abs(ledgerAward ?? requestedXp);
+          const subtraction = subtractXp(state, requestedRemoval);
+          const { removedXp, ...progressAfterRemoval } = subtraction;
+          const nextLedger = { ...state.xpAwardLedger };
+          if (eventId) delete nextLedger[eventId];
+
           set({
-            ...subtractXp(state, removedXp),
-            xpGainedToday: Math.max(0, state.xpGainedToday - removedXp),
+            ...progressAfterRemoval,
+            xpGainedToday: source === 'common'
+              ? Math.max(0, state.xpGainedToday - removedXp)
+              : state.xpGainedToday,
+            bonusXpGainedWeek: source === 'bonus'
+              ? Math.max(0, state.bonusXpGainedWeek - removedXp)
+              : state.bonusXpGainedWeek,
+            xpAwardLedger: nextLedger,
           });
 
           if (userId) {
             await get().saveProfile(userId);
           }
-          return;
+          return {
+            requestedXp,
+            awardedXp: -removedXp,
+            source,
+            capped: removedXp < requestedRemoval,
+          };
         }
 
-        // Consistência ajuda, mas não elimina a dificuldade da progressão.
-        const streakBonus = Math.min(state.streak.current * 0.01, 0.3);
-        const finalAmount = Math.floor(amount * (1 + streakBonus));
+        if (state.level >= MAX_LEVEL && state.xp >= state.xpRequired) {
+          return { requestedXp, awardedXp: 0, source, capped: true };
+        }
 
-        // Aplicar Anti-Farm
-        const { addedXp, newGainedToday } = calculateAntiFarmXp(state.xpGainedToday, finalAmount);
+        if (eventId && state.xpAwardLedger[eventId]) {
+          return { requestedXp, awardedXp: 0, source, capped: true };
+        }
+
+        const shouldApplyStreakBonus = options.applyStreakBonus ?? source === 'common';
+        const streakBonus = shouldApplyStreakBonus ? Math.min(state.streak.current * 0.01, 0.3) : 0;
+        const finalAmount = Math.floor(requestedXp * (1 + streakBonus));
+
+        const currentWeekKey = getIsoWeekKey();
+        const bonusXpGainedWeek = state.bonusXpWeekKey === currentWeekKey
+          ? state.bonusXpGainedWeek
+          : 0;
+
+        const xpCalculation = source === 'bonus'
+          ? {
+              addedXp: Math.min(finalAmount, Math.max(0, WEEKLY_BONUS_XP_CAP - bonusXpGainedWeek)),
+              newGainedToday: state.xpGainedToday,
+            }
+          : calculateCommonXp(state.xpGainedToday, finalAmount);
+
+        const addedXp = Math.max(0, Math.round(xpCalculation.addedXp));
+        const newGainedToday = xpCalculation.newGainedToday;
 
         let newXp = state.xp + addedXp;
         let newLevel = state.level;
         let newXpReq = state.xpRequired;
         let leveledUp = false;
 
-        while (newXp >= newXpReq) {
+        while (newXp >= newXpReq && newLevel < MAX_LEVEL) {
           newXp -= newXpReq;
           newLevel++;
           newXpReq = getXpRequiredForLevel(newLevel);
           leveledUp = true;
         }
+
+        if (newLevel >= MAX_LEVEL) {
+          newLevel = MAX_LEVEL;
+          newXpReq = getXpRequiredForLevel(MAX_LEVEL);
+          newXp = Math.min(newXp, newXpReq);
+        }
+
+        const nextLedger = eventId && addedXp > 0
+          ? pruneXpLedger({
+              ...state.xpAwardLedger,
+              [eventId]: { amount: addedXp, awardedAt: new Date().toISOString() },
+            })
+          : state.xpAwardLedger;
 
         set({
           xp: newXp,
@@ -194,12 +314,23 @@ export const useHunterStore = create<HunterState>()(
           rank: getRankForLevel(newLevel),
           pendingLevelUp: leveledUp ? newLevel : state.pendingLevelUp,
           xpGainedToday: newGainedToday,
+          bonusXpGainedWeek: source === 'bonus' ? bonusXpGainedWeek + addedXp : bonusXpGainedWeek,
+          bonusXpWeekKey: currentWeekKey,
+          xpAwardLedger: nextLedger,
         });
 
         if (userId) {
           await get().saveProfile(userId);
-          await get().checkAchievements(userId);
+          if (options.checkAchievements ?? source === 'common') {
+            await get().checkAchievements(userId);
+          }
         }
+        return {
+          requestedXp,
+          awardedXp: addedXp,
+          source,
+          capped: addedXp < finalAmount,
+        };
       },
 
       clearLevelUp: () => set({ pendingLevelUp: null }),
@@ -276,7 +407,8 @@ export const useHunterStore = create<HunterState>()(
         }
 
         if (data && !error) {
-          const level = data.level || 1;
+          const normalizedProgress = normalizeStoredProgress(data.level || 1, data.xp || 0);
+          const level = normalizedProgress.level;
 
           // Lógica robusta e resiliente de cálculo e atualização de Streak diária
           let newStreakCurrent = data.streak_current || 0;
@@ -328,12 +460,12 @@ export const useHunterStore = create<HunterState>()(
           const currentDiscipline = Number(data.discipline) || 10;
           const updatedDiscipline = currentDiscipline + bonusDiscipline;
 
-          const recalibratedXpRequired = getXpRequiredForLevel(level);
-          const recalibratedRank = getRankForLevel(level);
+          const recalibratedXpRequired = normalizedProgress.xpRequired;
+          const recalibratedRank = normalizedProgress.rank;
 
           set({
             level,
-            xp: data.xp || 0,
+            xp: normalizedProgress.xp,
             xpRequired: recalibratedXpRequired,
             rank: recalibratedRank,
             hunterClass: data.class as HunterClass,
@@ -361,7 +493,7 @@ export const useHunterStore = create<HunterState>()(
               current: newStreakCurrent,
               best: newStreakBest,
             },
-            xpGainedToday,
+            xpGainedToday: Math.min(DAILY_COMMON_XP_EFFECTIVE_MAX, xpGainedToday),
             streakMilestonesClaimed: data.streak_milestones_claimed || [],
             activeTitle: data.title || 'Iniciante',
           });
@@ -377,7 +509,9 @@ export const useHunterStore = create<HunterState>()(
                 streak_current: newStreakCurrent,
                 streak_best: newStreakBest,
                 last_check_in: now.toISOString(),
-                xp_gained_today: xpGainedToday,
+                xp_gained_today: Math.min(DAILY_COMMON_XP_EFFECTIVE_MAX, xpGainedToday),
+                level,
+                xp: normalizedProgress.xp,
                 discipline: updatedDiscipline,
                 xp_to_next_level: recalibratedXpRequired,
                 rank: recalibratedRank,
@@ -462,7 +596,12 @@ export const useHunterStore = create<HunterState>()(
               });
 
             // Conceder XP
-            await get().addXp(m.xp, userId);
+            await get().addXp(m.xp, userId, {
+              source: 'bonus',
+              eventId: `streak:${userId}:${m.key}`,
+              applyStreakBonus: false,
+              checkAchievements: false,
+            });
           }
         }
 
@@ -508,7 +647,12 @@ export const useHunterStore = create<HunterState>()(
                 unlocked_at: new Date().toISOString()
               });
               
-            await get().addXp(am.xp, userId);
+            await get().addXp(am.xp, userId, {
+              source: 'bonus',
+              eventId: `achievement:${userId}:${am.attr}:20`,
+              applyStreakBonus: false,
+              checkAchievements: false,
+            });
           }
         }
       },
@@ -527,14 +671,25 @@ export const useHunterStore = create<HunterState>()(
     }),
     {
       name: 'hunter-storage',
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const persisted = persistedState as Partial<HunterState>;
-        const level = Number(persisted.level) || 1;
+        const normalizedProgress = normalizeStoredProgress(
+          Number(persisted.level) || 1,
+          Number(persisted.xp) || 0,
+        );
         return {
           ...persisted,
-          xpRequired: getXpRequiredForLevel(level),
-          rank: getRankForLevel(level),
+          ...normalizedProgress,
+          xpGainedToday: Math.min(
+            DAILY_COMMON_XP_EFFECTIVE_MAX,
+            Number(persisted.xpGainedToday) || 0,
+          ),
+          bonusXpGainedWeek: persisted.bonusXpWeekKey === getIsoWeekKey()
+            ? Number(persisted.bonusXpGainedWeek) || 0
+            : 0,
+          bonusXpWeekKey: getIsoWeekKey(),
+          xpAwardLedger: persisted.xpAwardLedger || {},
         };
       },
     }

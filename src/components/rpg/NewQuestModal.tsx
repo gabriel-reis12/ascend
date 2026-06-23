@@ -157,7 +157,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                   <input
                     type="number"
                     min={1}
-                    max={500}
+                    max={50}
                     value={form.xp_reward}
                     onChange={(e) => set('xp_reward', Number(e.target.value))}
                     className="w-full rounded-xl border border-[#38384A] bg-[#0F0F13] px-3 py-2.5 text-sm text-[#FBBF24] outline-none transition-colors focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/30"

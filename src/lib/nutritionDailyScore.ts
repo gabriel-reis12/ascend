@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { localDateString, localDayBounds } from './date';
 import { calculateNutritionTargets } from './nutritionTargets';
+import type { XpAwardOptions, XpAwardResult } from '@/stores/useHunterStore';
 
 interface ProfileForNutrition {
   birthday: string | null;
@@ -11,7 +12,7 @@ interface ProfileForNutrition {
 }
 
 interface AwardHandlers {
-  addXp: (amount: number, userId?: string) => Promise<void>;
+  addXp: (amount: number, userId?: string, options?: XpAwardOptions) => Promise<XpAwardResult>;
   updateStat: (stat: 'vitality', amount: number, userId?: string) => Promise<void>;
   attackBoss: (userId: string, amount: number, actionType: string) => Promise<void>;
 }
@@ -98,7 +99,11 @@ export async function evaluateYesterdayNutrition(userId: string, handlers: Award
 
   if (insertError) throw insertError;
 
-  await handlers.addXp(xpAwarded, userId);
+  const xpResult = await handlers.addXp(xpAwarded, userId, {
+    eventId: `nutrition:${userId}:${dateKey}`,
+  });
   if (statAwarded) await handlers.updateStat('vitality', statAwarded, userId);
-  await handlers.attackBoss(userId, xpAwarded, 'nutrition');
+  if (xpResult.awardedXp !== 0) {
+    await handlers.attackBoss(userId, xpResult.awardedXp, 'nutrition');
+  }
 }

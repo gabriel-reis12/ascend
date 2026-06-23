@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
+import { normalizeActivityXp } from '@/lib/progression';
 import { localDateString, localDayBounds } from '@/lib/date';
 
 const MEAL_BOSS_DAMAGE = 15;
@@ -423,12 +424,16 @@ export function useHabits() {
           next.delete(habitId);
           return next;
         });
-        await addXp(-habit.xp_reward, user.id);
+        const xpResult = await addXp(-normalizeActivityXp(habit.xp_reward), user.id, {
+          eventId: `habit:${habit.id}:${todayStr()}`,
+        });
         if (habit.stat_target) await updateStat(habit.stat_target, -habit.stat_reward, user.id);
         
         // Reverter dano no boss com base na categoria
         const bossStore = useBossStore.getState();
-        await bossStore.attackActiveBoss(user.id, -habit.xp_reward, habit.category);
+        if (xpResult.awardedXp < 0) {
+          await bossStore.attackActiveBoss(user.id, xpResult.awardedXp, habit.category);
+        }
       }
     } else {
       const { error } = await supabase.from('habit_completions').insert({
@@ -439,12 +444,16 @@ export function useHabits() {
 
       if (!error) {
         updateCompletedState((prev) => new Set([...prev, habitId]));
-        await addXp(habit.xp_reward, user.id);
+        const xpResult = await addXp(normalizeActivityXp(habit.xp_reward), user.id, {
+          eventId: `habit:${habit.id}:${todayStr()}`,
+        });
         if (habit.stat_target) await updateStat(habit.stat_target, habit.stat_reward, user.id);
         
         // Causar dano no boss com base na categoria
         const bossStore = useBossStore.getState();
-        await bossStore.attackActiveBoss(user.id, habit.xp_reward, habit.category);
+        if (xpResult.awardedXp > 0) {
+          await bossStore.attackActiveBoss(user.id, xpResult.awardedXp, habit.category);
+        }
       }
     }
   };
@@ -528,7 +537,7 @@ export function useHabits() {
       title: input.title,
       category: input.category,
       category_color: input.category_color,
-      xp_reward: input.xp_reward,
+      xp_reward: normalizeActivityXp(input.xp_reward),
       stat_target: input.stat_target,
       stat_reward: input.stat_reward,
       user_id: user.id,
@@ -569,7 +578,7 @@ export function useHabits() {
       title: input.title,
       category: input.category,
       category_color: input.category_color,
-      xp_reward: input.xp_reward,
+      xp_reward: normalizeActivityXp(input.xp_reward),
       stat_target: input.stat_target,
       stat_reward: input.stat_reward,
       is_optional: input.is_optional ?? false,

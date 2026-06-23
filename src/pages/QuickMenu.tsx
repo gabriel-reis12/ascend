@@ -16,6 +16,7 @@ import {
 import { useHunterStore } from '../stores/useHunterStore';
 import { usePreferences } from '@/contexts/preferences';
 import { ProductTour } from '@/components/rpg/ProductTour';
+import { MAX_LEVEL } from '@/lib/progression';
 
 type PortalBadge = 'active' | 'new' | 'progress' | 'boss' | 'quest';
 
@@ -260,7 +261,11 @@ export function QuickMenu() {
   const l = (pt: string, en: string) => isEnglish ? en : pt;
   const navigate = useNavigate();
   const state = useHunterStore();
-  const xpPct = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
+  const xpPct = state.level >= MAX_LEVEL
+    ? 100
+    : state.xpRequired > 0
+      ? Math.min(100, (state.xp / state.xpRequired) * 100)
+      : 0;
   const hunterName = state.username || state.fullName || l('Caçador', 'Hunter');
   const hunterClass = state.hunterClass || l('Classe não definida', 'Class not selected');
 

@@ -510,7 +510,12 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
 
       // 4. Conceder XP bônus ao caçador
       const hunterStore = useHunterStore.getState();
-      await hunterStore.addXp(xpReward, userId);
+      await hunterStore.addXp(xpReward, userId, {
+        source: 'bonus',
+        eventId: `boss:${activeBattle.id}`,
+        applyStreakBonus: false,
+        checkAchievements: false,
+      });
 
       // Opcional: Equipa o novo título automaticamente
       await hunterStore.equipTitle(titleReward, userId);

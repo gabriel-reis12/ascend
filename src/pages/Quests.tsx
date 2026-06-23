@@ -38,6 +38,7 @@ import { generateBonusQuest } from '@/lib/groq';
 import { NewHabitModal } from '@/components/rpg/NewHabitModal';
 import { NeonCheckbox } from '@/components/ui/animated-check-box';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { DAILY_COMMON_XP_EFFECTIVE_MAX } from '@/lib/progression';
 import { useNavigate } from 'react-router-dom';
 import type { Habit, CreateHabitInput, WorkoutMission, MealMission } from '@/hooks/useHabits';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
@@ -488,7 +489,6 @@ export function Quests() {
     completedToday, 
     completedCount, 
     totalActive, 
-    xpEarnedToday, 
     loading, 
     error: habitsError,
     toggleCompletion, 
@@ -732,7 +732,6 @@ export function Quests() {
   const nextMissionStat = nextMissionStatTarget
     ? statAbbreviations[nextMissionStatTarget]
     : null;
-  const accumulatedXp = xpEarnedToday + activeTasks.filter(t => t.completed).reduce((acc, t) => acc + t.xp_reward, 0);
 
   function handleStartNextMission() {
     if (!nextMission) return;
@@ -826,7 +825,10 @@ export function Quests() {
             <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 px-5 py-4 sm:text-right">
               <p className="text-sm font-semibold text-gray-400">XP acumulado hoje</p>
               <p className="mt-1 text-2xl font-black text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.22)]" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                +{accumulatedXp} XP
+                +{hunterProfile.xpGainedToday} / {DAILY_COMMON_XP_EFFECTIVE_MAX} XP
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                XP bônus não consome o limite diário
               </p>
             </div>
           </div>

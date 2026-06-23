@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/preferences';
+import { MAX_LEVEL } from '@/lib/progression';
 
 interface MobileMenuProps {
   open: boolean;
@@ -50,7 +51,9 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const xpPct = Math.min(100, (state.xp / Math.max(state.xpRequired, 1)) * 100);
+  const xpPct = state.level >= MAX_LEVEL
+    ? 100
+    : Math.min(100, (state.xp / Math.max(state.xpRequired, 1)) * 100);
   const hunterName = state.username || state.fullName || 'Hunter';
   const hunterClass = state.hunterClass || t('common.classUndefined');
 

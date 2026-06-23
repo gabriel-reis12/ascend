@@ -166,10 +166,14 @@ export function Fortuna() {
         await hunterStore.updateStat('wisdom', 1, user.id);
       }
       
-      await hunterStore.addXp(xpGained, user.id);
+      const xpResult = await hunterStore.addXp(xpGained, user.id, {
+        eventId: `finance-log:${data.id}`,
+      });
 
       // Atacar Boss ativo com dano de finanças
-      await bossStore.attackActiveBoss(user.id, 10, 'finance');
+      if (xpResult.awardedXp > 0) {
+        await bossStore.attackActiveBoss(user.id, xpResult.awardedXp, 'finance');
+      }
 
       setSuccessAlert({
         desc: description.trim(),
@@ -248,7 +252,7 @@ export function Fortuna() {
       const currentVal = Number(goalCurrent || 0);
       const isCompleted = currentVal >= targetVal;
 
-      const { error: insertErr } = await supabase
+      const { data: createdGoal, error: insertErr } = await supabase
         .from('financial_goals')
         .insert({
           user_id: user.id,
@@ -257,13 +261,17 @@ export function Fortuna() {
           current_amount: currentVal,
           type: goalType,
           completed: isCompleted
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertErr) throw insertErr;
 
       // Recompensa se já iniciar completa
       if (isCompleted) {
-        await hunterStore.addXp(50, user.id);
+        await hunterStore.addXp(50, user.id, {
+          eventId: `finance-goal-created:${createdGoal.id}`,
+        });
         await hunterStore.updateStat('wisdom', 2, user.id);
         setSuccessAlert({
           desc: `Meta criada e concluída: "${goalTitle.trim()}"`,
@@ -280,7 +288,9 @@ export function Fortuna() {
           xp: 10,
           wisdom: 0
         });
-        await hunterStore.addXp(10, user.id);
+        await hunterStore.addXp(10, user.id, {
+          eventId: `finance-goal-created:${createdGoal.id}`,
+        });
       }
 
       setGoalTitle('');
@@ -314,7 +324,9 @@ export function Fortuna() {
 
       if (justCompleted) {
         // Conceder recompensa lendária por meta concluída (+50 XP e +2 WIS)
-        await hunterStore.addXp(50, user.id);
+        await hunterStore.addXp(50, user.id, {
+          eventId: `finance-goal-completed:${goal.id}`,
+        });
         await hunterStore.updateStat('wisdom', 2, user.id);
 
         setSuccessAlert({

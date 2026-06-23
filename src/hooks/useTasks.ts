@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
+import { normalizeActivityXp } from '@/lib/progression';
 
 export interface Task {
   id: string;
@@ -120,7 +121,7 @@ export function useTasks() {
     if (!user) return { data: null, error: 'Usuário não autenticado' };
     const { data, error } = await supabase
       .from('tasks')
-      .insert({ ...input, user_id: user.id })
+      .insert({ ...input, xp_reward: normalizeActivityXp(input.xp_reward), user_id: user.id })
       .select()
       .single();
     if (!error && data) {
@@ -146,12 +147,17 @@ export function useTasks() {
           t.id === taskId ? { ...t, completed: true, completed_at: completedAt } : t
         )
       );
-      await addXp(task.xp_reward, user.id);
+      const xpReward = normalizeActivityXp(task.xp_reward);
+      const xpResult = await addXp(xpReward, user.id, {
+        eventId: `task:${task.id}`,
+      });
       if (task.stat_target) await updateStat(task.stat_target, task.stat_reward, user.id);
       
       // Causar dano ao chefe ativo
       const bossStore = useBossStore.getState();
-      await bossStore.attackActiveBoss(user.id, task.xp_reward, task.category || 'task');
+      if (xpResult.awardedXp > 0) {
+        await bossStore.attackActiveBoss(user.id, xpResult.awardedXp, task.category || 'task');
+      }
     }
   };
 
@@ -169,12 +175,16 @@ export function useTasks() {
       updateTasksState((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, completed: false, completed_at: null } : t))
       );
-      await addXp(-task.xp_reward, user.id);
+      const xpResult = await addXp(-normalizeActivityXp(task.xp_reward), user.id, {
+        eventId: `task:${task.id}`,
+      });
       if (task.stat_target) await updateStat(task.stat_target, -task.stat_reward, user.id);
       
       // Reverter dano ao chefe ativo
       const bossStore = useBossStore.getState();
-      await bossStore.attackActiveBoss(user.id, -task.xp_reward, task.category || 'task');
+      if (xpResult.awardedXp < 0) {
+        await bossStore.attackActiveBoss(user.id, xpResult.awardedXp, task.category || 'task');
+      }
     }
   };
 

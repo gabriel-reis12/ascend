@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { MobileMenu } from './MobileMenu';
 import { supabase } from '@/lib/supabase';
 import { usePreferences } from '@/contexts/preferences';
+import { MAX_LEVEL } from '@/lib/progression';
 
 const navItems = [
   { path: '/', labelKey: 'nav.portal' as const, icon: LayoutGrid },
@@ -49,7 +50,11 @@ export function RPGLayout() {
 
   // Se o username não estiver preenchido, talvez o profile ainda esteja carregando
   // Mas vamos deixar renderizar com fallback se necessário.
-  const xpPct = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
+  const xpPct = state.level >= MAX_LEVEL
+    ? 100
+    : state.xpRequired > 0
+      ? Math.min(100, (state.xp / state.xpRequired) * 100)
+      : 0;
   const hunterName = state.username || state.fullName || 'Hunter';
   const hunterClass = state.hunterClass || t('common.classUndefined');
 
