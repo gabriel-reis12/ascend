@@ -28,7 +28,7 @@ interface RestLog {
 }
 
 export function Rest() {
-  const { t } = usePreferences();
+  const { language, t } = usePreferences();
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
   const [activeSubTab, setActiveSubTab] = useState<'sleep_lazer' | 'meditation'>('sleep_lazer');
@@ -594,7 +594,7 @@ export function Rest() {
                     </div>
                   ) : (
                     logs.map((log) => {
-                      const date = new Date(log.logged_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                      const date = new Date(log.logged_at).toLocaleDateString(language, { day: '2-digit', month: '2-digit' });
                       const hours = (log.duration_min / 60).toFixed(1);
 
                       return (

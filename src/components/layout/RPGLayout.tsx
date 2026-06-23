@@ -9,6 +9,7 @@ import { MobileMenu } from './MobileMenu';
 import { supabase } from '@/lib/supabase';
 import { usePreferences } from '@/contexts/preferences';
 import { MAX_LEVEL } from '@/lib/progression';
+import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
 
 const navItems = [
   { path: '/', labelKey: 'nav.portal' as const, icon: LayoutGrid },
@@ -177,8 +178,11 @@ export function RPGLayout() {
             alt="ASCEND"
             className="h-[47px] w-[47px] object-cover rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.5)]"
           />
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
-            {state.rank}
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher compact />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
+              {state.rank}
+            </div>
           </div>
         </header>
 
@@ -188,6 +192,7 @@ export function RPGLayout() {
             {new Date().toLocaleDateString(language, { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher compact />
             <div className="flex flex-col items-end">
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">
                 {t('common.status')}: {t('common.active')}

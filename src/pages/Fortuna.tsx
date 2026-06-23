@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
+import { usePreferences } from '@/contexts/preferences';
 
 interface FinancialLog {
   id: string;
@@ -46,6 +47,8 @@ interface FinancialGoal {
 }
 
 export function Fortuna() {
+  const { language } = usePreferences();
+  const numberLocale = language === 'en-US' ? 'en-US' : 'pt-BR';
   const { user } = useAuth();
   const hunterStore = useHunterStore();
   const bossStore = useBossStore();
@@ -422,7 +425,7 @@ export function Fortuna() {
           </div>
           <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ganhos do Mês</span>
           <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            R$ {monthlySummary.income.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            R$ {monthlySummary.income.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
         </div>
 
@@ -433,7 +436,7 @@ export function Fortuna() {
           </div>
           <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Gastos do Mês</span>
           <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            R$ {monthlySummary.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            R$ {monthlySummary.expense.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
         </div>
 
@@ -444,7 +447,7 @@ export function Fortuna() {
           </div>
           <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Aportado no Mês</span>
           <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            R$ {monthlySummary.investment.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            R$ {monthlySummary.investment.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h3>
         </div>
 
@@ -638,7 +641,7 @@ export function Fortuna() {
                           <td className="px-5 py-3">
                             <span className="font-bold text-white uppercase">{log.description}</span>
                             <span className="block text-[9px] text-gray-600 font-bold uppercase mt-0.5">
-                              {new Date(log.date).toLocaleDateString('pt-BR')}
+                              {new Date(log.date).toLocaleDateString(language)}
                             </span>
                           </td>
                           <td className="px-5 py-3">
@@ -664,7 +667,7 @@ export function Fortuna() {
                                 ? 'text-rose-400' 
                                 : 'text-amber-400'
                           }`}>
-                            {log.type === 'income' ? '+' : '-'} R$ {log.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {log.type === 'income' ? '+' : '-'} R$ {log.amount.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className="px-5 py-3 text-right">
                             <button
@@ -825,7 +828,7 @@ export function Fortuna() {
                           <div className="flex justify-between items-end text-[10px]">
                             {monthlySummary.income > 0 ? (
                               <span className="font-bold text-gray-400">
-                                R$ {systemProgress.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-gray-600">/</span> R$ {systemTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                R$ {systemProgress.toLocaleString(numberLocale, { minimumFractionDigits: 2 })} <span className="text-gray-600">/</span> R$ {systemTarget.toLocaleString(numberLocale, { minimumFractionDigits: 2 })}
                               </span>
                             ) : (
                               <span className="font-bold text-gray-500 uppercase tracking-wider">
@@ -922,7 +925,7 @@ export function Fortuna() {
                           <div className="mt-3.5 space-y-1.5">
                             <div className="flex justify-between items-end text-[10px]">
                               <span className="font-bold text-gray-400">
-                                R$ {goal.current_amount.toLocaleString('pt-BR')} <span className="text-gray-600">/</span> R$ {goal.target_amount.toLocaleString('pt-BR')}
+                                R$ {goal.current_amount.toLocaleString(numberLocale)} <span className="text-gray-600">/</span> R$ {goal.target_amount.toLocaleString(numberLocale)}
                               </span>
                               <span className="font-orbitron font-black text-amber-400">
                                 {pct.toFixed(0)}%

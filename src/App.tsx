@@ -16,6 +16,7 @@ import { Fortuna } from './pages/Fortuna';
 import { Rest } from './pages/Rest';
 import { useHunterStore } from './stores/useHunterStore';
 import { PreferencesProvider } from './contexts/PreferencesContext';
+import { LocalizationBridge } from './components/preferences/LocalizationBridge';
 
 function HunterGuard({ children }: { children: React.ReactNode }) {
   const hunterClass = useHunterStore((s) => s.hunterClass);
@@ -31,6 +32,7 @@ function HunterGuard({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <PreferencesProvider>
+      <LocalizationBridge />
       <BrowserRouter>
         <AuthProvider>
         <Routes>

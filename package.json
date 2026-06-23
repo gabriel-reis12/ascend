@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "audit:i18n": "node --experimental-strip-types execution/audit_localization.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

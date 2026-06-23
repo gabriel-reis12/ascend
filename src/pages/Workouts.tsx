@@ -116,10 +116,11 @@ const TRAINING_TABS = [
   { id: 'library' as const, title: 'Arsenal', description: 'Biblioteca de exercícios', icon: Dumbbell, tone: 'cyan' },
 ];
 
-const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
 export function Workouts() {
-  const { t } = usePreferences();
+  const { language, t } = usePreferences();
+  const dayLabels = language === 'en-US'
+    ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    : ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
   const [activeTab, setActiveTab] = useState<'library' | 'routines' | 'progress' | 'presets'>('routines');
@@ -1143,7 +1144,7 @@ export function Workouts() {
                     ? sessionExercises.find(item => !completedSessionExs.includes(item.id))
                     : sortedRoutineExercises[0];
                   const scheduledDays = routine.scheduled_days?.length
-                    ? routine.scheduled_days.map(day => DAY_LABELS[day]).filter(Boolean).join(' · ')
+                    ? routine.scheduled_days.map(day => dayLabels[day]).filter(Boolean).join(' · ')
                     : 'Sem agenda';
                   const protocolStatus = isActiveSession
                     ? 'Em progresso'
@@ -1227,7 +1228,7 @@ export function Workouts() {
                           <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-600">Último registro</p>
                           <p className="mt-2 truncate text-[10px] font-bold text-gray-300">
                             {lastRoutineLog
-                              ? new Date(lastRoutineLog.logged_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                              ? new Date(lastRoutineLog.logged_at).toLocaleDateString(language, { day: '2-digit', month: 'short' })
                               : 'Nenhum registro'}
                           </p>
                         </div>
@@ -1498,7 +1499,7 @@ export function Workouts() {
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Dias de Treino</label>
                   <div className="flex gap-2">
-                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => {
+                    {dayLabels.map((day, idx) => {
                       const isSelected = newRoutineDays.includes(idx);
                       return (
                         <button
@@ -1579,7 +1580,7 @@ export function Workouts() {
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Dias da Semana</h3>
                   <div className="flex flex-wrap gap-2">
-                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => {
+                    {dayLabels.map((day, idx) => {
                       const isSelected = selectedRoutine.scheduled_days?.includes(idx) ?? false;
                       return (
                         <button

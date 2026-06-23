@@ -15,6 +15,8 @@ import {
   User,
   Zap,
 } from 'lucide-react';
+import { usePreferences } from '@/contexts/preferences';
+import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
 
 interface AppInputProps {
   label?: string;
@@ -27,18 +29,6 @@ interface AppInputProps {
   minLength?: number;
   autoComplete?: string;
 }
-
-const systemStats = [
-  { label: 'Hunter Rank', value: 'C', icon: Shield, tone: 'text-cyan-200' },
-  { label: 'Level', value: '12', icon: Trophy, tone: 'text-violet-200' },
-  { label: 'Streak', value: '18d', icon: Flame, tone: 'text-orange-200' },
-];
-
-const systemSignals = [
-  { label: 'Classe', value: 'Shadow Striker' },
-  { label: 'Boss da Semana', value: 'Disciplina' },
-  { label: 'Quests da comunidade', value: '+12.000' },
-];
 
 const particles = Array.from({ length: 18 }, (_, index) => ({
   id: index,
@@ -114,6 +104,8 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
   loading = false,
   error = null,
 }) => {
+  const { language } = usePreferences();
+  const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
   const isSignUp = mode === 'signup';
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
   const [showPassword, setShowPassword] = useState(false);
@@ -132,10 +124,21 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
     });
   };
 
-  const title = isSignUp ? 'Primeiro despertar' : 'Bem-vindo ao Sistema';
+  const systemStats = [
+    { label: l('Rank do Caçador', 'Hunter Rank'), value: 'C', icon: Shield, tone: 'text-cyan-200' },
+    { label: l('Nível', 'Level'), value: '12', icon: Trophy, tone: 'text-violet-200' },
+    { label: 'Streak', value: l('18d', '18d'), icon: Flame, tone: 'text-orange-200' },
+  ];
+  const systemSignals = [
+    { label: l('Classe', 'Class'), value: 'Shadow Striker' },
+    { label: l('Boss da Semana', 'Weekly Boss'), value: l('Disciplina', 'Discipline') },
+    { label: l('Quests da comunidade', 'Community quests'), value: '+12,000' },
+  ];
+
+  const title = isSignUp ? l('Primeiro despertar', 'First Awakening') : l('Bem-vindo ao Sistema', 'Welcome to the System');
   const subtitle = isSignUp
-    ? 'Registre sua identidade e desbloqueie o protocolo de evolução.'
-    : 'Acesse sua jornada de evolução, quests, bosses e progressão diária.';
+    ? l('Registre sua identidade e desbloqueie o protocolo de evolução.', 'Register your identity and unlock the evolution protocol.')
+    : l('Acesse sua jornada de evolução, quests, bosses e progressão diária.', 'Access your journey of evolution, quests, bosses, and daily progression.');
 
   return (
     <main
@@ -195,8 +198,11 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
               </div>
             </div>
 
-            <div className="hidden rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[10px] font-bold font-orbitron uppercase tracking-[0.2em] text-slate-300 backdrop-blur-xl sm:flex">
-              Sistema online
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher compact />
+              <div className="hidden rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[10px] font-bold font-orbitron uppercase tracking-[0.2em] text-slate-300 backdrop-blur-xl sm:flex">
+                {l('Sistema online', 'System online')}
+              </div>
             </div>
           </header>
 
@@ -237,8 +243,8 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
               <div className="mb-8 rounded-3xl border border-cyan-200/15 bg-black/24 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
                 <div className="mb-3 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-cyan-200/70">Protocolo ativo</p>
-                    <p className="mt-1 text-sm font-bold font-orbitron text-white">XP para Level 13</p>
+                    <p className="text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-cyan-200/70">{l('Protocolo ativo', 'Active protocol')}</p>
+                    <p className="mt-1 text-sm font-bold font-orbitron text-white">{l('XP para o Nível 13', 'XP to Level 13')}</p>
                   </div>
                   <span className="rounded-full border border-orange-300/20 bg-orange-300/10 px-3 py-1 text-xs font-black font-orbitron text-orange-100">
                     82%
@@ -258,7 +264,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
 
                 {isSignUp && (
                   <AppInput
-                    label="Codinome"
+                    label={l('Codinome', 'Codename')}
                     name="username"
                     type="text"
                     placeholder="Ex: Sung Jin Woo"
@@ -270,7 +276,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 )}
 
                 <AppInput
-                  label="Identidade"
+                  label={l('Identidade', 'Identity')}
                   name="email"
                   type="email"
                   placeholder="hunter@ascend.system"
@@ -281,7 +287,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
 
                 <div className="space-y-2">
                   <AppInput
-                    label="Chave de acesso"
+                    label={l('Chave de acesso', 'Access key')}
                     name="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
@@ -292,7 +298,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                     action={
                       <button
                         type="button"
-                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        aria-label={showPassword ? l('Ocultar senha', 'Hide password') : l('Mostrar senha', 'Show password')}
                         onClick={() => setShowPassword(!showPassword)}
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-white/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                       >
@@ -306,14 +312,14 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                       href="#"
                       className="inline-flex text-[12px] font-bold font-orbitron uppercase tracking-[0.12em] text-slate-500 transition-colors hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                     >
-                      Recuperar chave
+                      {l('Recuperar chave', 'Recover key')}
                     </a>
                   )}
                 </div>
 
                 {isSignUp && (
                   <AppInput
-                    label="Confirmar chave"
+                    label={l('Confirmar chave', 'Confirm key')}
                     name="confirmPassword"
                     type={showConfirm ? 'text' : 'password'}
                     placeholder="••••••••"
@@ -324,7 +330,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                     action={
                       <button
                         type="button"
-                        aria-label={showConfirm ? 'Ocultar confirmacao' : 'Mostrar confirmacao'}
+                        aria-label={showConfirm ? l('Ocultar confirmação', 'Hide confirmation') : l('Mostrar confirmação', 'Show confirmation')}
                         onClick={() => setShowConfirm(!showConfirm)}
                         className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-white/10 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                       >
@@ -345,19 +351,25 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                   ) : (
                     <Swords className="mr-3 h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
                   )}
-                  {loading ? 'Sincronizando...' : isSignUp ? 'Despertar no Sistema' : 'Iniciar Ascensao'}
+                  {loading
+                    ? l('Sincronizando...', 'Synchronizing...')
+                    : isSignUp
+                      ? l('Despertar no Sistema', 'Awaken in the System')
+                      : l('Iniciar Ascensão', 'Begin Ascension')}
                   <ChevronRight className="ml-3 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </button>
               </form>
 
               <p className="mt-6 max-w-[520px] text-center text-sm text-slate-400">
-                {isSignUp ? 'Ja possui registro no sistema?' : 'Primeira vez no sistema?'}
+                {isSignUp
+                  ? l('Já possui registro no sistema?', 'Already registered in the System?')
+                  : l('Primeira vez no sistema?', 'First time in the System?')}
                 <button
                   type="button"
                   onClick={onToggleMode}
                   className="ml-2 font-black font-orbitron text-cyan-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
                 >
-                  {isSignUp ? 'Acessar conta' : 'Solicitar despertar'}
+                  {isSignUp ? l('Acessar conta', 'Access account') : l('Solicitar despertar', 'Request awakening')}
                 </button>
               </p>
             </div>
@@ -376,13 +388,13 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
           <div className="absolute inset-0 shadow-[inset_0_0_140px_rgba(0,0,0,0.74)]" />
 
           <div className="absolute left-10 top-10 rounded-full border border-cyan-200/20 bg-black/25 px-4 py-2 text-[10px] font-black font-orbitron uppercase tracking-[0.24em] text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.14)] backdrop-blur-xl">
-            Gate calibrado
+            {l('Gate calibrado', 'Gate calibrated')}
           </div>
 
           <div className="absolute bottom-10 left-10 right-10 grid grid-cols-[1fr_1.2fr] gap-4">
             <div className="rounded-3xl border border-white/10 bg-black/34 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-slate-400">Status preview</p>
+                <p className="text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-slate-400">{l('Prévia de status', 'Status preview')}</p>
                 <Activity className="h-4 w-4 text-cyan-200" />
               </div>
               <div className="space-y-3">
@@ -396,12 +408,12 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
             </div>
 
             <div className="flex flex-col justify-end rounded-3xl border border-violet-300/15 bg-violet-300/10 p-5 shadow-[0_24px_80px_rgba(124,58,237,0.18)] backdrop-blur-2xl">
-              <p className="mb-3 text-[10px] font-black font-orbitron uppercase tracking-[0.26em] text-violet-100/70">Mensagem do sistema</p>
+              <p className="mb-3 text-[10px] font-black font-orbitron uppercase tracking-[0.26em] text-violet-100/70">{l('Mensagem do sistema', 'System message')}</p>
               <p className="text-2xl font-black font-orbitron leading-tight text-white">
-                Transforme rotina em progressao visivel.
+                {l('Transforme rotina em progressão visível.', 'Turn routine into visible progression.')}
               </p>
               <p className="mt-3 text-sm leading-6 text-slate-300">
-                Cada treino, refeicao e decisao vira XP para a sua proxima versao.
+                {l('Cada treino, refeição e decisão vira XP para a sua próxima versão.', 'Every workout, meal, and decision becomes XP for your next version.')}
               </p>
             </div>
           </div>

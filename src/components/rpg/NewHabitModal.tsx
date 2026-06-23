@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Palette, RefreshCw } from 'lucide-react';
 import type { CreateHabitInput, Habit } from '@/hooks/useHabits';
+import { usePreferences } from '@/contexts/preferences';
 
 const PRESET_COLORS = [
   '#7C3AED', '#D946EF', '#3B82F6', '#10B981',
@@ -39,6 +40,7 @@ const DEFAULTS: CreateHabitInput = {
 };
 
 export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabitModalProps) {
+  const { language } = usePreferences();
   const [form, setForm] = useState<CreateHabitInput>(DEFAULTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +241,15 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                   Dias de Recorrência *
                 </label>
                 <div className="flex justify-between gap-1">
-                  {[
+                  {(language === 'en-US' ? [
+                    { label: 'S', value: 0 },
+                    { label: 'M', value: 1 },
+                    { label: 'T', value: 2 },
+                    { label: 'W', value: 3 },
+                    { label: 'T', value: 4 },
+                    { label: 'F', value: 5 },
+                    { label: 'S', value: 6 },
+                  ] : [
                     { label: 'D', value: 0 },
                     { label: 'S', value: 1 },
                     { label: 'T', value: 2 },
@@ -247,7 +257,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                     { label: 'Q', value: 4 },
                     { label: 'S', value: 5 },
                     { label: 'S', value: 6 },
-                  ].map((day) => {
+                  ]).map((day) => {
                     const isSelected = form.scheduled_days?.includes(day.value);
                     return (
                       <button

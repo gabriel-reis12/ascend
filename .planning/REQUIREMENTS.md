@@ -27,3 +27,5 @@ Documento detalhado de requisitos extraídos do `Features.txt`.
 
 ## 5. Autenticação
 - Sistema de login e registro para que múltiplos usuários possam usar o app na mesma instalação/servidor, mantendo dados isolados.
+- O idioma deve ser selecionável antes da autenticação e persistir entre login, onboarding, tutorial e módulos internos.
+- Todas as telas, modais, placeholders, mensagens de erro e rótulos de acessibilidade devem acompanhar PT-BR ou EN-US.

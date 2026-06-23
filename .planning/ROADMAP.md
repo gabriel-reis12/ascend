@@ -13,6 +13,7 @@
 - **Theme and localization hardening (2026-06-22):** Tema claro reconstruído com cobertura de superfícies, formulários e contraste; Configurações, Chefes e shell principal localizados em inglês sem controles presos ao modo escuro.
 - **Command Portal localization and imagery (2026-06-22):** Portal de Comando totalmente bilíngue; cards sem sombras decorativas, com overlays reduzidos e imagens legíveis também no tema claro.
 - **XP progression v2 (2026-06-22):** Curva recalibrada do onboarding ao nível 100, ranks redistribuídos, teto diário de XP comum, bônus semanal separado, recompensas configuráveis limitadas e eventos idempotentes integrados ao dano de bosses.
+- **Full English localization (2026-06-22):** Idioma disponível antes do login; autenticação, onboarding, questionário, despertar e tutorial traduzidos; módulos legados cobertos por tradução de compatibilidade e auditoria automática contra regressões.
 - **Validation:** `npm.cmd run build` aprovado.
 
 ## Phase 1: Foundation & UI/UX Base

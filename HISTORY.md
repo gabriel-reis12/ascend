@@ -863,3 +863,13 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Tarefas e hábitos personalizados passaram a aceitar entre 5 e 50 XP, com sanitização no frontend e constraint na migration `20260622_progression_v2.sql`.
   - Dashboard e Quests agora exibem os limites de XP comum e bônus de forma explícita.
   - Build de produção validado com `npm.cmd run build`.
+
+### 2026-06-22
+- **Localização integral PT-BR / EN-US:**
+  - Adicionado seletor de idioma no login, cadastro, onboarding e cabeçalho interno, com detecção inicial do idioma do navegador e persistência local.
+  - Traduzidos explicitamente login, cadastro, questionário do onboarding, classes, descrições de ranks, mensagens do Arquiteto, ritual de despertar e tutorial guiado.
+  - Criado `LocalizationBridge` para cobrir textos legados, placeholders, títulos, labels ARIA e diálogos de alerta/confirmação quando o idioma inglês estiver ativo.
+  - Criado catálogo inglês de compatibilidade para Dashboard, Missões, Treinos, Nutrição, Fortuna, Chefes, Descanso, Configurações e modais compartilhados.
+  - Datas de Dashboard, Treinos, Fortuna e Descanso passaram a respeitar o locale selecionado.
+  - Adicionada auditoria determinística `npm.cmd run audit:i18n` e diretiva `directives/localization.md`.
+  - Build de produção e auditoria de localização validados.

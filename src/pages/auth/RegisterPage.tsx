@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HunterLogin } from '../../components/ui/hunter-login';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePreferences } from '@/contexts/preferences';
 
 export function RegisterPage() {
   const { signUp } = useAuth();
+  const { language } = usePreferences();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function RegisterPage() {
     const username = formData.get('username') as string;
 
     if (password !== confirmPassword) {
-      setError('As senhas não coincidem');
+      setError(language === 'en-US' ? 'Passwords do not match' : 'As senhas não coincidem');
       setLoading(false);
       return;
     }

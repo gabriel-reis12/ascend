@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { usePreferences } from '@/contexts/preferences';
 
 const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
   id: i,
@@ -11,12 +12,16 @@ const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 export function LevelUpCelebration() {
+  const { language } = usePreferences();
+  const isEnglish = language === 'en-US';
   const pendingLevelUp = useHunterStore((s) => s.pendingLevelUp);
   const rank = useHunterStore((s) => s.rank);
   const hunterClass = useHunterStore((s) => s.hunterClass);
   const clearLevelUp = useHunterStore((s) => s.clearLevelUp);
 
-  const title = hunterClass ? `${hunterClass} de Rank ${rank}` : `Caçador de Rank ${rank}`;
+  const title = hunterClass
+    ? isEnglish ? `Rank ${rank} ${hunterClass}` : `${hunterClass} de Rank ${rank}`
+    : isEnglish ? `Rank ${rank} Hunter` : `Caçador de Rank ${rank}`;
 
   useEffect(() => {
     if (!pendingLevelUp) return;
@@ -83,11 +88,11 @@ export function LevelUpCelebration() {
                   {pendingLevelUp}
                 </motion.p>
                 <p className="mt-2 text-sm text-[#94A3B8]">
-                  Você agora é um <span className="font-semibold text-[#E2E8F0]">{title}</span>
+                  {isEnglish ? 'You are now a' : 'Você agora é um'} <span className="font-semibold text-[#E2E8F0]">{title}</span>
                 </p>
               </div>
 
-              <p className="text-xs text-[#94A3B8]">clique para continuar</p>
+              <p className="text-xs text-[#94A3B8]">{isEnglish ? 'click to continue' : 'clique para continuar'}</p>
             </motion.div>
           </div>
         </motion.div>

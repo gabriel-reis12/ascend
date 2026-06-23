@@ -185,7 +185,7 @@ function MissionCard({
   const isBonus = type === 'task' && title.startsWith('[BÔNUS IA] ');
   const displayTitle = isBonus ? title.replace('[BÔNUS IA] ', '') : title;
   const bonusLore = isBonus ? localStorage.getItem(`bonus_quest_lore_${id}`) : null;
-  const nowTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const nowTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   const missionStatus = done
     ? 'completed'
     : endTime && nowTime > endTime.slice(0, 5)

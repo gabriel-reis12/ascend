@@ -36,6 +36,7 @@ import {
   RANK_START_LEVELS,
   WEEKLY_BONUS_XP_CAP,
 } from '@/lib/progression';
+import { usePreferences } from '@/contexts/preferences';
 
 type StatKey = keyof HunterStats;
 
@@ -93,14 +94,15 @@ const DOMAIN_META: Array<{
   { key: 'balance', name: 'Equilíbrio', attributes: 'EQU', color: 'from-pink-500 to-rose-500', nextReward: '+1 Harmonia', icon: Scale },
 ];
 
-function formatEvolutionTime(timestamp: string | null) {
-  if (!timestamp) return 'Hoje';
+function formatEvolutionTime(timestamp: string | null, locale: string) {
+  if (!timestamp) return locale === 'en-US' ? 'Today' : 'Hoje';
   const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return 'Hoje';
-  return `Hoje, ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  if (Number.isNaN(date.getTime())) return locale === 'en-US' ? 'Today' : 'Hoje';
+  return `${locale === 'en-US' ? 'Today' : 'Hoje'}, ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 export function Dashboard() {
+  const { language } = usePreferences();
   const state = useHunterStore();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -758,7 +760,7 @@ export function Dashboard() {
                   <div className="min-w-0 flex-1 border-b border-[#1E1E26] pb-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs font-black uppercase tracking-wider text-white font-orbitron">{event.title}</p>
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">{formatEvolutionTime(event.timestamp)}</span>
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">{formatEvolutionTime(event.timestamp, language)}</span>
                     </div>
                     <p className={`mt-1 text-[10px] font-black uppercase tracking-wider ${event.color}`}>{event.reward}</p>
                     <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-600">Domínio: {event.domain}</p>

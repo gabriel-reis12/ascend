@@ -16,7 +16,8 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   });
   const [language, setLanguage] = useState<AppLanguage>(() => {
     const saved = localStorage.getItem(LANGUAGE_KEY);
-    return saved === 'en-US' ? 'en-US' : 'pt-BR';
+    if (saved === 'en-US' || saved === 'pt-BR') return saved;
+    return navigator.language.toLowerCase().startsWith('en') ? 'en-US' : 'pt-BR';
   });
 
   useLayoutEffect(() => {
