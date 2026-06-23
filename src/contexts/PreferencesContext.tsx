@@ -14,7 +14,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     const saved = localStorage.getItem(THEME_KEY);
     return saved === 'light' ? 'light' : 'dark';
   });
-  const [language, setLanguage] = useState<AppLanguage>(() => {
+  const [language] = useState<AppLanguage>(() => {
     const saved = localStorage.getItem(LANGUAGE_KEY);
     if (saved === 'en-US' || saved === 'pt-BR') return saved;
     return navigator.language.toLowerCase().startsWith('en') ? 'en-US' : 'pt-BR';
@@ -34,11 +34,16 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     localStorage.setItem(LANGUAGE_KEY, language);
   }, [language]);
 
+  const handleSetLanguage = (newLang: AppLanguage) => {
+    localStorage.setItem(LANGUAGE_KEY, newLang);
+    window.location.reload();
+  };
+
   const value = useMemo<PreferencesContextValue>(() => ({
     theme,
     language,
     setTheme,
-    setLanguage,
+    setLanguage: handleSetLanguage,
     t: (key) => translations[key][language],
   }), [language, theme]);
 

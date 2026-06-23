@@ -13,6 +13,11 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-23 — Correção de Tradução e Estabilização de Idiomas (Fim do F5)
+- Modificado o `setLanguage` em `PreferencesContext.tsx` para recarregar a página automaticamente (`window.location.reload()`) após gravar a escolha de idioma no `localStorage`. Isso elimina de vez os bugs de concorrência com o React e a necessidade de F5 manual ao alternar entre Português e Inglês.
+- Estendido e otimizado o dicionário `EXACT_ENGLISH` no `uiEnglish.ts` com mais de 150 chaves novas, cobrindo textos dinâmicos e estáticos em todo o aplicativo (Dashboard, Missões, Treinamento, Nutrição, Descanso, Chefes, Fortuna e Configurações).
+- Validado o build de produção com sucesso absoluto e executada a auditoria de i18n (`npm run audit:i18n`), garantindo zero erros ou regressões no projeto.
+
 ### 2026-06-22 — Correção Estrutural do Tema Claro e Inglês
 - O tema claro passou a cobrir superfícies recorrentes, campos, selects, placeholders, bordas, scrollbars e cores de status com contraste adequado.
 - Botões coloridos e áreas visuais que precisam permanecer escuras agora preservam texto branco e legibilidade.
