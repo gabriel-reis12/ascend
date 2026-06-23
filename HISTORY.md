@@ -5,6 +5,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ### Tecnologias Utilizadas
 - **Frontend:** React 19, Vite, TailwindCSS v4.
+# Histórico de Desenvolvimento e Documentação
+
+## 📋 Estado Atual do Projeto
+O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fundações de UI, Autenticação, Dashboard, Gerenciamento de Tarefas/Hábitos e Módulo de Treinos estão concluídas.
+
+### Tecnologias Utilizadas
+- **Frontend:** React 19, Vite, TailwindCSS v4.
 - **Backend:** Supabase (Auth & Database).
 - **Estilização:** CSS Vanilla + Design Tokens personalizados.
 - **Animações:** Framer Motion, Lucide React.
@@ -15,7 +22,8 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ### 2026-06-23 — Correção de Tradução e Estabilização de Idiomas (Fim do F5)
 - Modificado o `setLanguage` em `PreferencesContext.tsx` para recarregar a página automaticamente (`window.location.reload()`) após gravar a escolha de idioma no `localStorage`. Isso elimina de vez os bugs de concorrência com o React e a necessidade de F5 manual ao alternar entre Português e Inglês.
-- Estendido e otimizado o dicionário `EXACT_ENGLISH` no `uiEnglish.ts` com mais de 150 chaves novas, cobrindo textos dinâmicos e estáticos em todo o aplicativo (Dashboard, Missões, Treinamento, Nutrição, Descanso, Chefes, Fortuna e Configurações).
+- **Correção Geral de Falhas de Tradução**: Adicionadas mais de 60 traduções de frases completas mapeadas a partir das telas de Descanso (Rest), Nutrição (Nutrition) e Fortuna (Fortuna), corrigindo misturas de idiomas em cabeçalhos, botões, cards de metas, históricos e alertas.
+- **Refatoração Dinâmica das Expressões Regulares**: Substituídas as definições estáticas de `REPLACEMENTS` no `uiEnglish.ts` por RegExp construídos dinamicamente usando lookbehind e lookahead negativos que suportam caracteres acentuados do português. Isso previne de forma sistêmica traduções de substrings indevidas (como a palavra "Média" ser traduzida parcialmente como "Méday").
 - Validado o build de produção com sucesso absoluto e executada a auditoria de i18n (`npm run audit:i18n`), garantindo zero erros ou regressões no projeto.
 
 ### 2026-06-22 — Correção Estrutural do Tema Claro e Inglês
