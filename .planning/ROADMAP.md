@@ -11,6 +11,7 @@
 - **Final polish (2026-06-22):** Nutrição resiliente a joins variáveis, alerta explícito de excesso, animações/persistência de bosses corrigidas, tema claro, idioma inglês e progressão avançada mais desafiadora.
 - **Boss campaign balance v3 (2026-06-22):** Ataque manual diário restaurado; chefes recalibrados para 3–10 dias, dano normalizado, avanço automático após 0 HP e curva de XP/recompensas mais exigente.
 - **Theme and localization hardening (2026-06-22):** Tema claro reconstruído com cobertura de superfícies, formulários e contraste; Configurações, Chefes e shell principal localizados em inglês sem controles presos ao modo escuro.
+- **Command Portal localization and imagery (2026-06-22):** Portal de Comando totalmente bilíngue; cards sem sombras decorativas, com overlays reduzidos e imagens legíveis também no tema claro.
 - **Validation:** `npm.cmd run build` aprovado.
 
 ## Phase 1: Foundation & UI/UX Base

@@ -843,3 +843,11 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Refatorada a tela de Bosses para consumir seletores estaveis do Zustand e exibir erro recuperavel com botao de nova sincronizacao.
   - Adicionados paineis de erro visiveis em Missoes, Recuperacao e Centro de Treinamento para expor falhas reais de Supabase em vez de deixar listas vazias ou loading ambiguo.
   - Build de producao validado com `npm.cmd run build`.
+
+### 2026-06-22
+- **Portal bilíngue e cards com imagens legíveis:**
+  - Localizada integralmente a tela do Portal de Comando em português e inglês, incluindo títulos, descrições, badges, CTAs, progresso e rótulos de acessibilidade.
+  - Reestruturados os dados dos módulos para manter as duas versões de cada texto sem depender de conteúdo fixo em português.
+  - Removidas sombras decorativas dos cards e reduzido o overlay escuro a um degradê inferior, preservando contraste do texto sem ocultar as ilustrações.
+  - Cards marcados como superfície escura preservada para não perder contraste quando o tema claro está ativo.
+  - Build de produção validado com `npm.cmd run build`.

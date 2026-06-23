@@ -17,21 +17,21 @@ import { useHunterStore } from '../stores/useHunterStore';
 import { usePreferences } from '@/contexts/preferences';
 import { ProductTour } from '@/components/rpg/ProductTour';
 
-type PortalBadge =
-  | 'SISTEMA ATIVO'
-  | 'NOVO'
-  | 'EM PROGRESSO'
-  | 'BOSS DISPONÍVEL'
-  | 'QUEST PENDENTE';
+type PortalBadge = 'active' | 'new' | 'progress' | 'boss' | 'quest';
+
+interface LocalizedCopy {
+  pt: string;
+  en: string;
+}
 
 interface CommandCard {
-  title: string;
-  desc: string;
+  title: LocalizedCopy;
+  desc: LocalizedCopy;
   path: string;
   status: 'active' | 'locked';
   badge: PortalBadge;
   priority: 'primary' | 'secondary';
-  primaryLabel?: string;
+  primaryLabel?: LocalizedCopy;
   icon: React.ReactNode;
   color: string;
   arrowColor: string;
@@ -39,123 +39,153 @@ interface CommandCard {
 }
 
 const badgeStyles: Record<PortalBadge, string> = {
-  'SISTEMA ATIVO': 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400',
-  NOVO: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
-  'EM PROGRESSO': 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-  'BOSS DISPONÍVEL': 'border-rose-500/30 bg-rose-500/10 text-rose-400',
-  'QUEST PENDENTE': 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  active: 'border-emerald-400/45 bg-emerald-950/75 text-emerald-300',
+  new: 'border-cyan-400/45 bg-cyan-950/75 text-cyan-200',
+  progress: 'border-blue-400/45 bg-blue-950/75 text-blue-200',
+  boss: 'border-rose-400/45 bg-rose-950/75 text-rose-300',
+  quest: 'border-amber-400/45 bg-amber-950/75 text-amber-200',
 };
 
 const cards: CommandCard[] = [
   {
-    title: 'Status do Caçador',
-    desc: 'Visualize atributos, nível, rank e evolução dos domínios.',
+    title: { pt: 'Status do Caçador', en: 'Hunter Status' },
+    desc: {
+      pt: 'Visualize atributos, nível, rank e evolução dos domínios.',
+      en: 'Review attributes, level, rank, and domain progression.',
+    },
     path: '/status',
     status: 'active',
-    badge: 'SISTEMA ATIVO',
+    badge: 'active',
     priority: 'primary',
-    primaryLabel: 'Análise Principal',
+    primaryLabel: { pt: 'Análise Principal', en: 'Core Analysis' },
     icon: <LayoutDashboard className="h-5 w-5" />,
-    color: 'border-blue-500/40 hover:border-blue-400/80 hover:shadow-[0_0_34px_rgba(59,130,246,0.2)]',
-    arrowColor: 'group-hover:border-blue-400/70 group-hover:bg-blue-500/15 group-hover:text-blue-300 group-hover:shadow-[0_0_18px_rgba(59,130,246,0.45)]',
+    color: 'border-blue-500/40 hover:border-blue-400/80',
+    arrowColor: 'group-hover:border-blue-400/70 group-hover:bg-blue-500/25 group-hover:text-blue-200',
     image: '/Cards/Status.jpeg',
   },
   {
-    title: 'Quadro de Missões',
-    desc: 'Gerencie hábitos, tarefas e quests bônus da IA.',
+    title: { pt: 'Quadro de Missões', en: 'Quest Board' },
+    desc: {
+      pt: 'Gerencie hábitos, tarefas e quests bônus da IA.',
+      en: 'Manage habits, tasks, and AI-generated bonus quests.',
+    },
     path: '/quests',
     status: 'active',
-    badge: 'QUEST PENDENTE',
+    badge: 'quest',
     priority: 'primary',
-    primaryLabel: 'Centro de Quests',
+    primaryLabel: { pt: 'Centro de Quests', en: 'Quest Center' },
     icon: <CheckSquare className="h-5 w-5" />,
-    color: 'border-cyan-500/40 hover:border-cyan-300/80 hover:shadow-[0_0_34px_rgba(6,182,212,0.2)]',
-    arrowColor: 'group-hover:border-cyan-400/70 group-hover:bg-cyan-500/15 group-hover:text-cyan-300 group-hover:shadow-[0_0_18px_rgba(6,182,212,0.45)]',
+    color: 'border-cyan-500/40 hover:border-cyan-300/80',
+    arrowColor: 'group-hover:border-cyan-400/70 group-hover:bg-cyan-500/25 group-hover:text-cyan-200',
     image: '/Cards/Quadro de Missoes.jpeg',
   },
   {
-    title: 'Centro de Treinamento',
-    desc: 'Registre cargas, repetições e acompanhe sua evolução.',
+    title: { pt: 'Centro de Treinamento', en: 'Training Center' },
+    desc: {
+      pt: 'Registre cargas, repetições e acompanhe sua evolução.',
+      en: 'Log weights and reps while tracking your progression.',
+    },
     path: '/workouts',
     status: 'active',
-    badge: 'EM PROGRESSO',
+    badge: 'progress',
     priority: 'primary',
-    primaryLabel: 'Módulo Físico',
+    primaryLabel: { pt: 'Módulo Físico', en: 'Physical Module' },
     icon: <Dumbbell className="h-5 w-5" />,
-    color: 'border-purple-500/40 hover:border-purple-400/80 hover:shadow-[0_0_34px_rgba(168,85,247,0.2)]',
-    arrowColor: 'group-hover:border-purple-400/70 group-hover:bg-purple-500/15 group-hover:text-purple-300 group-hover:shadow-[0_0_18px_rgba(168,85,247,0.45)]',
+    color: 'border-purple-500/40 hover:border-purple-400/80',
+    arrowColor: 'group-hover:border-purple-400/70 group-hover:bg-purple-500/25 group-hover:text-purple-200',
     image: '/Cards/Treinos.jpeg',
   },
   {
-    title: 'Recuperação & Nutrição',
-    desc: 'Monte refeições, registre alimentos e acompanhe sua estratégia.',
+    title: { pt: 'Recuperação & Nutrição', en: 'Recovery & Nutrition' },
+    desc: {
+      pt: 'Monte refeições, registre alimentos e acompanhe sua estratégia.',
+      en: 'Build meals, log foods, and monitor your nutrition strategy.',
+    },
     path: '/nutrition',
     status: 'active',
-    badge: 'NOVO',
+    badge: 'new',
     priority: 'secondary',
     icon: <Apple className="h-5 w-5" />,
-    color: 'border-orange-500/25 hover:border-orange-400/65 hover:shadow-[0_0_28px_rgba(249,115,22,0.16)]',
-    arrowColor: 'group-hover:border-orange-400/60 group-hover:bg-orange-500/15 group-hover:text-orange-300 group-hover:shadow-[0_0_16px_rgba(249,115,22,0.4)]',
+    color: 'border-orange-500/35 hover:border-orange-400/70',
+    arrowColor: 'group-hover:border-orange-400/60 group-hover:bg-orange-500/25 group-hover:text-orange-200',
     image: '/Cards/Estudos-Nutricao.jpeg',
   },
   {
-    title: 'Módulo Fortuna',
-    desc: 'Controle finanças, economia e evolução do atributo WIS.',
+    title: { pt: 'Módulo Fortuna', en: 'Fortune Module' },
+    desc: {
+      pt: 'Controle finanças, economia e evolução do atributo WIS.',
+      en: 'Manage finances, savings, and progression of your WIS attribute.',
+    },
     path: '/fortuna',
     status: 'active',
-    badge: 'SISTEMA ATIVO',
+    badge: 'active',
     priority: 'secondary',
     icon: <Coins className="h-5 w-5" />,
-    color: 'border-amber-500/25 hover:border-amber-400/65 hover:shadow-[0_0_28px_rgba(245,158,11,0.16)]',
-    arrowColor: 'group-hover:border-amber-400/60 group-hover:bg-amber-500/15 group-hover:text-amber-300 group-hover:shadow-[0_0_16px_rgba(245,158,11,0.4)]',
+    color: 'border-amber-500/35 hover:border-amber-400/70',
+    arrowColor: 'group-hover:border-amber-400/60 group-hover:bg-amber-500/25 group-hover:text-amber-200',
     image: '/Cards/Fortuna.jpeg',
   },
   {
-    title: 'Portal dos Chefes',
-    desc: 'Enfrente bosses semanais causados por hábitos ruins.',
+    title: { pt: 'Portal dos Chefes', en: 'Boss Portal' },
+    desc: {
+      pt: 'Enfrente bosses semanais causados por hábitos ruins.',
+      en: 'Face weekly bosses created by destructive habits.',
+    },
     path: '/bosses',
     status: 'active',
-    badge: 'BOSS DISPONÍVEL',
+    badge: 'boss',
     priority: 'secondary',
     icon: <Skull className="h-5 w-5" />,
-    color: 'border-rose-500/25 hover:border-rose-400/65 hover:shadow-[0_0_28px_rgba(244,63,94,0.16)]',
-    arrowColor: 'group-hover:border-rose-400/60 group-hover:bg-rose-500/15 group-hover:text-rose-300 group-hover:shadow-[0_0_16px_rgba(244,63,94,0.4)]',
+    color: 'border-rose-500/35 hover:border-rose-400/70',
+    arrowColor: 'group-hover:border-rose-400/60 group-hover:bg-rose-500/25 group-hover:text-rose-200',
     image: '/Cards/Chefes Finais.jpeg',
   },
   {
-    title: 'Santuário do Descanso',
-    desc: 'Monitore sono, descanso e equilíbrio mental.',
+    title: { pt: 'Santuário do Descanso', en: 'Recovery Sanctuary' },
+    desc: {
+      pt: 'Monitore sono, descanso e equilíbrio mental.',
+      en: 'Track sleep, recovery, leisure, and mental balance.',
+    },
     path: '/rest',
     status: 'active',
-    badge: 'SISTEMA ATIVO',
+    badge: 'active',
     priority: 'secondary',
     icon: <Moon className="h-5 w-5" />,
-    color: 'border-indigo-500/25 hover:border-indigo-400/65 hover:shadow-[0_0_28px_rgba(99,102,241,0.16)]',
-    arrowColor: 'group-hover:border-indigo-400/60 group-hover:bg-indigo-500/15 group-hover:text-indigo-300 group-hover:shadow-[0_0_16px_rgba(99,102,241,0.4)]',
+    color: 'border-indigo-500/35 hover:border-indigo-400/70',
+    arrowColor: 'group-hover:border-indigo-400/60 group-hover:bg-indigo-500/25 group-hover:text-indigo-200',
     image: '/Cards/Descanso-Lazer.jpeg',
   },
 ];
 
-function StatusBadge({ badge }: { badge: PortalBadge }) {
+const badgeCopy: Record<PortalBadge, LocalizedCopy> = {
+  active: { pt: 'Sistema ativo', en: 'System active' },
+  new: { pt: 'Novo', en: 'New' },
+  progress: { pt: 'Em progresso', en: 'In progress' },
+  boss: { pt: 'Boss disponível', en: 'Boss available' },
+  quest: { pt: 'Quest pendente', en: 'Quest pending' },
+};
+
+function StatusBadge({ badge, isEnglish }: { badge: PortalBadge; isEnglish: boolean }) {
   return (
     <span
-      className={`rounded-md border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] font-orbitron shadow-[0_0_12px_rgba(0,0,0,0.32)] ${badgeStyles[badge]}`}
+      className={`rounded-md border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] font-orbitron ${badgeStyles[badge]}`}
     >
-      {badge}
+      {isEnglish ? badgeCopy[badge].en : badgeCopy[badge].pt}
     </span>
   );
 }
 
-function PortalCard({ card, onOpen }: { card: CommandCard; onOpen: () => void }) {
+function PortalCard({ card, onOpen, isEnglish }: { card: CommandCard; onOpen: () => void; isEnglish: boolean }) {
   const isLocked = card.status === 'locked';
   const isPrimary = card.priority === 'primary';
+  const copy = (value: LocalizedCopy) => isEnglish ? value.en : value.pt;
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Abrir ${card.title}`}
-      className={`group relative flex w-full flex-col justify-between overflow-hidden rounded-2xl border bg-[#0F0F13] p-5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.015] ${
+      aria-label={`${isEnglish ? 'Open' : 'Abrir'} ${copy(card.title)}`}
+      className={`theme-preserve-dark group relative flex w-full flex-col justify-between overflow-hidden rounded-2xl border bg-[#0F0F13] p-5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 motion-safe:hover:-translate-y-1 ${
         isPrimary ? 'min-h-[244px] lg:min-h-[260px]' : 'min-h-[205px]'
       } ${card.color} ${isLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
     >
@@ -165,40 +195,37 @@ function PortalCard({ card, onOpen }: { card: CommandCard; onOpen: () => void })
           alt=""
           aria-hidden="true"
           loading="lazy"
-          className={`h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-110 group-hover:contrast-125 group-hover:saturate-125 ${
+          className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035] ${
             isLocked ? 'grayscale-[40%] blur-[1px]' : ''
           }`}
         />
         <div
           className={`absolute inset-0 z-10 transition-opacity duration-500 ${
             isPrimary
-              ? 'bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/78 to-black/15'
-              : 'bg-gradient-to-t from-[#0B0B0F] via-[#0B0B0F]/88 to-black/30'
-          } group-hover:via-[#0B0B0F]/70`}
+              ? 'bg-gradient-to-t from-black/90 via-black/20 via-55% to-transparent'
+              : 'bg-gradient-to-t from-black/90 via-black/15 via-58% to-transparent'
+          }`}
         />
       </div>
-
-      <div className="pointer-events-none absolute inset-[-35%] z-10 scale-75 rounded-full border border-white/0 opacity-0 transition-all duration-700 group-hover:scale-100 group-hover:border-white/10 group-hover:opacity-100 group-hover:shadow-[inset_0_0_80px_rgba(59,130,246,0.12)]" />
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_78%_22%,rgba(255,255,255,0.13),transparent_28%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
       <div className="relative z-20 flex w-full items-start justify-between gap-3">
         <div
           className={`flex size-10 shrink-0 items-center justify-center rounded-xl border backdrop-blur-md transition-all duration-300 ${
             isLocked
               ? 'border-[#1e1e26] bg-black/55 text-gray-500'
-              : 'border-white/10 bg-black/60 text-white group-hover:border-white/25 group-hover:bg-black/75 group-hover:shadow-[0_0_18px_rgba(255,255,255,0.12)]'
+              : 'border-white/25 bg-black/55 text-white group-hover:border-white/40 group-hover:bg-black/70'
           }`}
         >
           {isLocked ? <Lock size={16} /> : card.icon}
         </div>
-        <StatusBadge badge={card.badge} />
+        <StatusBadge badge={card.badge} isEnglish={isEnglish} />
       </div>
 
       <div className="relative z-20 mt-10">
         {isPrimary && (
           <div className="mb-2 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-blue-300 font-orbitron">
             <Sparkles className="h-3 w-3" />
-            {card.primaryLabel}
+            {card.primaryLabel && copy(card.primaryLabel)}
           </div>
         )}
         <h2
@@ -206,15 +233,15 @@ function PortalCard({ card, onOpen }: { card: CommandCard; onOpen: () => void })
             isPrimary ? 'text-lg tracking-[0.08em]' : 'text-[15px] tracking-[0.07em]'
           }`}
         >
-          {card.title}
+          {copy(card.title)}
         </h2>
         <p className={`mt-2 max-w-[96%] font-semibold leading-relaxed text-gray-300 ${isPrimary ? 'text-[13px]' : 'text-xs'}`}>
-          {card.desc}
+          {copy(card.desc)}
         </p>
 
         <div className="mt-4 flex items-center justify-between">
           <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-400 transition-colors group-hover:text-white">
-            Acessar módulo
+            {isEnglish ? 'Open module' : 'Acessar módulo'}
           </span>
           <div
             className={`flex size-8 items-center justify-center rounded-lg border border-[#252530] bg-black/65 text-gray-500 transition-all duration-300 group-hover:translate-x-1 ${card.arrowColor}`}
@@ -228,12 +255,14 @@ function PortalCard({ card, onOpen }: { card: CommandCard; onOpen: () => void })
 }
 
 export function QuickMenu() {
-  const { t } = usePreferences();
+  const { language, t } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => isEnglish ? en : pt;
   const navigate = useNavigate();
   const state = useHunterStore();
   const xpPct = state.xpRequired > 0 ? Math.min(100, (state.xp / state.xpRequired) * 100) : 0;
-  const hunterName = state.username || state.fullName || 'Caçador';
-  const hunterClass = state.hunterClass || 'Classe não definida';
+  const hunterName = state.username || state.fullName || l('Caçador', 'Hunter');
+  const hunterClass = state.hunterClass || l('Classe não definida', 'Class not selected');
 
   return (
     <div className="space-y-8 pb-16 text-silver">
@@ -245,14 +274,17 @@ export function QuickMenu() {
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,1)] animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-400 font-orbitron">
-                Sistema de Integração Neural
+                {l('Sistema de Integração Neural', 'Neural Integration System')}
               </span>
             </div>
             <h1 className="text-2xl font-black uppercase italic tracking-wider text-white font-orbitron text-glow-blue sm:text-3xl">
               {t('pages.portal')}
             </h1>
             <p className="max-w-xl text-[11px] font-semibold uppercase leading-relaxed tracking-widest text-gray-500 sm:text-xs">
-              Selecione um portal para acessar seu próximo eixo de evolução.
+              {l(
+                'Selecione um portal para acessar seu próximo eixo de evolução.',
+                'Select a portal to access your next path of progression.',
+              )}
             </p>
           </div>
 
@@ -267,14 +299,14 @@ export function QuickMenu() {
                   {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank || 'E'}
                 </p>
                 <p className="mt-1 text-[10px] font-black uppercase tracking-[0.1em] text-blue-400">
-                  Level {state.level} <span className="text-gray-600">—</span>{' '}
+                  {l('Nível', 'Level')} {state.level} <span className="text-gray-600">—</span>{' '}
                   <span className="text-amber-400"><Zap className="mr-0.5 inline h-3 w-3" fill="currentColor" />{state.xp} / {state.xpRequired} XP</span>
                 </p>
               </div>
             </div>
             <div className="mt-4">
               <div className="mb-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-600">
-                <span>Progresso para o próximo level</span>
+                <span>{l('Progresso para o próximo nível', 'Progress to next level')}</span>
                 <span>{state.xp} / {state.xpRequired} XP</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
@@ -296,8 +328,12 @@ export function QuickMenu() {
               <CheckSquare className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400 font-orbitron">Próxima ação recomendada</p>
-              <p className="mt-1 text-sm font-semibold text-gray-200">Complete sua primeira missão diária para ganhar XP.</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400 font-orbitron">
+                {l('Próxima ação recomendada', 'Recommended next action')}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-gray-200">
+                {l('Complete sua primeira missão diária para ganhar XP.', 'Complete your first daily quest to earn XP.')}
+              </p>
             </div>
           </div>
           <button
@@ -305,7 +341,7 @@ export function QuickMenu() {
             onClick={() => navigate('/quests')}
             className="flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-purple-200 transition-all hover:border-purple-400/60 hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
           >
-            Abrir Quadro de Missões
+            {l('Abrir Quadro de Missões', 'Open Quest Board')}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -314,30 +350,36 @@ export function QuickMenu() {
       <section aria-labelledby="primary-portals-title">
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-blue-500 font-orbitron">Núcleo do Sistema</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-blue-500 font-orbitron">
+              {l('Núcleo do Sistema', 'System Core')}
+            </p>
             <h2 id="primary-portals-title" className="mt-1 text-sm font-black uppercase tracking-wider text-white font-orbitron">
-              Portais principais
+              {l('Portais principais', 'Primary portals')}
             </h2>
           </div>
-          <span className="hidden text-[9px] font-bold uppercase tracking-widest text-gray-600 sm:block">3 módulos prioritários</span>
+          <span className="hidden text-[9px] font-bold uppercase tracking-widest text-gray-600 sm:block">
+            {l('3 módulos prioritários', '3 priority modules')}
+          </span>
         </div>
         <div id="tour-portal-primary" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {cards.filter(card => card.priority === 'primary').map(card => (
-            <PortalCard key={card.title} card={card} onOpen={() => navigate(card.path)} />
+            <PortalCard key={card.path} card={card} isEnglish={isEnglish} onOpen={() => navigate(card.path)} />
           ))}
         </div>
       </section>
 
       <section aria-labelledby="secondary-portals-title">
         <div className="mb-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.24em] text-gray-600 font-orbitron">Expansões conectadas</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.24em] text-gray-600 font-orbitron">
+            {l('Expansões conectadas', 'Connected expansions')}
+          </p>
           <h2 id="secondary-portals-title" className="mt-1 text-sm font-black uppercase tracking-wider text-white font-orbitron">
-            Módulos complementares
+            {l('Módulos complementares', 'Complementary modules')}
           </h2>
         </div>
         <div id="tour-portal-secondary" className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           {cards.filter(card => card.priority === 'secondary').map(card => (
-            <PortalCard key={card.title} card={card} onOpen={() => navigate(card.path)} />
+            <PortalCard key={card.path} card={card} isEnglish={isEnglish} onOpen={() => navigate(card.path)} />
           ))}
         </div>
       </section>
