@@ -13,6 +13,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-22 — Correção Estrutural do Tema Claro e Inglês
+- O tema claro passou a cobrir superfícies recorrentes, campos, selects, placeholders, bordas, scrollbars e cores de status com contraste adequado.
+- Botões coloridos e áreas visuais que precisam permanecer escuras agora preservam texto branco e legibilidade.
+- Removidos controles que forçavam `color-scheme: dark` em Configurações, Missões e Onboarding.
+- Configurações foi localizada nos fluxos de perfil, conquistas, segurança, tutorial, telemetria, resets e mensagens.
+- Chefes recebeu tradução dos estados de batalha, histórico, recompensas, nomes, descrições, fraquezas e títulos dos sete confrontos.
+- O shell principal agora traduz avisos de conexão, diagnóstico e status do sistema.
+
 ### 2026-06-22 — Integração de Fontes Nutricionais na IA e Painel de Comparação Premium
 - Atualizado o Codex de Alimentação (IA de Nutrição) em [Nutrition.tsx](file:///d:/Área%20de%20Trabalho/App/src/pages/Nutrition.tsx) para consultar e comparar os valores nutricionais de cada ingrediente em três bases distintas: Tabela TACO, FatSecret e Estimativa da própria IA (fallback).
 - Reformulado o prompt do sistema para a API do Groq (Llama 3.1) para extrair os macronutrientes e calorias de cada uma das fontes por 100g e calcular o consolidado final priorizando TACO > FatSecret > IA Fallback.

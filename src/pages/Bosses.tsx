@@ -29,6 +29,64 @@ import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore, BOSS_LIST } from '@/stores/useBossStore';
 import { usePreferences } from '@/contexts/preferences';
 
+const EN_BOSS_COPY: Record<string, {
+  name: string;
+  titleReward: string;
+  lore: string;
+  victoryLore: string;
+  weakness: string;
+}> = {
+  boss_01: {
+    name: 'The Lord of Procrastination',
+    titleReward: 'Relentless Executor',
+    lore: 'A colossal entity forged from chains, broken clocks, and abandoned missions. It grows stronger whenever unfinished work accumulates.',
+    victoryLore: 'You broke the chains of delay and reclaimed your time. The Rift recognizes you as a Relentless Executor.',
+    weakness: 'Complete daily tasks and regular quests.',
+  },
+  boss_02: {
+    name: 'The King of Sloth',
+    titleReward: 'The Tireless',
+    lore: 'An immovable creature seated on a throne of stone and decay, draining the energy of every Hunter who approaches.',
+    victoryLore: 'Your training shattered the throne and dispersed its lethargy. Nothing can stop your advance.',
+    weakness: 'Complete workouts in the Training Center.',
+  },
+  boss_03: {
+    name: 'The Siren of Distraction',
+    titleReward: 'Master of Focus',
+    lore: 'An ethereal entity surrounded by notifications and endless screens, feeding on fragmented attention.',
+    victoryLore: 'You silenced the digital noise and recovered deep focus. Empty lights no longer command your mind.',
+    weakness: 'Complete reading, study, and deep-focus activities.',
+  },
+  boss_04: {
+    name: 'The Devourer of Progress',
+    titleReward: 'Master of Discipline',
+    lore: 'A creature shaped by excess and instant gratification, persuading Hunters to trade long-term growth for short-lived comfort.',
+    victoryLore: 'Your nutritional discipline starved the creature of excess. Consistency became your shield.',
+    weakness: 'Log meals and stay within your nutrition targets.',
+  },
+  boss_05: {
+    name: 'The Merchant of Debt',
+    titleReward: 'Guardian of Freedom',
+    lore: 'A dimensional merchant whose tempting offers conceal chains that bind future freedom.',
+    victoryLore: 'By controlling expenses and resisting impulse purchases, you broke the golden contract.',
+    weakness: 'Track finances, control expenses, and record investments.',
+  },
+  boss_06: {
+    name: 'The Herald of Chaos',
+    titleReward: 'Master of Clarity',
+    lore: 'A silent catastrophe that turns priorities into noise and motion into directionless activity.',
+    victoryLore: 'Clear priorities and organized routines dispersed the fog. The path is visible again.',
+    weakness: 'Plan your week, set priorities, and organize your environment.',
+  },
+  boss_07: {
+    name: 'The Reflection of Self-Sabotage',
+    titleReward: 'The Purified',
+    lore: 'The final enemy is a reflection built from every version of you that once chose to quit.',
+    victoryLore: 'You overcame the weakest reflection of yourself and completed the final purification.',
+    weakness: 'Maintain long daily streaks and consistent activity.',
+  },
+};
+
 export function Bosses() {
   const { user } = useAuth();
   const hunterStore = useHunterStore();
@@ -42,6 +100,7 @@ export function Bosses() {
   const purifyActiveBoss = useBossStore((state) => state.purifyActiveBoss);
   const resetBattle = useBossStore((state) => state.resetBattle);
   const { language, t } = usePreferences();
+  const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
   const reduceMotion = useReducedMotion();
   const manualAttackKey = user?.id && activeBattle
     ? `ascend_manual_boss_attack_${user.id}_${activeBattle.id}`
@@ -130,12 +189,26 @@ export function Bosses() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-gray-500 uppercase tracking-widest">Acesso restrito — Faça login para entrar na fenda.</p>
+        <p className="text-gray-500 uppercase tracking-widest">
+          {l('Acesso restrito — Faça login para entrar na fenda.', 'Restricted access — Sign in to enter the Rift.')}
+        </p>
       </div>
     );
   }
 
   const bossDef = activeBattle ? BOSS_LIST.find(b => b.id === activeBattle.boss_id) : null;
+  const localizedBoss = bossDef && language === 'en-US' ? EN_BOSS_COPY[bossDef.id] : null;
+  const localizedWeaknessCategory = bossDef && language === 'en-US'
+    ? ({
+        task: 'tasks',
+        workout: 'workouts',
+        foco: 'focus',
+        nutrition: 'nutrition',
+        finance: 'finance',
+        organization: 'organization',
+        streak: 'streaks',
+      }[bossDef.weaknessCategory] || bossDef.weaknessCategory)
+    : bossDef?.weaknessCategory;
   const hpPercent = activeBattle ? (activeBattle.current_hp / activeBattle.max_hp) * 100 : 0;
   const damageDealt = activeBattle ? activeBattle.max_hp - activeBattle.current_hp : 0;
   const raidDeadline = activeBattle
@@ -214,18 +287,18 @@ export function Bosses() {
               {t('bosses.title')}
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-gray-400">
-              Caçador <span className="font-bold text-white">{hunterStore.fullName || hunterStore.username}</span> · Rank <span className="text-amber-300">{hunterStore.rank}</span> · Classe <span className="text-purple-300">{hunterStore.hunterClass || 'Nenhuma'}</span>
+              {l('Caçador', 'Hunter')} <span className="font-bold text-white">{hunterStore.fullName || hunterStore.username}</span> · Rank <span className="text-amber-300">{hunterStore.rank}</span> · {l('Classe', 'Class')} <span className="text-purple-300">{hunterStore.hunterClass || l('Nenhuma', 'None')}</span>
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: t('bosses.weekBoss'), value: bossDef?.name || '...', icon: Crown, tone: 'text-purple-300' },
+              { label: t('bosses.weekBoss'), value: localizedBoss?.name || bossDef?.name || '...', icon: Crown, tone: 'text-purple-300' },
               { label: t('bosses.hpRemaining'), value: activeBattle ? `${activeBattle.current_hp} / ${activeBattle.max_hp}` : '--', icon: Heart, tone: 'text-rose-300' },
               { label: t('bosses.damageDealt'), value: activeBattle ? `${damageDealt} HP` : '--', icon: Swords, tone: 'text-amber-300' },
               { label: t('bosses.deadline'), value: activeBattle ? `${remainingDays}d ${remainingHours}h` : '--', icon: Timer, tone: 'text-blue-300' },
               { label: t('bosses.reward'), value: bossDef ? `+${bossDef.xpReward} XP` : '--', icon: Gift, tone: 'text-emerald-300' },
-              { label: t('bosses.titleReward'), value: bossDef?.titleReward || '--', icon: Award, tone: 'text-yellow-300' },
+              { label: t('bosses.titleReward'), value: localizedBoss?.titleReward || bossDef?.titleReward || '--', icon: Award, tone: 'text-yellow-300' },
             ].map(item => (
               <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3 transition-colors hover:border-white/10">
                 <item.icon className={`size-4 ${item.tone}`} />
@@ -240,7 +313,7 @@ export function Bosses() {
           <button
             onClick={() => void resetBattle(user.id)}
             disabled={bossLoading}
-            title="Resetar HP do Boss atual"
+            title={l('Resetar HP do Boss atual', 'Reset current Boss HP')}
             className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-xl border border-[#1e1e26] bg-black/50 text-gray-500 transition hover:border-gray-500/50 hover:text-white disabled:opacity-40"
           >
             <RotateCcw size={15} className={bossLoading ? 'animate-spin' : ''} />
@@ -256,14 +329,14 @@ export function Bosses() {
             <div className="absolute inset-0 rounded-full border-t-2 border-purple-500 animate-spin" />
           </div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 animate-pulse font-orbitron">
-            Sincronizando com a Fenda Dimensional...
+            {l('Sincronizando com a Fenda Dimensional...', 'Synchronizing with the Dimensional Rift...')}
           </p>
         </div>
       ) : bossError && !activeBattle ? (
         <div className="rounded-3xl border border-rose-500/30 bg-rose-500/5 p-10 text-center shadow-xl">
           <ShieldAlert className="mx-auto mb-4 size-10 text-rose-400" />
           <p className="text-xs font-black uppercase tracking-widest text-rose-400 font-orbitron">
-            Falha ao sincronizar a fenda
+            {l('Falha ao sincronizar a fenda', 'Failed to synchronize the Rift')}
           </p>
           <p className="mx-auto mt-3 max-w-2xl break-words text-xs font-semibold text-rose-200/80">
             {bossError}
@@ -272,7 +345,7 @@ export function Bosses() {
             onClick={() => user?.id && void loadActiveBattle(user.id)}
             className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-rose-300 transition hover:bg-rose-500/20"
           >
-            Tentar sincronizar novamente
+            {l('Tentar sincronizar novamente', 'Try synchronizing again')}
           </button>
         </div>
       ) : activeBattle && bossDef ? (
@@ -281,7 +354,7 @@ export function Bosses() {
           {/* Card do Boss (Visual) */}
           <div className="lg:col-span-7 space-y-6">
             <div 
-              className="relative rounded-3xl border border-[#1e1e26] bg-[#0c0c0f] overflow-hidden flex flex-col justify-end aspect-[4/5] w-full group shadow-2xl"
+              className="theme-preserve-dark relative rounded-3xl border border-[#1e1e26] bg-[#0c0c0f] overflow-hidden flex flex-col justify-end aspect-[4/5] w-full group shadow-2xl"
               style={{
                 boxShadow: `0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 30px -5px ${bossDef.color}20`
               }}
@@ -352,23 +425,23 @@ export function Bosses() {
                     {bossDef.title}
                   </span>
                   <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                    <Award size={13} style={{ color: bossDef.color }} /> Recompensa: 
+                    <Award size={13} style={{ color: bossDef.color }} /> {l('Recompensa', 'Reward')}:
                     <span className="text-white font-orbitron" style={{ textShadow: `0 0 10px ${bossDef.color}40` }}>
-                      {bossDef.titleReward}
+                      {localizedBoss?.titleReward || bossDef.titleReward}
                     </span>
                   </div>
                 </div>
 
                 {/* Nome do Boss */}
                 <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-white font-orbitron">
-                  {bossDef.name}
+                  {localizedBoss?.name || bossDef.name}
                 </h2>
 
                 {/* Status de HP */}
                 <div className="space-y-2">
                   <div className="flex items-end justify-between font-orbitron">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                      Integridade da Entidade
+                      {l('Integridade da Entidade', 'Entity Integrity')}
                     </span>
                     <span 
                       className="text-base font-black tracking-widest"
@@ -432,7 +505,7 @@ export function Bosses() {
                     </div>
                     
                     <p className="text-xs text-gray-300 font-medium leading-relaxed italic border-l-2 border-emerald-500/30 pl-4 bg-emerald-500/5 py-3 rounded-r-xl">
-                      "{bossDef.victoryLore}"
+                      “{localizedBoss?.victoryLore || bossDef.victoryLore}”
                     </p>
 
                     <div className="rounded-2xl border border-emerald-500/10 bg-emerald-500/5 p-4 space-y-2.5">
@@ -441,13 +514,13 @@ export function Bosses() {
                       </h4>
                       <ul className="space-y-1.5 text-[10px] uppercase font-bold text-gray-400 tracking-wider">
                         <li className="flex items-center gap-2">
-                          <Zap size={11} className="text-amber-400" /> Bônus de Experiência: <span className="text-white font-orbitron">+{bossDef.xpReward} XP</span>
+                          <Zap size={11} className="text-amber-400" /> {l('Bônus de Experiência', 'Experience Bonus')}: <span className="text-white font-orbitron">+{bossDef.xpReward} XP</span>
                         </li>
                         <li className="flex items-center gap-2">
-                          <Crown size={11} className="text-emerald-400" /> Título Desbloqueado: <span className="text-white font-orbitron">{bossDef.titleReward}</span>
+                          <Crown size={11} className="text-emerald-400" /> {l('Título Desbloqueado', 'Title Unlocked')}: <span className="text-white font-orbitron">{localizedBoss?.titleReward || bossDef.titleReward}</span>
                         </li>
                         <li className="flex items-center gap-2">
-                          <Award size={11} className="text-purple-400" /> Medalha: <span className="text-white font-orbitron">Insignia do Boss Derrotado</span>
+                          <Award size={11} className="text-purple-400" /> {l('Medalha', 'Medal')}: <span className="text-white font-orbitron">{l('Insígnia do Boss Derrotado', 'Defeated Boss Insignia')}</span>
                         </li>
                       </ul>
                     </div>
@@ -459,7 +532,7 @@ export function Bosses() {
                     className="w-full mt-6 py-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-400 font-black text-xs uppercase tracking-widest transition duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.15)] active:scale-98 cursor-pointer disabled:opacity-50"
                   >
                     <Sparkles size={14} className={purifying ? 'animate-pulse' : ''} />
-                    {purifying ? 'Canalizando Energia...' : 'Purificar Entidade & Avançar'}
+                    {purifying ? l('Canalizando Energia...', 'Channeling Energy...') : l('Purificar Entidade & Avançar', 'Purify Entity & Advance')}
                   </button>
                 </div>
               ) : (
@@ -470,10 +543,10 @@ export function Bosses() {
                     {/* Descrição Lore */}
                     <div className="space-y-2">
                       <h3 className="flex items-center gap-2 text-sm font-black text-white font-orbitron">
-                        <Info size={16} style={{ color: bossDef.color }} /> Descrição do Boss
+                        <Info size={16} style={{ color: bossDef.color }} /> {l('Descrição do Boss', 'Boss Description')}
                       </h3>
                       <p className="text-sm leading-relaxed text-gray-400">
-                        {bossDef.lore}
+                        {localizedBoss?.lore || bossDef.lore}
                       </p>
                     </div>
 
@@ -483,17 +556,17 @@ export function Bosses() {
                     {/* Mecânica de Fraqueza */}
                     <div className="space-y-2">
                       <h3 className="flex items-center gap-2 text-sm font-black text-yellow-400 font-orbitron">
-                        <ShieldAlert size={14} className="text-yellow-400" /> Fraqueza Identificada
+                        <ShieldAlert size={14} className="text-yellow-400" /> {l('Fraqueza Identificada', 'Weakness Identified')}
                       </h3>
                       <p className="text-sm font-semibold leading-relaxed text-gray-300">
-                        {bossDef.weakness}
+                        {localizedBoss?.weakness || bossDef.weakness}
                       </p>
                       <div className="flex items-center gap-2 mt-1 bg-yellow-500/5 border border-yellow-500/10 rounded-xl p-2.5">
                         <div className="size-6 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400 shrink-0">
                           {getBossIcon(bossDef.weaknessCategory)}
                         </div>
                         <span className="text-xs font-bold text-yellow-400">
-                          Multiplicador 1.75x para ações do tipo {bossDef.weaknessCategory}
+                          {l('Multiplicador 1.75x para ações do tipo', '1.75x multiplier for')} {localizedWeaknessCategory}
                         </span>
                       </div>
                     </div>
@@ -501,23 +574,27 @@ export function Bosses() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="rounded-xl border border-emerald-500/10 bg-emerald-500/5 p-3">
                         <TrendingDown className="size-4 text-emerald-400" />
-                        <p className="mt-2 text-xs font-bold text-white">Fontes de dano</p>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-500">Quests, treinos, nutrição, finanças e hábitos concluídos.</p>
+                        <p className="mt-2 text-xs font-bold text-white">{l('Fontes de dano', 'Damage sources')}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">{l('Quests, treinos, nutrição, finanças e hábitos concluídos.', 'Completed quests, workouts, nutrition, finances, and habits.')}</p>
                       </div>
                       <div className="rounded-xl border border-red-500/10 bg-red-500/5 p-3">
                         <TrendingUp className="size-4 text-red-400" />
-                        <p className="mt-2 text-xs font-bold text-white">Regeneração</p>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-500">Desfazer atividades restaura o mesmo dano aplicado, impedindo farm de golpes.</p>
+                        <p className="mt-2 text-xs font-bold text-white">{l('Regeneração', 'Regeneration')}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">{l('Desfazer atividades restaura o mesmo dano aplicado, impedindo farm de golpes.', 'Undoing activities restores the same damage, preventing attack farming.')}</p>
                       </div>
                       <div className="rounded-xl border border-purple-500/10 bg-purple-500/5 p-3">
                         <Activity className="size-4 text-purple-400" />
-                        <p className="mt-2 text-xs font-bold text-white">Multiplicador ativo</p>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-500">1.75x em {bossDef.weaknessCategory}; sinergias especiais aplicam 1.35x.</p>
+                        <p className="mt-2 text-xs font-bold text-white">{l('Multiplicador ativo', 'Active multiplier')}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                          {l(`1.75x em ${bossDef.weaknessCategory}; sinergias especiais aplicam 1.35x.`, `1.75x for ${localizedWeaknessCategory}; special synergies apply 1.35x.`)}
+                        </p>
                       </div>
                       <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-3">
                         <ShieldAlert className="size-4 text-amber-400" />
-                        <p className="mt-2 text-xs font-bold text-white">Risco atual</p>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-500">{raidRisk} · {activeBattle.current_hp} HP ainda precisam ser removidos.</p>
+                        <p className="mt-2 text-xs font-bold text-white">{l('Risco atual', 'Current risk')}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                          {raidRisk} · {l(`${activeBattle.current_hp} HP ainda precisam ser removidos.`, `${activeBattle.current_hp} HP still need to be removed.`)}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -525,8 +602,8 @@ export function Bosses() {
                   {/* Painel de Interação de Ataque / Teste */}
                   <div className="space-y-3 pt-6 border-t border-[#1e1e26] border-dashed">
                     <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-                      <span>Ataque manual diário</span>
-                      <span>{manualAttackUsedToday ? 'Disponível amanhã' : '1 uso disponível'}</span>
+                      <span>{l('Ataque manual diário', 'Daily manual attack')}</span>
+                      <span>{manualAttackUsedToday ? l('Disponível amanhã', 'Available tomorrow') : l('1 uso disponível', '1 use available')}</span>
                     </div>
                     
                     <div className="grid grid-cols-1 gap-2">
@@ -536,12 +613,12 @@ export function Bosses() {
                         className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/10 text-sm font-black text-purple-200 transition hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(168,85,247,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Swords size={16} className="text-yellow-400" />
-                        {manualAttackUsedToday ? 'Ataque diário utilizado' : 'Executar ataque de treino'}
+                        {manualAttackUsedToday ? l('Ataque diário utilizado', 'Daily attack used') : l('Executar ataque de treino', 'Perform training attack')}
                       </button>
                     </div>
                     
                     <p className="text-xs text-center leading-relaxed text-gray-600">
-                      O dano principal é aplicado automaticamente ao concluir atividades nos módulos do Ascend.
+                      {l('O dano principal é aplicado automaticamente ao concluir atividades nos módulos do Ascend.', 'Most damage is applied automatically when you complete activities across Ascend modules.')}
                     </p>
                   </div>
                 </div>
@@ -551,7 +628,7 @@ export function Bosses() {
         </div>
       ) : (
         <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-12 text-center shadow-xl">
-          <p className="text-gray-500 font-orbitron uppercase tracking-widest">Nenhuma raid ativa encontrada na fenda.</p>
+          <p className="text-gray-500 font-orbitron uppercase tracking-widest">{l('Nenhuma raid ativa encontrada na fenda.', 'No active raid found in the Rift.')}</p>
         </div>
       )}
 
@@ -560,16 +637,16 @@ export function Bosses() {
           <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-black text-white font-orbitron">Histórico de Dano</h3>
-                <p className="mt-1 text-xs text-gray-500">Eventos recentes registrados durante esta sessão de raid.</p>
+                <h3 className="text-base font-black text-white font-orbitron">{l('Histórico de Dano', 'Damage History')}</h3>
+                <p className="mt-1 text-xs text-gray-500">{l('Eventos recentes registrados durante esta sessão de raid.', 'Recent events recorded during this raid session.')}</p>
               </div>
               <Activity className="size-5 text-purple-400" />
             </div>
             <div className="mt-5 space-y-2">
               {combatEvents.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-purple-500/20 bg-purple-500/[0.025] p-5 text-center">
-                  <p className="text-sm font-semibold text-gray-400">Nenhum impacto registrado nesta sessão.</p>
-                  <p className="mt-1 text-xs text-gray-600">Conclua atividades ou use o ataque manual diário para gerar o primeiro evento.</p>
+                  <p className="text-sm font-semibold text-gray-400">{l('Nenhum impacto registrado nesta sessão.', 'No impact recorded in this session.')}</p>
+                  <p className="mt-1 text-xs text-gray-600">{l('Conclua atividades ou use o ataque manual diário para gerar o primeiro evento.', 'Complete activities or use the daily manual attack to create the first event.')}</p>
                 </div>
               ) : (
                 combatEvents.map(event => (
@@ -604,18 +681,18 @@ export function Bosses() {
               <div className="flex size-11 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
                 <Trophy className="size-5" />
               </div>
-              <p className="mt-4 text-xs font-bold text-amber-300">Recompensa da purificação</p>
-              <h3 className="mt-1 text-xl font-black text-white font-orbitron">{bossDef.titleReward}</h3>
+              <p className="mt-4 text-xs font-bold text-amber-300">{l('Recompensa da purificação', 'Purification reward')}</p>
+              <h3 className="mt-1 text-xl font-black text-white font-orbitron">{localizedBoss?.titleReward || bossDef.titleReward}</h3>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-xl border border-white/5 bg-black/25 p-3">
                   <Zap className="size-4 text-yellow-400" />
-                  <p className="mt-2 text-xs text-gray-500">Experiência</p>
+                  <p className="mt-2 text-xs text-gray-500">{l('Experiência', 'Experience')}</p>
                   <p className="mt-1 text-sm font-bold text-white">+{bossDef.xpReward} XP</p>
                 </div>
                 <div className="rounded-xl border border-white/5 bg-black/25 p-3">
                   <Award className="size-4 text-purple-400" />
-                  <p className="mt-2 text-xs text-gray-500">Relíquia</p>
-                  <p className="mt-1 text-sm font-bold text-white">Insígnia do Boss</p>
+                  <p className="mt-2 text-xs text-gray-500">{l('Relíquia', 'Relic')}</p>
+                  <p className="mt-1 text-sm font-bold text-white">{l('Insígnia do Boss', 'Boss Insignia')}</p>
                 </div>
               </div>
             </div>
@@ -627,10 +704,10 @@ export function Bosses() {
       <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 sm:p-8 shadow-xl relative overflow-hidden">
         <div className="mb-6">
           <h3 className="text-sm font-black uppercase tracking-wider text-white font-orbitron">
-            Galeria das Fendas <span className="text-purple-400">Purificadas</span>
+            {l('Galeria das Fendas', 'Rift Gallery')} <span className="text-purple-400">{l('Purificadas', 'Purified')}</span>
           </h3>
           <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            Registro de todos os chefes derrotados no servidor do ASCEND
+            {l('Registro de todos os chefes derrotados no servidor do ASCEND', 'Record of every boss defeated on the ASCEND server')}
           </p>
         </div>
 
@@ -641,6 +718,7 @@ export function Bosses() {
             const isDefeated = status === 'defeated';
             const isActive = status === 'active';
             const isLocked = status === 'locked';
+            const galleryBossName = language === 'en-US' ? EN_BOSS_COPY[boss.id]?.name || boss.name : boss.name;
 
             return (
               <motion.div
@@ -669,10 +747,14 @@ export function Bosses() {
                 {/* Info Text */}
                 <div className="flex min-h-16 w-full flex-col items-center justify-center gap-1">
                   <p className="w-full whitespace-normal break-words text-[10px] font-black leading-4 font-orbitron [overflow-wrap:anywhere] sm:text-[11px]">
-                    {boss.name}
+                    {galleryBossName}
                   </p>
                   <p className={`text-[10px] font-bold ${isDefeated ? 'text-emerald-400' : isActive ? 'text-purple-300' : 'text-gray-600'}`}>
-                    {isDefeated ? 'Purificado' : isActive ? 'Em combate' : 'Bloqueado'}
+                    {isDefeated
+                      ? l('Purificado', 'Purified')
+                      : isActive
+                        ? l('Em combate', 'In combat')
+                        : l('Bloqueado', 'Locked')}
                   </p>
                 </div>
                 

@@ -138,6 +138,27 @@
 .theme-light .text-rose-400 { color: #be123c !important; }
 .theme-light .text-red-300,
 .theme-light .text-red-400 { color: #b91c1c !important; }
+
+.theme-light [class*="bg-blue-"][class~="text-white"],
+.theme-light [class*="bg-purple-"][class~="text-white"],
+.theme-light [class*="bg-emerald-"][class~="text-white"],
+.theme-light [class*="bg-orange-"][class~="text-white"],
+.theme-light [class*="bg-rose-"][class~="text-white"],
+.theme-light [class*="bg-red-"][class~="text-white"],
+.theme-light [class*="bg-gradient-to-"][class~="text-white"] {
+  color: #ffffff !important;
+}
+
+.theme-light .theme-preserve-dark {
+  background-color: #0f0f13 !important;
+  color: #cbd5e1;
+}
+
+.theme-light .theme-preserve-dark .text-white { color: #ffffff !important; }
+.theme-light .theme-preserve-dark .text-gray-300 { color: #d1d5db !important; }
+.theme-light .theme-preserve-dark .text-gray-400 { color: #9ca3af !important; }
+.theme-light .theme-preserve-dark .text-gray-500,
+.theme-light .theme-preserve-dark .text-gray-600 { color: #6b7280 !important; }
 .theme-light [class~="border-white/5"],
 .theme-light [class~="border-white/10"],
 .theme-light [class~="border-[#1E1E26]"],
