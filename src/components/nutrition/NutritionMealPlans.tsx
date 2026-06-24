@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Search, Trash2, UtensilsCrossed, Zap, Apple, ChevronDown, Flame, Droplets, Scale, Clock, Gauge, CheckCircle2 } from 'lucide-react';
 import { useMealPlans, calcMealMacros, type MealPlan } from '@/hooks/useMealPlans';
 import type { Food } from '@/types/nutrition';
+import { usePreferences } from '@/contexts/preferences';
+import { translateUiText } from '@/lib/uiEnglish';
 
 interface NutritionMealPlansProps {
   foods: Food[];
@@ -40,6 +42,8 @@ function MacroBadge({ label, value, color }: { label: string; value: string; col
 }
 
 function FoodSearchResult({ food, onAdd }: { food: Food; onAdd: (foodId: string, quantityGrams: number) => void }) {
+  const { language } = usePreferences();
+  const tx = (value?: string | null) => language === 'en-US' && value ? translateUiText(value) : value;
   const isCustomUnit = !!food.serving_unit && !!food.serving_size;
   const [qty, setQty] = useState(isCustomUnit ? 1 : 100);
 
@@ -51,9 +55,9 @@ function FoodSearchResult({ food, onAdd }: { food: Food; onAdd: (foodId: string,
   return (
     <div className="flex items-center gap-2 rounded-lg bg-white/5 p-2">
       <div className="flex-1 min-w-0">
-        <span className="text-xs font-bold text-white uppercase truncate block">{food.name}</span>
+        <span className="text-xs font-bold text-white uppercase truncate block">{tx(food.name)}</span>
         <span className="text-xs text-gray-500">
-           {isCustomUnit ? `${food.serving_size}g / ${food.serving_unit}` : `${food.calories_per_100g} kcal/100g`}
+           {isCustomUnit ? `${food.serving_size}g / ${tx(food.serving_unit)}` : `${food.calories_per_100g} kcal/100g`}
         </span>
       </div>
       <input
@@ -63,7 +67,7 @@ function FoodSearchResult({ food, onAdd }: { food: Food; onAdd: (foodId: string,
         className="w-14 rounded-lg border border-[#1E1E26] bg-black px-2 py-1 text-center text-xs text-white focus:outline-none"
         min={1}
       />
-      <span className="text-xs text-gray-500">{isCustomUnit ? food.serving_unit : 'g'}</span>
+      <span className="text-xs text-gray-500">{isCustomUnit ? tx(food.serving_unit) : 'g'}</span>
       <button
         onClick={handleAdd}
         className="rounded-lg bg-orange-600 p-1.5 text-white hover:bg-orange-500"
@@ -91,6 +95,10 @@ function MealPlanCard({
   onUsePlan: (plan: MealPlan) => Promise<void>;
   isUsing: boolean;
 }) {
+  const { language } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
+  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
@@ -116,15 +124,15 @@ function MealPlanCard({
           <div className="min-w-0 flex-1">
             <p className="truncate text-base font-black uppercase tracking-tight text-white"
               style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              {plan.name}
+              {tx(plan.name)}
             </p>
-            <p className="mt-1 text-[13px] font-medium text-gray-500">{metadata.objective}</p>
+            <p className="mt-1 text-[13px] font-medium text-gray-500">{tx(metadata.objective)}</p>
           </div>
 
           {confirmDel ? (
             <div className="flex gap-1">
-              <button onClick={() => onDelete(plan.id)} className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-bold text-red-400 hover:bg-red-500/30">Sim</button>
-              <button onClick={() => setConfirmDel(false)} className="rounded-lg bg-white/5 px-2 py-1 text-xs font-bold text-gray-500">Não</button>
+              <button onClick={() => onDelete(plan.id)} className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-bold text-red-400 hover:bg-red-500/30">{l('Sim', 'Yes')}</button>
+              <button onClick={() => setConfirmDel(false)} className="rounded-lg bg-white/5 px-2 py-1 text-xs font-bold text-gray-500">{l('Não', 'No')}</button>
             </div>
           ) : (
             <button onClick={() => setConfirmDel(true)} className="text-gray-700 hover:text-red-400 transition-colors">
@@ -135,10 +143,10 @@ function MealPlanCard({
 
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            { label: 'Energia', value: `${Math.round(macros.kcal)} kcal`, icon: Flame, tone: 'text-orange-400' },
-            { label: 'Proteína', value: `${macros.protein.toFixed(0)}g`, icon: Zap, tone: 'text-purple-400' },
-            { label: 'Dificuldade', value: metadata.difficulty, icon: Gauge, tone: 'text-blue-400' },
-            { label: 'Preparo', value: metadata.prepTime, icon: Clock, tone: 'text-emerald-400' },
+            { label: l('Energia', 'Energy'), value: `${Math.round(macros.kcal)} kcal`, icon: Flame, tone: 'text-orange-400' },
+            { label: l('Proteína', 'Protein'), value: `${macros.protein.toFixed(0)}g`, icon: Zap, tone: 'text-purple-400' },
+            { label: l('Dificuldade', 'Difficulty'), value: tx(metadata.difficulty), icon: Gauge, tone: 'text-blue-400' },
+            { label: l('Preparo', 'Prep'), value: metadata.prepTime, icon: Clock, tone: 'text-emerald-400' },
           ].map(item => (
             <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3">
               <item.icon className={`size-3.5 ${item.tone}`} />
@@ -151,7 +159,7 @@ function MealPlanCard({
         <div className="mt-3 flex flex-wrap gap-1.5">
           {metadata.tags.map(tag => (
             <span key={tag} className="rounded-md border border-orange-500/15 bg-orange-500/5 px-2 py-1 text-xs font-semibold text-orange-300">
-              {tag}
+              {tx(tag)}
             </span>
           ))}
         </div>
@@ -164,13 +172,13 @@ function MealPlanCard({
             className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-bold text-white transition-all hover:bg-orange-500 hover:shadow-[0_0_18px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isUsing ? <Clock className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-            {isUsing ? 'Adicionando...' : 'Adicionar ao dia'}
+            {isUsing ? l('Adicionando...', 'Adding...') : l('Adicionar ao dia', 'Add to day')}
           </button>
           <button
             type="button"
             onClick={() => setExpanded(p => !p)}
             className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-500 transition-colors hover:text-white"
-            aria-label={expanded ? 'Recolher cardápio' : 'Expandir cardápio'}
+            aria-label={expanded ? l('Recolher cardápio', 'Collapse meal plan') : l('Expandir cardápio', 'Expand meal plan')}
           >
             <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
           </button>
@@ -191,7 +199,7 @@ function MealPlanCard({
               {/* Itens da refeição */}
               {(plan.items ?? []).length === 0 ? (
                 <p className="py-2 text-center text-[13px] font-medium text-gray-500">
-                  Nenhum alimento adicionado ainda.
+                  {l('Nenhum alimento adicionado ainda.', 'No food added yet.')}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -206,8 +214,8 @@ function MealPlanCard({
                       <div key={item.id} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
                         <Apple size={12} className="shrink-0 text-orange-400" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-white uppercase truncate block">{item.food?.name}</span>
-                          <span className="text-xs text-gray-500">{displayQty} {displayUnit} · {Math.round(kcal)} kcal</span>
+                          <span className="text-xs font-bold text-white uppercase truncate block">{tx(item.food?.name)}</span>
+                          <span className="text-xs text-gray-500">{displayQty} {tx(displayUnit)} · {Math.round(kcal)} kcal</span>
                         </div>
                         <button onClick={() => onRemoveItem(item.id, plan.id)} className="text-gray-700 hover:text-red-400">
                           <X size={12} />
@@ -230,12 +238,12 @@ function MealPlanCard({
 
               {/* Adicionar alimento */}
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-400">Adicionar alimento</p>
+                <p className="text-sm font-semibold text-gray-400">{l('Adicionar alimento', 'Add food')}</p>
                 <div className="relative">
                   <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
-                    placeholder="Buscar alimento..."
+                    placeholder={l('Buscar alimento...', 'Search food...')}
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     className="w-full rounded-xl border border-[#1E1E26] bg-black py-2 pl-8 pr-3 text-xs text-white placeholder:text-gray-600 focus:border-orange-500/50 focus:outline-none"
@@ -255,7 +263,7 @@ function MealPlanCard({
                       />
                     ))}
                     {filtered.length === 0 && (
-                      <p className="py-2 text-center text-[13px] text-gray-500">Nenhum alimento encontrado.</p>
+                      <p className="py-2 text-center text-[13px] text-gray-500">{l('Nenhum alimento encontrado.', 'No food found.')}</p>
                     )}
                   </div>
                 )}
@@ -269,6 +277,10 @@ function MealPlanCard({
 }
 
 export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMealPlansProps) {
+  const { language } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
+  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
   const {
     mealPlans,
     loading,
@@ -318,16 +330,16 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
           className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm font-semibold text-emerald-200"
         >
           <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
-          {feedback}
+          {tx(feedback)}
         </motion.div>
       )}
       {/* Stats Board */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
         {[
-          { label: 'Energia (kcal)', value: totals.kcal.toFixed(0), icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-          { label: 'Proteína', value: totals.protein.toFixed(1) + 'g', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Carbos', value: totals.carbs.toFixed(1) + 'g', icon: Droplets, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-          { label: 'Gorduras', value: totals.fat.toFixed(1) + 'g', icon: Scale, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+          { label: l('Energia (kcal)', 'Energy (kcal)'), value: totals.kcal.toFixed(0), icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+          { label: l('Proteína', 'Protein'), value: totals.protein.toFixed(1) + 'g', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: l('Carbos', 'Carbs'), value: totals.carbs.toFixed(1) + 'g', icon: Droplets, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+          { label: l('Gorduras', 'Fats'), value: totals.fat.toFixed(1) + 'g', icon: Scale, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
         ].map((stat, i) => (
           <div key={i} className="rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-3 sm:p-5">
             <div className="flex items-center gap-2 sm:gap-4">
@@ -347,7 +359,7 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
       <div className="flex items-center gap-4 rounded-2xl border border-orange-500/20 bg-orange-500/5 px-5 py-3">
         <UtensilsCrossed size={18} className="text-orange-400 shrink-0" />
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-400">Total energético dos cardápios</p>
+          <p className="text-sm font-semibold text-gray-400">{l('Total energético dos cardápios', 'Total energy across meal plans')}</p>
           <p className="text-xl font-black text-orange-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
             {Math.round(totals.kcal)} <span className="text-xs text-gray-600">kcal</span>
           </p>
@@ -361,13 +373,13 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
       {/* Header + botão */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-gray-500">
-          {mealPlans.length} refeição(ões) definida(s)
+          {mealPlans.length} {l('refeição(ões) definida(s)', 'meal(s) defined')}
         </p>
         <button
           onClick={() => setModalOpen(true)}
           className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
         >
-          <Plus size={14} strokeWidth={3} /> Nova Refeição
+          <Plus size={14} strokeWidth={3} /> {l('Nova Refeição', 'New Meal')}
         </button>
       </div>
 
@@ -382,13 +394,13 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
             <UtensilsCrossed size={48} className="text-gray-700" />
           </div>
           <h3 className="text-sm font-bold uppercase italic text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            Nenhum Cardápio Definido
+            {l('Nenhum Cardápio Definido', 'No Meal Plan Defined')}
           </h3>
           <p className="mt-2 max-w-xs text-[11px] uppercase tracking-widest text-gray-600">
-            Crie suas refeições para que apareçam como missões diárias.
+            {l('Crie suas refeições para que apareçam como missões diárias.', 'Create meals so they appear as daily quests.')}
           </p>
           <button onClick={() => setModalOpen(true)} className="mt-5 text-[11px] font-black uppercase tracking-widest text-orange-400 hover:underline">
-            + Criar Primeira Refeição
+            {l('+ Criar Primeira Refeição', '+ Create First Meal')}
           </button>
         </div>
       ) : (
@@ -433,18 +445,18 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
                 </div>
                 <div>
                   <h2 className="text-lg font-black uppercase italic text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    Nova <span className="text-orange-400">Refeição</span>
+                    {l('Nova', 'New')} <span className="text-orange-400">{l('Refeição', 'Meal')}</span>
                   </h2>
-                  <p className="text-[13px] text-gray-500">Defina seu cardápio</p>
+                  <p className="text-[13px] text-gray-500">{l('Defina seu cardápio', 'Define your meal plan')}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-300">Nome da refeição</label>
+                  <label className="text-sm font-semibold text-gray-300">{l('Nome da refeição', 'Meal name')}</label>
                   <input
                     type="text"
-                    placeholder="Ex: Café da Manhã, Ref. 1, Pré-Treino..."
+                    placeholder={l('Ex: Café da Manhã, Ref. 1, Pré-Treino...', 'E.g. Breakfast, Meal 1, Pre-workout...')}
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleCreate()}
@@ -460,7 +472,7 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
                   className="w-full rounded-2xl bg-orange-600 py-4 font-black uppercase italic tracking-[0.15em] text-white transition-all hover:bg-orange-500 hover:shadow-[0_0_25px_rgba(249,115,22,0.35)] disabled:opacity-40"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  Criar Refeição
+                  {l('Criar Refeição', 'Create Meal')}
                 </button>
               </div>
             </motion.div>

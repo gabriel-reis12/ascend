@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Palette } from 'lucide-react';
 import type { CreateTaskInput, Task } from '@/hooks/useTasks';
+import { usePreferences } from '@/contexts/preferences';
+import { translateUiText } from '@/lib/uiEnglish';
 
 const PRESET_COLORS = [
   '#7C3AED', '#D946EF', '#3B82F6', '#10B981',
@@ -36,6 +38,10 @@ const DEFAULTS: CreateTaskInput = {
 };
 
 export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
+  const { language } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
+  const tx = (value: string) => (isEnglish ? translateUiText(value) : value);
   const [form, setForm] = useState<CreateTaskInput>(DEFAULTS);
   const [loading, setLoading] = useState(false);
 
@@ -77,7 +83,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                 className="text-lg font-bold text-[#E2E8F0]"
                 style={{ fontFamily: 'Orbitron, sans-serif' }}
               >
-                Nova Quest
+                {l('Nova Quest', 'New Quest')}
               </h2>
               <button
                 onClick={onClose}
@@ -91,7 +97,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
               {/* Title */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                  Título da quest *
+                  {l('Título da quest *', 'Quest title *')}
                 </label>
                 <input
                   type="text"
@@ -106,7 +112,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
               {/* Category */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                  Categoria *
+                  {l('Categoria *', 'Category *')}
                 </label>
                 <input
                   type="text"
@@ -122,7 +128,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
               <div>
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
                   <Palette size={12} />
-                  Cor da categoria
+                  {l('Cor da categoria', 'Category color')}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_COLORS.map((color) => (
@@ -143,7 +149,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                     value={form.category_color}
                     onChange={(e) => set('category_color', e.target.value)}
                     className="size-7 cursor-pointer rounded-lg border-0 bg-transparent p-0"
-                    title="Cor personalizada"
+                    title={l('Cor personalizada', 'Custom color')}
                   />
                 </div>
               </div>
@@ -166,7 +172,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
 
                 <div className="flex-1">
                   <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                    Stat alvo
+                    {l('Stat alvo', 'Target stat')}
                   </label>
                   <select
                     value={form.stat_target ?? ''}
@@ -177,7 +183,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                   >
                     {STAT_OPTIONS.map((o) => (
                       <option key={String(o.value)} value={o.value ?? ''}>
-                        {o.label}
+                        {tx(o.label)}
                       </option>
                     ))}
                   </select>
@@ -196,7 +202,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                 ) : (
                   <Plus size={16} />
                 )}
-                {loading ? 'Criando...' : 'Criar Quest'}
+                {loading ? l('Criando...', 'Creating...') : l('Criar Quest', 'Create Quest')}
               </motion.button>
             </form>
           </motion.div>

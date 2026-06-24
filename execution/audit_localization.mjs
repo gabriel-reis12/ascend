@@ -45,6 +45,18 @@ const samples = [
   ['Estado de equilíbrio', 'Balance state'],
   ['Buscar suprimentos nutricionais...', 'Search nutritional supplies...'],
   ['Acessar módulo', 'Open module'],
+  ['refeição(ões) definida(s)', 'meal(s) defined'],
+  ['Crie suas refeições para que apareçam como missões diárias.', 'Create meals so they appear as daily quests.'],
+  ['Missão Flexível / Opcional', 'Flexible / Optional quest'],
+  ['Supino Reto com Barra', 'Barbell Bench Press'],
+  ['C - Legs (Pernas)', 'C - Legs'],
+  ['Força Base 3x', 'Base Strength 3x'],
+  ['O Senhor da Procrastinação', 'The Lord of Procrastination'],
+  ['Recompensas da Purificação', 'Purification Rewards'],
+  ['Ganhos do Mês', 'Income This Month'],
+  ['Templo do Silêncio', 'Temple of Silence'],
+  ['Selecionar idioma', 'Select language'],
+  ['Confirmar Senha', 'Confirm Password'],
 ];
 
 for (const [portuguese, english] of samples) {

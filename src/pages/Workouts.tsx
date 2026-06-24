@@ -39,7 +39,7 @@ import { localDateString } from '@/lib/date';
 import { WORKOUT_PROGRAM_PRESETS } from '@/data/workoutPresets';
 import type { WorkoutProgramPreset, PresetRoutine } from '@/data/workoutPresets';
 import { usePreferences } from '@/contexts/preferences';
-
+import { PremiumGate } from '@/components/premium/PremiumGate';
 
 interface Exercise {
   id: string;
@@ -1295,9 +1295,14 @@ export function Workouts() {
           )}
 
           {activeTab === 'progress' && (
-            <div className="space-y-6">
-              <WorkoutProgress />
-            </div>
+            <PremiumGate
+              title="Histórico e Evolução Físicos Restritos"
+              description="O painel de evolução corporal, análise de carga e histórico detalhado de treinos realizados requer ativação de assinatura premium."
+            >
+              <div className="space-y-6">
+                <WorkoutProgress />
+              </div>
+            </PremiumGate>
           )}
       </motion.div>
 

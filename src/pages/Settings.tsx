@@ -31,7 +31,9 @@ import {
   Scale,
   Languages,
   MoonStar,
-  Sun
+  Sun,
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { useHunterStore, type HunterClass, type HunterGender } from '../stores/useHunterStore';
 import { useAuth } from '../contexts/AuthContext';
@@ -339,6 +341,53 @@ export function Settings() {
     hunterStore.mainGoal,
     hunterStore.experienceLevel
   ]);
+
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+
+  const handleStripeCheckout = async () => {
+    setStripeLoading(true);
+    setStripeError(null);
+    try {
+      const { data, error: funcErr } = await supabase.functions.invoke('stripe-checkout');
+      if (funcErr) {
+        const errBody = await funcErr.context?.json().catch(() => ({}));
+        throw new Error(errBody?.error || funcErr.message || "Erro ao conectar ao Stripe.");
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("URL de checkout inválida.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setStripeError(err.message || "Falha ao iniciar processo de pagamento.");
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const handleStripePortal = async () => {
+    setStripeLoading(true);
+    setStripeError(null);
+    try {
+      const { data, error: funcErr } = await supabase.functions.invoke('stripe-portal');
+      if (funcErr) {
+        const errBody = await funcErr.context?.json().catch(() => ({}));
+        throw new Error(errBody?.error || funcErr.message || "Erro ao conectar ao Stripe Portal.");
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("URL do portal inválida.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setStripeError(err.message || "Falha ao abrir portal de gerenciamento.");
+    } finally {
+      setStripeLoading(false);
+    }
+  };
 
   // Configuração visual por classe
   const getClassConfig = (hClass: HunterClass | null, rank: string | null | undefined) => {
@@ -1550,6 +1599,94 @@ export function Settings() {
                   {l('Sincronização Forçada', 'Force Synchronization')}
                 </button>
               </div>
+            </div>
+          </motion.div>
+
+          {/* PAINEL 2.9: SEÇÃO DE FATURAMENTO / STRIPE */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.29 }}
+            className="rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 sm:p-8 shadow-xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="mb-5 sm:mb-6 flex items-center justify-between">
+              <div className="space-y-1">
+                <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white font-orbitron">
+                  {l('Assinatura &', 'Subscription &')} <span className="text-purple-400">{l('Faturamento', 'Billing')}</span>
+                </h2>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-600">
+                  {l('Gerenciamento de acesso premium via Stripe', 'Manage premium access via Stripe')}
+                </p>
+              </div>
+              <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+                <CreditCard className="w-4 h-4 text-purple-400" />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {stripeError && (
+                <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 text-xs text-rose-400 font-semibold uppercase tracking-wide">
+                  ⚠️ {stripeError}
+                </div>
+              )}
+
+              {hunterStore.isPremium ? (
+                <div className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                      <Sparkles size={18} className="animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-wider text-emerald-400 font-orbitron">
+                        {l('Status: Desperto (Premium)', 'Status: Awakened (Premium)')}
+                      </h4>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {l('Você possui acesso ilimitado a todos os portais, fendas e IA do Sistema.', 'You have unlimited access to all system portals, rifts, and AI.')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end border-t border-emerald-500/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleStripePortal}
+                      disabled={stripeLoading}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-emerald-400 transition-all hover:bg-emerald-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {stripeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      {l('Gerenciar Assinatura', 'Manage Subscription')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-5 rounded-2xl border border-[#1e1e26] bg-black/40 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-gray-500/10 text-gray-400">
+                      <Lock size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-wider text-gray-400 font-orbitron">
+                        {l('Status: Iniciante (Gratuito)', 'Status: Beginner (Free)')}
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {l('Desbloqueie fendas Rank S, IA nutricional e ferramentas de finanças.', 'Unlock Rank S rifts, nutrition AI, and financial tools.')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end border-t border-[#1e1e26] pt-4">
+                    <button
+                      type="button"
+                      onClick={handleStripeCheckout}
+                      disabled={stripeLoading}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 rounded-xl bg-purple-600 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-purple-600/20 transition-all hover:bg-purple-500 active:scale-95 disabled:opacity-50 cursor-pointer"
+                    >
+                      {stripeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 animate-pulse" />}
+                      {l('Despertar Premium', 'Awaken Premium')}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
 

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Palette, RefreshCw } from 'lucide-react';
 import type { CreateHabitInput, Habit } from '@/hooks/useHabits';
 import { usePreferences } from '@/contexts/preferences';
+import { translateUiText } from '@/lib/uiEnglish';
 
 const PRESET_COLORS = [
   '#7C3AED', '#D946EF', '#3B82F6', '#10B981',
@@ -41,6 +42,9 @@ const DEFAULTS: CreateHabitInput = {
 
 export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabitModalProps) {
   const { language } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
+  const tx = (value: string) => (isEnglish ? translateUiText(value) : value);
   const [form, setForm] = useState<CreateHabitInput>(DEFAULTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +124,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                   className="text-lg font-bold text-[#E2E8F0]"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  Novo Hábito Diário
+                  {l('Novo Hábito Diário', 'New Daily Habit')}
                 </h2>
               </div>
               <button
@@ -134,7 +138,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                  Nome do hábito *
+                  {l('Nome do hábito *', 'Habit name *')}
                 </label>
                 <input
                   type="text"
@@ -148,7 +152,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                  Categoria *
+                  {l('Categoria *', 'Category *')}
                 </label>
                 <input
                   type="text"
@@ -163,7 +167,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
               <div>
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
                   <Palette size={12} />
-                  Cor da categoria
+                  {l('Cor da categoria', 'Category color')}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_COLORS.map((color) => (
@@ -184,7 +188,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                     value={form.category_color}
                     onChange={(e) => set('category_color', e.target.value)}
                     className="size-7 cursor-pointer rounded-lg border-0 bg-transparent p-0"
-                    title="Cor personalizada"
+                    title={l('Cor personalizada', 'Custom color')}
                   />
                 </div>
               </div>
@@ -192,7 +196,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                    XP por dia
+                    {l('XP por dia', 'XP per day')}
                   </label>
                   <input
                     type="number"
@@ -206,7 +210,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
 
                 <div className="flex-1">
                   <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                    Horário (Opcional)
+                    {l('Horário (Opcional)', 'Time (Optional)')}
                   </label>
                   <input
                     type="time"
@@ -218,7 +222,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
 
                 <div className="flex-1">
                   <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                    Stat alvo
+                    {l('Stat alvo', 'Target stat')}
                   </label>
                   <select
                     value={form.stat_target ?? ''}
@@ -229,7 +233,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                   >
                     {STAT_OPTIONS.map((o) => (
                       <option key={String(o.value)} value={o.value ?? ''}>
-                        {o.label}
+                        {tx(o.label)}
                       </option>
                     ))}
                   </select>
@@ -238,7 +242,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
 
               <div>
                 <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                  Dias de Recorrência *
+                  {l('Dias de Recorrência *', 'Recurrence days *')}
                 </label>
                 <div className="flex justify-between gap-1">
                   {(language === 'en-US' ? [
@@ -297,10 +301,10 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                 />
                 <div>
                   <label htmlFor="is_optional" className="block text-sm font-medium text-[#E2E8F0]">
-                    Missão Flexível / Opcional
+                    {l('Missão Flexível / Opcional', 'Flexible / Optional quest')}
                   </label>
                   <p className="text-xs text-[#94A3B8]">
-                    Se não fizer, não prejudica seu progresso de 100% no dia.
+                    {l('Se não fizer, não prejudica seu progresso de 100% no dia.', 'If you skip it, it will not hurt your 100% daily progress.')}
                   </p>
                 </div>
               </div>
@@ -312,7 +316,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                   className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-center shadow-[0_0_10px_rgba(239,68,68,0.1)]"
                 >
                   <p className="text-xs font-black uppercase tracking-wider text-red-400">
-                    ⚠️ Erro de Calibração: {error}
+                    {l('⚠️ Erro de Calibração:', '⚠️ Calibration Error:')} {isEnglish ? translateUiText(error) : error}
                   </p>
                 </motion.div>
               )}
@@ -328,7 +332,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                 ) : (
                   <Plus size={16} />
                 )}
-                {loading ? 'Criando...' : 'Criar Hábito'}
+                {loading ? l('Criando...', 'Creating...') : l('Criar Hábito', 'Create Habit')}
               </motion.button>
             </form>
           </motion.div>

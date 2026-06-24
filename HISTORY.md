@@ -20,6 +20,18 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-23 — Integração do Sistema de Assinaturas Premium com Stripe
+- **Banco de Dados (Supabase)**: Criada a migration `update_schema_stripe.sql` adicionando campos `is_premium`, `stripe_customer_id` e `stripe_subscription_id` na tabela `profiles` e executados os comandos SQL no banco de produção.
+- **Supabase Edge Functions**: Desenvolvidos e implantados com sucesso os endpoints `stripe-checkout` (para iniciar sessões de checkout seguras), `stripe-portal` (para redirecionar o usuário ao Customer Portal de autogestão do Stripe) e `stripe-webhook` (para escutar eventos de pagamento/cancelamento do Stripe e retransmiti-los ao banco).
+- **Zustand & Persistência**: Atualizada a store global `useHunterStore.ts` para carregar, persistir e gerenciar as novas propriedades do perfil de assinante (`isPremium`, `stripeCustomerId` e `stripeSubscriptionId`).
+- **Paywall PremiumGate**: Desenvolvido o componente visual `PremiumGate.tsx` com visual cyberpunk holográfico estilo Solo Leveling para interceptar acessos restritos em áreas do aplicativo e facilitar o checkout.
+- **Bloqueio de Módulos Premium**: Envolvidos com o `PremiumGate` os seguintes componentes:
+  - **Nutrição com IA**: Bloqueio na aba Códex de Alimentação em `Nutrition.tsx`.
+  - **Histórico de Treinos**: Bloqueio na aba de Evolução/Progresso em `Workouts.tsx`.
+  - **Chefes Finais**: Bloqueado combate ativo contra os Bosses 05, 06 e 07 em `Bosses.tsx`. Atualizada a galeria inferior de bosses para identificar os chefes restritos com ícone de `Sparkles` e status "Premium" se o usuário for comum.
+  - **Módulo Fortuna**: Bloqueio total de acesso à página `Fortuna.tsx` para não assinantes.
+- **Painel de Assinatura nas Configurações**: Adicionada seção de assinatura em `Settings.tsx` para visualização e gerenciamento rápido do plano. Permite ao usuário comum iniciar o checkout e ao usuário premium acessar o portal de faturamento do Stripe para alterar dados ou cancelar o plano.
+
 ### 2026-06-23 — Correção de Tradução e Estabilização de Idiomas (Fim do F5)
 - Modificado o `setLanguage` em `PreferencesContext.tsx` para recarregar a página automaticamente (`window.location.reload()`) após gravar a escolha de idioma no `localStorage`. Isso elimina de vez os bugs de concorrência com o React e a necessidade de F5 manual ao alternar entre Português e Inglês.
 - **Correção Geral de Falhas de Tradução**: Adicionadas mais de 60 traduções de frases completas mapeadas a partir das telas de Descanso (Rest), Nutrição (Nutrition) e Fortuna (Fortuna), corrigindo misturas de idiomas em cabeçalhos, botões, cards de metas, históricos e alertas.
@@ -886,3 +898,14 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Datas de Dashboard, Treinos, Fortuna e Descanso passaram a respeitar o locale selecionado.
   - Adicionada auditoria determinística `npm.cmd run audit:i18n` e diretiva `directives/localization.md`.
   - Build de produção e auditoria de localização validados.
+
+### 2026-06-23
+- **Correção Geral de Tradução e Acentuação**:
+  - Ajustado o motor de expressões regulares de substituição em [uiEnglish.ts](file:///d:/Área de Trabalho/App/src/lib/uiEnglish.ts) usando lookbehinds/lookaheads negativos de caracteres acentuados, impedindo a partição e tradução indevida de substrings acentuadas (como o fragmento "dia" em "Média" traduzido para "day", gerando "Méday").
+  - Mapeadas frases completas e específicas para as telas de Descanso, Fortuna e Nutrição no dicionário `EXACT_ENGLISH` do [uiEnglish.ts](file:///d:/Área de Trabalho/App/src/lib/uiEnglish.ts), evitando a fragmentação e garantindo consistência no idioma inglês.
+- **Conclusão da Integração Stripe & Assinaturas Premium**:
+  - Corrigido o arquivo [Fortuna.tsx](file:///d:/Área de Trabalho/App/src/pages/Fortuna.tsx) limpando importações duplicadas e quebradas geradas por interrupção abrupta de energia.
+  - Ajustadas as tags JSX desalinhadas e chaves órfãs no arquivo [Settings.tsx](file:///d:/Área de Trabalho/App/src/pages/Settings.tsx).
+  - Implementada a interface do Painel de Faturamento e Assinatura (Subscription & Billing) nas Configurações ([Settings.tsx](file:///d:/Área de Trabalho/App/src/pages/Settings.tsx)), permitindo a ativação do premium via Stripe Checkout ou redirecionamento ao Stripe Customer Portal para gerenciar a assinatura ativa, de forma dinâmica e bilíngue.
+  - Modificado o componente [PremiumGate.tsx](file:///d:/Área de Trabalho/App/src/components/premium/PremiumGate.tsx) tornando a propriedade `children` opcional para ser usado como paywall estrutural em fendas de chefes Rank S sem impor quebras de tipo estáticas.
+  - Build de produção (`npm run build`) e auditoria de i18n (`npm run audit:i18n`) testados e aprovados com sucesso.

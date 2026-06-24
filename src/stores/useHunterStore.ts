@@ -77,6 +77,9 @@ export interface HunterState {
   xpAwardLedger: Record<string, XpAwardLedgerEntry>;
   streakMilestonesClaimed: string[];
   activeTitle: string;
+  isPremium: boolean;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
 
   // Actions
   addXp: (amount: number, userId?: string, options?: XpAwardOptions) => Promise<XpAwardResult>;
@@ -127,6 +130,9 @@ const INITIAL_STATE = {
   xpAwardLedger: {} as Record<string, XpAwardLedgerEntry>,
   streakMilestonesClaimed: [] as string[],
   activeTitle: 'Iniciante',
+  isPremium: false,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
 };
 
 const calculateCommonXp = (currentGainedToday: number, amount: number) => {
@@ -496,6 +502,9 @@ export const useHunterStore = create<HunterState>()(
             xpGainedToday: Math.min(DAILY_COMMON_XP_EFFECTIVE_MAX, xpGainedToday),
             streakMilestonesClaimed: data.streak_milestones_claimed || [],
             activeTitle: data.title || 'Iniciante',
+            isPremium: data.is_premium || false,
+            stripeCustomerId: data.stripe_customer_id || null,
+            stripeSubscriptionId: data.stripe_subscription_id || null,
           });
 
           if (
@@ -562,6 +571,9 @@ export const useHunterStore = create<HunterState>()(
             xp_gained_today: state.xpGainedToday,
             streak_milestones_claimed: state.streakMilestonesClaimed,
             title: state.activeTitle,
+            is_premium: state.isPremium,
+            stripe_customer_id: state.stripeCustomerId,
+            stripe_subscription_id: state.stripeSubscriptionId,
           })
           .eq('id', userId);
       },

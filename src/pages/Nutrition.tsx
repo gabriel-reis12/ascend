@@ -36,6 +36,7 @@ import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 import type { MealPlan } from '@/hooks/useMealPlans';
 import { calculateMealFromTaco } from '@/lib/taco';
 import { usePreferences } from '@/contexts/preferences';
+import { PremiumGate } from '@/components/premium/PremiumGate';
 
 interface FoodLog {
   id: string;
@@ -1086,7 +1087,11 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
 
               {/* Conteúdo: Códex da Alimentação (IA) */}
               {subTab === 'codex' && (
-                <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
+                <PremiumGate
+                  title="Códex de Alimentação Restrito"
+                  description="A calibração e análise de nutrientes via rede neural avançada (IA) requer ativação de assinatura premium."
+                >
+                  <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-purple-500/5 blur-3xl" />
                   
                   <div className="space-y-1 relative z-10">
@@ -1395,7 +1400,8 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
+                  </div>
+                </PremiumGate>
               )}
 
               {/* Conteúdo: Biblioteca de Suprimentos */}

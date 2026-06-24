@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { usePreferences } from '@/contexts/preferences';
 import { translateUiText } from '@/lib/uiEnglish';
 
-const ATTRIBUTES = ['placeholder', 'title', 'aria-label'] as const;
+const ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'aria-description', 'alt'] as const;
 
 export function LocalizationBridge() {
   const { language } = usePreferences();
@@ -11,10 +11,12 @@ export function LocalizationBridge() {
     if (language !== 'en-US') return;
     const originalText = new Map<Text, string>();
     const originalAttributes = new Map<Element, Map<string, string>>();
+    const originalTitle = document.title;
     const nativeAlert = window.alert;
     const nativeConfirm = window.confirm;
     window.alert = message => nativeAlert(translateUiText(String(message)));
     window.confirm = message => nativeConfirm(translateUiText(String(message)));
+    document.title = translateUiText(document.title);
 
     const translateElement = (element: Element) => {
       if (element.matches('script, style, code, pre')) return;
@@ -82,6 +84,7 @@ export function LocalizationBridge() {
       observer.disconnect();
       window.alert = nativeAlert;
       window.confirm = nativeConfirm;
+      document.title = originalTitle;
       originalText.forEach((value, node) => {
         if (node.isConnected) node.textContent = value;
       });
