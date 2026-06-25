@@ -15,6 +15,7 @@
 - **XP progression v2 (2026-06-22):** Curva recalibrada do onboarding ao nível 100, ranks redistribuídos, teto diário de XP comum, bônus semanal separado, recompensas configuráveis limitadas e eventos idempotentes integrados ao dano de bosses.
 - **Full English localization (2026-06-22):** Idioma disponível antes do login; autenticação, onboarding, questionário, despertar e tutorial traduzidos; módulos legados cobertos por tradução de compatibilidade e auditoria automática contra regressões.
 - **Active-screen localization repair (2026-06-24):** Missões, Fenda de Anomalia IA, Consumo Diário, `PremiumGate` e paywalls de Treinos/Nutrição/Fortuna/Bosses agora usam frases completas PT-BR/EN-US para evitar traduções híbridas geradas pelo fallback.
+- **Nutrition Codex hardening (2026-06-24):** Códex nutricional passou a usar analisador local auditável com TACO, alimentos salvos, catálogo curado de fast foods/industrializados, porções caseiras PT-BR/EN-US e estimativas revisáveis; removida a promessa visual de consulta FatSecret/internet sem integração real.
 - **Validation:** `npm.cmd run build` aprovado.
 
 ## Phase 1: Foundation & UI/UX Base

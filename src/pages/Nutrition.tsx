@@ -34,10 +34,10 @@ import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 import type { MealPlan } from '@/hooks/useMealPlans';
-import { calculateMealFromTaco } from '@/lib/taco';
 import { usePreferences } from '@/contexts/preferences';
 import { PremiumGate } from '@/components/premium/PremiumGate';
 import { translateUiText } from '@/lib/uiEnglish';
+import { analyzeNutritionText, type NutritionAiIngredient } from '@/lib/nutritionAi';
 
 interface FoodLog {
   id: string;
@@ -84,9 +84,22 @@ function gramsToQuantity(food: Food, grams: number) {
 type NutritionStatus = 'low' | 'ideal' | 'exceeded';
 
 const NUTRITION_PROMPTS = [
-  { label: 'Prato completo', text: '150g de frango, arroz, feijão e salada' },
-  { label: 'Lanche rápido', text: 'Iogurte natural, banana, aveia e mel' },
-  { label: 'Café proteico', text: 'Omelete com 3 ovos, queijo e pão integral' },
+  {
+    label: { 'pt-BR': 'Prato completo', 'en-US': 'Full plate' },
+    text: { 'pt-BR': '150g de frango, 150g de arroz, 100g de feijão e salada', 'en-US': '150g grilled chicken, 150g rice, 100g beans and salad' },
+  },
+  {
+    label: { 'pt-BR': 'Lanche rápido', 'en-US': 'Quick snack' },
+    text: { 'pt-BR': 'Iogurte natural, banana, aveia e mel', 'en-US': 'Plain yogurt, banana, oats and honey' },
+  },
+  {
+    label: { 'pt-BR': 'Fast food', 'en-US': 'Fast food' },
+    text: { 'pt-BR': 'Big Mac e batata frita média', 'en-US': 'Big Mac and medium fries' },
+  },
+  {
+    label: { 'pt-BR': 'Café proteico', 'en-US': 'Protein breakfast' },
+    text: { 'pt-BR': 'Omelete com 3 ovos, queijo e pão integral', 'en-US': 'Omelet with 3 eggs, cheese and whole wheat bread' },
+  },
 ];
 
 function NutritionMetricCard({
@@ -199,28 +212,6 @@ export function Nutrition() {
   const [iaMealType, setIaMealType] = useState('Almoço');
   const [iaLoading, setIaLoading] = useState(false);
   const [iaError, setIaError] = useState<string | null>(null);
-  interface IaIngredientSourceData {
-    found: boolean;
-    kcal: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-  }
-  
-  interface IaIngredient {
-    name: string;
-    grams: number;
-    taco: IaIngredientSourceData;
-    fatsecret: IaIngredientSourceData;
-    ia_fallback: Omit<IaIngredientSourceData, 'found'> & { reason?: string };
-    final: {
-      source_used: 'taco' | 'fatsecret' | 'ia_fallback';
-      kcal: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    };
-  }
 
   const [iaPreview, setIaPreview] = useState<{
     mealName: string;
@@ -230,7 +221,7 @@ export function Nutrition() {
     fat: number;
     totalGrams: number;
     confidence: number;
-    ingredients: IaIngredient[];
+    ingredients: NutritionAiIngredient[];
   } | null>(null);
   const [expandedIaIngs, setExpandedIaIngs] = useState<Set<number>>(new Set());
   
@@ -566,142 +557,8 @@ export function Nutrition() {
     setIaRegistrationSuccess(null);
     setExpandedIaIngs(new Set());
 
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-
-    if (!apiKey) {
-      setIaError('A chave do Códex Neural (Groq API Key) não foi detectada no sistema. Por favor, configure a variável VITE_GROQ_API_KEY no arquivo .env.local.');
-      setIaLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
-          messages: [
-            {
-              role: 'system',
-              content: `Você é o Códex da Alimentação, um assistente neural de nutrição integrado a um sistema ciberpunk de RPG de vida real.
-Sua tarefa é decompor a descrição livre da refeição em ingredientes, estimar o peso em gramas de cada item e obter as informações nutricionais por 100g de 3 fontes distintas:
-1. Tabela TACO (Tabela Brasileira de Composição de Alimentos)
-2. FatSecret (Base de dados muito utilizada em aplicativos de nutrição)
-3. Estimativa de fallback própria da IA (caso falte informações em um ou nos dois anteriores)
-
-Regras especiais para alimentos comerciais e de marcas:
-- **Alimentos Comerciais, Fast-Food e Pratos Prontos de Marcas**: Se o usuário descrever um alimento comercial de marca, item de fast-food (ex: "Big Mac", "Whopper", "McFritas", "Subway de Frango", etc.) ou prato industrializado consolidado (ex: "Lasanha Sadia"), você **NÃO deve decompô-lo** em ingredientes primários separados. Em vez disso, retorne-o como um único ingrediente contendo o nome do produto oficial com a respectiva marca (ex: "Big Mac (McDonald's)") e o peso total estimado dele. Para as informações nutricionais por 100g das fontes (especialmente FatSecret e IA Fallback), utilize os dados nutricionais oficiais do produto inteiro (ex: para o Big Mac, o valor oficial de ~222 kcal por 100g, que equivale a ~524 kcal por sanduíche de 236g). Não tente estimar os ingredientes do sanduíche separados se o item completo possui tabela oficial consolidada.
-
-Regras para obter os dados de cada fonte por 100g:
-- Para a fonte 'taco', verifique se o ingrediente existe na Tabela TACO. Se sim, defina 'found' como true e forneça os valores (kcal, protein, carbs, fat). Se não, defina 'found' como false e coloque os valores zerados.
-- Para a fonte 'fatsecret', verifique se o ingrediente existe na base FatSecret. Se sim, defina 'found' como true e forneça os valores (kcal, protein, carbs, fat). Se não, defina 'found' como false e coloque os valores zerados.
-- Para a fonte 'ia_fallback', estime com base no seu conhecimento os valores médios ideais por 100g para o alimento.
-- No campo 'final', defina qual fonte foi a escolhida para ser a principal de acordo com a disponibilidade (prioridade: taco > fatsecret > ia_fallback) e forneça os valores consolidados por 100g desse ingrediente no campo correspondente, além do nome da fonte usada no campo 'source_used'.
-
-Retorne APENAS um objeto JSON válido sem qualquer introdução, conclusão ou blocos de código markdown.
-
-Formato do JSON esperado:
-{
-  "meal_name": "Nome descritivo em português, curto, em caixa alta (ex: PRATO DE ARROZ, FEIJÃO E FRANGO GRELHADO)",
-  "confidence_percentage": 90,
-  "ingredients": [
-    {
-      "name": "arroz branco cozido",
-      "grams": 150,
-      "taco": {
-        "found": true,
-        "kcal": 130,
-        "protein": 2.5,
-        "carbs": 28.2,
-        "fat": 0.2
-      },
-      "fatsecret": {
-        "found": true,
-        "kcal": 130,
-        "protein": 2.7,
-        "carbs": 28.0,
-        "fat": 0.3
-      },
-      "ia_fallback": {
-        "kcal": 130,
-        "protein": 2.6,
-        "carbs": 28.1,
-        "fat": 0.25
-      },
-      "final": {
-        "source_used": "taco",
-        "kcal": 130,
-        "protein": 2.5,
-        "carbs": 28.2,
-        "fat": 0.2
-      }
-    }
-  ]
-}
-
-Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas com uma estimativa realista. Preserve o estado de preparo: cru, cozido, assado, frito ou grelhado. Não invente ingredientes que não estejam no texto.`
-            },
-            {
-              role: 'user',
-              content: `Analise a refeição: "${iaTextInput}"`
-            }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.1
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Erro do servidor Groq (Status: ${response.status})`);
-      }
-
-      const responseData = await response.json();
-      const content = responseData.choices?.[0]?.message?.content;
-
-      if (!content) {
-        throw new Error('Nenhuma resposta retornada do modelo de IA.');
-      }
-
-      const parsedData = JSON.parse(content);
-      const { meal_name, ingredients, confidence_percentage } = parsedData;
-
-      if (!meal_name || !Array.isArray(ingredients) || ingredients.length === 0) {
-        throw new Error('Formato de dados incompleto retornado pelo modelo de IA.');
-      }
-
-      let totalKcal = 0;
-      let totalProtein = 0;
-      let totalCarbs = 0;
-      let totalFat = 0;
-      let totalGrams = 0;
-
-      ingredients.forEach((ing: any) => {
-        const grams = Number(ing.grams) || 0;
-        const ratio = grams / 100;
-        totalKcal += (Number(ing.final?.kcal) || 0) * ratio;
-        totalProtein += (Number(ing.final?.protein) || 0) * ratio;
-        totalCarbs += (Number(ing.final?.carbs) || 0) * ratio;
-        totalFat += (Number(ing.final?.fat) || 0) * ratio;
-        totalGrams += grams;
-      });
-
-      const detailSignals = iaTextInput.match(/\b\d+(?:[.,]\d+)?\s*(?:g|gramas?|ml|unidades?|fatias?|colheres?)\b/gi)?.length ?? 0;
-      const confidence = confidence_percentage || Math.min(98, Math.round(80 + detailSignals * 2));
-
-      setIaPreview({
-        mealName: meal_name,
-        calories: Math.round(totalKcal),
-        protein: Number(totalProtein.toFixed(1)),
-        carbs: Number(totalCarbs.toFixed(1)),
-        fat: Number(totalFat.toFixed(1)),
-        totalGrams: Math.round(totalGrams),
-        confidence: confidence,
-        ingredients: ingredients
-      });
+      setIaPreview(analyzeNutritionText(iaTextInput, foods));
 
     } catch (err: unknown) {
       console.error('[Códex IA] Erro ao processar:', err);
@@ -1094,8 +951,8 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                 <PremiumGate
                   title={l('Códex de Alimentação Restrito', 'Food Codex Locked')}
                   description={l(
-                    'A calibração e análise de nutrientes via rede neural avançada (IA) requer ativação de assinatura premium.',
-                    'Nutrient calibration and analysis through the advanced neural network (AI) require an active premium subscription.'
+                    'A calibração avançada de nutrientes, catálogo de fast foods e análise assistida requer ativação de assinatura premium.',
+                    'Advanced nutrient calibration, fast-food catalog matching, and assisted analysis require an active premium subscription.'
                   )}
                 >
                   <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
@@ -1106,38 +963,44 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                       <div className="flex items-center gap-2 text-purple-400">
                         <Brain size={16} className="animate-pulse" />
                         <h2 className="text-xl font-black uppercase sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                          CÓDEX DA ALIMENTAÇÃO
+                          {l('CÓDEX DA ALIMENTAÇÃO', 'FOOD CODEX')}
                         </h2>
                       </div>
                       <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-300">
-                        IA ativa
+                        {l('Códex ativo', 'Codex active')}
                       </span>
                     </div>
                     <p className="max-w-2xl text-sm leading-relaxed text-gray-300">
-                      Descreva sua refeição e o Sistema calculará calorias, macros e impacto na sua recuperação.
+                      {l(
+                        'Descreva sua refeição e o Sistema calculará calorias, macros e impacto na sua recuperação usando TACO, catálogo do app e estimativas revisáveis.',
+                        'Describe your meal and the System will calculate calories, macros, and recovery impact using TACO, the app catalog, and editable estimates.'
+                      )}
                     </p>
                   </div>
 
                   {/* Formulário do Códex */}
                   <div className="space-y-4 relative z-10">
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-300">Descrição da refeição</label>
+                      <label className="text-sm font-semibold text-gray-300">{l('Descrição da refeição', 'Meal description')}</label>
                       <textarea
                         value={iaTextInput}
                         onChange={(e) => setIaTextInput(e.target.value)}
-                        placeholder="Ex: Almocei 150g de filé de frango, 200g de arroz integral, 100g de feijão carioca e salada com uma colher de sopa de azeite..."
+                        placeholder={l(
+                          'Ex: Almocei 150g de filé de frango, 200g de arroz integral, 100g de feijão carioca e salada com uma colher de sopa de azeite...',
+                          'Ex: I had 150g grilled chicken, 200g brown rice, 100g beans and salad with one tablespoon of olive oil...'
+                        )}
                         rows={5}
                         className="w-full resize-none rounded-2xl border border-[#252530] bg-[#0A0A0D] p-5 text-base leading-relaxed text-white placeholder:text-gray-600 transition-all focus:border-purple-500/50 focus:shadow-[0_0_18px_rgba(168,85,247,0.12)] focus:outline-none"
                       />
                       <div className="flex flex-wrap gap-2 pt-1">
                         {NUTRITION_PROMPTS.map(prompt => (
                           <button
-                            key={prompt.label}
+                            key={prompt.label['pt-BR']}
                             type="button"
-                            onClick={() => setIaTextInput(prompt.text)}
+                            onClick={() => setIaTextInput(prompt.text[language])}
                             className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-[13px] font-medium text-gray-400 transition-all hover:border-purple-500/30 hover:bg-purple-500/5 hover:text-purple-200"
                           >
-                            {prompt.label}
+                            {prompt.label[language]}
                           </button>
                         ))}
                       </div>
@@ -1145,16 +1008,16 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-300">Período</label>
+                        <label className="text-sm font-semibold text-gray-300">{l('Período', 'Period')}</label>
                         <select
                           value={iaMealType}
                           onChange={(e) => setIaMealType(e.target.value)}
                           className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-purple-500 focus:outline-none appearance-none cursor-pointer"
                         >
-                          <option value="Café da Manhã">Café da Manhã</option>
-                          <option value="Almoço">Almoço</option>
-                          <option value="Lanche">Lanche</option>
-                          <option value="Jantar">Jantar</option>
+                          <option value="Café da Manhã">{l('Café da Manhã', 'Breakfast')}</option>
+                          <option value="Almoço">{l('Almoço', 'Lunch')}</option>
+                          <option value="Lanche">{l('Lanche', 'Snack')}</option>
+                          <option value="Jantar">{l('Jantar', 'Dinner')}</option>
                         </select>
                       </div>
 
@@ -1168,12 +1031,12 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                           {iaLoading ? (
                             <>
                               <Cpu size={14} className="animate-spin text-purple-400" />
-                              Sistema analisando nutrientes...
+                              {l('Sistema analisando nutrientes...', 'System analyzing nutrients...')}
                             </>
                           ) : (
                             <>
                               <Sparkles size={14} className="text-purple-300" />
-                              Analisar refeição
+                              {l('Analisar refeição', 'Analyze meal')}
                             </>
                           )}
                         </button>
@@ -1217,7 +1080,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                             <div className="flex items-center gap-2 text-purple-400">
                               <Zap size={18} />
                               <span className="text-sm font-black uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                Análise concluída
+                                {l('Análise concluída', 'Analysis complete')}
                               </span>
                             </div>
                             {iaEditing ? (
@@ -1225,25 +1088,25 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                                 value={iaPreview.mealName}
                                 onChange={event => setIaPreview(current => current ? { ...current, mealName: event.target.value } : current)}
                                 className="mt-3 w-full rounded-lg border border-purple-500/30 bg-black/40 px-3 py-2 text-base font-bold text-white outline-none focus:border-purple-400"
-                                aria-label="Nome da refeição"
+                                aria-label={l('Nome da refeição', 'Meal name')}
                               />
                             ) : (
                               <p className="mt-2 text-lg font-bold text-white">{iaPreview.mealName}</p>
                             )}
                           </div>
                           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-right">
-                            <p className="text-xs font-medium text-gray-400">Confiança estimada</p>
+                            <p className="text-xs font-medium text-gray-400">{l('Confiança estimada', 'Estimated confidence')}</p>
                             <p className="mt-1 text-lg font-black text-emerald-300">{iaPreview.confidence}%</p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                           {[
-                            { key: 'calories' as const, label: 'Energia', unit: 'kcal', tone: 'text-orange-400' },
-                            { key: 'protein' as const, label: 'Proteína', unit: 'g', tone: 'text-purple-400' },
-                            { key: 'carbs' as const, label: 'Carboidratos', unit: 'g', tone: 'text-green-400' },
-                            { key: 'fat' as const, label: 'Gorduras', unit: 'g', tone: 'text-blue-400' },
-                            { key: 'totalGrams' as const, label: 'Peso estimado', unit: 'g', tone: 'text-gray-300' },
+                            { key: 'calories' as const, label: l('Energia', 'Energy'), unit: 'kcal', tone: 'text-orange-400' },
+                            { key: 'protein' as const, label: l('Proteína', 'Protein'), unit: 'g', tone: 'text-purple-400' },
+                            { key: 'carbs' as const, label: l('Carboidratos', 'Carbs'), unit: 'g', tone: 'text-green-400' },
+                            { key: 'fat' as const, label: l('Gorduras', 'Fat'), unit: 'g', tone: 'text-blue-400' },
+                            { key: 'totalGrams' as const, label: l('Peso estimado', 'Estimated weight'), unit: 'g', tone: 'text-gray-300' },
                           ].map(metric => (
                             <div key={metric.key} className="rounded-xl border border-white/5 bg-white/[0.035] p-3">
                               <p className="text-xs font-medium text-gray-500">{metric.label}</p>
@@ -1270,7 +1133,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
 
                         <div className="space-y-3">
                           <p className="text-xs font-black uppercase tracking-widest text-purple-400 font-orbitron">
-                            Ingredientes & Comparação de Fontes (TACO vs FatSecret vs IA)
+                            {l('Ingredientes & Comparação de Fontes (TACO vs Catálogo vs Estimativa)', 'Ingredients & Source Comparison (TACO vs Catalog vs Estimate)')}
                           </p>
                           <div className="space-y-2">
                             {iaPreview.ingredients.map((ing, idx) => (
@@ -1288,11 +1151,11 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                                     <span className={`rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
                                       ing.final.source_used === 'taco' 
                                         ? 'border-purple-500/35 bg-purple-500/10 text-purple-400' 
-                                        : ing.final.source_used === 'fatsecret'
+                                        : ing.final.source_used === 'catalog'
                                           ? 'border-orange-500/35 bg-orange-500/10 text-orange-400'
                                           : 'border-amber-500/35 bg-amber-500/10 text-amber-400'
                                     }`}>
-                                      Fonte: {ing.final.source_used === 'taco' ? 'TACO' : ing.final.source_used === 'fatsecret' ? 'FatSecret' : 'IA Fallback'}
+                                      {l('Fonte', 'Source')}: {ing.final.source_used === 'taco' ? 'TACO' : ing.final.source_used === 'catalog' ? l('Catálogo', 'Catalog') : l('Estimativa', 'Estimate')}
                                     </span>
                                     <ChevronDown className={`size-4 text-gray-500 transition-transform duration-200 ${expandedIaIngs.has(idx) ? 'rotate-180' : ''}`} />
                                   </div>
@@ -1311,11 +1174,11 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                                         <table className="w-full text-left text-xs text-gray-400">
                                           <thead>
                                             <tr className="border-b border-white/5 text-[9px] uppercase font-black tracking-widest text-gray-500">
-                                              <th className="pb-2">Fonte (por 100g)</th>
-                                              <th className="pb-2 text-right">Energia</th>
+                                              <th className="pb-2">{l('Fonte (por 100g)', 'Source (per 100g)')}</th>
+                                              <th className="pb-2 text-right">{l('Energia', 'Energy')}</th>
                                               <th className="pb-2 text-right">Prot.</th>
                                               <th className="pb-2 text-right">Carb.</th>
-                                              <th className="pb-2 text-right">Gord.</th>
+                                              <th className="pb-2 text-right">{l('Gord.', 'Fat')}</th>
                                               <th className="pb-2 text-right">Status</th>
                                             </tr>
                                           </thead>
@@ -1334,38 +1197,38 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                                                 <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                                   ing.taco.found ? 'bg-purple-500/10 border border-purple-500/20 text-purple-400' : 'bg-white/5 text-gray-600'
                                                 }`}>
-                                                  {ing.taco.found ? 'Disponível' : 'N/D'}
+                                                  {ing.taco.found ? l('Disponível', 'Available') : 'N/D'}
                                                 </span>
                                               </td>
                                             </tr>
-                                            {/* Linha FatSecret */}
-                                            <tr className={ing.final.source_used === 'fatsecret' ? 'text-orange-300 font-bold' : ''}>
+                                            {/* Linha Catálogo */}
+                                            <tr className={ing.final.source_used === 'catalog' ? 'text-orange-300 font-bold' : ''}>
                                               <td className="py-2.5 flex items-center gap-1.5">
-                                                <span className={`size-1.5 rounded-full ${ing.fatsecret.found ? 'bg-orange-500' : 'bg-gray-700'}`} />
-                                                FatSecret
+                                                <span className={`size-1.5 rounded-full ${ing.catalog.found ? 'bg-orange-500' : 'bg-gray-700'}`} />
+                                                {l('Catálogo do app', 'App catalog')}
                                               </td>
-                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.kcal} kcal` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.protein}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.carbs}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.fatsecret.found ? `${ing.fatsecret.fat}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.kcal} kcal` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.protein}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.carbs}g` : '--'}</td>
+                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.fat}g` : '--'}</td>
                                               <td className="py-2.5 text-right">
                                                 <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                                  ing.fatsecret.found ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-white/5 text-gray-600'
+                                                  ing.catalog.found ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-white/5 text-gray-600'
                                                 }`}>
-                                                  {ing.fatsecret.found ? 'Disponível' : 'N/D'}
+                                                  {ing.catalog.found ? l('Disponível', 'Available') : 'N/D'}
                                                 </span>
                                               </td>
                                             </tr>
-                                            {/* Linha IA Fallback */}
-                                            <tr className={ing.final.source_used === 'ia_fallback' ? 'text-amber-300 font-bold' : ''}>
+                                            {/* Linha Estimativa */}
+                                            <tr className={ing.final.source_used === 'estimate' ? 'text-amber-300 font-bold' : ''}>
                                               <td className="py-2.5 flex items-center gap-1.5">
                                                 <span className="size-1.5 rounded-full bg-amber-500" />
-                                                IA Fallback
+                                                {l('Estimativa', 'Estimate')}
                                               </td>
-                                              <td className="py-2.5 text-right">{ing.ia_fallback.kcal} kcal</td>
-                                              <td className="py-2.5 text-right">{ing.ia_fallback.protein}g</td>
-                                              <td className="py-2.5 text-right">{ing.ia_fallback.carbs}g</td>
-                                              <td className="py-2.5 text-right">{ing.ia_fallback.fat}g</td>
+                                              <td className="py-2.5 text-right">{ing.estimate.kcal} kcal</td>
+                                              <td className="py-2.5 text-right">{ing.estimate.protein}g</td>
+                                              <td className="py-2.5 text-right">{ing.estimate.carbs}g</td>
+                                              <td className="py-2.5 text-right">{ing.estimate.fat}g</td>
                                               <td className="py-2.5 text-right">
                                                 <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
                                                   Ativo
@@ -1383,7 +1246,10 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                           </div>
                         </div>
                         <p className="text-[13px] leading-relaxed text-gray-500">
-                          Os macronutrientes da refeição foram calculados de forma consolidada comparando a Tabela TACO, base do FatSecret e estimativa da IA (fallback) para cada item individual. Revise os dados antes de registrar.
+                          {l(
+                            'Os macronutrientes foram calculados comparando a Tabela TACO, o catálogo local do app (incluindo fast foods e alimentos salvos) e uma estimativa controlada. Revise os dados antes de registrar.',
+                            'Macros were calculated by comparing the TACO table, the app’s local catalog (including fast foods and saved foods), and a controlled estimate. Review the data before saving.'
+                          )}
                         </p>
 
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -1392,7 +1258,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                             onClick={() => setIaEditing(current => !current)}
                             className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-bold text-gray-300 transition-colors hover:border-purple-500/30 hover:text-white"
                           >
-                            {iaEditing ? 'Concluir edição' : 'Editar antes de salvar'}
+                            {iaEditing ? l('Concluir edição', 'Finish editing') : l('Editar antes de salvar', 'Edit before saving')}
                           </button>
                           <button
                             type="button"
@@ -1401,7 +1267,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                             className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 text-sm font-black uppercase text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_22px_rgba(168,85,247,0.25)] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {iaRegistering ? <Cpu className="size-4 animate-spin" /> : <BookOpen className="size-4" />}
-                            {iaRegistering ? 'Registrando...' : 'Registrar no diário'}
+                            {iaRegistering ? l('Registrando...', 'Saving...') : l('Registrar no diário', 'Save to diary')}
                           </button>
                         </div>
                       </motion.div>

@@ -35,11 +35,26 @@ export interface TacoMealCalculation {
 const tacoFoods = tacoFoodsData as TacoFood[];
 const STOP_WORDS = new Set([
   'a', 'ao', 'aos', 'as', 'com', 'da', 'das', 'de', 'do', 'dos', 'e', 'em',
-  'sob', 'um', 'uma',
+  'para', 'por', 'sem', 'sob', 'um', 'uma',
 ]);
 
+export function repairMojibake(value: string) {
+  if (!/[ÃÂ]/.test(value)) return value;
+
+  try {
+    const bytes = new Uint8Array([...value].map(char => char.charCodeAt(0) & 0xff));
+    const decoded = new TextDecoder('utf-8').decode(bytes);
+    const originalNoise = (value.match(/[ÃÂ]/g) ?? []).length;
+    const decodedNoise = (decoded.match(/[ÃÂ]/g) ?? []).length;
+
+    return decodedNoise < originalNoise ? decoded : value;
+  } catch {
+    return value;
+  }
+}
+
 function normalize(value: string) {
-  return value
+  return repairMojibake(value)
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()

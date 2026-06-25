@@ -24,6 +24,9 @@ Documento detalhado de requisitos extraídos do `Features.txt`.
 - O usuário pode registrar refeições.
 - Deve permitir a inclusão de calorias aproximadas por refeição (ex: 4 ovos + 2 pães = ~500 kcal).
 - Dashboard visual das calorias diárias.
+- O Códex nutricional deve diferenciar fonte real de estimativa: TACO, alimentos salvos e catálogo local podem ser usados diretamente; fontes externas não integradas não devem ser apresentadas como consultadas.
+- Itens comerciais/fast food com tabela consolidada devem ser tratados como produto único com porção estimada, não decompostos em ingredientes primários.
+- A análise assistida deve aceitar unidades caseiras comuns em PT-BR e EN-US e sempre permitir revisão manual antes de salvar no diário.
 
 ## 5. Autenticação
 - Sistema de login e registro para que múltiplos usuários possam usar o app na mesma instalação/servidor, mantendo dados isolados.

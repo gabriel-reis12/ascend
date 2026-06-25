@@ -20,6 +20,15 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-24 — Estabilização do Códex Nutricional e Fast Foods
+- Substituída a análise nutricional dependente do Groq por um motor local auditável em `src/lib/nutritionAi.ts`, evitando respostas inconsistentes quando a API não estava configurada ou quando o modelo inferia fontes externas sem consulta real.
+- Adicionado catálogo curado para itens comerciais/fast food comuns (Big Mac, Whopper, McFritas, McNuggets, Subway e industrializados), tratando produtos consolidados como um único item em vez de decompor sanduíches em ingredientes primários.
+- O Códex agora combina Tabela TACO, alimentos salvos no app, catálogo local e estimativas controladas com confiança calculada por fonte/porção informada.
+- Melhorado o parser de unidades caseiras e entradas PT-BR/EN-US: gramas, ml, unidades, fatias/slices, colheres/tbsp, conchas, xícaras/cups, scoops e porções.
+- Corrigido o matcher da TACO para reparar nomes de alimentos com mojibake antes da normalização, melhorando busca por itens acentuados como pão, feijão, açúcar e brócolis.
+- A interface do Códex deixou de mencionar FatSecret/internet como fonte real e passou a exibir “TACO vs Catálogo vs Estimativa”, mantendo revisão manual antes de salvar no diário.
+- Validações executadas: `npm.cmd run audit:i18n` e `npm.cmd run build`.
+
 ### 2026-06-24 — Correção de Traduções Compostas em Telas Ativas
 - Corrigidas traduções híbridas em inglês nas telas de Missões, Nutrição, Treinos, Fortuna, Bosses e paywalls premium.
 - `PremiumGate` passou a respeitar o idioma selecionado internamente, incluindo título, descrição, benefícios, preço, CTA, mensagens de erro e nota do Stripe.
