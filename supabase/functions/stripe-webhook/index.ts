@@ -47,12 +47,30 @@ Deno.serve(async (req) => {
 
         console.log(`[Webhook] Ativando assinatura premium para usuário ${userId}. Customer: ${customerId}, Subscription: ${subscriptionId}`);
 
+        let status = "active";
+        let trialEndsAt: Date | null = null;
+        if (subscriptionId) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            status = sub.status;
+            if (sub.trial_end) {
+              trialEndsAt = new Date(sub.trial_end * 1000);
+            }
+          } catch (subErr) {
+            console.error("[Webhook] Erro ao buscar detalhes da assinatura do Stripe:", subErr);
+          }
+        }
+
+        const isPremiumActive = status === "active" || status === "trialing";
+
         const { error } = await supabaseAdmin
           .from("profiles")
           .update({
-            is_premium: true,
+            is_premium: isPremiumActive,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
+            subscription_status: status,
+            trial_ends_at: trialEndsAt ? trialEndsAt.toISOString() : null,
           })
           .eq("id", userId);
 
@@ -88,6 +106,8 @@ Deno.serve(async (req) => {
             .update({
               is_premium: false,
               stripe_subscription_id: null,
+              subscription_status: "canceled",
+              trial_ends_at: null,
             })
             .eq("id", profile.id);
 
@@ -117,16 +137,51 @@ Deno.serve(async (req) => {
 
         if (profile) {
           const isPremiumActive = status === "active" || status === "trialing";
+          let trialEndsAt: Date | null = null;
+          if (subscription.trial_end) {
+            trialEndsAt = new Date(subscription.trial_end * 1000);
+          }
           const { error } = await supabaseAdmin
             .from("profiles")
             .update({
               is_premium: isPremiumActive,
               stripe_subscription_id: isPremiumActive ? subscriptionId : null,
+              subscription_status: status,
+              trial_ends_at: trialEndsAt ? trialEndsAt.toISOString() : null,
             })
             .eq("id", profile.id);
 
           if (error) {
             console.error(`[Webhook] Erro ao atualizar perfil do usuário ${profile.id} na atualização de assinatura:`, error);
+            return new Response("Erro ao atualizar banco", { status: 500 });
+          }
+        }
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = invoice.customer as string;
+
+        console.log(`[Webhook] Falha de pagamento de fatura recebida para customer ${customerId}. Desativando premium.`);
+
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("stripe_customer_id", customerId)
+          .maybeSingle();
+
+        if (profile) {
+          const { error } = await supabaseAdmin
+            .from("profiles")
+            .update({
+              is_premium: false,
+              subscription_status: "past_due",
+            })
+            .eq("id", profile.id);
+
+          if (error) {
+            console.error(`[Webhook] Erro ao desativar premium do usuário ${profile.id} após falha de fatura:`, error);
             return new Response("Erro ao atualizar banco", { status: 500 });
           }
         }

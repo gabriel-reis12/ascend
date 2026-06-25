@@ -20,6 +20,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-25 — Implementação de Trial de 7 Dias no Stripe e Ciclo de Vida do Assinante
+- **Trial de 7 Dias (`stripe-checkout`):** Adicionada a propriedade `trial_period_days: 7` na criação da sessão do Stripe Checkout, iniciando o período de testes grátis. A exigência do cartão de crédito imediatamente no checkout foi mantida (Opção A) para garantir a renovação automática.
+- **Tratamento de Inadimplência e Ciclo Completo (`stripe-webhook`):** Adicionado suporte para o evento `invoice.payment_failed` para remover imediatamente o acesso premium e marcar a conta como `past_due` caso a cobrança mensal falhe. Também implementada a busca ativa dos dados de assinatura em `checkout.session.completed` e atualização refinada em `customer.subscription.updated` e `customer.subscription.deleted`, tratando de forma robusta e persistente todas as transições de status do Stripe (`trialing`, `active`, `past_due`, `unpaid`, `canceled`).
+- **Novas colunas no Banco (`profiles`):** Criada e aplicada a migration `20260625_stripe_trial.sql` para persistir os campos `trial_ends_at` (fim do período de testes) e `subscription_status` (status exato do Stripe).
+- **Mapeamento na Store Zustand (`useHunterStore.ts`):** Atualizada a interface, estado inicial e as funções de carregamento/salvamento do perfil (`loadProfile`/`saveProfile`) para gerenciar as novas variáveis do Stripe no front-end.
+- **Interface Paywall do Premium Gate (`PremiumGate.tsx`):** Ajustados os textos de preço, botão principal e rodapé do paywall para explicitar de forma clara o período experimental de 7 dias grátis antes da primeira cobrança de $1.99.
+- **Build verificado:** Compilação com `npm run build` validada localmente com 100% de sucesso.
+
 ### 2026-06-25 — Correções de Admin Premium, Estabilidade do Banco e Internacionalização do Dashboard
 - **Fix admin premium (`premiumAccess.ts`):** Adicionado `admin@ascen.com` (sem "d") na whitelist de emails com acesso premium garantido. O email anterior `admin@ascend.com` também mantido. O check `startsWith('admin@')` cobre qualquer subdomínio admin.
 - **Supabase mais robusto (`supabase.ts`):** Adicionado timeout de 20 segundos por requisição via `AbortController` no fetch global, reduzindo o travamento silencioso quando a conexão falha. Exportada nova função `withRetry<T>()` com backoff exponencial (500ms → 1s → 2s) para uso em queries críticas, evitando falhas permanentes por instabilidade momentânea de rede.
@@ -949,3 +957,21 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Implementada a interface do Painel de Faturamento e Assinatura (Subscription & Billing) nas Configurações ([Settings.tsx](file:///d:/Área de Trabalho/App/src/pages/Settings.tsx)), permitindo a ativação do premium via Stripe Checkout ou redirecionamento ao Stripe Customer Portal para gerenciar a assinatura ativa, de forma dinâmica e bilíngue.
   - Modificado o componente [PremiumGate.tsx](file:///d:/Área de Trabalho/App/src/components/premium/PremiumGate.tsx) tornando a propriedade `children` opcional para ser usado como paywall estrutural em fendas de chefes Rank S sem impor quebras de tipo estáticas.
   - Build de produção (`npm run build`) e auditoria de i18n (`npm run audit:i18n`) testados e aprovados com sucesso.
+
+### 2026-06-25
+- **Auditoria conservadora de Nutrição, loading e imagens:**
+  - Corrigida a prévia da análise nutricional para respeitar o idioma selecionado nos nomes gerados pelo catálogo padrão, como `Grilled chicken`, preservando nomes customizados do usuário.
+  - Localizadas mensagens de erro/sucesso do fluxo de análise assistida e pequenos rótulos da tabela de comparação de fontes.
+  - Conferidos os caminhos estáticos de imagens em `public/`; todos os assets referenciados diretamente foram encontrados.
+  - Adicionados fallback e `decoding="async"` para imagens dinâmicas de avatar/classe no Dashboard e em Configurações, evitando imagem quebrada se rank/classe salvo gerar um caminho inválido.
+  - Auditoria de localização (`npm.cmd run audit:i18n`) e build de produção (`npm.cmd run build`) validados com sucesso.
+  - `npm.cmd run lint` ainda falha por dívida pré-existente espalhada no projeto (`obsoleto/`, imports não usados, `any` e regras de hooks), sem bloqueio novo gerado por esta alteração.
+
+### 2026-06-25
+- **Higienização pré-lançamento do lint e código morto:**
+  - Atualizado o estado da auditoria anterior: `npm.cmd run lint` agora passa sem erros bloqueantes; permanecem avisos de tipagem ampla e hooks para uma etapa futura de hardening.
+  - Ajustada a configuração do ESLint para ignorar pastas regeneráveis/obsoletas (`dist`, `.tmp`, `.agent`, `.agents`, `.claude`, `obsoleto`) e rebaixar regras de migração ampla para avisos.
+  - Removidos imports, estados e helpers não utilizados em telas e componentes ativos, incluindo Fortuna, Treinos, Onboarding, PremiumGate, SignIn e WorkoutProgress.
+  - Substituídas partículas aleatórias em render por uma configuração estável em `auth-fuse`, evitando comportamento não determinístico.
+  - Simplificada a assinatura de reset de boss e separado o resultado do carregamento de perfil para eliminar erros de lint sem mudar a lógica.
+  - Validados `npm.cmd run lint`, `npm.cmd run audit:i18n`, `npm.cmd run build` e `git diff --check`.

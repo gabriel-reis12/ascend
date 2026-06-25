@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Sparkles, Cpu, ShieldAlert, CheckCircle2, Flame, Swords } from 'lucide-react';
+import { Lock, Sparkles, Cpu, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { usePreferences } from '@/contexts/preferences';
@@ -105,8 +105,8 @@ export function PremiumGate({ children, title, description }: PremiumGateProps) 
       {/* Ação de Assinatura */}
       <div className="mt-8 space-y-4 max-w-md mx-auto">
         <div className="flex items-center justify-between border-t border-white/5 pt-4 text-xs font-bold text-gray-500">
-          <span>{l('Assinatura Mensal Recorrente', 'Recurring monthly subscription')}</span>
-          <span className="text-lg font-black text-white font-orbitron">$1.99 <span className="text-[10px] font-sans font-semibold text-gray-500">{l('/mês', '/month')}</span></span>
+          <span>{l('Teste Grátis por 7 Dias', '7-Day Free Trial')}</span>
+          <span className="text-lg font-black text-white font-orbitron">$1.99 <span className="text-[10px] font-sans font-semibold text-gray-500">{l('/mês (após trial)', '/month (after trial)')}</span></span>
         </div>
 
         <button
@@ -123,7 +123,7 @@ export function PremiumGate({ children, title, description }: PremiumGateProps) 
           ) : (
             <>
               <Sparkles size={16} className="text-purple-300 animate-pulse" />
-              {l('Desbloquear Todos os Módulos', 'Unlock All Modules')}
+              {l('Iniciar Teste Gratuito de 7 Dias', 'Start 7-Day Free Trial')}
             </>
           )}
         </button>
@@ -144,7 +144,7 @@ export function PremiumGate({ children, title, description }: PremiumGateProps) 
       </div>
 
       <p className="mt-4 text-[10px] text-gray-500 font-medium leading-relaxed">
-        {l('Pagamento seguro via Stripe. Cancele a qualquer momento nas configurações do seu perfil.', 'Secure payment via Stripe. Cancel anytime in your profile settings.')}
+        {l('Pagamento seguro via Stripe. Exige cartão de crédito para ativar o trial. Cancele a qualquer momento nas configurações sem cobranças.', 'Secure payment via Stripe. Requires credit card to activate trial. Cancel anytime in settings with no charges.')}
       </p>
     </div>
   );

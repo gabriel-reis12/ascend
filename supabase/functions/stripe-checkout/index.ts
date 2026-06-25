@@ -106,6 +106,9 @@ Deno.serve(async (req) => {
         },
       ],
       mode: "subscription",
+      subscription_data: {
+        trial_period_days: 7,
+      },
       client_reference_id: user.id,
       success_url: `${origin}/settings?payment=success`,
       cancel_url: `${origin}/settings?payment=cancel`,

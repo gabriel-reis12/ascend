@@ -80,6 +80,8 @@ export interface HunterState {
   isPremium: boolean;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
+  subscriptionStatus: string | null;
+  trialEndsAt: string | null;
 
   // Actions
   addXp: (amount: number, userId?: string, options?: XpAwardOptions) => Promise<XpAwardResult>;
@@ -133,6 +135,8 @@ const INITIAL_STATE = {
   isPremium: false,
   stripeCustomerId: null,
   stripeSubscriptionId: null,
+  subscriptionStatus: null,
+  trialEndsAt: null,
 };
 
 const calculateCommonXp = (currentGainedToday: number, amount: number) => {
@@ -505,6 +509,8 @@ export const useHunterStore = create<HunterState>()(
             isPremium: data.is_premium || false,
             stripeCustomerId: data.stripe_customer_id || null,
             stripeSubscriptionId: data.stripe_subscription_id || null,
+            subscriptionStatus: data.subscription_status || null,
+            trialEndsAt: data.trial_ends_at || null,
           });
 
           if (
@@ -574,6 +580,8 @@ export const useHunterStore = create<HunterState>()(
             is_premium: state.isPremium,
             stripe_customer_id: state.stripeCustomerId,
             stripe_subscription_id: state.stripeSubscriptionId,
+            subscription_status: state.subscriptionStatus,
+            trial_ends_at: state.trialEndsAt,
           })
           .eq('id', userId);
       },
