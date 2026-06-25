@@ -50,22 +50,6 @@ interface EvolutionEvent {
   timestamp: string | null;
 }
 
-const STAT_META: Array<{
-  key: StatKey;
-  label: string;
-  name: string;
-  color: string;
-  border: string;
-}> = [
-  { key: 'strength', label: 'FOR', name: 'Força', color: 'text-red-400', border: 'hover:border-red-500/35' },
-  { key: 'intelligence', label: 'INT', name: 'Inteligência', color: 'text-blue-400', border: 'hover:border-blue-500/35' },
-  { key: 'endurance', label: 'RES', name: 'Resistência', color: 'text-emerald-400', border: 'hover:border-emerald-500/35' },
-  { key: 'vitality', label: 'VIT', name: 'Vitalidade', color: 'text-amber-400', border: 'hover:border-amber-500/35' },
-  { key: 'discipline', label: 'DIS', name: 'Disciplina', color: 'text-purple-400', border: 'hover:border-purple-500/35' },
-  { key: 'wisdom', label: 'SAB', name: 'Sabedoria', color: 'text-cyan-400', border: 'hover:border-cyan-500/35' },
-  { key: 'balance', label: 'EQU', name: 'Equilíbrio', color: 'text-pink-400', border: 'hover:border-pink-500/35' },
-];
-
 const NEXT_RANK: Record<string, string> = {
   E: 'D',
   D: 'C',
@@ -74,25 +58,32 @@ const NEXT_RANK: Record<string, string> = {
   A: 'S',
   S: 'National',
   National: 'Monarch',
-  Monarch: 'Máximo',
+  Monarch: 'Max',
 };
 
-const DOMAIN_META: Array<{
-  key: StatKey;
-  name: string;
-  attributes: string;
-  color: string;
-  nextReward: string;
-  icon: React.ComponentType<{ className?: string }>;
-}> = [
-  { key: 'strength', name: 'Força', attributes: 'FOR', color: 'from-red-500 to-orange-500', nextReward: '+1 Potência', icon: Sword },
-  { key: 'intelligence', name: 'Inteligência', attributes: 'INT', color: 'from-blue-500 to-indigo-500', nextReward: 'Leitura Consistente', icon: Brain },
-  { key: 'endurance', name: 'Resistência', attributes: 'RES', color: 'from-emerald-500 to-teal-500', nextReward: '+1 Fôlego', icon: Shield },
-  { key: 'vitality', name: 'Vitalidade', attributes: 'VIT', color: 'from-amber-500 to-orange-500', nextReward: '+1 Recuperação', icon: HeartPulse },
-  { key: 'discipline', name: 'Disciplina', attributes: 'DIS', color: 'from-purple-500 to-fuchsia-500', nextReward: 'Foco Profundo', icon: Target },
-  { key: 'wisdom', name: 'Sabedoria', attributes: 'SAB', color: 'from-cyan-500 to-blue-500', nextReward: '+1 Percepção', icon: Coins },
-  { key: 'balance', name: 'Equilíbrio', attributes: 'EQU', color: 'from-pink-500 to-rose-500', nextReward: '+1 Harmonia', icon: Scale },
-];
+function getStatMeta(l: (pt: string, en: string) => string) {
+  return [
+    { key: 'strength' as StatKey, label: 'STR', name: l('Força', 'Strength'), color: 'text-red-400', border: 'hover:border-red-500/35' },
+    { key: 'intelligence' as StatKey, label: 'INT', name: l('Inteligência', 'Intelligence'), color: 'text-blue-400', border: 'hover:border-blue-500/35' },
+    { key: 'endurance' as StatKey, label: 'END', name: l('Resistência', 'Endurance'), color: 'text-emerald-400', border: 'hover:border-emerald-500/35' },
+    { key: 'vitality' as StatKey, label: 'VIT', name: l('Vitalidade', 'Vitality'), color: 'text-amber-400', border: 'hover:border-amber-500/35' },
+    { key: 'discipline' as StatKey, label: 'DIS', name: l('Disciplina', 'Discipline'), color: 'text-purple-400', border: 'hover:border-purple-500/35' },
+    { key: 'wisdom' as StatKey, label: 'WIS', name: l('Sabedoria', 'Wisdom'), color: 'text-cyan-400', border: 'hover:border-cyan-500/35' },
+    { key: 'balance' as StatKey, label: 'BAL', name: l('Equilíbrio', 'Balance'), color: 'text-pink-400', border: 'hover:border-pink-500/35' },
+  ];
+}
+
+function getDomainMeta(l: (pt: string, en: string) => string) {
+  return [
+    { key: 'strength' as StatKey, name: l('Força', 'Strength'), attributes: 'STR', color: 'from-red-500 to-orange-500', nextReward: l('+1 Potência', '+1 Power'), icon: Sword },
+    { key: 'intelligence' as StatKey, name: l('Inteligência', 'Intelligence'), attributes: 'INT', color: 'from-blue-500 to-indigo-500', nextReward: l('Leitura Consistente', 'Consistent Reading'), icon: Brain },
+    { key: 'endurance' as StatKey, name: l('Resistência', 'Endurance'), attributes: 'END', color: 'from-emerald-500 to-teal-500', nextReward: l('+1 Fôlego', '+1 Stamina'), icon: Shield },
+    { key: 'vitality' as StatKey, name: l('Vitalidade', 'Vitality'), attributes: 'VIT', color: 'from-amber-500 to-orange-500', nextReward: l('+1 Recuperação', '+1 Recovery'), icon: HeartPulse },
+    { key: 'discipline' as StatKey, name: l('Disciplina', 'Discipline'), attributes: 'DIS', color: 'from-purple-500 to-fuchsia-500', nextReward: l('Foco Profundo', 'Deep Focus'), icon: Target },
+    { key: 'wisdom' as StatKey, name: l('Sabedoria', 'Wisdom'), attributes: 'WIS', color: 'from-cyan-500 to-blue-500', nextReward: l('+1 Percepção', '+1 Perception'), icon: Coins },
+    { key: 'balance' as StatKey, name: l('Equilíbrio', 'Balance'), attributes: 'BAL', color: 'from-pink-500 to-rose-500', nextReward: l('+1 Harmonia', '+1 Harmony'), icon: Scale },
+  ];
+}
 
 function formatEvolutionTime(timestamp: string | null, locale: string) {
   if (!timestamp) return locale === 'en-US' ? 'Today' : 'Hoje';
@@ -103,6 +94,9 @@ function formatEvolutionTime(timestamp: string | null, locale: string) {
 
 export function Dashboard() {
   const { language } = usePreferences();
+  const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
+  const STAT_META = React.useMemo(() => getStatMeta(l), [language]);
+  const DOMAIN_META = React.useMemo(() => getDomainMeta(l), [language]);
   const state = useHunterStore();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -183,7 +177,7 @@ export function Dashboard() {
       const events: EvolutionEvent[] = [];
       const statDomain = (statTarget: string | null) => {
         const stat = STAT_META.find(item => item.key === statTarget);
-        return stat ? stat.name : 'Evolução';
+        return stat ? stat.name : l('Evolução', 'Evolution');
       };
       const statLabel = (statTarget: string | null) => {
         const stat = STAT_META.find(item => item.key === statTarget);
@@ -224,7 +218,7 @@ export function Dashboard() {
         const attribute = statLabel(statTarget);
         events.push({
           id: `routine-${completion.id}`,
-          title: routine?.name || 'Treino concluído',
+          title: routine?.name || l('Treino concluído', 'Workout completed'),
           reward: `+${completion.xp_awarded || 0} XP · ${attribute} +2 · VIT +1 · DIS +1`,
           domain: statDomain(statTarget),
           color: 'text-purple-400',
@@ -237,9 +231,9 @@ export function Dashboard() {
         const meal = Array.isArray(completion.meal_plan) ? completion.meal_plan[0] : completion.meal_plan;
         events.push({
           id: `meal-${completion.id}`,
-          title: meal?.name || 'Refeição registrada',
-          reward: 'Recuperação registrada · VIT',
-          domain: 'Vitalidade',
+          title: meal?.name || l('Refeição registrada', 'Meal logged'),
+          reward: l('Recuperação registrada · VIT', 'Recovery logged · VIT'),
+          domain: l('Vitalidade', 'Vitality'),
           color: 'text-orange-400',
           icon: Flame,
           timestamp: completion.created_at,
@@ -250,9 +244,9 @@ export function Dashboard() {
         const wisdomGain = log.type === 'investment' ? ' · SAB +1' : '';
         events.push({
           id: `finance-${log.id}`,
-          title: log.description || 'Finanças atualizadas',
+          title: log.description || l('Finanças atualizadas', 'Finances updated'),
           reward: `+10 XP${wisdomGain}`,
-          domain: 'Sabedoria',
+          domain: l('Sabedoria', 'Wisdom'),
           color: 'text-emerald-400',
           icon: Coins,
           timestamp: log.created_at,
@@ -338,11 +332,11 @@ export function Dashboard() {
     if (workout) {
       return {
         title: workout.title,
-        eyebrow: 'Missão física prioritária',
+        eyebrow: l('Missão física prioritária', 'Priority physical mission'),
         reward: `+${workout.xp_reward} XP`,
-        impact: `${workout.stat_target === 'strength' ? 'FOR' : 'RES'} +${workout.stat_reward}`,
+        impact: `${workout.stat_target === 'strength' ? 'STR' : 'END'} +${workout.stat_reward}`,
         path: '/workouts',
-        action: 'Iniciar missão',
+        action: l('Iniciar missão', 'Start mission'),
         time: workout.scheduled_time,
         icon: Dumbbell,
       };
@@ -353,11 +347,11 @@ export function Dashboard() {
       const stat = STAT_META.find(item => item.key === habit.stat_target);
       return {
         title: habit.title,
-        eyebrow: 'Quest diária recomendada',
+        eyebrow: l('Quest diária recomendada', 'Recommended daily quest'),
         reward: `+${habit.xp_reward} XP`,
-        impact: habit.stat_target ? `${stat?.label || 'ATR'} +${habit.stat_reward}` : 'XP de evolução',
+        impact: habit.stat_target ? `${stat?.label || 'ATR'} +${habit.stat_reward}` : l('XP de evolução', 'Evolution XP'),
         path: '/quests',
-        action: 'Ver missão',
+        action: l('Ver missão', 'View mission'),
         time: habit.scheduled_time?.slice(0, 5) || null,
         icon: CheckCircle2,
       };
@@ -367,29 +361,30 @@ export function Dashboard() {
     if (meal) {
       return {
         title: meal.title,
-        eyebrow: 'Protocolo de recuperação',
+        eyebrow: l('Protocolo de recuperação', 'Recovery protocol'),
         reward: meal.xp_reward > 0 ? `+${meal.xp_reward} XP` : `${meal.totalKcal} kcal`,
-        impact: 'VIT · Recuperação',
+        impact: l('VIT · Recuperação', 'VIT · Recovery'),
         path: '/nutrition',
-        action: 'Ver missão',
+        action: l('Ver missão', 'View mission'),
         time: meal.scheduled_time,
         icon: Flame,
       };
     }
 
     return {
-      title: 'Todas as missões de hoje foram concluídas.',
-      eyebrow: 'Sistema sincronizado',
-      reward: `+${state.xpGainedToday || xpEarnedToday} XP hoje`,
-      impact: 'Próxima quest em preparação',
+      title: l('Todas as missões de hoje foram concluídas.', 'All of today\'s missions are complete.'),
+      eyebrow: l('Sistema sincronizado', 'System synchronized'),
+      reward: `+${state.xpGainedToday || xpEarnedToday} XP ${l('hoje', 'today')}`,
+      impact: l('Próxima quest em preparação', 'Next quest loading'),
       path: '/quests',
-      action: 'Abrir missões',
+      action: l('Abrir missões', 'Open missions'),
       time: null,
       icon: Trophy,
     };
   }, [
     activeHabits,
     completedToday,
+    language,
     mealMissions,
     state.xpGainedToday,
     workoutMissions,
@@ -406,38 +401,38 @@ export function Dashboard() {
         level: Math.max(1, Math.floor(value / 10)),
         progress: (value % 10) * 10,
         xpRemaining: 100 - (value % 10) * 10,
-        lastGain: latestEvent?.title || (statVariation[domain.key] > 0 ? `+${statVariation[domain.key]} registrado hoje` : 'Sem ganho recente'),
+        lastGain: latestEvent?.title || (statVariation[domain.key] > 0 ? `+${statVariation[domain.key]} ${l('registrado hoje', 'logged today')}` : l('Sem ganho recente', 'No recent gain')),
       };
     });
-  }, [evolutionHistory, state.stats, statVariation]);
+  }, [evolutionHistory, language, state.stats, statVariation]);
 
   const profileReading = React.useMemo(() => {
     const rankedStats = STAT_META
       .map(stat => ({ ...stat, value: state.stats[stat.key] }))
       .sort((a, b) => b.value - a.value);
     const weakestDomains = [...domains].sort((a, b) => a.value - b.value).slice(0, 2);
-
+    const and = l(' e ', ' & ');
     return {
-      dominant: `${rankedStats[0].name} e ${rankedStats[1].name}`,
-      focus: weakestDomains.map(domain => domain.name).join(' e '),
+      dominant: `${rankedStats[0].name}${and}${rankedStats[1].name}`,
+      focus: weakestDomains.map(domain => domain.name).join(and),
     };
-  }, [domains, state.stats]);
+  }, [domains, language, state.stats]);
 
   const evolutionEvents = React.useMemo(() => {
     const events = [...evolutionHistory];
     if (state.streak.current > 0) {
       events.push({
         id: 'streak-current',
-        title: 'Sequência mantida',
-        reward: `Streak ${state.streak.current} dias`,
-        domain: 'Disciplina',
+        title: l('Sequência mantida', 'Streak maintained'),
+        reward: `Streak ${state.streak.current} ${l('dias', 'days')}`,
+        domain: l('Disciplina', 'Discipline'),
         color: 'text-orange-400',
         icon: Flame,
         timestamp: null,
       });
     }
     return events;
-  }, [evolutionHistory, state.streak.current]);
+  }, [evolutionHistory, language, state.streak.current]);
 
   const xpPercent = state.level >= MAX_LEVEL
     ? 100
@@ -475,30 +470,30 @@ export function Dashboard() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
             <span className="absolute bottom-3 left-3 rounded-md border border-blue-400/25 bg-black/60 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-blue-300 backdrop-blur-md">
-              Ver avatar
+              {l('Ver avatar', 'View avatar')}
             </span>
           </button>
 
           <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-blue-500 font-orbitron">Perfil do Caçador</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-blue-500 font-orbitron">{l('Perfil do Caçador', 'Hunter Profile')}</p>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <h1 className="truncate text-3xl font-black uppercase italic tracking-tight text-white font-orbitron sm:text-4xl">
                 {state.username || state.fullName || 'Hunter'}
               </h1>
               <span className="rounded-lg border border-purple-500/25 bg-purple-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-purple-300">
-                {state.hunterClass || 'Sem classe'}
+                {state.hunterClass || l('Sem classe', 'No class')}
               </span>
             </div>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
-              <span className="flex items-center gap-1.5"><Crown className="h-4 w-4 text-amber-400" /> Título: <strong className="text-amber-300">{state.activeTitle || 'Iniciante'}</strong></span>
+              <span className="flex items-center gap-1.5"><Crown className="h-4 w-4 text-amber-400" /> {l('Título:', 'Title:')} <strong className="text-amber-300">{state.activeTitle || l('Iniciante', 'Beginner')}</strong></span>
               <span className="flex items-center gap-1.5"><Trophy className="h-4 w-4 text-blue-400" /> Rank {state.rank}</span>
-              <span className="flex items-center gap-1.5"><Flame className="h-4 w-4 text-orange-400" /> Streak {state.streak.current} dias</span>
+              <span className="flex items-center gap-1.5"><Flame className="h-4 w-4 text-orange-400" /> Streak {state.streak.current} {l('dias', 'days')}</span>
             </div>
 
             <div className="mt-6 max-w-2xl">
               <div className="mb-2 flex items-end justify-between gap-4">
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-gray-600">Experiência do Hunter</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.22em] text-gray-600">{l('Experiência do Hunter', 'Hunter Experience')}</p>
                   <p className="mt-1 text-sm font-black uppercase text-white font-orbitron">
                     Level {state.level}{state.level >= MAX_LEVEL ? ' · MAX' : ''}
                   </p>
@@ -518,7 +513,7 @@ export function Dashboard() {
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
             <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Próximo Rank</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">{l('Próximo Rank', 'Next Rank')}</p>
               <div className="mt-2 flex items-end justify-between">
                 <span className="text-2xl font-black italic text-blue-400 font-orbitron">{NEXT_RANK[state.rank] || 'D'}</span>
                 <span className="text-[10px] font-bold text-gray-500">Level {nextRankLevel}</span>
@@ -528,13 +523,13 @@ export function Dashboard() {
               </div>
             </div>
             <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Resumo de Hoje</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">{l('Resumo de Hoje', "Today's Summary")}</p>
               <p className="mt-2 text-lg font-black text-white font-orbitron">{dailySummary.completed}/{dailySummary.total || 0}</p>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-orange-300">
-                {state.xpGainedToday || xpEarnedToday} / {DAILY_COMMON_XP_EFFECTIVE_MAX} XP diário
+                {state.xpGainedToday || xpEarnedToday} / {DAILY_COMMON_XP_EFFECTIVE_MAX} {l('XP diário', 'daily XP')}
               </p>
               <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-600">
-                Bônus semanal {state.bonusXpGainedWeek} / {WEEKLY_BONUS_XP_CAP}
+                {l('Bônus semanal', 'Weekly bonus')} {state.bonusXpGainedWeek} / {WEEKLY_BONUS_XP_CAP}
               </p>
             </div>
           </div>
@@ -555,7 +550,7 @@ export function Dashboard() {
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">Missão Principal</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">{l('Missão Principal', 'Main Mission')}</p>
                 {nextMission.time && (
                   <span className="rounded-md border border-white/5 bg-white/5 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-gray-500">
                     {nextMission.time}
@@ -577,7 +572,7 @@ export function Dashboard() {
             disabled={habitsLoading}
             className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-5 text-[10px] font-black uppercase tracking-[0.15em] text-purple-200 transition-all hover:border-purple-400/60 hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(124,58,237,0.2)] disabled:cursor-wait disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
           >
-            {habitsLoading ? 'Sincronizando' : nextMission.action}
+            {habitsLoading ? l('Sincronizando', 'Syncing') : nextMission.action}
             {!habitsLoading && <ArrowRight className="h-4 w-4" />}
           </button>
         </div>
@@ -586,10 +581,10 @@ export function Dashboard() {
       <section aria-labelledby="attributes-title">
         <div className="mb-4 flex items-end justify-between">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">Parâmetros do Sistema</p>
-            <h2 id="attributes-title" className="mt-1 text-lg font-black uppercase italic text-white font-orbitron">Atributos Principais</h2>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">{l('Parâmetros do Sistema', 'System Parameters')}</p>
+            <h2 id="attributes-title" className="mt-1 text-lg font-black uppercase italic text-white font-orbitron">{l('Atributos Principais', 'Main Attributes')}</h2>
           </div>
-          <span className="hidden text-[9px] font-bold uppercase tracking-widest text-gray-600 sm:block">Atualização em tempo real</span>
+          <span className="hidden text-[9px] font-bold uppercase tracking-widest text-gray-600 sm:block">{l('Atualização em tempo real', 'Real-time update')}</span>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
           {STAT_META.map((stat, index) => (
@@ -620,10 +615,10 @@ export function Dashboard() {
               <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-gray-600">{stat.name}</p>
               <div className="mt-3 min-h-8">
                 <p className={`text-[9px] font-black uppercase tracking-wider ${statVariation[stat.key] > 0 ? stat.color : 'text-gray-600'}`}>
-                  {statVariation[stat.key] > 0 ? `+${statVariation[stat.key]} hoje` : 'Sem variação hoje'}
+                  {statVariation[stat.key] > 0 ? `+${statVariation[stat.key]} ${l('hoje', 'today')}` : l('Sem variação hoje', 'No change today')}
                 </p>
                 <p className={`mt-1 text-[8px] font-bold uppercase tracking-wider ${statRecentXp[stat.key] > 0 ? 'text-amber-400/80' : 'text-gray-800'}`}>
-                  {statRecentXp[stat.key] > 0 ? `+${statRecentXp[stat.key]} XP recente` : 'Aguardando evolução'}
+                  {statRecentXp[stat.key] > 0 ? `+${statRecentXp[stat.key]} ${l('XP recente', 'recent XP')}` : l('Aguardando evolução', 'Awaiting evolution')}
                 </p>
               </div>
             </motion.div>
@@ -640,8 +635,8 @@ export function Dashboard() {
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-blue-500 font-orbitron">Leitura Holográfica</p>
-              <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Janela de Status</h2>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-blue-500 font-orbitron">{l('Leitura Holográfica', 'Holographic Reading')}</p>
+              <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">{l('Janela de Status', 'Status Window')}</h2>
             </div>
             <div className="flex size-10 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-400">
               <Target className="h-5 w-5" />
@@ -654,15 +649,15 @@ export function Dashboard() {
 
           <div className="grid gap-3 border-t border-dashed border-[#252530] pt-5 sm:grid-cols-3">
             <div>
-              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Perfil dominante</p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">{l('Perfil dominante', 'Dominant profile')}</p>
               <p className="mt-1 text-xs font-bold text-purple-300">{profileReading.dominant}</p>
             </div>
             <div>
-              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Classe atual</p>
-              <p className="mt-1 text-xs font-bold text-blue-300">{state.hunterClass || 'Não definida'}</p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">{l('Classe atual', 'Current class')}</p>
+              <p className="mt-1 text-xs font-bold text-blue-300">{state.hunterClass || l('Não definida', 'Undefined')}</p>
             </div>
             <div>
-              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Foco recomendado</p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">{l('Foco recomendado', 'Recommended focus')}</p>
               <p className="mt-1 text-xs font-bold text-orange-300">{profileReading.focus}</p>
             </div>
           </div>
@@ -676,8 +671,8 @@ export function Dashboard() {
           className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-xl sm:p-6 lg:col-span-7"
         >
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">Dimensões da Vida</p>
-            <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Domínios de Evolução</h2>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-purple-400 font-orbitron">{l('Dimensões da Vida', 'Life Dimensions')}</p>
+            <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">{l('Domínios de Evolução', 'Evolution Domains')}</h2>
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -710,13 +705,13 @@ export function Dashboard() {
                       </div>
                       <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <div>
-                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-700">Último registro</p>
+                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-700">{l('Último registro', 'Last entry')}</p>
                           <p className="mt-1 text-[10px] font-semibold text-gray-500">{domain.lastGain}</p>
                         </div>
                         <div className="sm:text-right">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-700">Próximo marco</p>
+                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-700">{l('Próximo marco', 'Next milestone')}</p>
                           <p className="mt-1 text-[10px] font-bold text-purple-300">{domain.nextReward}</p>
-                          <p className="mt-0.5 text-[9px] font-semibold text-gray-600">{domain.xpRemaining} XP restantes</p>
+                          <p className="mt-0.5 text-[9px] font-semibold text-gray-600">{domain.xpRemaining} {l('XP restantes', 'XP remaining')}</p>
                         </div>
                       </div>
                     </div>
@@ -737,8 +732,8 @@ export function Dashboard() {
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-cyan-400 font-orbitron">Registro do Sistema</p>
-              <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Histórico de Evolução</h2>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-cyan-400 font-orbitron">{l('Registro do Sistema', 'System Log')}</p>
+              <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">{l('Histórico de Evolução', 'Evolution History')}</h2>
             </div>
             <History className="h-5 w-5 text-cyan-400" />
           </div>
@@ -747,7 +742,7 @@ export function Dashboard() {
             {loadingDailySignals ? (
               <div className="flex min-h-28 items-center justify-center rounded-2xl border border-dashed border-[#252530] bg-black/20">
                 <LoaderCircle className="h-5 w-5 animate-spin text-cyan-500" />
-                <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-gray-600">Sincronizando registros</span>
+                <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-gray-600">{l('Sincronizando registros', 'Syncing records')}</span>
               </div>
             ) : evolutionEvents.length > 0 ? evolutionEvents.map((event, index) => {
               const Icon = event.icon;
@@ -763,21 +758,21 @@ export function Dashboard() {
                       <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">{formatEvolutionTime(event.timestamp, language)}</span>
                     </div>
                     <p className={`mt-1 text-[10px] font-black uppercase tracking-wider ${event.color}`}>{event.reward}</p>
-                    <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-600">Domínio: {event.domain}</p>
+                    <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-600">{l('Domínio:', 'Domain:')} {event.domain}</p>
                   </div>
                 </div>
               );
             }) : (
               <div className="rounded-2xl border border-dashed border-[#252530] bg-black/20 p-6 text-center">
                 <Sparkles className="mx-auto h-6 w-6 text-gray-700" />
-                <p className="mt-3 text-xs font-black uppercase tracking-wider text-gray-500 font-orbitron">O Sistema ainda não registrou evolução hoje.</p>
-                <p className="mt-1 text-xs text-gray-600">Complete uma missão para gerar seu primeiro registro.</p>
+                <p className="mt-3 text-xs font-black uppercase tracking-wider text-gray-500 font-orbitron">{l('O Sistema ainda não registrou evolução hoje.', 'The System has no evolution records for today.')}</p>
+                <p className="mt-1 text-xs text-gray-600">{l('Complete uma missão para gerar seu primeiro registro.', 'Complete a mission to generate your first record.')}</p>
                 <button
                   type="button"
                   onClick={() => navigate('/quests')}
                   className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-4 text-[9px] font-black uppercase tracking-[0.14em] text-cyan-300 transition-all hover:border-cyan-400/50 hover:bg-cyan-500/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70"
                 >
-                  Ver missões disponíveis
+                  {l('Ver missões disponíveis', 'View available missions')}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -793,16 +788,16 @@ export function Dashboard() {
           className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-5 shadow-xl sm:p-6 lg:col-span-4"
         >
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-orange-400 font-orbitron">Leitura Diária</p>
-            <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">Recursos do Dia</h2>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-orange-400 font-orbitron">{l('Leitura Diária', 'Daily Reading')}</p>
+            <h2 className="mt-1 text-xl font-black uppercase italic text-white font-orbitron">{l('Recursos do Dia', "Day's Resources")}</h2>
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             {[
-              { label: 'Mana', detail: 'Energia registrada', value: `${dailySummary.calories}`, unit: 'kcal', icon: Flame, color: 'text-orange-400' },
-              { label: 'Força Vital', detail: 'Volume mobilizado', value: `${Math.round(todayVolume)}`, unit: 'kg', icon: Dumbbell, color: 'text-blue-400' },
-              { label: 'Ritmo de Evolução', detail: 'Progresso diário', value: `${dailySummary.progress}`, unit: '%', icon: TrendingUp, color: 'text-purple-400' },
-              { label: 'Sequência', detail: 'Dias consecutivos', value: `${state.streak.current}`, unit: 'dias', icon: Flame, color: 'text-amber-400' },
+              { label: l('Mana', 'Mana'), detail: l('Energia registrada', 'Energy logged'), value: `${dailySummary.calories}`, unit: 'kcal', icon: Flame, color: 'text-orange-400' },
+              { label: l('Força Vital', 'Vital Force'), detail: l('Volume mobilizado', 'Volume moved'), value: `${Math.round(todayVolume)}`, unit: 'kg', icon: Dumbbell, color: 'text-blue-400' },
+              { label: l('Ritmo de Evolução', 'Evolution Pace'), detail: l('Progresso diário', 'Daily progress'), value: `${dailySummary.progress}`, unit: '%', icon: TrendingUp, color: 'text-purple-400' },
+              { label: l('Sequência', 'Streak'), detail: l('Dias consecutivos', 'Consecutive days'), value: `${state.streak.current}`, unit: l('dias', 'days'), icon: Flame, color: 'text-amber-400' },
             ].map(resource => {
               const Icon = resource.icon;
               return (
@@ -827,12 +822,12 @@ export function Dashboard() {
           <div className="mt-4 rounded-2xl border border-blue-500/15 bg-blue-500/5 p-4">
             <div className="flex items-center gap-2">
               <HeartPulse className="h-4 w-4 text-blue-400" />
-              <p className="text-[9px] font-black uppercase tracking-wider text-blue-300">Estado do sistema</p>
+              <p className="text-[9px] font-black uppercase tracking-wider text-blue-300">{l('Estado do sistema', 'System state')}</p>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-gray-400">
               {dailySummary.progress >= 70
-                ? 'Ritmo elevado. Sua progressão diária está consistente.'
-                : 'Potencial disponível. Complete novas ações para fortalecer sua ficha.'}
+                ? l('Ritmo elevado. Sua progressão diária está consistente.', 'High pace. Your daily progression is consistent.')
+                : l('Potencial disponível. Complete novas ações para fortalecer sua ficha.', 'Potential available. Complete new actions to strengthen your profile.')}
             </p>
           </div>
         </motion.section>
@@ -860,7 +855,7 @@ export function Dashboard() {
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent p-6">
                 <p className="text-xl font-black uppercase text-white font-orbitron">{state.username || 'Hunter'}</p>
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-300">
-                  {state.hunterClass || 'Sem classe'} · Rank {state.rank} · Level {state.level}
+                  {state.hunterClass || l('Sem classe', 'No class')} · Rank {state.rank} · Level {state.level}
                 </p>
               </div>
               <button

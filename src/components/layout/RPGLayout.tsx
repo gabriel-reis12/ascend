@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, Menu, AlertTriangle, LayoutGrid, Skull, Coins, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,7 @@ const navItems = [
 
 export function RPGLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const state = useHunterStore();
   const { signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -58,6 +59,10 @@ export function RPGLayout() {
       : 0;
   const hunterName = state.username || state.fullName || 'Hunter';
   const hunterClass = state.hunterClass || t('common.classUndefined');
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="flex h-screen bg-[#0B0B0F] text-[#C9CED6] overflow-hidden">
@@ -150,7 +155,8 @@ export function RPGLayout() {
 
           {/* Sign out */}
           <button
-            onClick={() => void signOut()}
+            type="button"
+            onClick={() => void handleSignOut()}
             className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
           >
             <LogOut size={16} />

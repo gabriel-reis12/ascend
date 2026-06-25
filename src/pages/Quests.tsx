@@ -43,6 +43,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Habit, CreateHabitInput, WorkoutMission, MealMission } from '@/hooks/useHabits';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 import { usePreferences } from '@/contexts/preferences';
+import { translateUiText } from '@/lib/uiEnglish';
 
 type CodexEntry = {
   activity: string;
@@ -485,6 +486,7 @@ export function Quests() {
   const { language, t } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => isEnglish ? en : pt;
+  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
   const { 
     activeHabits, 
     habits, 
@@ -1411,15 +1413,16 @@ export function Quests() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h2 className="text-xl font-black uppercase text-white sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                          Diretrizes do Códex
+                          {l('Diretrizes do Códex', 'Codex Guidelines')}
                         </h2>
                         <p className="mt-1 text-sm font-semibold text-blue-300">
-                          Protocolo de calibração dos atributos do Caçador
+                          {l('Protocolo de calibração dos atributos do Caçador', 'Hunter attribute calibration protocol')}
                         </p>
                         <p className="mt-4 text-sm leading-7 text-gray-300 sm:text-[15px]">
-                          O Códex define como cada hábito, missão e atividade diária impacta sua evolução.
-                          Cada ação concluída recalibra seus atributos, fortalece seus domínios e registra progresso no Sistema.
-                          Mantenha a disciplina ativa para desbloquear novos títulos, recompensas e níveis de Caçador.
+                          {l(
+                            'O Códex define como cada hábito, missão e atividade diária impacta sua evolução. Cada ação concluída recalibra seus atributos, fortalece seus domínios e registra progresso no Sistema. Mantenha a disciplina ativa para desbloquear novos títulos, recompensas e níveis de Caçador.',
+                            'The Codex defines how each habit, quest, and daily activity impacts your evolution. Every completed action recalibrates your attributes, strengthens your domains, and records progress in the System. Keep discipline active to unlock new Hunter titles, rewards, and levels.'
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1441,8 +1444,10 @@ export function Quests() {
                               <GroupIcon className="size-5" />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block text-base font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>{group.category}</span>
-                              <span className="mt-1 block text-sm text-gray-500">{group.entries.length} {group.entries.length === 1 ? 'diretriz disponível' : 'diretrizes disponíveis'}</span>
+                              <span className="block text-base font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>{tx(group.category)}</span>
+                              <span className="mt-1 block text-sm text-gray-500">
+                                {group.entries.length} {group.entries.length === 1 ? l('diretriz disponível', 'directive available') : l('diretrizes disponíveis', 'directives available')}
+                              </span>
                             </span>
                             <ChevronDown className={`size-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180 text-blue-400' : ''}`} />
                           </button>
@@ -1465,12 +1470,12 @@ export function Quests() {
                                             <EntryIcon className="size-4" />
                                           </span>
                                           <div className="min-w-0">
-                                            <h3 className="text-sm font-bold text-white">{entry.activity}</h3>
-                                            <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{entry.lore}</p>
+                                            <h3 className="text-sm font-bold text-white">{tx(entry.activity)}</h3>
+                                            <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{tx(entry.lore)}</p>
                                           </div>
                                         </div>
                                         <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-                                          <span className={`rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 ${entry.statColor}`}>{entry.stat}</span>
+                                          <span className={`rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 ${entry.statColor}`}>{tx(entry.stat)}</span>
                                           <span className="rounded-lg border border-blue-500/15 bg-blue-500/5 px-2.5 py-1.5 text-blue-300">{entry.statBonus}</span>
                                           <span className="rounded-lg border border-yellow-500/15 bg-yellow-500/5 px-2.5 py-1.5 text-yellow-400">{entry.xp}</span>
                                         </div>
@@ -1488,7 +1493,7 @@ export function Quests() {
                                           className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 text-sm font-bold text-blue-300 transition-all hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-white"
                                         >
                                           {entry.route ? <Sword className="size-4" /> : <Plus className="size-4" />}
-                                          {entry.route ? 'Abrir módulo' : 'Criar quest'}
+                                          {entry.route ? l('Abrir módulo', 'Open module') : l('Criar quest', 'Create quest')}
                                         </button>
                                       </div>
                                     );

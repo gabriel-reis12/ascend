@@ -111,6 +111,7 @@ function NutritionMetricCard({
   accent,
   bar,
   status,
+  language,
 }: {
   label: string;
   unit: string;
@@ -120,7 +121,10 @@ function NutritionMetricCard({
   accent: string;
   bar: string;
   status: NutritionStatus;
+  language: string;
 }) {
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => isEnglish ? en : pt;
   const progress = target ? Math.min(100, Math.round((consumed / target) * 100)) : 0;
   const remaining = target ? Math.max(0, target - consumed) : null;
   const statusStyle = {
@@ -128,7 +132,11 @@ function NutritionMetricCard({
     ideal: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
     exceeded: 'border-blue-500/20 bg-blue-500/10 text-blue-300',
   }[status];
-  const statusLabel = { low: 'Baixo', ideal: 'Ideal', exceeded: 'Excedido' }[status];
+  const statusLabel = {
+    low: l('Baixo', 'Low'),
+    ideal: l('Ideal', 'Ideal'),
+    exceeded: l('Excedido', 'Exceeded'),
+  }[status];
 
   return (
     <motion.div
@@ -150,7 +158,7 @@ function NutritionMetricCard({
 
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold">
-          <span className="text-gray-600">{target ? `Meta ${Math.round(target)} ${unit}` : 'Meta indisponível'}</span>
+          <span className="text-gray-600">{target ? `${l('Meta', 'Goal')} ${Math.round(target)} ${unit}` : l('Meta indisponível', 'Goal unavailable')}</span>
           <span className={`rounded-md border px-1.5 py-0.5 ${statusStyle}`}>{statusLabel}</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-black/50">
@@ -163,10 +171,10 @@ function NutritionMetricCard({
         </div>
         <p className="mt-2 text-xs font-medium text-gray-500">
           {remaining === null
-            ? 'Complete seu perfil para calibrar.'
+            ? l('Complete seu perfil para calibrar.', 'Complete your profile to calibrate.')
             : remaining > 0
-              ? `${remaining.toFixed(unit === 'kcal' ? 0 : 1)} ${unit} restantes`
-              : `Referência alcançada em ${progress}%`}
+              ? `${remaining.toFixed(unit === 'kcal' ? 0 : 1)} ${unit} ${l('restantes', 'remaining')}`
+              : `${l('Referência alcançada em', 'Reference reached at')} ${progress}%`}
         </p>
       </div>
     </motion.div>
@@ -349,7 +357,10 @@ export function Nutrition() {
 
   function handleEditLog(log: FoodLog) {
     if (log.source === 'meal_plan') {
-      setDataError('Refeições do Cardápio do Caçador devem ser ajustadas no próprio cardápio. Desmarque a missão antes de alterar os itens.');
+      setDataError(l(
+        'Refeições do Cardápio do Caçador devem ser ajustadas no próprio cardápio. Desmarque a missão antes de alterar os itens.',
+        'Meals from the Hunter\'s Meal Plan must be adjusted in the plan itself. Uncheck the quest before changing items.'
+      ));
       return;
     }
 
@@ -562,7 +573,7 @@ export function Nutrition() {
 
     } catch (err: unknown) {
       console.error('[Códex IA] Erro ao processar:', err);
-      setIaError(err instanceof Error ? err.message : 'Houve uma anomalia na calibração neural. Tente novamente.');
+      setIaError(err instanceof Error ? err.message : l('Houve uma anomalia na calibração neural. Tente novamente.', 'There was an anomaly in neural calibration. Try again.'));
     } finally {
       setIaLoading(false);
     }
@@ -674,6 +685,17 @@ export function Nutrition() {
         : 'exceeded';
   const isInsideRecommendedRange = calorieStatus === 'ideal';
   const projectedNutritionXp = 35;
+  const localizedGoalLabel = l(
+    nutritionTargets.goalLabel,
+    nutritionTargets.goal === 'lose'
+      ? 'Lose weight'
+      : nutritionTargets.goal === 'gain'
+        ? 'Gain weight'
+        : 'Maintain weight'
+  );
+  const missingProfileFields = nutritionTargets.missingFields.length
+    ? nutritionTargets.missingFields.map(field => tx(field)).join(', ')
+    : l('dados físicos', 'physical data');
 
   return (
     <div className="space-y-6 pb-12">
@@ -695,7 +717,7 @@ export function Nutrition() {
             className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]"
           >
             <Plus className="size-4" strokeWidth={3} />
-            Novo Alimento
+            {l('Novo Alimento', 'New Food')}
           </button>
         )}
       </div>
@@ -781,7 +803,7 @@ export function Nutrition() {
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <NutritionMetricCard
-              label="Energia diária"
+              label={l('Energia diária', 'Daily energy')}
               unit="kcal"
               consumed={dailyMacros.kcal}
               target={nutritionTargets.targetCalories}
@@ -789,9 +811,10 @@ export function Nutrition() {
               accent="text-orange-400"
               bar="bg-gradient-to-r from-orange-700 via-orange-500 to-amber-300 shadow-[0_0_10px_rgba(249,115,22,0.45)]"
               status={calorieStatus}
+              language={language}
             />
             <NutritionMetricCard
-              label="Proteínas"
+              label={l('Proteínas', 'Protein')}
               unit="g"
               consumed={dailyMacros.protein}
               target={macroTargets.protein}
@@ -799,9 +822,10 @@ export function Nutrition() {
               accent="text-purple-400"
               bar="bg-gradient-to-r from-purple-700 via-purple-500 to-fuchsia-300 shadow-[0_0_10px_rgba(168,85,247,0.4)]"
               status={getReferenceStatus(dailyMacros.protein, macroTargets.protein)}
+              language={language}
             />
             <NutritionMetricCard
-              label="Carboidratos"
+              label={l('Carboidratos', 'Carbs')}
               unit="g"
               consumed={dailyMacros.carbs}
               target={macroTargets.carbs}
@@ -809,9 +833,10 @@ export function Nutrition() {
               accent="text-green-400"
               bar="bg-gradient-to-r from-emerald-700 via-green-500 to-lime-300 shadow-[0_0_10px_rgba(34,197,94,0.35)]"
               status={getReferenceStatus(dailyMacros.carbs, macroTargets.carbs)}
+              language={language}
             />
             <NutritionMetricCard
-              label="Gorduras"
+              label={l('Gorduras', 'Fats')}
               unit="g"
               consumed={dailyMacros.fat}
               target={macroTargets.fat}
@@ -819,6 +844,7 @@ export function Nutrition() {
               accent="text-blue-400"
               bar="bg-gradient-to-r from-blue-700 via-blue-500 to-cyan-300 shadow-[0_0_10px_rgba(59,130,246,0.35)]"
               status={getReferenceStatus(dailyMacros.fat, macroTargets.fat)}
+              language={language}
             />
           </div>
 
@@ -828,29 +854,32 @@ export function Nutrition() {
               <div>
                 <div className="flex items-center gap-2 text-orange-400">
                   <Target className="size-4" />
-                  <span className="text-sm font-bold">Meta diária de recuperação</span>
+                  <span className="text-sm font-bold">{l('Meta diária de recuperação', 'Daily recovery goal')}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
                   <h2 className="text-2xl font-black uppercase text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                     {Math.round(dailyMacros.kcal)}
                   </h2>
                   <p className="pb-1 text-xs font-black uppercase tracking-widest text-gray-500">
-                    de {nutritionTargets.targetCalories ?? '--'} kcal
+                    {l('de', 'of')} {nutritionTargets.targetCalories ?? '--'} kcal
                   </p>
                 </div>
                 <p className="mt-2 text-xs font-semibold leading-relaxed text-gray-400">
                   {nutritionTargets.targetCalories
                     ? remainingCalories && remainingCalories > 0
-                      ? `${Math.round(remainingCalories)} kcal disponíveis para completar o objetivo de ${nutritionTargets.goalLabel.toLowerCase()} com consistência.`
+                      ? l(
+                        `${Math.round(remainingCalories)} kcal disponíveis para completar o objetivo de ${localizedGoalLabel.toLowerCase()} com consistência.`,
+                        `${Math.round(remainingCalories)} kcal available to complete the ${localizedGoalLabel.toLowerCase()} goal consistently.`
+                      )
                       : isInsideRecommendedRange
-                        ? 'Faixa recomendada alcançada. O Sistema avaliará o resultado no fechamento do dia.'
-                        : 'A referência diária foi ultrapassada. Siga normalmente e priorize consistência ao longo dos dias.'
-                    : `Complete no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados físicos'}.`}
+                        ? l('Faixa recomendada alcançada. O Sistema avaliará o resultado no fechamento do dia.', 'Recommended range reached. The System will evaluate the result at the end of the day.')
+                        : l('A referência diária foi ultrapassada. Siga normalmente e priorize consistência ao longo dos dias.', 'The daily reference was exceeded. Keep going normally and prioritize consistency over the week.')
+                    : l(`Complete no perfil: ${missingProfileFields}.`, `Complete in your profile: ${missingProfileFields}.`)}
                 </p>
 
                 <div className="mt-5">
                   <div className="mb-2 flex items-center justify-between text-sm font-semibold">
-                    <span className="text-gray-500">Sincronização energética</span>
+                    <span className="text-gray-500">{l('Sincronização energética', 'Energy synchronization')}</span>
                     <span className="text-orange-300">{calorieProgress}%</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-black/60">
@@ -866,10 +895,10 @@ export function Nutrition() {
 
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: 'Objetivo', value: nutritionTargets.goalLabel, icon: Gauge, tone: 'text-orange-300' },
-                  { label: 'Restante', value: remainingCalories === null ? '--' : `${Math.round(remainingCalories)} kcal`, icon: Flame, tone: 'text-white' },
+                  { label: l('Objetivo', 'Goal'), value: localizedGoalLabel, icon: Gauge, tone: 'text-orange-300' },
+                  { label: l('Restante', 'Remaining'), value: remainingCalories === null ? '--' : `${Math.round(remainingCalories)} kcal`, icon: Flame, tone: 'text-white' },
                   {
-                    label: 'Faixa recomendada',
+                    label: l('Faixa recomendada', 'Recommended range'),
                     value: nutritionTargets.minCalories && nutritionTargets.maxCalories
                       ? `${nutritionTargets.minCalories}–${nutritionTargets.maxCalories}`
                       : '--',
@@ -877,7 +906,7 @@ export function Nutrition() {
                     tone: 'text-white',
                   },
                   {
-                    label: 'XP previsto',
+                    label: l('XP previsto', 'Expected XP'),
                     value: `+${projectedNutritionXp} XP`,
                     icon: Zap,
                     tone: isInsideRecommendedRange ? 'text-purple-300' : 'text-gray-400',
@@ -892,25 +921,28 @@ export function Nutrition() {
               </div>
             </div>
             <p className="relative mt-4 border-t border-white/5 pt-3 text-[13px] leading-relaxed text-gray-500">
-              Referências de macros são estimativas visuais do Sistema. A recompensa real é processada pela avaliação nutricional diária.
+              {l(
+                'Referências de macros são estimativas visuais do Sistema. A recompensa real é processada pela avaliação nutricional diária.',
+                'Macro references are visual estimates from the System. The real reward is processed by the daily nutrition assessment.'
+              )}
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-purple-500/15 bg-purple-500/[0.035] p-4">
-              <p className="text-xs font-bold text-purple-400">Suporte físico</p>
-              <p className="mt-2 text-sm font-bold text-white">Proteína em faixa de referência</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Acompanha a preparação de FOR e RES sem conceder atributos automaticamente.</p>
+              <p className="text-xs font-bold text-purple-400">{l('Suporte físico', 'Physical support')}</p>
+              <p className="mt-2 text-sm font-bold text-white">{l('Proteína em faixa de referência', 'Protein in reference range')}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{l('Acompanha a preparação de FOR e RES sem conceder atributos automaticamente.', 'Monitors STR and END preparation without granting attributes automatically.')}</p>
             </div>
             <div className="rounded-2xl border border-orange-500/15 bg-orange-500/[0.035] p-4">
-              <p className="text-xs font-bold text-orange-400">Recompensa diária</p>
+              <p className="text-xs font-bold text-orange-400">{l('Recompensa diária', 'Daily reward')}</p>
               <p className="mt-2 text-sm font-bold text-white">+35 XP · +2 VIT</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Concedidos pelo Sistema no fechamento de um dia dentro da faixa recomendada.</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{l('Concedidos pelo Sistema no fechamento de um dia dentro da faixa recomendada.', 'Granted by the System at the end of a day inside the recommended range.')}</p>
             </div>
             <div className="rounded-2xl border border-blue-500/15 bg-blue-500/[0.035] p-4">
-              <p className="text-xs font-bold text-blue-400">Streak nutricional</p>
-              <p className="mt-2 text-sm font-bold text-white">{nutritionStreak} {nutritionStreak === 1 ? 'dia' : 'dias'}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">Sequência real de avaliações concluídas dentro da meta energética.</p>
+              <p className="text-xs font-bold text-blue-400">{l('Streak nutricional', 'Nutritional streak')}</p>
+              <p className="mt-2 text-sm font-bold text-white">{nutritionStreak} {nutritionStreak === 1 ? l('dia', 'day') : l('dias', 'days')}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{l('Sequência real de avaliações concluídas dentro da meta energética.', 'Real streak of completed assessments within the energy goal.')}</p>
             </div>
           </div>
 
@@ -1053,7 +1085,7 @@ export function Nutrition() {
                         exit={{ opacity: 0 }}
                         className="rounded-xl border border-red-500/25 bg-red-500/5 p-4 text-xs text-red-400 flex items-start gap-2 relative z-10"
                       >
-                        <span className="font-bold">ANOMALIA:</span> {iaError}
+                        <span className="font-bold">{l('ANOMALIA:', 'ANOMALY:')}</span> {iaError}
                       </motion.div>
                     )}
 
@@ -1552,7 +1584,7 @@ export function Nutrition() {
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase italic text-white tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {editingLogId ? 'Editar' : 'Registrar'} <span className="text-purple-500">Recuperação</span>
+                    {editingLogId ? l('Editar', 'Edit') : l('Registrar', 'Log')} <span className="text-purple-500">{l('Recuperação', 'Recovery')}</span>
                   </h2>
                   <p className="text-xs font-black uppercase tracking-widest text-gray-600">{selectedFood.name}</p>
                 </div>
@@ -1560,23 +1592,23 @@ export function Nutrition() {
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">Tipo de recurso</label>
+                  <label className="text-sm font-semibold text-gray-300">{l('Tipo de recurso', 'Resource type')}</label>
                   <select 
                     value={mealType}
                     onChange={(e) => setMealType(e.target.value)}
                     className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none appearance-none"
                   >
-                    <option value="Café da Manhã">Café da Manhã</option>
-                    <option value="Almoço">Almoço</option>
-                    <option value="Café da Tarde">Café da Tarde</option>
-                    <option value="Jantar">Jantar</option>
-                    <option value="Lanche">Lanche</option>
+                    <option value="Café da Manhã">{l('Café da Manhã', 'Breakfast')}</option>
+                    <option value="Almoço">{l('Almoço', 'Lunch')}</option>
+                    <option value="Café da Tarde">{l('Café da Tarde', 'Afternoon Snack')}</option>
+                    <option value="Jantar">{l('Jantar', 'Dinner')}</option>
+                    <option value="Lanche">{l('Lanche', 'Snack')}</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-300">
-                    Quantidade ({selectedFood.serving_unit || 'Gramas'})
+                    {l('Quantidade', 'Quantity')} ({selectedFood.serving_unit || l('Gramas', 'Grams')})
                   </label>
                   <input 
                     type="number" 
@@ -1588,7 +1620,7 @@ export function Nutrition() {
 
                 <div className="rounded-xl bg-purple-500/5 p-4 border border-purple-500/20">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-gray-400">Conversão de energia</span>
+                    <span className="text-sm font-semibold text-gray-400">{l('Conversão de energia', 'Energy conversion')}</span>
                     <span className="text-lg font-black text-purple-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                       {((selectedFood.calories_per_100g * quantityToGrams(selectedFood, quantity)) / 100).toFixed(0)} kcal
                     </span>
@@ -1600,7 +1632,7 @@ export function Nutrition() {
                   className="w-full rounded-2xl bg-purple-600 py-5 font-black uppercase italic tracking-[0.2em] text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  {editingLogId ? 'Salvar Registro' : 'Confirmar Recuperação'}
+                  {editingLogId ? l('Salvar Registro', 'Save Record') : l('Confirmar Recuperação', 'Confirm Recovery')}
                 </button>
               </div>
             </motion.div>
@@ -1638,27 +1670,27 @@ export function Nutrition() {
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase italic text-white tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    Novo <span className="text-purple-500">Recurso</span>
+                    {l('Novo', 'New')} <span className="text-purple-500">{l('Recurso', 'Resource')}</span>
                   </h2>
-                  <p className="text-xs font-black uppercase tracking-widest text-gray-600">Expanda a base de dados do sistema</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-gray-600">{l('Expanda a base de dados do sistema', 'Expand the system database')}</p>
                 </div>
               </div>
 
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">Nome do item</label>
+                  <label className="text-sm font-semibold text-gray-300">{l('Nome do item', 'Item name')}</label>
                   <input 
                     type="text" 
                     value={newFoodName}
                     onChange={(e) => setNewFoodName(e.target.value)}
-                    placeholder="Ex: Arroz Integral"
+                    placeholder={l('Ex: Arroz Integral', 'e.g., Brown Rice')}
                     className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">Kcal por porção/100g</label>
+                    <label className="text-sm font-semibold text-gray-300">{l('Kcal por porção/100g', 'Kcal per serving/100g')}</label>
                     <input 
                       type="number" 
                       value={newFoodCals}
@@ -1667,7 +1699,7 @@ export function Nutrition() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">Proteína (g)</label>
+                    <label className="text-sm font-semibold text-gray-300">{l('Proteína (g)', 'Protein (g)')}</label>
                     <input 
                       type="number" 
                       value={newFoodProtein}
@@ -1679,7 +1711,7 @@ export function Nutrition() {
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">Carboidratos (g)</label>
+                    <label className="text-sm font-semibold text-gray-300">{l('Carboidratos (g)', 'Carbs (g)')}</label>
                     <input 
                       type="number" 
                       value={newFoodCarbs}
@@ -1688,7 +1720,7 @@ export function Nutrition() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">Gorduras (g)</label>
+                    <label className="text-sm font-semibold text-gray-300">{l('Gorduras (g)', 'Fat (g)')}</label>
                     <input 
                       type="number" 
                       value={newFoodFat}
@@ -1701,41 +1733,41 @@ export function Nutrition() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-300">
-                      Porção (ex: 2)
+                      {l('Porção', 'Serving')} ({l('ex: 2', 'e.g., 2')})
                     </label>
                     <input 
                       type="number" 
                       value={newFoodServingSize || ''}
                       onChange={(e) => setNewFoodServingSize(e.target.value ? parseFloat(e.target.value) : undefined)}
-                      placeholder="Opcional"
+                      placeholder={l('Opcional', 'Optional')}
                       className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-300">
-                      Unidade (ex: fatias)
+                      {l('Unidade', 'Unit')} ({l('ex: fatias', 'e.g., slices')})
                     </label>
                     <input 
                       type="text" 
                       value={newFoodServingUnit}
                       onChange={(e) => setNewFoodServingUnit(e.target.value)}
-                      placeholder="Opcional"
+                      placeholder={l('Opcional', 'Optional')}
                       className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">Categoria</label>
+                  <label className="text-sm font-semibold text-gray-300">{l('Categoria', 'Category')}</label>
                   <select 
                     value={newFoodCategory}
                     onChange={(e) => setNewFoodCategory(e.target.value)}
                     className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none appearance-none"
                   >
-                    <option value="Proteína">Proteína</option>
-                    <option value="Carboidrato">Carboidrato</option>
-                    <option value="Gordura">Gordura</option>
-                    <option value="Outros">Outros</option>
+                    <option value="Proteína">{l('Proteína', 'Protein')}</option>
+                    <option value="Carboidrato">{l('Carboidrato', 'Carbohydrate')}</option>
+                    <option value="Gordura">{l('Gordura', 'Fat')}</option>
+                    <option value="Outros">{l('Outros', 'Others')}</option>
                   </select>
                 </div>
 
@@ -1744,7 +1776,7 @@ export function Nutrition() {
                   className="w-full rounded-2xl bg-purple-600 py-5 font-black uppercase italic tracking-[0.2em] text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  Registrar Recurso
+                  {l('Registrar Recurso', 'Register Resource')}
                 </button>
               </div>
             </motion.div>

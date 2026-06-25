@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHunterStore } from '../stores/useHunterStore';
 import { useBossStore } from '../stores/useBossStore';
 import { usePreferences } from '../contexts/preferences';
+import { translateUiText } from '@/lib/uiEnglish';
 
 interface RestLog {
   id: string;
@@ -29,6 +30,8 @@ interface RestLog {
 
 export function Rest() {
   const { language, t } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => isEnglish ? en : pt;
   const { user } = useAuth();
   const { addXp, updateStat } = useHunterStore();
   const [activeSubTab, setActiveSubTab] = useState<'sleep_lazer' | 'meditation'>('sleep_lazer');
@@ -103,7 +106,7 @@ export function Rest() {
       setLogs(data || []);
     } catch (err) {
       console.error('Erro ao buscar logs de descanso:', err);
-      setDataError('Erro ao sincronizar logs de descanso.');
+      setDataError(l('Erro ao sincronizar logs de descanso.', 'Error syncing recovery logs.'));
     } finally {
       setLoading(false);
     }
@@ -120,7 +123,7 @@ export function Rest() {
         type: 'sleep',
         duration_min: durationMin,
         quality: sleepQuality,
-        notes: `Qualidade: ${sleepQuality}/5`
+        notes: `${l('Qualidade', 'Quality')}: ${sleepQuality}/5`
       }).select('id').single();
 
       if (error) throw error;
@@ -136,13 +139,13 @@ export function Rest() {
         await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'Estudo');
       }
 
-      setShowReward({ xp: 20, stat: 'EQUILÍBRIO', val: 2 });
+      setShowReward({ xp: 20, stat: l('EQUILÍBRIO', 'BALANCE'), val: 2 });
       setTimeout(() => setShowReward(null), 4000);
 
       fetchLogs();
     } catch (err) {
       console.error('Erro ao registrar sono:', err);
-      alert('Falha ao registrar sono.');
+      alert(l('Falha ao registrar sono.', 'Failed to log sleep.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -172,14 +175,14 @@ export function Rest() {
         await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'Estudo');
       }
 
-      setShowReward({ xp: 15, stat: 'EQUILÍBRIO', val: 1 });
+      setShowReward({ xp: 15, stat: l('EQUILÍBRIO', 'BALANCE'), val: 1 });
       setTimeout(() => setShowReward(null), 4000);
 
       setHobbyNotes('');
       fetchLogs();
     } catch (err) {
       console.error('Erro ao registrar lazer:', err);
-      alert('Falha ao registrar lazer.');
+      alert(l('Falha ao registrar lazer.', 'Failed to log leisure.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -194,7 +197,7 @@ export function Rest() {
         type: 'meditation',
         duration_min: mins,
         quality: 5,
-        notes: 'Sessão de Meditação Cronometrada Concluída'
+        notes: l('Sessão de Meditação Cronometrada Concluída', 'Timed Meditation Session Completed')
       }).select('id').single();
 
       if (error) throw error;
@@ -210,7 +213,7 @@ export function Rest() {
         await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'Estudo');
       }
 
-      setShowReward({ xp: 15, stat: 'EQUILÍBRIO', val: 2 });
+      setShowReward({ xp: 15, stat: l('EQUILÍBRIO', 'BALANCE'), val: 2 });
       setTimeout(() => setShowReward(null), 4000);
 
       fetchLogs();
@@ -264,7 +267,11 @@ export function Rest() {
   const meditationProgress = Math.min(100, (stats.todayMeditation / 10) * 100);
   const hobbyProgress = Math.min(100, (stats.todayHobby / 60) * 100);
   const balanceProgress = Math.round((sleepProgress + meditationProgress + hobbyProgress) / 3);
-  const balanceStatus = balanceProgress >= 80 ? 'Equilíbrio restaurado' : balanceProgress >= 45 ? 'Recuperação em progresso' : 'Mana em recuperação';
+  const balanceStatus = balanceProgress >= 80 
+    ? l('Equilíbrio restaurado', 'Balance restored') 
+    : balanceProgress >= 45 
+      ? l('Recuperação em progresso', 'Recovery in progress') 
+      : l('Mana em recuperação', 'Mana recovering');
 
   function toggleTimer() {
     setIsMeditationActive(!isMeditationActive);
@@ -296,15 +303,15 @@ export function Rest() {
             <h1 className="mt-2 text-3xl font-black uppercase tracking-tight text-white italic font-orbitron">
               {t('pages.rest')}
             </h1>
-            <p className="mt-2 text-sm leading-relaxed text-gray-400">Regenere sua mana e calibre o atributo Equilíbrio (EQU).</p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-400">{l('Regenere sua mana e calibre o atributo Equilíbrio (EQU).', 'Regenerate your mana and calibrate the Balance (BAL) attribute.')}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Sono atual', value: `${stats.lastSleep}h`, icon: Moon, tone: 'text-indigo-300' },
-              { label: 'Meditação acumulada', value: `${stats.totalMed} min`, icon: Compass, tone: 'text-purple-300' },
-              { label: 'Lazer offline', value: `${stats.totalHobby}h`, icon: Smile, tone: 'text-cyan-300' },
-              { label: 'Estado de equilíbrio', value: balanceStatus, icon: Activity, tone: balanceProgress >= 80 ? 'text-emerald-300' : 'text-amber-300' },
+              { label: l('Sono atual', 'Current sleep'), value: `${stats.lastSleep}h`, icon: Moon, tone: 'text-indigo-300' },
+              { label: l('Meditação acumulada', 'Accumulated meditation'), value: `${stats.totalMed} min`, icon: Compass, tone: 'text-purple-300' },
+              { label: l('Lazer offline', 'Offline leisure'), value: `${stats.totalHobby}h`, icon: Smile, tone: 'text-cyan-300' },
+              { label: l('Estado de equilíbrio', 'Balance state'), value: balanceStatus, icon: Activity, tone: balanceProgress >= 80 ? 'text-emerald-300' : 'text-amber-300' },
             ].map(item => (
               <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3 transition-colors hover:border-white/10">
                 <item.icon className={`size-4 ${item.tone}`} />
@@ -329,7 +336,7 @@ export function Rest() {
               <Sparkles size={24} />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-widest text-amber-500 font-orbitron">Mana Restaurada!</p>
+              <p className="text-xs font-black uppercase tracking-widest text-amber-500 font-orbitron">{l('Mana Restaurada!', 'Mana Restored!')}</p>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 +{showReward.xp} XP • +{showReward.val} {showReward.stat}
               </p>
@@ -344,7 +351,7 @@ export function Rest() {
         <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-indigo-500/25">
           <div className="absolute -right-4 -top-4 size-20 bg-indigo-500/5 blur-2xl" />
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-300 font-orbitron">Sono</span>
+            <span className="text-sm font-bold text-gray-300 font-orbitron">{l('Sono', 'Sleep')}</span>
             <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
               <Moon size={16} />
             </div>
@@ -352,13 +359,13 @@ export function Rest() {
           <div>
             <p className="text-3xl font-black text-white font-orbitron">{stats.lastSleep}<span className="text-xs text-gray-500 font-bold ml-1">H</span></p>
             <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-              <span className="text-gray-500">Meta diária: 8h</span>
-              <span className={sleepProgress >= 100 ? 'text-emerald-300' : 'text-indigo-300'}>{sleepProgress >= 100 ? 'Meta alcançada' : `${Math.round(sleepProgress)}%`}</span>
+              <span className="text-gray-500">{l('Meta diária: 8h', 'Daily target: 8h')}</span>
+              <span className={sleepProgress >= 100 ? 'text-emerald-300' : 'text-indigo-300'}>{sleepProgress >= 100 ? l('Meta alcançada', 'Target achieved') : `${Math.round(sleepProgress)}%`}</span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/50">
               <motion.div initial={{ width: 0 }} animate={{ width: `${sleepProgress}%` }} className="h-full rounded-full bg-gradient-to-r from-indigo-700 to-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
             </div>
-            <p className="mt-2 text-xs text-gray-500">Média registrada: {stats.avgSleep}h</p>
+            <p className="mt-2 text-xs text-gray-500">{l('Média registrada:', 'Logged average:')} {stats.avgSleep}h</p>
           </div>
         </motion.div>
 
@@ -366,7 +373,7 @@ export function Rest() {
         <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-purple-500/25">
           <div className="absolute -right-4 -top-4 size-20 bg-purple-500/5 blur-2xl" />
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-300 font-orbitron">Meditação</span>
+            <span className="text-sm font-bold text-gray-300 font-orbitron">{l('Meditação', 'Meditation')}</span>
             <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
               <Compass size={16} />
             </div>
@@ -374,13 +381,13 @@ export function Rest() {
           <div>
             <p className="text-3xl font-black text-white font-orbitron">{stats.totalMed}<span className="text-xs text-gray-500 font-bold ml-1">MIN</span></p>
             <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-              <span className="text-gray-500">Meta diária: 10 min</span>
-              <span className={meditationProgress >= 100 ? 'text-emerald-300' : 'text-purple-300'}>{meditationProgress >= 100 ? 'Foco calibrado' : `${Math.round(meditationProgress)}%`}</span>
+              <span className="text-gray-500">{l('Meta diária: 10 min', 'Daily target: 10 min')}</span>
+              <span className={meditationProgress >= 100 ? 'text-emerald-300' : 'text-purple-300'}>{meditationProgress >= 100 ? l('Foco calibrado', 'Focus calibrated') : `${Math.round(meditationProgress)}%`}</span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/50">
               <motion.div initial={{ width: 0 }} animate={{ width: `${meditationProgress}%` }} className="h-full rounded-full bg-gradient-to-r from-purple-700 to-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]" />
             </div>
-            <p className="mt-2 text-xs text-gray-500">{stats.todayMeditation} min registrados hoje</p>
+            <p className="mt-2 text-xs text-gray-500">{stats.todayMeditation} {l('min registrados hoje', 'min logged today')}</p>
           </div>
         </motion.div>
 
@@ -388,7 +395,7 @@ export function Rest() {
         <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-cyan-500/25">
           <div className="absolute -right-4 -top-4 size-20 bg-cyan-500/5 blur-2xl" />
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-300 font-orbitron">Lazer Offline</span>
+            <span className="text-sm font-bold text-gray-300 font-orbitron">{l('Lazer Offline', 'Offline Leisure')}</span>
             <div className="flex size-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
               <Smile size={16} />
             </div>
@@ -396,13 +403,13 @@ export function Rest() {
           <div>
             <p className="text-3xl font-black text-white font-orbitron">{stats.totalHobby}<span className="text-xs text-gray-500 font-bold ml-1">H</span></p>
             <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-              <span className="text-gray-500">Meta diária: 60 min</span>
-              <span className={hobbyProgress >= 100 ? 'text-emerald-300' : 'text-cyan-300'}>{hobbyProgress >= 100 ? 'Desconexão completa' : `${Math.round(hobbyProgress)}%`}</span>
+              <span className="text-gray-500">{l('Meta diária: 60 min', 'Daily target: 60 min')}</span>
+              <span className={hobbyProgress >= 100 ? 'text-emerald-300' : 'text-cyan-300'}>{hobbyProgress >= 100 ? l('Desconexão completa', 'Complete disconnect') : `${Math.round(hobbyProgress)}%`}</span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/50">
               <motion.div initial={{ width: 0 }} animate={{ width: `${hobbyProgress}%` }} className="h-full rounded-full bg-gradient-to-r from-cyan-700 to-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)]" />
             </div>
-            <p className="mt-2 text-xs text-gray-500">{stats.todayHobby} min longe das telas hoje</p>
+            <p className="mt-2 text-xs text-gray-500">{stats.todayHobby} {l('min longe das telas hoje', 'min away from screens today')}</p>
           </div>
         </motion.div>
       </div>
@@ -410,8 +417,8 @@ export function Rest() {
       {/* Sub-abas de Navegação */}
       <div className="grid grid-cols-1 gap-2 rounded-2xl border border-[#1E1E26] bg-[#0B0B0F] p-2 sm:grid-cols-2">
         {[
-          { id: 'sleep_lazer' as const, title: 'Sono & Lazer', subtitle: 'registro de descanso e hobbies', icon: Moon, tone: 'indigo' },
-          { id: 'meditation' as const, title: 'Templo da Mente', subtitle: 'respiração, meditação e foco', icon: Compass, tone: 'purple' },
+          { id: 'sleep_lazer' as const, title: l('Sono & Lazer', 'Sleep & Leisure'), subtitle: l('registro de descanso e hobbies', 'log rest and hobbies'), icon: Moon, tone: 'indigo' },
+          { id: 'meditation' as const, title: l('Templo da Mente', 'Mind Temple'), subtitle: l('respiração, meditação e foco', 'breathing, meditation and focus'), icon: Compass, tone: 'purple' },
         ].map(item => {
           const ItemIcon = item.icon;
           const isActive = activeSubTab === item.id;
@@ -453,7 +460,7 @@ export function Rest() {
       >
         {dataError && (
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
-            <span className="font-black uppercase tracking-widest text-rose-400">Erro: </span>
+            <span className="font-black uppercase tracking-widest text-rose-400">{l('Erro:', 'Error:')} </span>
             {dataError}
           </div>
         )}
@@ -470,13 +477,13 @@ export function Rest() {
                     <Moon className="size-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-black text-white font-orbitron">Registrar Sono</h2>
-                    <p className="mt-1 text-xs text-gray-500">Informe duração e percepção de qualidade.</p>
+                    <h2 className="text-base font-black text-white font-orbitron">{l('Registrar Sono', 'Log Sleep')}</h2>
+                    <p className="mt-1 text-xs text-gray-500">{l('Informe duração e percepção de qualidade.', 'Report duration and quality perception.')}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">Horas dormidas</label>
+                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Horas dormidas', 'Hours slept')}</label>
                     <div className="flex items-center justify-between rounded-xl bg-white/5 p-2.5">
                       <button 
                         onClick={() => setSleepHours(Math.max(1, sleepHours - 0.5))}
@@ -491,7 +498,7 @@ export function Rest() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">Qualidade do sono</label>
+                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Qualidade do sono', 'Sleep quality')}</label>
                     <div className="flex items-center justify-center gap-2 rounded-xl bg-white/5 p-3">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -514,7 +521,7 @@ export function Rest() {
                     style={{ fontFamily: 'Orbitron, sans-serif' }}
                   >
                     <Moon size={14} />
-                    {isSubmitting ? 'Registrando...' : 'Registrar Descanso'}
+                    {isSubmitting ? l('Registrando...', 'Logging...') : l('Registrar Descanso', 'Log Rest')}
                   </button>
                 </div>
               </div>
@@ -526,13 +533,13 @@ export function Rest() {
                     <Smile className="size-5" />
                   </div>
                   <div>
-                    <h2 className="text-base font-black text-white font-orbitron">Registrar Lazer</h2>
-                    <p className="mt-1 text-xs text-gray-500">Registre uma pausa offline que ajudou sua recuperação.</p>
+                    <h2 className="text-base font-black text-white font-orbitron">{l('Registrar Lazer', 'Log Leisure')}</h2>
+                    <p className="mt-1 text-xs text-gray-500">{l('Registre uma pausa offline que ajudou sua recuperação.', 'Log an offline break that helped your recovery.')}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">Duração em minutos</label>
+                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Duração em minutos', 'Duration in minutes')}</label>
                     <div className="flex items-center justify-between rounded-xl bg-white/5 p-2.5">
                       <button 
                         onClick={() => setHobbyDuration(Math.max(10, hobbyDuration - 10))}
@@ -547,10 +554,10 @@ export function Rest() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">Hobby ou atividade</label>
+                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Hobby ou atividade', 'Hobby or activity')}</label>
                     <input 
                       type="text"
-                      placeholder="Ex: Leitura, Violão, Caminhada..."
+                      placeholder={l('Ex: Leitura, Violão, Caminhada...', 'e.g., Reading, Guitar, Walking...')}
                       value={hobbyNotes}
                       onChange={(e) => setHobbyNotes(e.target.value)}
                       className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:border-cyan-500/50 focus:outline-none"
@@ -564,7 +571,7 @@ export function Rest() {
                     style={{ fontFamily: 'Orbitron, sans-serif' }}
                   >
                     <Smile size={14} />
-                    {isSubmitting ? 'Registrando...' : 'Registrar Lazer'}
+                    {isSubmitting ? l('Registrando...', 'Logging...') : l('Registrar Lazer', 'Log Leisure')}
                   </button>
                 </div>
               </div>
@@ -574,7 +581,7 @@ export function Rest() {
             <div className="lg:col-span-2 space-y-4">
               <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 flex flex-col h-full">
                 <h2 className="text-base font-black uppercase italic text-white tracking-tight mb-4 font-orbitron">
-                  Histórico de <span className="text-indigo-400">Recuperação</span>
+                  {l('Histórico de', 'History of')} <span className="text-indigo-400">{l('Recuperação', 'Recovery')}</span>
                 </h2>
 
                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 max-h-[500px]">
@@ -587,9 +594,9 @@ export function Rest() {
                       <div className="flex size-14 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
                         <Heart className="size-6" />
                       </div>
-                      <p className="mt-5 text-sm font-bold text-white">O Sistema ainda não detectou registros de recuperação.</p>
+                      <p className="mt-5 text-sm font-bold text-white">{l('O Sistema ainda não detectou registros de recuperação.', 'The System has not detected recovery logs yet.')}</p>
                       <p className="mt-2 max-w-md text-[13px] leading-relaxed text-gray-500">
-                        Registre sono, meditação ou lazer para iniciar sua trilha de equilíbrio.
+                        {l('Registre sono, meditação ou lazer para iniciar sua trilha de equilíbrio.', 'Log sleep, meditation, or leisure to begin your balance path.')}
                       </p>
                     </div>
                   ) : (
@@ -609,11 +616,11 @@ export function Rest() {
                             </div>
                             <div>
                               <h4 className="text-xs font-black uppercase tracking-widest text-white">
-                                {log.type === 'sleep' ? 'Repouso Noturno' : 
-                                 log.type === 'meditation' ? 'Meditação / Calma' : 'Hobby & Desconexão'}
+                                {log.type === 'sleep' ? l('Repouso Noturno', 'Nightly Rest') : 
+                                 log.type === 'meditation' ? l('Meditação / Calma', 'Meditation / Calm') : l('Hobby & Desconexão', 'Hobby & Disconnection')}
                               </h4>
                               <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-0.5">
-                                {date} • {log.notes || 'Sem observações'}
+                                {date} • {log.notes ? l(log.notes, translateUiText(log.notes)) : l('Sem observações', 'No notes')}
                               </p>
                             </div>
                           </div>
@@ -644,12 +651,12 @@ export function Rest() {
           <div className="flex flex-col items-center justify-center rounded-3xl border border-purple-500/15 bg-[#0F0F13] px-6 py-12 shadow-[0_0_28px_rgba(168,85,247,0.05)]">
             <div className="max-w-md w-full text-center space-y-8">
               <div className="space-y-1.5">
-                <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-400 font-orbitron">Templo do Silêncio</span>
+                <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-400 font-orbitron">{l('Templo do Silêncio', 'Silence Temple')}</span>
                 <h2 className="text-2xl font-black uppercase tracking-tight text-white font-orbitron">
-                  Meditação <span className="text-purple-400">Guiada</span>
+                  {l('Meditação', 'Guided')} <span className="text-purple-400">{l('Guiada', 'Meditation')}</span>
                 </h2>
                 <p className="mx-auto max-w-sm text-sm leading-relaxed text-gray-400">
-                  Acalme sua mente para recuperar mana. Siga o pulso de respiração para sincronizar seus batimentos.
+                  {l('Acalme sua mente para recuperar mana. Siga o pulso de respiração para sincronizar seus batimentos.', 'Calm your mind to recover mana. Follow the breathing pulse to sync your heartbeat.')}
                 </p>
               </div>
 
@@ -685,13 +692,13 @@ export function Rest() {
                   transition={isMeditationActive ? { duration: 4, ease: 'easeInOut' } : { duration: 0.5 }}
                 >
                   <span className="text-xs font-black uppercase tracking-[0.16em] text-purple-400 font-orbitron">
-                    {isMeditationActive ? breatheState : 'PRONTO'}
+                    {isMeditationActive ? l(breatheState, breatheState === 'Inspire' ? 'Inhale' : breatheState === 'Segure' ? 'Hold' : breatheState === 'Expire' ? 'Exhale' : 'Hold') : l('PRONTO', 'READY')}
                   </span>
                   <span className="mt-2 text-4xl font-black text-white font-orbitron drop-shadow-[0_0_12px_rgba(168,85,247,0.28)]">
                     {formatTime(timeLeft)}
                   </span>
                   <span className="mt-2 text-xs font-semibold text-gray-500">
-                    Meta: {meditationTime} Min
+                    {l('Meta:', 'Target:')} {meditationTime} Min
                   </span>
                 </motion.div>
               </div>
@@ -731,7 +738,7 @@ export function Rest() {
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
                   {isMeditationActive ? <Pause size={14} /> : <Play size={14} />}
-                  {isMeditationActive ? 'Pausar' : 'Iniciar'}
+                  {isMeditationActive ? l('Pausar', 'Pause') : l('Iniciar', 'Start')}
                 </button>
 
                 {timeLeft < meditationTime * 60 && (
@@ -741,7 +748,7 @@ export function Rest() {
                     style={{ fontFamily: 'Orbitron, sans-serif' }}
                   >
                     <RotateCcw size={14} />
-                    Reiniciar
+                    {l('Reiniciar', 'Restart')}
                   </button>
                 )}
               </div>

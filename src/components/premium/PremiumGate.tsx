@@ -85,7 +85,7 @@ export function PremiumGate({ children, title, description }: PremiumGateProps) 
         <ul className="space-y-2 text-xs font-semibold text-gray-300">
           <li className="flex items-center gap-2">
             <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-            <span>{l('Códex de Nutrição com IA ativa (Llama 3.1)', 'AI-powered Nutrition Codex (Llama 3.1)')}</span>
+            <span>{l('Códex nutricional avançado com catálogo de fast foods', 'Advanced Nutrition Codex with fast-food catalog')}</span>
           </li>
           <li className="flex items-center gap-2">
             <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
@@ -106,7 +106,7 @@ export function PremiumGate({ children, title, description }: PremiumGateProps) 
       <div className="mt-8 space-y-4 max-w-md mx-auto">
         <div className="flex items-center justify-between border-t border-white/5 pt-4 text-xs font-bold text-gray-500">
           <span>{l('Assinatura Mensal Recorrente', 'Recurring monthly subscription')}</span>
-          <span className="text-lg font-black text-white font-orbitron">$ 2,00 <span className="text-[10px] font-sans font-semibold text-gray-500">{l('/mês', '/month')}</span></span>
+          <span className="text-lg font-black text-white font-orbitron">$1.99 <span className="text-[10px] font-sans font-semibold text-gray-500">{l('/mês', '/month')}</span></span>
         </div>
 
         <button

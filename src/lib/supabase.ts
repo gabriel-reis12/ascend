@@ -12,7 +12,6 @@ if (typeof window !== 'undefined') {
   });
 }
 
-
 // Aviso de desenvolvimento: ajuda a debugar configurações faltando
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error(
@@ -33,4 +32,56 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // Auto-refresh do token antes de expirar
     autoRefreshToken: true,
   },
+  global: {
+    // Configurações para melhorar resiliência de rede
+    fetch: (url, options = {}) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+      return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(timeoutId));
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    // Reconexão automática mais agressiva para evitar perda de conexão
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
 })
+
+/**
+ * Executa uma query com retry automático e backoff exponencial.
+ * Usado para queries críticas que podem falhar por instabilidade de rede.
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelayMs = 500
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastError = err;
+      const isAborted = err instanceof Error && err.name === 'AbortError';
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+
+      if (!isAborted && !isNetworkError) {
+        // Erro não relacionado à rede — não tenta novamente
+        throw err;
+      }
+
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelayMs * Math.pow(2, attempt); // backoff exponencial: 500ms, 1000ms, 2000ms
+        console.warn(`[Supabase] Tentativa ${attempt + 1} falhou. Tentando novamente em ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
+}

@@ -18,7 +18,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
-    const priceId = Deno.env.get("STRIPE_PREMIUM_PRICE_ID");
+    const premiumUnitAmount = Number(Deno.env.get("STRIPE_PREMIUM_UNIT_AMOUNT") ?? "199");
+    const premiumCurrency = (Deno.env.get("STRIPE_PREMIUM_CURRENCY") ?? "usd").toLowerCase();
 
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error("Configurações do Supabase ausentes no ambiente.");
@@ -26,8 +27,8 @@ Deno.serve(async (req) => {
     if (!stripeSecretKey) {
       throw new Error("Chave secreta do Stripe (STRIPE_SECRET_KEY) não configurada no Supabase.");
     }
-    if (!priceId) {
-      throw new Error("ID do Preço do Stripe (STRIPE_PREMIUM_PRICE_ID) não configurado no Supabase.");
+    if (!Number.isFinite(premiumUnitAmount) || premiumUnitAmount < 50) {
+      throw new Error("Valor da assinatura premium inválido no ambiente.");
     }
 
     // 1. Obter e validar o usuário autenticado do Supabase
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: profile } = await adminClient
       .from("profiles")
-      .select("stripe_customer_id, email")
+      .select("stripe_customer_id")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -90,7 +91,17 @@ Deno.serve(async (req) => {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: priceId,
+          price_data: {
+            currency: premiumCurrency,
+            unit_amount: premiumUnitAmount,
+            recurring: {
+              interval: "month",
+            },
+            product_data: {
+              name: "Ascend Premium",
+              description: "Acesso premium mensal aos módulos avançados do Sistema.",
+            },
+          },
           quantity: 1,
         },
       ],

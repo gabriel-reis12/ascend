@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useHunterStore } from '../stores/useHunterStore';
 import { useBossStore } from '../stores/useBossStore';
 import { evaluateYesterdayNutrition } from '../lib/nutritionDailyScore';
+import { hasManualPremiumAccess } from '../lib/premiumAccess';
 
 interface AuthContextValue {
   user: User | null;
@@ -27,9 +28,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Ref para evitar chamadas concorrentes ao loadProfile
   const loadingProfileRef = useRef(false);
 
-  const syncProfileAndDailyNutrition = async (userId: string) => {
-    await loadProfile(userId);
-    await evaluateYesterdayNutrition(userId, {
+  const syncProfileAndDailyNutrition = async (currentUser: User) => {
+    await loadProfile(currentUser.id);
+    if (hasManualPremiumAccess(currentUser.email)) {
+      useHunterStore.setState({ isPremium: true });
+      await supabase
+        .from('profiles')
+        .update({ is_premium: true })
+        .eq('id', currentUser.id);
+    }
+    await evaluateYesterdayNutrition(currentUser.id, {
       addXp: useHunterStore.getState().addXp,
       updateStat: useHunterStore.getState().updateStat,
       attackBoss: useBossStore.getState().attackActiveBoss,
@@ -71,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!loadingProfileRef.current) {
             loadingProfileRef.current = true;
             try {
-              await syncProfileAndDailyNutrition(userId);
+              await syncProfileAndDailyNutrition(currentSession.user);
             } finally {
               loadingProfileRef.current = false;
             }
@@ -115,7 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!loadingProfileRef.current) {
             loadingProfileRef.current = true;
             try {
-              await syncProfileAndDailyNutrition(newUserId);
+              if (newSession?.user) {
+                await syncProfileAndDailyNutrition(newSession.user);
+              }
             } catch (err) {
               console.error('[AuthContext] Erro ao carregar perfil:', err);
             } finally {
@@ -158,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       currentUserRef.current = null;
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'global' });
     } catch (err) {
       console.error('[AuthContext] Erro no signOut do Supabase:', err);
     } finally {

@@ -20,6 +20,28 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-25 — Correções de Admin Premium, Estabilidade do Banco e Internacionalização do Dashboard
+- **Fix admin premium (`premiumAccess.ts`):** Adicionado `admin@ascen.com` (sem "d") na whitelist de emails com acesso premium garantido. O email anterior `admin@ascend.com` também mantido. O check `startsWith('admin@')` cobre qualquer subdomínio admin.
+- **Supabase mais robusto (`supabase.ts`):** Adicionado timeout de 20 segundos por requisição via `AbortController` no fetch global, reduzindo o travamento silencioso quando a conexão falha. Exportada nova função `withRetry<T>()` com backoff exponencial (500ms → 1s → 2s) para uso em queries críticas, evitando falhas permanentes por instabilidade momentânea de rede.
+- **Tradução completa do Dashboard (`Dashboard.tsx`):** O Dashboard era a única tela principal sem suporte bilíngue. Refatorados `STAT_META` e `DOMAIN_META` de constantes estáticas para funções dinâmicas `getStatMeta(l)` e `getDomainMeta(l)` que recebem o helper de tradução. Todas as strings visíveis (nomes de atributos, labels de stats, resumo do dia, histórico de evolução, missão principal, domínios, etc.) agora respondem ao toggle PT-BR / EN-US sem reload.
+- **Preço ($1.99):** Confirmado que `PremiumGate.tsx` já exibia `$1.99` corretamente. Nenhuma string `$2.00` encontrada em código-fonte.
+- **Build verificado:** `npm run build` passou sem erros de TypeScript (apenas warnings de chunk size já existentes).
+
+### 2026-06-24 — Tradução Completa de Módulos (Fortuna, Rest, Nutrition) e Admin Premium
+- Internacionalização completa via helper dinâmico `l(pt, en)` e `translateUiText` nas páginas [Fortuna.tsx](file:///d:/Área de Trabalho/App/src/pages/Fortuna.tsx), [Rest.tsx](file:///d:/Área de Trabalho/App/src/pages/Rest.tsx) e [Nutrition.tsx](file:///d:/Área de Trabalho/App/src/pages/Nutrition.tsx).
+- Adicionada moeda dinâmica na Fortuna (R$ para pt-BR, $ para en-US) e tradução dinâmica das categorias financeiras, estados de respiração da meditação e botões de modais de formulário.
+- Verificados com sucesso o build (`npm run build`) e a auditoria de localização (`npm run audit:i18n`).
+- Sincronização do status premium para contas admin (e-mails iniciados por `admin@`) ativada tanto no banco de dados Supabase quanto na Store global do Zustand.
+
+### 2026-06-24 — Premium Manual, Preço Stripe e Localização Residual
+- Adicionada concessão manual de premium para `diegoseleguini@gmail.com` via `src/lib/premiumAccess.ts`, sincronizando `is_premium=true` no profile quando o usuário logar.
+- Criada migration `supabase/migrations/20260624_manual_premium_diego.sql` para aplicar a mesma concessão diretamente no Supabase remoto.
+- O checkout premium passou a criar assinatura recorrente por `price_data` com `unit_amount=199` e moeda `usd`, removendo a dependência obrigatória de `STRIPE_PREMIUM_PRICE_ID` para cobrar US$ 1.99/mês.
+- Atualizado o preço exibido no `PremiumGate` para `$1.99 /month` e removida a menção antiga a Llama no benefício nutricional.
+- Corrigido o botão de desconectar em inglês com logout global do Supabase e navegação explícita para `/login`.
+- Corrigidas traduções híbridas restantes em Nutrição, presets de Treino e Códex de Quests, especialmente metas nutricionais, botões Visualizar/Importar, divisão semanal, atributos e diretrizes do Códex.
+- Validações executadas: `npm.cmd run audit:i18n`, `npm.cmd run build` e `git diff --check`.
+
 ### 2026-06-24 — Estabilização do Códex Nutricional e Fast Foods
 - Substituída a análise nutricional dependente do Groq por um motor local auditável em `src/lib/nutritionAi.ts`, evitando respostas inconsistentes quando a API não estava configurada ou quando o modelo inferia fontes externas sem consulta real.
 - Adicionado catálogo curado para itens comerciais/fast food comuns (Big Mac, Whopper, McFritas, McNuggets, Subway e industrializados), tratando produtos consolidados como um único item em vez de decompor sanduíches em ingredientes primários.

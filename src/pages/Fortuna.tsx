@@ -51,6 +51,30 @@ export function Fortuna() {
   const { language } = usePreferences();
   const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
   const numberLocale = language === 'en-US' ? 'en-US' : 'pt-BR';
+  const currencySymbol = l('R$', '$');
+
+  const translateCategory = (cat: string) => {
+    const ptToEn: Record<string, string> = {
+      'Salário': 'Salary',
+      'Freelance': 'Freelance',
+      'Rendimentos': 'Yields',
+      'Vendas': 'Sales',
+      'Outros': 'Others',
+      'Moradia': 'Housing',
+      'Alimentação': 'Food',
+      'Transporte': 'Transportation',
+      'Saúde': 'Health',
+      'Lazer': 'Leisure',
+      'Assinaturas': 'Subscriptions',
+      'Ações': 'Stocks',
+      'FIIs': 'REITs',
+      'Renda Fixa': 'Fixed Income',
+      'Criptomoedas': 'Cryptocurrencies',
+      'Reserva de Emergência': 'Emergency Fund'
+    };
+    return language === 'en-US' ? (ptToEn[cat] || cat) : cat;
+  };
+
   const { user } = useAuth();
   const hunterStore = useHunterStore();
   const bossStore = useBossStore();
@@ -137,7 +161,7 @@ export function Fortuna() {
     e.preventDefault();
     if (!user) return;
     if (!description.trim() || !amount || amount <= 0) {
-      setError('Por favor, preencha a descrição e um valor maior que zero.');
+      setError(l('Por favor, preencha a descrição e um valor maior que zero.', 'Please enter a description and a value greater than zero.'));
       return;
     }
 
@@ -248,7 +272,7 @@ export function Fortuna() {
     e.preventDefault();
     if (!user) return;
     if (!goalTitle.trim() || !goalTarget || goalTarget <= 0) {
-      setError('Por favor, insira o título e o valor alvo da meta.');
+      setError(l('Por favor, insira o título e o valor alvo da meta.', 'Please enter the title and target amount of the goal.'));
       return;
     }
 
@@ -279,7 +303,7 @@ export function Fortuna() {
         });
         await hunterStore.updateStat('wisdom', 2, user.id);
         setSuccessAlert({
-          desc: `Meta criada e concluída: "${goalTitle.trim()}"`,
+          desc: l(`Meta criada e concluída: "${goalTitle.trim()}"`, `Goal created and completed: "${goalTitle.trim()}"`),
           amount: targetVal,
           type: 'investment',
           xp: 50,
@@ -287,7 +311,7 @@ export function Fortuna() {
         });
       } else {
         setSuccessAlert({
-          desc: `Meta criada: "${goalTitle.trim()}"`,
+          desc: l(`Meta criada: "${goalTitle.trim()}"`, `Goal created: "${goalTitle.trim()}"`),
           amount: targetVal,
           type: 'investment',
           xp: 10,
@@ -335,7 +359,7 @@ export function Fortuna() {
         await hunterStore.updateStat('wisdom', 2, user.id);
 
         setSuccessAlert({
-          desc: `CONQUISTA: Meta "${goal.title}" concluída com sucesso!`,
+          desc: l(`CONQUISTA: Meta "${goal.title}" concluída com sucesso!`, `ACHIEVEMENT: Goal "${goal.title}" completed successfully!`),
           amount: goal.target_amount,
           type: 'investment',
           xp: 50,
@@ -405,17 +429,17 @@ export function Fortuna() {
           <div className="space-y-1 z-10">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
-                Gestão de Recursos
+                {l('Gestão de Recursos', 'Resource Management')}
               </span>
               <span className="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                Atributo: WIS (Sabedoria)
+                {l('Atributo: WIS (Sabedoria)', 'Stat: WIS (Wisdom)')}
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white font-orbitron">
-              Módulo <span className="text-amber-400">Fortuna</span>
+              {l('Módulo', 'Module')} <span className="text-amber-400">{l('Fortuna', 'Fortune')}</span>
             </h1>
             <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 leading-relaxed">
-              Controle de fluxo de moedas e rito de investimentos para purificação de dívidas.
+              {l('Controle de fluxo de moedas e rito de investimentos para purificação de dívidas.', 'Coin flow control and investment rituals to purify debts.')}
             </p>
           </div>
           <div className="flex items-center gap-3 z-10">
@@ -432,9 +456,9 @@ export function Fortuna() {
             <div className="absolute right-4 top-4 size-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
               <ArrowUpRight size={16} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ganhos do Mês</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{l('Ganhos do Mês', 'Monthly Earnings')}</span>
             <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              R$ {monthlySummary.income.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol} {monthlySummary.income.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h3>
           </div>
 
@@ -443,9 +467,9 @@ export function Fortuna() {
             <div className="absolute right-4 top-4 size-9 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center">
               <ArrowDownLeft size={16} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Gastos do Mês</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{l('Gastos do Mês', 'Monthly Expenses')}</span>
             <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              R$ {monthlySummary.expense.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol} {monthlySummary.expense.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h3>
           </div>
 
@@ -454,9 +478,9 @@ export function Fortuna() {
             <div className="absolute right-4 top-4 size-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
               <Coins size={16} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Aportado no Mês</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{l('Aportado no Mês', 'Monthly Investments')}</span>
             <h3 className="mt-2 text-xl sm:text-2xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              R$ {monthlySummary.investment.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol} {monthlySummary.investment.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </h3>
           </div>
 
@@ -465,7 +489,7 @@ export function Fortuna() {
             <div className="absolute right-4 top-4 size-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
               <DollarSign size={16} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Aporte / Poupança</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{l('Aporte / Poupança', 'Investments / Savings')}</span>
             <h3 className="mt-2 text-lg sm:text-xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
               {investmentRate.toFixed(0)}% <span className="text-xs text-gray-600">/</span> {savingsRate.toFixed(0)}%
             </h3>
@@ -483,25 +507,25 @@ export function Fortuna() {
               <div className="flex items-center gap-2 border-b border-[#1E1E26] pb-3 text-amber-400">
                 <Plus size={16} />
                 <h2 className="text-xs font-black uppercase tracking-widest font-orbitron">
-                  Registrar Fluxo de Recurso
+                  {l('Registrar Fluxo de Recurso', 'Log Resource Flow')}
                 </h2>
               </div>
 
               <form onSubmit={handleAddTransaction} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Descrição</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{l('Descrição', 'Description')}</label>
                     <input 
                       type="text" 
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Ex: Salário, Supermercado, Aporte FIIs..."
+                      placeholder={l('Ex: Salário, Supermercado, Aporte FIIs...', 'e.g., Salary, Supermarket, REITs...')}
                       className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white placeholder:text-gray-600 focus:border-amber-500/40 focus:outline-none transition-all"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Valor (R$)</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{l(`Valor (${currencySymbol})`, `Amount (${currencySymbol})`)}</label>
                     <input 
                       type="number" 
                       step="0.01"
@@ -515,33 +539,33 @@ export function Fortuna() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Tipo</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{l('Tipo', 'Type')}</label>
                     <select 
                       value={type}
                       onChange={(e) => setType(e.target.value as any)}
                       className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-amber-500/40 focus:outline-none appearance-none cursor-pointer"
                     >
-                      <option value="expense">Despesa (Saída)</option>
-                      <option value="income">Receita (Entrada)</option>
-                      <option value="investment">Investimento / Aporte</option>
+                      <option value="expense">{l('Despesa (Saída)', 'Expense (Outflow)')}</option>
+                      <option value="income">{l('Receita (Entrada)', 'Income (Inflow)')}</option>
+                      <option value="investment">{l('Investimento / Aporte', 'Investment / Contribution')}</option>
                     </select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Categoria</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{l('Categoria', 'Category')}</label>
                     <select 
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-amber-500/40 focus:outline-none appearance-none cursor-pointer"
                     >
                       {categoriesByType[type].map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat}>{translateCategory(cat)}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Data</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{l('Data', 'Date')}</label>
                     <input 
                       type="date" 
                       value={date}
@@ -557,7 +581,7 @@ export function Fortuna() {
                   className="w-full rounded-xl bg-amber-600/90 hover:bg-amber-500 disabled:bg-amber-900/40 disabled:text-gray-500 text-white font-black uppercase tracking-widest text-xs py-4 px-4 border border-amber-500/30 transition-all cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.05)] active:scale-[0.98] flex items-center justify-center gap-2"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  {formLoading ? 'Registrando no Codex...' : 'Registrar Transação'}
+                  {formLoading ? l('Registrando no Codex...', 'Recording in Codex...') : l('Registrar Transação', 'Log Transaction')}
                 </button>
               </form>
 
@@ -572,7 +596,7 @@ export function Fortuna() {
                   >
                     <ShieldAlert className="size-4 shrink-0 text-rose-400" />
                     <div>
-                      <span className="font-bold">ANOMALIA FINANCEIRA:</span> {error}
+                      <span className="font-bold">{l('ANOMALIA FINANCEIRA:', 'FINANCIAL ANOMALY:')}</span> {error}
                     </div>
                   </motion.div>
                 )}
@@ -587,23 +611,26 @@ export function Fortuna() {
                     <div className="flex items-center gap-2 text-amber-400">
                       <Sparkles size={16} className="animate-bounce" />
                       <span className="font-black text-xs uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        REGISTRO PERSISTIDO NO CODEX NEURAL
+                        {l('REGISTRO PERSISTIDO NO CODEX NEURAL', 'RECORD PERSISTED IN NEURAL CODEX')}
                       </span>
                     </div>
                     <div className="text-xs text-gray-300">
                       <p className="font-semibold text-white">
-                        Lançamento de <span className="uppercase text-amber-400 font-bold">{successAlert.desc}</span> no valor de R$ {successAlert.amount.toFixed(2)} registrado.
+                        {l(
+                          `Lançamento de "${successAlert.desc}" no valor de R$ ${successAlert.amount.toFixed(2)} registrado.`,
+                          `Entry of "${successAlert.desc}" amounting to $ ${successAlert.amount.toFixed(2)} registered.`
+                        )}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20">
-                        <span>SISTEMA: +{successAlert.xp} XP obtidos</span>
+                        <span>{l(`SISTEMA: +${successAlert.xp} XP obtidos`, `SYSTEM: +${successAlert.xp} XP earned`)}</span>
                         {successAlert.wisdom > 0 && (
                           <>
                             <span className="text-gray-600">|</span>
-                            <span className="text-blue-400">ATRIBUTOS: +{successAlert.wisdom} Sabedoria (WIS)</span>
+                            <span className="text-blue-400">{l(`ATRIBUTOS: +${successAlert.wisdom} Sabedoria (WIS)`, `STATS: +${successAlert.wisdom} Wisdom (WIS)`)}</span>
                           </>
                         )}
                         <span className="text-gray-600">|</span>
-                        <span>ATAQUE AO BOSS: -10 HP</span>
+                        <span>{l('ATAQUE AO BOSS: -10 HP', 'BOSS ATTACK: -10 HP')}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -617,7 +644,7 @@ export function Fortuna() {
                 <div className="flex items-center gap-2 text-gray-400">
                   <History size={16} />
                   <h2 className="text-xs font-black uppercase tracking-widest font-orbitron">
-                    Registros do Mês Atual
+                    {l('Registros do Mês Atual', 'Current Month Records')}
                   </h2>
                 </div>
               </div>
@@ -626,22 +653,22 @@ export function Fortuna() {
                 {loading ? (
                   <div className="p-8 text-center space-y-2">
                     <div className="size-8 rounded-full border-2 border-amber-500/10 border-t-amber-500 animate-spin mx-auto" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Lendo logs de transações...</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">{l('Lendo logs de transações...', 'Reading transaction logs...')}</p>
                   </div>
                 ) : logs.length === 0 ? (
                   <div className="p-12 text-center">
-                    <p className="text-[10px] uppercase font-bold text-gray-600">Nenhum fluxo de moedas registrado este mês.</p>
+                    <p className="text-[10px] uppercase font-bold text-gray-600">{l('Nenhum fluxo de moedas registrado este mês.', 'No coin flow logged this month.')}</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-[#1E1E26] bg-white/5 text-[9px] font-black uppercase tracking-widest text-gray-400">
-                          <th className="px-5 py-3">Descrição</th>
-                          <th className="px-5 py-3">Categoria</th>
-                          <th className="px-5 py-3">Tipo</th>
-                          <th className="px-5 py-3">Valor</th>
-                          <th className="px-5 py-3 text-right">Ação</th>
+                          <th className="px-5 py-3">{l('Descrição', 'Description')}</th>
+                          <th className="px-5 py-3">{l('Categoria', 'Category')}</th>
+                          <th className="px-5 py-3">{l('Tipo', 'Type')}</th>
+                          <th className="px-5 py-3">{l('Valor', 'Amount')}</th>
+                          <th className="px-5 py-3 text-right">{l('Ação', 'Action')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1E1E26] text-xs">
@@ -655,7 +682,7 @@ export function Fortuna() {
                             </td>
                             <td className="px-5 py-3">
                               <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-gray-500/10 border border-gray-500/25 text-gray-400">
-                                {log.category}
+                                {translateCategory(log.category)}
                               </span>
                             </td>
                             <td className="px-5 py-3">
@@ -666,7 +693,7 @@ export function Fortuna() {
                                     ? 'text-rose-400' 
                                     : 'text-amber-400'
                               }`}>
-                                {log.type === 'income' ? 'Receita' : log.type === 'expense' ? 'Despesa' : 'Aporte'}
+                                {log.type === 'income' ? l('Receita', 'Income') : log.type === 'expense' ? l('Despesa', 'Expense') : l('Aporte', 'Investment')}
                               </span>
                             </td>
                             <td className={`px-5 py-3 font-bold font-orbitron ${
@@ -676,13 +703,13 @@ export function Fortuna() {
                                   ? 'text-rose-400' 
                                   : 'text-amber-400'
                             }`}>
-                              {log.type === 'income' ? '+' : '-'} R$ {log.amount.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              {log.type === 'income' ? '+' : '-'} {currencySymbol} {log.amount.toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td className="px-5 py-3 text-right">
                               <button
                                 onClick={() => handleDeleteTransaction(log.id)}
                                 className="p-1.5 rounded-lg text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                title="Excluir transação"
+                                title={l('Excluir transação', 'Delete transaction')}
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -707,7 +734,7 @@ export function Fortuna() {
                 <div className="flex items-center gap-2 text-amber-400">
                   <Target size={16} />
                   <h2 className="text-xs font-black uppercase tracking-widest font-orbitron">
-                    Objetivos & Metas
+                    {l('Objetivos & Metas', 'Objectives & Goals')}
                   </h2>
                 </div>
                 <button
@@ -715,7 +742,7 @@ export function Fortuna() {
                   className="text-[10px] font-black uppercase tracking-widest text-amber-400 hover:text-amber-300 flex items-center gap-1 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/25 cursor-pointer"
                 >
                   <Plus size={10} />
-                  {showNewGoalForm ? 'Fechar' : 'Nova'}
+                  {showNewGoalForm ? l('Fechar', 'Close') : l('Nova', 'New')}
                 </button>
               </div>
 
@@ -730,19 +757,19 @@ export function Fortuna() {
                     className="space-y-3 bg-[#0A0A0D] p-4 rounded-xl border border-[#1E1E26] overflow-hidden"
                   >
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-500">Título do Objetivo</label>
+                      <label className="text-[9px] font-black uppercase text-gray-500">{l('Título do Objetivo', 'Goal Title')}</label>
                       <input
                         type="text"
                         value={goalTitle}
                         onChange={(e) => setGoalTitle(e.target.value)}
-                        placeholder="Ex: Guardar 40 mil para o carro"
+                        placeholder={l('Ex: Guardar 40 mil para o carro', 'e.g., Save 40k for the car')}
                         className="w-full rounded-lg border border-[#1E1E26] bg-[#0F0F13] py-2 px-3 text-xs text-white placeholder:text-gray-600 focus:outline-none"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-gray-500">Valor Alvo (R$)</label>
+                        <label className="text-[9px] font-black uppercase text-gray-500">{l(`Valor Alvo (${currencySymbol})`, `Target Amount (${currencySymbol})`)}</label>
                         <input
                           type="number"
                           value={goalTarget}
@@ -752,7 +779,7 @@ export function Fortuna() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-gray-500">Acumulado Inicial (R$)</label>
+                        <label className="text-[9px] font-black uppercase text-gray-500">{l(`Acumulado Inicial (${currencySymbol})`, `Initial Accumulated (${currencySymbol})`)}</label>
                         <input
                           type="number"
                           value={goalCurrent}
@@ -764,14 +791,14 @@ export function Fortuna() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black uppercase text-gray-500">Tipo de Objetivo</label>
+                      <label className="text-[9px] font-black uppercase text-gray-500">{l('Tipo de Objetivo', 'Goal Type')}</label>
                       <select
                         value={goalType}
                         onChange={(e) => setGoalType(e.target.value as any)}
                         className="w-full rounded-lg border border-[#1E1E26] bg-[#0F0F13] py-2 px-3 text-xs text-white focus:outline-none"
                       >
-                        <option value="one_time">Meta Única (Ex: Comprar Carro)</option>
-                        <option value="recurring_monthly">Meta Mensal (Ex: Investir 300 reais/mês)</option>
+                        <option value="one_time">{l('Meta Única (Ex: Comprar Carro)', 'Single Goal (e.g., Buy Car)')}</option>
+                        <option value="recurring_monthly">{l('Meta Mensal (Ex: Investir 300 reais/mês)', 'Monthly Goal (e.g., Invest $300/mo)')}</option>
                       </select>
                     </div>
 
@@ -779,7 +806,7 @@ export function Fortuna() {
                       type="submit"
                       className="w-full bg-amber-600 text-white text-[10px] py-2 rounded-lg font-black uppercase tracking-widest hover:bg-amber-500 transition-colors cursor-pointer"
                     >
-                      Estabelecer Objetivo
+                      {l('Estabelecer Objetivo', 'Establish Goal')}
                     </button>
                   </motion.form>
                 )}
@@ -812,10 +839,10 @@ export function Fortuna() {
                           <div className="flex justify-between items-start gap-2">
                             <div>
                               <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                Quest do Sistema
+                                {l('Quest do Sistema', 'System Quest')}
                               </span>
                               <h3 className={`text-xs font-bold mt-2 uppercase ${isSystemCompleted ? 'text-amber-400 line-through opacity-85' : 'text-white'}`}>
-                                Aporte de Purificação (Guardar 20% do Ganho)
+                                {l('Aporte de Purificação (Guardar 20% do Ganho)', 'Purification Contribution (Save 20% of Income)')}
                               </h3>
                             </div>
 
@@ -826,7 +853,7 @@ export function Fortuna() {
                                 </div>
                               ) : (
                                 <span className="text-[8px] font-bold text-amber-500 uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
-                                  Fixa
+                                  {l('Fixa', 'Fixed')}
                                 </span>
                               )}
                             </div>
@@ -837,11 +864,11 @@ export function Fortuna() {
                             <div className="flex justify-between items-end text-[10px]">
                               {monthlySummary.income > 0 ? (
                                 <span className="font-bold text-gray-400">
-                                  R$ {systemProgress.toLocaleString(numberLocale, { minimumFractionDigits: 2 })} <span className="text-gray-600">/</span> R$ {systemTarget.toLocaleString(numberLocale, { minimumFractionDigits: 2 })}
+                                  {currencySymbol} {systemProgress.toLocaleString(numberLocale, { minimumFractionDigits: 2 })} <span className="text-gray-600">/</span> {currencySymbol} {systemTarget.toLocaleString(numberLocale, { minimumFractionDigits: 2 })}
                                 </span>
                               ) : (
                                 <span className="font-bold text-gray-500 uppercase tracking-wider">
-                                  Aguardando receita mensal...
+                                  {l('Aguardando receita mensal...', 'Awaiting monthly income...')}
                                 </span>
                               )}
                               <span className="font-orbitron font-black text-amber-400">
@@ -857,7 +884,7 @@ export function Fortuna() {
                               />
                             </div>
                             <p className="text-[8px] text-gray-500 uppercase tracking-wide leading-tight mt-1">
-                              Calculado automaticamente com base na receita e nos investimentos deste mês.
+                              {l('Calculado automaticamente com base na receita e nos investimentos deste mês.', 'Automatically calculated based on this month\'s income and investments.')}
                             </p>
                           </div>
                         </div>
@@ -869,8 +896,8 @@ export function Fortuna() {
                     {/* Metas dos Usuários */}
                     {goals.length === 0 ? (
                       <div className="py-6 text-center bg-black/10 rounded-xl border border-[#1E1E26] border-dashed p-4">
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">Nenhum objetivo personalizado estabelecido.</p>
-                        <p className="text-[8px] text-gray-500 uppercase mt-1">Crie objetivos para expandir sua Sabedoria.</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">{l('Nenhum objetivo personalizado estabelecido.', 'No custom goal established.')}</p>
+                        <p className="text-[8px] text-gray-500 uppercase mt-1">{l('Crie objetivos para expandir sua Sabedoria.', 'Create goals to expand your Wisdom.')}</p>
                       </div>
                     ) : (
                       goals.map((goal) => {
@@ -893,7 +920,7 @@ export function Fortuna() {
                                     ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
                                     : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                 }`}>
-                                  {goal.type === 'recurring_monthly' ? 'Mensal Recorrente' : 'Objetivo Único'}
+                                  {goal.type === 'recurring_monthly' ? l('Mensal Recorrente', 'Monthly Recurring') : l('Objetivo Único', 'Single Goal')}
                                 </span>
                                 <h3 className={`text-xs font-bold mt-2 uppercase ${isCompleted ? 'text-amber-400 line-through opacity-85' : 'text-white'}`}>
                                   {goal.title}
@@ -917,13 +944,13 @@ export function Fortuna() {
                                     }}
                                     className="text-[9px] text-gray-500 hover:text-white uppercase font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/10 cursor-pointer"
                                   >
-                                    [EDITAR]
+                                    {l('[EDITAR]', '[EDIT]')}
                                   </button>
                                 )}
                                 <button
                                   onClick={() => handleDeleteGoal(goal.id)}
                                   className="p-1 rounded text-gray-600 hover:text-rose-400 transition-colors cursor-pointer"
-                                  title="Remover meta"
+                                  title={l('Remover meta', 'Remove goal')}
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -934,7 +961,7 @@ export function Fortuna() {
                             <div className="mt-3.5 space-y-1.5">
                               <div className="flex justify-between items-end text-[10px]">
                                 <span className="font-bold text-gray-400">
-                                  R$ {goal.current_amount.toLocaleString(numberLocale)} <span className="text-gray-600">/</span> R$ {goal.target_amount.toLocaleString(numberLocale)}
+                                  {currencySymbol} {goal.current_amount.toLocaleString(numberLocale)} <span className="text-gray-600">/</span> {currencySymbol} {goal.target_amount.toLocaleString(numberLocale)}
                                 </span>
                                 <span className="font-orbitron font-black text-amber-400">
                                   {pct.toFixed(0)}%
@@ -960,14 +987,14 @@ export function Fortuna() {
                                     type="number"
                                     value={tempGoalProgress}
                                     onChange={(e) => setTempGoalProgress(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                                    placeholder="Novo valor"
+                                    placeholder={l('Novo valor', 'New value')}
                                     className="w-full rounded border border-[#1E1E26] bg-[#0A0A0D] py-1 px-2 text-xs text-white focus:outline-none"
                                   />
                                   <button
                                     onClick={() => handleUpdateGoalProgress(goal, Number(tempGoalProgress))}
                                     className="bg-amber-600 text-white text-[9px] px-2.5 py-1.5 rounded font-black cursor-pointer uppercase tracking-widest shrink-0"
                                   >
-                                    Salvar
+                                    {l('Salvar', 'Save')}
                                   </button>
                                 </div>
                               )}
@@ -988,19 +1015,19 @@ export function Fortuna() {
               <div className="flex items-center gap-2 text-blue-400 border-b border-[#1E1E26] pb-3">
                 <Sparkles size={16} />
                 <h2 className="text-xs font-black uppercase tracking-widest font-orbitron">
-                  Provérbios da Sabedoria (WIS)
+                  {l('Provérbios da Sabedoria (WIS)', 'Proverbs of Wisdom (WIS)')}
                 </h2>
               </div>
 
               <div className="space-y-3 text-xs text-gray-400 leading-relaxed font-semibold">
                 <p>
-                  🛡️ <span className="text-white">Aporte de Proteção:</span> Investidores consistentes mitigam o poder do <span className="text-rose-400">Mercador das Dívidas</span>. Cada aporte causa dano crítico!
+                  🛡️ <span className="text-white">{l('Aporte de Proteção:', 'Protection Contribution:')}</span> {l('Investidores consistentes mitigam o poder do', 'Consistent investors mitigate the power of')} <span className="text-rose-400">{l('Mercador das Dívidas', 'Debt Merchant')}</span>. {l('Cada aporte causa dano crítico!', 'Each contribution inflicts critical damage!')}
                 </p>
                 <p>
-                  ⚖️ <span className="text-white">Taxa de Aporte Saudável:</span> Procure direcionar pelo menos <span className="text-amber-400 font-bold">20%</span> da sua receita mensal para aportes/investimentos para purificar seu fluxo energético.
+                  ⚖️ <span className="text-white">{l('Taxa de Aporte Saudável:', 'Healthy Contribution Rate:')}</span> {l('Procure direcionar pelo menos', 'Aim to direct at least')} <span className="text-amber-400 font-bold">20%</span> {l('da sua receita mensal para aportes/investimentos para purificar seu fluxo energético.', 'of your monthly income towards contributions/investments to purify your energy flow.')}
                 </p>
                 <p>
-                  🧠 <span className="text-white">Wisdom Stat:</span> O atributo de Sabedoria aumenta sua resiliência a impulsos de gratificação imediata. A Sabedoria é seu escudo!
+                  🧠 <span className="text-white">{l('Wisdom Stat:', 'Wisdom Stat:')}</span> {l('O atributo de Sabedoria aumenta sua resiliência a impulsos de gratificação imediata. A Sabedoria é seu escudo!', 'The Wisdom attribute increases your resilience to instant gratification impulses. Wisdom is your shield!')}
                 </p>
               </div>
             </div>

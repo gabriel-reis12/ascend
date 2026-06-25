@@ -40,6 +40,7 @@ import { WORKOUT_PROGRAM_PRESETS } from '@/data/workoutPresets';
 import type { WorkoutProgramPreset, PresetRoutine } from '@/data/workoutPresets';
 import { usePreferences } from '@/contexts/preferences';
 import { PremiumGate } from '@/components/premium/PremiumGate';
+import { translateUiText } from '@/lib/uiEnglish';
 
 interface Exercise {
   id: string;
@@ -118,7 +119,9 @@ const TRAINING_TABS = [
 
 export function Workouts() {
   const { language, t } = usePreferences();
-  const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => isEnglish ? en : pt;
+  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
   const dayLabels = language === 'en-US'
     ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     : ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -774,10 +777,10 @@ export function Workouts() {
   };
 
   const contextualAction = {
-    routines: { label: 'Nova Rotina', icon: Plus, className: 'bg-purple-600 hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(147,51,234,0.3)]' },
-    presets: { label: 'Importar Protocolo', icon: Upload, className: 'bg-amber-600 hover:bg-amber-500 hover:shadow-[0_0_18px_rgba(245,158,11,0.3)]' },
-    progress: { label: 'Registrar Treino', icon: Zap, className: 'bg-blue-600 hover:bg-blue-500 hover:shadow-[0_0_18px_rgba(59,130,246,0.3)]' },
-    library: { label: 'Novo Exercício', icon: Plus, className: 'bg-cyan-600 hover:bg-cyan-500 hover:shadow-[0_0_18px_rgba(6,182,212,0.3)]' },
+    routines: { label: l('Nova Rotina', 'New Routine'), icon: Plus, className: 'bg-purple-600 hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(147,51,234,0.3)]' },
+    presets: { label: l('Importar Protocolo', 'Import Protocol'), icon: Upload, className: 'bg-amber-600 hover:bg-amber-500 hover:shadow-[0_0_18px_rgba(245,158,11,0.3)]' },
+    progress: { label: l('Registrar Treino', 'Log Workout'), icon: Zap, className: 'bg-blue-600 hover:bg-blue-500 hover:shadow-[0_0_18px_rgba(59,130,246,0.3)]' },
+    library: { label: l('Novo Exercício', 'New Exercise'), icon: Plus, className: 'bg-cyan-600 hover:bg-cyan-500 hover:shadow-[0_0_18px_rgba(6,182,212,0.3)]' },
   }[activeTab];
   const ContextActionIcon = contextualAction.icon;
 
@@ -835,10 +838,10 @@ export function Workouts() {
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-[10px] font-black uppercase tracking-[0.16em] text-current" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {tab.title}
+                  {tx(tab.title)}
                 </span>
                 <span className={`mt-1 block truncate text-[9px] font-semibold ${isActive ? 'text-white/60' : 'text-gray-600 group-hover:text-gray-500'}`}>
-                  {tab.description}
+                  {tx(tab.description)}
                 </span>
               </span>
               {isActive && (
@@ -1002,7 +1005,7 @@ export function Workouts() {
                     }`}
                     style={{ fontFamily: 'Orbitron, sans-serif' }}
                   >
-                    {filter === 'Treino em Casa' ? 'Em Casa' : filter === 'Todos' ? 'Todos os Modelos' : filter}
+                    {filter === 'Treino em Casa' ? l('Em Casa', 'Home') : filter === 'Todos' ? l('Todos os Modelos', 'All Models') : tx(filter)}
                   </button>
                 ))}
               </div>
@@ -1013,11 +1016,19 @@ export function Workouts() {
                   .filter(p => presetFilter === 'Todos' || p.frequency === presetFilter)
                   .map((program) => {
                     const meta = PROGRAM_META[program.id] || {
-                      objective: 'Evolução física estruturada',
-                      level: 'Intermediário',
+                      objective: l('Evolução física estruturada', 'Structured physical progression'),
+                      level: l('Intermediário', 'Intermediate'),
                       split: program.routines.map(routine => routine.name).join(' / '),
                       attributes: 'FOR · VIT · RES',
                     };
+                    const programFrequency = tx(program.frequency);
+                    const programTitle = tx(program.title);
+                    const programDescription = tx(program.description);
+                    const programDuration = tx(program.estimatedDuration)?.replace(l(' por sessão', ' per session'), '');
+                    const programObjective = tx(meta.objective);
+                    const programLevel = tx(meta.level);
+                    const programSplit = tx(meta.split);
+                    const programAttributes = tx(meta.attributes);
                     return (
                     <div
                       key={program.id}
@@ -1026,7 +1037,7 @@ export function Workouts() {
                       <div className="relative h-36 overflow-hidden border-b border-[#1E1E26] bg-[#09090D]">
                         <img
                           src={program.image}
-                          alt={`Arte do protocolo ${program.title}`}
+                          alt={l(`Arte do protocolo ${program.title}`, `Artwork for ${programTitle} protocol`)}
                           loading="lazy"
                           decoding="async"
                           className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04]"
@@ -1038,35 +1049,35 @@ export function Workouts() {
                       <div className="flex flex-1 flex-col p-5">
                         <div className="mb-4 flex items-center justify-between gap-2">
                           <span className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-amber-400 font-orbitron">
-                            {program.frequency}
+                            {programFrequency}
                           </span>
                           <span className="rounded-md border border-white/5 bg-white/5 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-gray-500">
-                            {meta.level}
+                            {programLevel}
                           </span>
                         </div>
 
                         <h3 className="text-lg font-black uppercase italic text-white tracking-tight leading-snug" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                          {program.title}
+                          {programTitle}
                         </h3>
-                        <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-amber-400">{meta.objective}</p>
-                        <p className="mt-3 text-xs text-gray-500 leading-relaxed line-clamp-2">{program.description}</p>
+                        <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-amber-400">{programObjective}</p>
+                        <p className="mt-3 text-xs text-gray-500 leading-relaxed line-clamp-2">{programDescription}</p>
 
                         <div className="mt-4 grid grid-cols-2 gap-2">
                           <div className="rounded-xl border border-white/5 bg-black/25 p-3">
                             <CalendarDays className="h-3.5 w-3.5 text-blue-400" />
-                            <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">Duração</p>
-                            <p className="mt-1 text-[10px] font-bold text-gray-300">{program.estimatedDuration.replace(' por sessão', '')}</p>
+                            <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">{l('Duração', 'Duration')}</p>
+                            <p className="mt-1 text-[10px] font-bold text-gray-300">{programDuration}</p>
                           </div>
                           <div className="rounded-xl border border-white/5 bg-black/25 p-3">
                             <Gauge className="h-3.5 w-3.5 text-purple-400" />
-                            <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">Atributos</p>
-                            <p className="mt-1 text-[10px] font-bold text-purple-300">{meta.attributes}</p>
+                            <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-gray-600">{l('Atributos', 'Attributes')}</p>
+                            <p className="mt-1 text-[10px] font-bold text-purple-300">{programAttributes}</p>
                           </div>
                         </div>
 
                         <div className="mt-4 rounded-xl border border-[#1E1E26] bg-black/20 p-3">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">Divisão semanal</p>
-                          <p className="mt-1 text-[10px] font-semibold leading-relaxed text-gray-400">{meta.split}</p>
+                          <p className="text-[8px] font-black uppercase tracking-widest text-gray-600">{l('Divisão semanal', 'Weekly split')}</p>
+                          <p className="mt-1 text-[10px] font-semibold leading-relaxed text-gray-400">{programSplit}</p>
                         </div>
 
                       <div className="mt-auto flex gap-2 pt-5">
@@ -1079,7 +1090,7 @@ export function Workouts() {
                           style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          Visualizar
+                          {l('Visualizar', 'View')}
                         </button>
                         <button
                           onClick={() => handleImportProgram(program)}
@@ -1088,7 +1099,7 @@ export function Workouts() {
                           style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
                           <Upload className="h-3.5 w-3.5" />
-                          {loading && isImportingPreset ? 'Importando...' : 'Importar'}
+                          {loading && isImportingPreset ? l('Importando...', 'Importing...') : l('Importar', 'Import')}
                         </button>
                       </div>
                     </div>
@@ -2297,23 +2308,23 @@ export function Workouts() {
                   </div>
                   <div>
                     <h2 className="text-xl font-black uppercase italic text-white tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                      {selectedPreset.title}
+                      {tx(selectedPreset.title)}
                     </h2>
-                    <p className="text-xs font-black uppercase tracking-widest text-amber-500 font-orbitron">{selectedPreset.frequency} · {selectedPreset.estimatedDuration}</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-500 font-orbitron">{tx(selectedPreset.frequency)} · {tx(selectedPreset.estimatedDuration)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  {selectedPreset.description}
+                  {tx(selectedPreset.description)}
                 </p>
 
                 <div className="space-y-6">
                   {selectedPreset.routines.map((routine, rIdx) => (
                     <div key={rIdx} className="space-y-3">
                       <h3 className="text-xs font-black uppercase tracking-[0.2em] text-amber-400 font-orbitron">
-                        {routine.name}
+                        {tx(routine.name)}
                       </h3>
                       <div className="space-y-2">
                         {routine.exercises.map((ex, exIdx) => (
@@ -2323,15 +2334,15 @@ export function Workouts() {
                                 <span className="text-xs font-bold font-orbitron">{exIdx + 1}</span>
                               </div>
                               <div>
-                                <p className="text-xs font-bold text-white uppercase">{ex.name}</p>
+                                <p className="text-xs font-bold text-white uppercase">{tx(ex.name)}</p>
                                 <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">
-                                  {ex.muscle_group} · {ex.category}
+                                  {tx(ex.muscle_group)} · {tx(ex.category)}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest font-mono">
-                                {ex.weight_kg > 0 ? `${ex.weight_kg} KG` : 'Peso Corporal'}
+                                {ex.weight_kg > 0 ? `${ex.weight_kg} KG` : l('Peso Corporal', 'Bodyweight')}
                               </span>
                               <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest font-mono">
                                 {ex.sets}S x {ex.reps}R
@@ -2351,7 +2362,7 @@ export function Workouts() {
                   className="flex-1 rounded-xl border border-[#1E1E26] bg-white/5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 transition-all hover:bg-white/10 hover:text-white"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  Voltar
+                  {l('Voltar', 'Back')}
                 </button>
                 <button 
                   onClick={() => handleImportProgram(selectedPreset)}
@@ -2359,7 +2370,7 @@ export function Workouts() {
                   className="flex-1 rounded-xl bg-amber-600 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-amber-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
-                  {loading ? 'Importando...' : 'Importar Programa Completo'}
+                  {loading ? l('Importando...', 'Importing...') : l('Importar Programa Completo', 'Import Full Program')}
                 </button>
               </div>
             </motion.div>

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, X, LayoutGrid, Skull, Coins, Moon } from 'lucide-react';
 import { useEffect, useRef } from 'react';
@@ -27,6 +27,7 @@ const navItems = [
 
 export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const state = useHunterStore();
   const { signOut } = useAuth();
   const { t } = usePreferences();
@@ -56,6 +57,11 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     : Math.min(100, (state.xp / Math.max(state.xpRequired, 1)) * 100);
   const hunterName = state.username || state.fullName || 'Hunter';
   const hunterClass = state.hunterClass || t('common.classUndefined');
+  const handleSignOut = async () => {
+    await signOut();
+    onClose();
+    navigate('/login', { replace: true });
+  };
 
   const classGlowMap: Record<string, string> = {
     mage: 'glow-mage',
@@ -169,7 +175,8 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
               </div>
 
               <button
-                onClick={() => void signOut()}
+                type="button"
+                onClick={() => void handleSignOut()}
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
               >
                 <LogOut size={18} />
