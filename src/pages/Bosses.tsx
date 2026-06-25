@@ -352,8 +352,11 @@ export function Bosses() {
       ) : activeBattle && bossDef ? (
         ['boss_05', 'boss_06', 'boss_07'].includes(activeBattle.boss_id) && !hunterStore.isPremium ? (
           <PremiumGate
-            title={`Invasão de Fenda Rank S: ${bossDef.name}`}
-            description="As fendas finais dos caçadores de alto nível são classificadas como Rank S e estão seladas. Para lutar contra os últimos 3 chefes da campanha e purificar sua mente, desperte seu potencial premium."
+            title={l(`Invasão de Fenda Rank S: ${bossDef.name}`, `Rank S Gate Invasion: ${localizedBoss?.name || bossDef.name}`)}
+            description={l(
+              'As fendas finais dos caçadores de alto nível são classificadas como Rank S e estão seladas. Para lutar contra os últimos 3 chefes da campanha e purificar sua mente, desperte seu potencial premium.',
+              'The final gates for high-level hunters are classified as Rank S and remain sealed. To fight the last 3 campaign bosses and purify your mind, awaken your premium potential.'
+            )}
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

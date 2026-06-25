@@ -118,6 +118,7 @@ const TRAINING_TABS = [
 
 export function Workouts() {
   const { language, t } = usePreferences();
+  const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
   const dayLabels = language === 'en-US'
     ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     : ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -1296,8 +1297,11 @@ export function Workouts() {
 
           {activeTab === 'progress' && (
             <PremiumGate
-              title="Histórico e Evolução Físicos Restritos"
-              description="O painel de evolução corporal, análise de carga e histórico detalhado de treinos realizados requer ativação de assinatura premium."
+              title={l('Histórico e Evolução Físicos Restritos', 'Physical History & Progression Locked')}
+              description={l(
+                'O painel de evolução corporal, análise de carga e histórico detalhado de treinos realizados requer ativação de assinatura premium.',
+                'Body progression, load analysis, and detailed workout history require an active premium subscription.'
+              )}
             >
               <div className="space-y-6">
                 <WorkoutProgress />

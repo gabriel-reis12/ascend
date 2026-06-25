@@ -29,3 +29,4 @@ Documento detalhado de requisitos extraídos do `Features.txt`.
 - Sistema de login e registro para que múltiplos usuários possam usar o app na mesma instalação/servidor, mantendo dados isolados.
 - O idioma deve ser selecionável antes da autenticação e persistir entre login, onboarding, tutorial e módulos internos.
 - Todas as telas, modais, placeholders, mensagens de erro e rótulos de acessibilidade devem acompanhar PT-BR ou EN-US.
+- Frases compostas com contadores, status, paywalls e dados vindos de módulos ativos devem possuir tradução explícita por contexto, evitando misturas como termos em inglês dentro de frases em português ou vice-versa.

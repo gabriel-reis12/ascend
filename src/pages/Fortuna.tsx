@@ -49,6 +49,7 @@ interface FinancialGoal {
 
 export function Fortuna() {
   const { language } = usePreferences();
+  const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
   const numberLocale = language === 'en-US' ? 'en-US' : 'pt-BR';
   const { user } = useAuth();
   const hunterStore = useHunterStore();
@@ -391,8 +392,11 @@ export function Fortuna() {
 
   return (
     <PremiumGate
-      title="Módulo da Fortuna Restrito"
-      description="O gerenciamento financeiro e controle do fluxo de moedas são privilégios de caçadores de alto nível. Desperte o Premium para acessar a Fortuna e derrotar o Mercador das Dívidas."
+      title={l('Módulo da Fortuna Restrito', 'Fortune Module Locked')}
+      description={l(
+        'O gerenciamento financeiro e controle do fluxo de moedas são privilégios de caçadores de alto nível. Desperte o Premium para acessar a Fortuna e derrotar o Mercador das Dívidas.',
+        'Financial management and coin-flow control are privileges for high-level hunters. Awaken Premium to access Fortune and defeat the Debt Merchant.'
+      )}
     >
       <div className="space-y-8 pb-12">
         {/* Cabeçalho */}

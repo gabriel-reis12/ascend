@@ -482,7 +482,9 @@ function ManageQuestRow({
 }
 
 export function Quests() {
-  const { t } = usePreferences();
+  const { language, t } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => isEnglish ? en : pt;
   const { 
     activeHabits, 
     habits, 
@@ -810,25 +812,29 @@ export function Quests() {
             <div className="space-y-2">
               <h3 className="flex items-center gap-2 text-sm font-bold text-gray-300">
                 <ShieldCheck size={14} className="text-blue-500" />
-                Status de Hoje
+                {l('Status de Hoje', 'Today Status')}
               </h3>
               <p className="text-2xl font-black tracking-tight text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {totalCompleted} de {totalMissions} missões concluídas
+                {isEnglish
+                  ? `${totalCompleted} of ${totalMissions} ${totalMissions === 1 ? 'quest' : 'quests'} completed`
+                  : `${totalCompleted} de ${totalMissions} missões concluídas`}
               </p>
               <p className="text-sm text-gray-400">
                 {progressPct === 100
-                  ? 'Sistema sincronizado. Todas as quests do ciclo foram concluídas.'
-                  : `${Math.round(progressPct)}% da missão diária. O Sistema aguarda sua próxima ação.`}
+                  ? l('Sistema sincronizado. Todas as quests do ciclo foram concluídas.', 'System synchronized. Every quest in this cycle is complete.')
+                  : isEnglish
+                    ? `${Math.round(progressPct)}% of daily quests complete. The System awaits your next action.`
+                    : `${Math.round(progressPct)}% da missão diária. O Sistema aguarda sua próxima ação.`}
               </p>
             </div>
             
             <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 px-5 py-4 sm:text-right">
-              <p className="text-sm font-semibold text-gray-400">XP acumulado hoje</p>
+              <p className="text-sm font-semibold text-gray-400">{l('XP acumulado hoje', 'XP earned today')}</p>
               <p className="mt-1 text-2xl font-black text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.22)]" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 +{hunterProfile.xpGainedToday} / {DAILY_COMMON_XP_EFFECTIVE_MAX} XP
               </p>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                XP bônus não consome o limite diário
+                  {l('XP bônus não consome o limite diário', 'Bonus XP does not consume the daily limit')}
               </p>
             </div>
           </div>
@@ -1040,10 +1046,10 @@ export function Quests() {
                           </div>
                           <div>
                             <h2 className="flex items-center gap-2 text-base font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                              Fenda de Anomalia <span className="text-cyan-400">IA</span>
+                              {l('Fenda de Anomalia', 'Anomaly Gate')} <span className="text-cyan-400">{l('IA', 'AI')}</span>
                             </h2>
                             <p className="text-xs font-medium text-gray-500">
-                              Gere uma quest bônus diária focada em um domínio.
+                              {l('Gere uma quest bônus diária focada em um domínio.', 'Generate a daily bonus quest focused on one domain.')}
                             </p>
                           </div>
                         </div>
@@ -1056,13 +1062,13 @@ export function Quests() {
                               : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 animate-pulse'
                           }`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${bonusQuestToday ? 'bg-purple-400' : 'bg-cyan-400 animate-ping'}`} />
-                            {bonusQuestToday ? 'Portal Fechado' : 'Fenda Aberta'}
+                            {bonusQuestToday ? l('Portal Fechado', 'Portal Closed') : l('Fenda Aberta', 'Gate Open')}
                           </span>
                           <button
                             type="button"
                             onClick={() => setFissureExpanded(current => !current)}
                             className="flex size-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-colors hover:text-white"
-                            aria-label={fissureExpanded ? 'Recolher Fenda IA' : 'Expandir Fenda IA'}
+                            aria-label={fissureExpanded ? l('Recolher Fenda IA', 'Collapse AI Gate') : l('Expandir Fenda IA', 'Expand AI Gate')}
                           >
                             <ChevronDown className={`size-4 transition-transform ${fissureExpanded ? 'rotate-180' : ''}`} />
                           </button>
@@ -1083,7 +1089,7 @@ export function Quests() {
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                               <span className="text-[9px] font-black uppercase tracking-widest text-purple-400 block mb-1">
-                                Anomalia Detectada Hoje:
+                                {l('Anomalia Detectada Hoje:', 'Anomaly Detected Today:')}
                               </span>
                               <h4 className="text-base font-black text-white uppercase tracking-wide" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                                 {bonusQuestToday.title.replace('[BÔNUS IA] ', '')}
@@ -1094,7 +1100,7 @@ export function Quests() {
                                 ? 'bg-green-500/20 text-green-400 border-green-500/30' 
                                 : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse'
                             }`}>
-                              {bonusQuestToday.completed ? 'COMPLETADA' : 'EM EXECUÇÃO'}
+                              {bonusQuestToday.completed ? l('COMPLETADA', 'COMPLETED') : l('EM EXECUÇÃO', 'IN PROGRESS')}
                             </span>
                           </div>
 

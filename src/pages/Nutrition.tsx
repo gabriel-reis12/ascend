@@ -37,6 +37,7 @@ import type { MealPlan } from '@/hooks/useMealPlans';
 import { calculateMealFromTaco } from '@/lib/taco';
 import { usePreferences } from '@/contexts/preferences';
 import { PremiumGate } from '@/components/premium/PremiumGate';
+import { translateUiText } from '@/lib/uiEnglish';
 
 interface FoodLog {
   id: string;
@@ -163,6 +164,9 @@ export function Nutrition() {
   const { user } = useAuth();
   const hunterProfile = useHunterStore();
   const { language, t } = usePreferences();
+  const isEnglish = language === 'en-US';
+  const l = (pt: string, en: string) => isEnglish ? en : pt;
+  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
 
   const [activeTab, setActiveTab] = useState<'diario' | 'cardapios'>('diario');
   const [subTab, setSubTab] = useState<'codex' | 'library'>('codex');
@@ -1088,8 +1092,11 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
               {/* Conteúdo: Códex da Alimentação (IA) */}
               {subTab === 'codex' && (
                 <PremiumGate
-                  title="Códex de Alimentação Restrito"
-                  description="A calibração e análise de nutrientes via rede neural avançada (IA) requer ativação de assinatura premium."
+                  title={l('Códex de Alimentação Restrito', 'Food Codex Locked')}
+                  description={l(
+                    'A calibração e análise de nutrientes via rede neural avançada (IA) requer ativação de assinatura premium.',
+                    'Nutrient calibration and analysis through the advanced neural network (AI) require an active premium subscription.'
+                  )}
                 >
                   <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-purple-500/5 blur-3xl" />
@@ -1517,7 +1524,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
               <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-lg">
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="text-lg font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    CONSUMO DIÁRIO
+                    {l('CONSUMO DIÁRIO', 'DAILY CONSUMPTION')}
                   </h2>
                   <History className="size-4 text-purple-500" />
                 </div>
@@ -1528,14 +1535,14 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                       <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
                         <UtensilsCrossed className="size-5" />
                       </div>
-                      <p className="mt-4 text-sm font-bold text-white">O Sistema ainda não detectou nutrientes hoje.</p>
-                      <p className="mt-2 text-[13px] leading-relaxed text-gray-500">Registre uma refeição para iniciar sua recuperação de mana.</p>
+                      <p className="mt-4 text-sm font-bold text-white">{l('O Sistema ainda não detectou nutrientes hoje.', 'The System has not detected nutrients today.')}</p>
+                      <p className="mt-2 text-[13px] leading-relaxed text-gray-500">{l('Registre uma refeição para iniciar sua recuperação de mana.', 'Log a meal to begin your mana recovery.')}</p>
                       <button
                         type="button"
                         onClick={() => setSubTab('codex')}
                         className="mt-5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(168,85,247,0.25)]"
                       >
-                        Registrar refeição
+                        {l('Registrar refeição', 'Log meal')}
                       </button>
                     </div>
                   ) : (
@@ -1567,9 +1574,9 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <span className="rounded-md border border-purple-500/15 bg-purple-500/10 px-2 py-1 text-xs font-semibold text-purple-300">
-                                  {log.meal_type}
+                                  {tx(log.meal_type)}
                                 </span>
-                                <p className="mt-2 truncate text-sm font-bold text-white">{food?.name || 'Alimento indisponível'}</p>
+                                <p className="mt-2 truncate text-sm font-bold text-white">{tx(food?.name) || l('Alimento indisponível', 'Food unavailable')}</p>
                               </div>
                               <ChevronDown className={`mt-1 size-4 shrink-0 text-gray-600 transition-transform ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
                             </div>
@@ -1579,7 +1586,7 @@ Converta unidades caseiras (unidade, fatia, colher, concha, xícara) para gramas
                               </p>
                               <p className="flex items-center gap-1 text-xs font-medium text-gray-500">
                                 <Clock className="size-3" />
-                                {new Date(log.logged_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(log.logged_at).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
                           </button>

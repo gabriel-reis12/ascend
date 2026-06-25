@@ -20,6 +20,15 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-24 — Correção de Traduções Compostas em Telas Ativas
+- Corrigidas traduções híbridas em inglês nas telas de Missões, Nutrição, Treinos, Fortuna, Bosses e paywalls premium.
+- `PremiumGate` passou a respeitar o idioma selecionado internamente, incluindo título, descrição, benefícios, preço, CTA, mensagens de erro e nota do Stripe.
+- O status diário de Missões agora renderiza contagem/pluralização completa em inglês, sem depender da ponte automática de DOM.
+- A Fenda de Anomalia IA recebeu textos explícitos em EN-US para título, descrição, estado do portal e status da anomalia.
+- O consumo diário de Nutrição agora traduz cabeçalhos, vazio, CTA, tipo de refeição, nome de alimento e horário pelo locale selecionado.
+- Paywalls de Treinos, Nutrição, Fortuna e Bosses passaram a enviar títulos e descrições naturais em EN-US.
+- Validações executadas: `npm.cmd run audit:i18n` e `npm.cmd run build`.
+
 ### 2026-06-23 — Integração do Sistema de Assinaturas Premium com Stripe
 - **Banco de Dados (Supabase)**: Criada a migration `update_schema_stripe.sql` adicionando campos `is_premium`, `stripe_customer_id` e `stripe_subscription_id` na tabela `profiles` e executados os comandos SQL no banco de produção.
 - **Supabase Edge Functions**: Desenvolvidos e implantados com sucesso os endpoints `stripe-checkout` (para iniciar sessões de checkout seguras), `stripe-portal` (para redirecionar o usuário ao Customer Portal de autogestão do Stripe) e `stripe-webhook` (para escutar eventos de pagamento/cancelamento do Stripe e retransmiti-los ao banco).
