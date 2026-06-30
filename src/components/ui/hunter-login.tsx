@@ -146,9 +146,11 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
       onMouseMove={handleMouseMove}
     >
       <img
-        src="/Login Screen.jpeg"
+        src="/optimized/Login Screen.jpg"
         alt=""
         aria-hidden="true"
+        decoding="async"
+        fetchPriority="high"
         className="absolute inset-0 h-full w-full object-cover object-[62%_center] opacity-35 blur-[1px] lg:hidden"
       />
 
@@ -378,8 +380,10 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
 
         <aside className="relative hidden min-h-screen overflow-hidden lg:block">
           <img
-            src="/Login Screen.jpeg"
+            src="/optimized/Login Screen.jpg"
             alt="Hunter em uma fenda de energia do Ascend System"
+            decoding="async"
+            fetchPriority="high"
             className="absolute inset-0 h-full w-full scale-[1.03] object-cover object-center"
           />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_46%_40%,rgba(34,211,238,0.05),transparent_26%),linear-gradient(90deg,#03040a_0%,rgba(3,4,10,0.86)_11%,rgba(3,4,10,0.18)_38%,rgba(3,4,10,0.08)_100%)]" />

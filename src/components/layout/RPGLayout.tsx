@@ -38,6 +38,7 @@ export function RPGLayout() {
         setSupabaseError(t('errors.supabaseKeysMissing'));
         return;
       }
+      if (!import.meta.env.DEV) return;
       try {
         const { error } = await supabase.from('exercises').select('id').limit(1);
         if (error) {
@@ -74,8 +75,9 @@ export function RPGLayout() {
         <div className="flex items-center gap-3 px-6 py-8">
           <div className="flex size-[52px] shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.4)]">
             <img
-              src="/Icon 2.png"
+              src="/optimized/Icon 2.png"
               alt="ASCEND"
+              decoding="async"
               className="size-[52px] object-cover"
             />
           </div>
@@ -180,8 +182,9 @@ export function RPGLayout() {
             <Menu size={24} />
           </button>
           <img
-            src="/Icon 2.png"
+            src="/optimized/Icon 2.png"
             alt="ASCEND"
+            decoding="async"
             className="h-[47px] w-[47px] object-cover rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.5)]"
           />
           <div className="flex items-center gap-2">

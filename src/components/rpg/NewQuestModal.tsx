@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Palette } from 'lucide-react';
+import { X, Plus, Palette, CalendarDays, Clock3, StickyNote } from 'lucide-react';
 import type { CreateTaskInput, Task } from '@/hooks/useTasks';
 import { usePreferences } from '@/contexts/preferences';
 import { translateUiText } from '@/lib/uiEnglish';
@@ -30,11 +30,11 @@ interface NewQuestModalProps {
 
 const DEFAULTS: CreateTaskInput = {
   title: '',
-  category: '',
+  category: 'Compromisso',
   category_color: '#7C3AED',
-  xp_reward: 25,
+  xp_reward: 5,
   stat_target: null,
-  stat_reward: 1,
+  stat_reward: 0,
 };
 
 export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
@@ -43,15 +43,31 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
   const l = (pt: string, en: string) => (isEnglish ? en : pt);
   const tx = (value: string) => (isEnglish ? translateUiText(value) : value);
   const [form, setForm] = useState<CreateTaskInput>(DEFAULTS);
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
+  const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.category.trim()) return;
+    if (!form.title.trim()) return;
     setLoading(true);
-    await onSubmit({ ...form, title: form.title.trim(), category: form.category.trim() });
+    await onSubmit({
+      ...form,
+      title: form.title.trim(),
+      category: form.category.trim() || 'Missao Unica',
+      single_meta: {
+        kind: 'single',
+        due_date: dueDate || undefined,
+        due_time: dueTime || undefined,
+        note: note.trim() || undefined,
+      },
+    });
     setLoading(false);
     setForm(DEFAULTS);
+    setDueDate('');
+    setDueTime('');
+    setNote('');
     onClose();
   };
 
@@ -83,7 +99,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                 className="text-lg font-bold text-[#E2E8F0]"
                 style={{ fontFamily: 'Orbitron, sans-serif' }}
               >
-                {l('Nova Quest', 'New Quest')}
+                {l('Missão Única', 'One-Time Quest')}
               </h2>
               <button
                 onClick={onClose}
@@ -121,6 +137,48 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                   placeholder="Ex: Estudo, Treino, Hábito..."
                   required
                   className="w-full rounded-xl border border-[#38384A] bg-[#0F0F13] px-3 py-2.5 text-sm text-[#E2E8F0] placeholder-[#94A3B8]/50 outline-none transition-colors focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/30"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
+                    <CalendarDays size={12} />
+                    {l('Data', 'Date')}
+                  </label>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full rounded-xl border border-[#38384A] bg-[#0F0F13] px-3 py-2.5 text-sm text-[#E2E8F0] outline-none transition-colors focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
+                    <Clock3 size={12} />
+                    {l('Hora', 'Time')}
+                  </label>
+                  <input
+                    type="time"
+                    value={dueTime}
+                    onChange={(e) => setDueTime(e.target.value)}
+                    className="w-full rounded-xl border border-[#38384A] bg-[#0F0F13] px-3 py-2.5 text-sm text-[#E2E8F0] outline-none transition-colors focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/30"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
+                  <StickyNote size={12} />
+                  {l('Nota opcional', 'Optional note')}
+                </label>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  placeholder={l('Ex: pauta, link, endereco ou lembrete rapido', 'Ex: agenda, link, address, or quick reminder')}
+                  className="w-full resize-none rounded-xl border border-[#38384A] bg-[#0F0F13] px-3 py-2.5 text-sm text-[#E2E8F0] placeholder-[#94A3B8]/50 outline-none transition-colors focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]/30"
                 />
               </div>
 
@@ -162,7 +220,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                   </label>
                   <input
                     type="number"
-                    min={1}
+                    min={5}
                     max={50}
                     value={form.xp_reward}
                     onChange={(e) => set('xp_reward', Number(e.target.value))}
@@ -193,7 +251,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
               {/* Submit */}
               <motion.button
                 type="submit"
-                disabled={loading || !form.title.trim() || !form.category.trim()}
+                disabled={loading || !form.title.trim()}
                 whileTap={{ scale: 0.97 }}
                 className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#7C3AED] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#7C3AED]/30 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -202,7 +260,7 @@ export function NewQuestModal({ open, onClose, onSubmit }: NewQuestModalProps) {
                 ) : (
                   <Plus size={16} />
                 )}
-                {loading ? l('Criando...', 'Creating...') : l('Criar Quest', 'Create Quest')}
+                {loading ? l('Criando...', 'Creating...') : l('Criar Missão Única', 'Create One-Time Quest')}
               </motion.button>
             </form>
           </motion.div>

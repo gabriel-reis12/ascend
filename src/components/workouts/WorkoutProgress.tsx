@@ -5,10 +5,8 @@ import {
   Award, 
   Activity, 
   Calendar,
-  ChevronRight,
   Flame,
   Zap,
-  Target,
   Trophy,
   Dumbbell,
   BarChart3
@@ -45,12 +43,6 @@ export function WorkoutProgress() {
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVolume, setTotalVolume] = useState(0);
-
-  useEffect(() => {
-    if (user) {
-      fetchProgress();
-    }
-  }, [user]);
 
   async function fetchProgress() {
     try {
@@ -105,6 +97,12 @@ export function WorkoutProgress() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (user) {
+      fetchProgress();
+    }
+  }, [user]);
 
   if (loading) {
     return (

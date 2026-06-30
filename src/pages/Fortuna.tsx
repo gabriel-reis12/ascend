@@ -2,16 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
-  TrendingUp, 
-  TrendingDown, 
   Coins, 
   Trash2, 
   History, 
   Sparkles, 
-  Lock, 
   Target, 
-  Briefcase, 
-  ShoppingCart, 
   ShieldAlert,
   ArrowUpRight,
   ArrowDownLeft,
@@ -111,6 +106,15 @@ export function Fortuna() {
     wisdom: number;
   } | null>(null);
 
+  const [noTxToday, setNoTxToday] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const todayYYYYMMDD = new Date().toLocaleDateString('en-CA');
+    const noTxKey = `ascend_finance_no_tx_${user.id}_${todayYYYYMMDD}`;
+    setNoTxToday(localStorage.getItem(noTxKey) === 'true');
+  }, [user, successAlert]);
+
   const categoriesByType = {
     income: ['Salário', 'Freelance', 'Rendimentos', 'Vendas', 'Outros'],
     expense: ['Moradia', 'Alimentação', 'Transporte', 'Saúde', 'Lazer', 'Assinaturas', 'Outros'],
@@ -186,7 +190,7 @@ export function Fortuna() {
       if (insertErr) throw insertErr;
 
       // Ganhar XP e Sabedoria
-      let xpGained = 10;
+      const xpGained = 10;
       let wisGained = 0;
 
       if (type === 'investment') {
@@ -224,6 +228,55 @@ export function Fortuna() {
       setError(err.message || 'Erro ao registrar transação no Supabase.');
     } finally {
       setFormLoading(false);
+    }
+  }
+
+  async function handleNoTransactionsToday() {
+    if (!user) return;
+    const todayYYYYMMDD = new Date().toLocaleDateString('en-CA');
+    const noTxKey = `ascend_finance_no_tx_${user.id}_${todayYYYYMMDD}`;
+    const isCurrentlyNoTx = localStorage.getItem(noTxKey) === 'true';
+
+    setError(null);
+    setSuccessAlert(null);
+
+    if (isCurrentlyNoTx) {
+      localStorage.removeItem(noTxKey);
+      setNoTxToday(false);
+      const xpKey = `ascend_finance_no_tx_xp_${user.id}_${todayYYYYMMDD}`;
+      if (localStorage.getItem(xpKey) === 'true') {
+        await hunterStore.addXp(-10, user.id, {
+          eventId: `finance-no-tx:${todayYYYYMMDD}`,
+        });
+        localStorage.removeItem(xpKey);
+      }
+    } else {
+      const { data } = await supabase
+        .from('financial_logs')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', todayYYYYMMDD);
+      if (data && data.length > 0) {
+        setError(l('Você já possui transações registradas hoje!', 'You already have transactions registered today!'));
+        return;
+      }
+
+      localStorage.setItem(noTxKey, 'true');
+      setNoTxToday(true);
+      const xpKey = `ascend_finance_no_tx_xp_${user.id}_${todayYYYYMMDD}`;
+      if (localStorage.getItem(xpKey) !== 'true') {
+        await hunterStore.addXp(10, user.id, {
+          eventId: `finance-no-tx:${todayYYYYMMDD}`,
+        });
+        localStorage.setItem(xpKey, 'true');
+        setSuccessAlert({
+          desc: l('Confirmado: Sem transações hoje', 'Confirmed: No transactions today'),
+          amount: 0,
+          type: 'income',
+          xp: 10,
+          wisdom: 0
+        });
+      }
     }
   }
 
@@ -405,7 +458,6 @@ export function Fortuna() {
     return acc;
   }, { income: 0, expense: 0, investment: 0 });
 
-  const totalOutflow = monthlySummary.expense + monthlySummary.investment;
   const savingsRate = monthlySummary.income > 0 
     ? ((monthlySummary.income - monthlySummary.expense) / monthlySummary.income) * 100 
     : 0;
@@ -582,6 +634,19 @@ export function Fortuna() {
                   style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
                   {formLoading ? l('Registrando no Codex...', 'Recording in Codex...') : l('Registrar Transação', 'Log Transaction')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNoTransactionsToday}
+                  className={`w-full rounded-xl font-black uppercase tracking-widest text-xs py-3.5 px-4 border transition-all cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2 mt-2 ${
+                    noTxToday 
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' 
+                      : 'bg-transparent border-[#1E1E26] text-gray-400 hover:bg-white/5'
+                  }`}
+                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                >
+                  {noTxToday ? l('Desfazer \'Sem Transações\'', 'Undo \'No Transactions\'') : l('Nenhuma Transação Hoje', 'No Transactions Today')}
                 </button>
               </form>
 

@@ -7,7 +7,6 @@ import {
   History, 
   TrendingUp, 
   ChevronRight,
-  Filter,
   CheckCircle2,
   X,
   LayoutGrid,
@@ -26,8 +25,7 @@ import {
   Upload,
   CalendarDays,
   Gauge,
-  Trophy,
-  Flame
+  Trophy
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,7 +35,7 @@ import { WorkoutProgress } from '@/components/workouts/WorkoutProgress';
 import { cn } from '@/lib/utils';
 import { localDateString } from '@/lib/date';
 import { WORKOUT_PROGRAM_PRESETS } from '@/data/workoutPresets';
-import type { WorkoutProgramPreset, PresetRoutine } from '@/data/workoutPresets';
+import type { WorkoutProgramPreset } from '@/data/workoutPresets';
 import { usePreferences } from '@/contexts/preferences';
 import { PremiumGate } from '@/components/premium/PremiumGate';
 import { translateUiText } from '@/lib/uiEnglish';
@@ -229,7 +227,6 @@ export function Workouts() {
   
   // Management Search State
   const [routineExSearch, setRoutineExSearch] = useState('');
-  const [isAddingExercise, setIsAddingExercise] = useState(false);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -605,7 +602,7 @@ export function Workouts() {
         sab: 6
       };
 
-      let currentExercises = [...exercises];
+      const currentExercises = [...exercises];
 
       for (const r of program.routines) {
         const numericDays = r.scheduled_days.map(d => dayMap[d.toLowerCase()]).filter(v => v !== undefined);
@@ -624,7 +621,7 @@ export function Workouts() {
 
         for (let i = 0; i < r.exercises.length; i++) {
           const ex = r.exercises[i];
-          let matchedExercise = currentExercises.find(
+          const matchedExercise = currentExercises.find(
             e => e.name.toLowerCase().trim() === ex.name.toLowerCase().trim()
           );
 
@@ -2290,6 +2287,8 @@ export function Workouts() {
                   src={selectedPreset.image}
                   alt=""
                   aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 h-full w-full object-cover object-center opacity-35"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F13] via-[#0F0F13]/85 to-[#0F0F13]/35" />

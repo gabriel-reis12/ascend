@@ -27,7 +27,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'ppl-3x',
     title: 'Push Pull Legs 3x',
-    image: '/Treinos/Push Pull Legs 3x.png',
+    image: '/optimized/Treinos/Push Pull Legs 3x.jpg',
     frequency: '3x na semana',
     description: 'A divisão clássica e mais eficiente para hipertrofia e força. Ideal para quem treina segundas, quartas e sextas.',
     estimatedDuration: '50-60 min por sessão',
@@ -70,7 +70,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'abcd-4x',
     title: 'ABCD Hipertrofia',
-    image: '/Treinos/ABCD Hipertrofia.png',
+    image: '/optimized/Treinos/ABCD Hipertrofia.jpg',
     frequency: '4x na semana',
     description: 'Divisão que permite maior volume semanal por grupo muscular e maior tempo de descanso. Excelente para intermediários.',
     estimatedDuration: '45-55 min por sessão',
@@ -124,7 +124,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'abcde-5x',
     title: 'ABCDE Clássico',
-    image: '/Treinos/ABCDE Clássico.png',
+    image: '/optimized/Treinos/ABCDE Clássico.jpg',
     frequency: '5x na semana',
     description: 'Foco em altíssima intensidade por grupo muscular com uma sessão por dia de segunda a sexta. Recomendado para caçadores avançados.',
     estimatedDuration: '40-50 min por sessão',
@@ -186,7 +186,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'ppl-6x',
     title: 'Push Pull Legs 6x',
-    image: '/Treinos/Push Pull Legs 6x.png',
+    image: '/optimized/Treinos/Push Pull Legs 6x.jpg',
     frequency: '6x na semana',
     description: 'Volume e frequência máximos para atletas com rotina de treino dedicada. Duplica a divisão PPL cobrindo de segunda a sábado.',
     estimatedDuration: '50-60 min por sessão',
@@ -262,7 +262,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'casa-3x',
     title: 'Treino em Casa',
-    image: '/Treinos/Treino em Casa.png',
+    image: '/optimized/Treinos/Treino em Casa.jpg',
     frequency: 'Treino em Casa',
     description: 'Programa completo utilizando apenas o peso do corpo. Excelente para manter a forma e consistência de qualquer lugar.',
     estimatedDuration: '35-45 min por sessão',
@@ -302,7 +302,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'full-body-3x',
     title: 'Full Body 3x',
-    image: '/Treinos/Full Body 3x.png',
+    image: '/optimized/Treinos/Full Body 3x.jpg',
     frequency: '3x na semana',
     description: 'Treino completo de corpo inteiro com progressão simples, alta frequência e excelente recuperação.',
     estimatedDuration: '45-55 min por sessão',
@@ -342,7 +342,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'upper-lower-4x',
     title: 'Upper/Lower 4x',
-    image: '/Treinos/UpperLower 4x.png',
+    image: '/optimized/Treinos/UpperLower 4x.jpg',
     frequency: '4x na semana',
     description: 'Alternância eficiente entre membros superiores e inferiores para força e hipertrofia equilibradas.',
     estimatedDuration: '50-60 min por sessão',
@@ -392,7 +392,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'forca-base-3x',
     title: 'Força Base 3x',
-    image: '/Treinos/Força Base 3x.png',
+    image: '/optimized/Treinos/Força Base 3x.jpg',
     frequency: '3x na semana',
     description: 'Fundamentos de força com foco nos grandes levantamentos e progressão consistente de carga.',
     estimatedDuration: '55-65 min por sessão',
@@ -429,7 +429,7 @@ export const WORKOUT_PROGRAM_PRESETS: WorkoutProgramPreset[] = [
   {
     id: 'recomposicao-4x',
     title: 'Recomposição Corporal',
-    image: '/Treinos/Recomposição Corporal.png',
+    image: '/optimized/Treinos/Recomposição Corporal.jpg',
     frequency: '4x na semana',
     description: 'Combina musculação e condicionamento para aumentar massa magra enquanto melhora o gasto energético.',
     estimatedDuration: '45-60 min por sessão',

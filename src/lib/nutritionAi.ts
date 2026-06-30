@@ -2,6 +2,7 @@ import { findTacoFood, repairMojibake } from '@/lib/taco';
 import type { Food } from '@/types/nutrition';
 
 export type NutritionAiSource = 'taco' | 'catalog' | 'estimate';
+export type NutritionAiLanguage = 'pt-BR' | 'en-US';
 
 export interface NutritionAiSourceData {
   found: boolean;
@@ -238,6 +239,68 @@ const genericCatalog: CatalogEntry[] = [
 
 const allCatalog = [...brandCatalog, ...genericCatalog].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 
+const ENGLISH_CATALOG_NAMES: Record<string, string> = {
+  'big mac mcdonald s': "Big Mac (McDonald's)",
+  'quarterao com queijo mcdonald s': "Quarter Pounder with Cheese (McDonald's)",
+  'mcchicken mcdonald s': "McChicken (McDonald's)",
+  'mcfritas media mcdonald s': "Medium Fries (McDonald's)",
+  'mcfritas grande mcdonald s': "Large Fries (McDonald's)",
+  'chicken mcnuggets 10 unidades mcdonald s': "10-piece Chicken McNuggets (McDonald's)",
+  'whopper burger king': 'Whopper (Burger King)',
+  'whopper com queijo burger king': 'Whopper with Cheese (Burger King)',
+  'subway frango 15 cm': 'Subway Chicken 15 cm',
+  'lasanha industrializada': 'Frozen lasagna',
+  'arroz branco cozido': 'Cooked white rice',
+  'arroz branco': 'White rice',
+  'arroz integral cozido': 'Cooked brown rice',
+  'feijao carioca cozido': 'Cooked pinto beans',
+  'frango grelhado': 'Grilled chicken',
+  'carne bovina grelhada': 'Grilled beef',
+  'ovo inteiro cozido': 'Boiled whole egg',
+  'ovo cozido': 'Boiled egg',
+  'omelete': 'Omelet',
+  'pao frances': 'French bread roll',
+  'pao integral': 'Whole wheat bread',
+  'batata doce': 'Sweet potato',
+  'banana': 'Banana',
+  'brocolis': 'Broccoli',
+  'maca': 'Apple',
+  'aveia em flocos': 'Rolled oats',
+  'aveia': 'Oats',
+  'mel': 'Honey',
+  'azeite de oliva': 'Olive oil',
+  'queijo mussarela': 'Mozzarella cheese',
+  'iogurte natural': 'Plain yogurt',
+  'leite integral': 'Whole milk',
+  'whey protein': 'Whey protein',
+  'salada simples': 'Simple salad',
+  'batata frita': 'French fries',
+  'pizza': 'Pizza',
+  'hamburguer simples': 'Simple burger',
+};
+
+const ENGLISH_SOURCE_LABELS: Record<string, string> = {
+  'catalogo fast food': 'Fast food catalog',
+  'catalogo industrializados': 'Packaged foods catalog',
+  'estimativa validada': 'Validated estimate',
+  'biblioteca do usuario app': 'User/app library',
+};
+
+function localizeCatalogName(entry: CatalogEntry, language: NutritionAiLanguage) {
+  if (language !== 'en-US') return entry.name;
+  return ENGLISH_CATALOG_NAMES[normalize(entry.name)] ?? entry.name;
+}
+
+function localizeSourceLabel(label: string | undefined, language: NutritionAiLanguage) {
+  if (!label || language !== 'en-US') return label;
+  return ENGLISH_SOURCE_LABELS[normalize(label)] ?? label;
+}
+
+function localizeStandardFoodName(food: Food, language: NutritionAiLanguage) {
+  if (language !== 'en-US' || food.is_custom) return food.name;
+  return ENGLISH_CATALOG_NAMES[normalize(food.name)] ?? food.name;
+}
+
 function extractQuantityGrams(phrase: string, entry?: CatalogEntry | Food) {
   const normalized = normalize(phrase);
   const number = '(\\d+(?:[\\.,]\\d+)?)';
@@ -325,7 +388,7 @@ function inferCupGrams(phrase: string) {
 
 function stripQuantity(phrase: string) {
   return phrase
-    .replace(/\d+(?:[\.,]\d+)?\s*(kg|quilo|quilos|g|gr|gramas?|grams?|ml|unidades?|units?|uni|fatias?|slices?|colheres?|tbsp|tablespoons?|conchas?|x[ií]caras?|cups?|scoops?|porç(?:ão|oes|ões)|servings?|pieces?)/gi, ' ')
+    .replace(/\d+(?:[.,]\d+)?\s*(kg|quilo|quilos|g|gr|gramas?|grams?|ml|unidades?|units?|uni|fatias?|slices?|colheres?|tbsp|tablespoons?|conchas?|x[ií]caras?|cups?|scoops?|porç(?:ão|oes|ões)|servings?|pieces?)/gi, ' ')
     .replace(/\b(de|do|da|com|with|and|e|mais)\b/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -387,7 +450,7 @@ function chooseFinal(taco: NutritionAiSourceData, catalog: NutritionAiSourceData
   return { source_used: 'estimate' as const, ...sourceDataFromMacro(true, estimate) };
 }
 
-function buildIngredient(phrase: string, foods: Food[]): NutritionAiIngredient {
+function buildIngredient(phrase: string, foods: Food[], language: NutritionAiLanguage): NutritionAiIngredient {
   const cleanedPhrase = stripQuantity(phrase) || phrase;
   const brandEntry = findCatalogEntry(phrase, brandCatalog);
   const localFood = !brandEntry ? findLocalFood(cleanedPhrase, foods) : null;
@@ -416,15 +479,27 @@ function buildIngredient(phrase: string, foods: Food[]): NutritionAiIngredient {
     : { kcal: 180, protein: 8, carbs: 20, fat: 7 });
 
   const taco = sourceDataFromMacro(!!tacoMatch?.food && tacoMatch.food.kcal > 0, tacoMacro, tacoMatch?.food.description);
-  const catalog = sourceDataFromMacro(!!catalogMacro, catalogMacro ?? { kcal: 0, protein: 0, carbs: 0, fat: 0 }, localFood ? 'Biblioteca do usuário/app' : catalogEntry?.sourceLabel);
+  const catalogLabel = localFood ? 'Biblioteca do usuário/app' : catalogEntry?.sourceLabel;
+  const catalog = sourceDataFromMacro(
+    !!catalogMacro,
+    catalogMacro ?? { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+    localizeSourceLabel(catalogLabel, language)
+  );
+  const estimateReason = catalogMacro || taco.found
+    ? language === 'en-US'
+      ? 'Mirrored from the best source found.'
+      : 'Estimativa espelhada da melhor fonte encontrada.'
+    : language === 'en-US'
+      ? 'Item not identified with confidence; used an average mixed meal.'
+      : 'Item não identificado com segurança; usei uma refeição mista média.';
   const estimate = {
-    ...sourceDataFromMacro(true, estimateMacro, 'Estimativa controlada'),
-    reason: catalogMacro || taco.found ? 'Estimativa espelhada da melhor fonte encontrada.' : 'Item não identificado com segurança; usei uma refeição mista média.',
+    ...sourceDataFromMacro(true, estimateMacro, language === 'en-US' ? 'Controlled estimate' : 'Estimativa controlada'),
+    reason: estimateReason,
   };
   const chosen = chooseFinal(taco, catalog, estimateMacro);
 
   return {
-    name: localFood?.name ?? catalogEntry?.name ?? tacoMatch?.food.description ?? cleanedPhrase,
+    name: localFood ? localizeStandardFoodName(localFood, language) : (catalogEntry ? localizeCatalogName(catalogEntry, language) : tacoMatch?.food.description) ?? cleanedPhrase,
     grams,
     taco,
     catalog,
@@ -455,7 +530,7 @@ function splitMealText(input: string) {
     .filter(Boolean);
 }
 
-function mealNameFromIngredients(ingredients: NutritionAiIngredient[], input: string) {
+function mealNameFromIngredients(ingredients: NutritionAiIngredient[], input: string, language: NutritionAiLanguage) {
   if (ingredients.length === 1) return ingredients[0].name.toUpperCase();
   const relevant = ingredients
     .slice(0, 4)
@@ -463,17 +538,17 @@ function mealNameFromIngredients(ingredients: NutritionAiIngredient[], input: st
     .filter(Boolean);
 
   if (relevant.length) return relevant.join(', ').toUpperCase();
-  return (stripQuantity(input) || 'Refeição analisada').slice(0, 58).toUpperCase();
+  return (stripQuantity(input) || (language === 'en-US' ? 'Analyzed meal' : 'Refeição analisada')).slice(0, 58).toUpperCase();
 }
 
-export function analyzeNutritionText(input: string, foods: Food[] = []): NutritionAiPreview {
+export function analyzeNutritionText(input: string, foods: Food[] = [], language: NutritionAiLanguage = 'pt-BR'): NutritionAiPreview {
   const phrases = splitMealText(input);
 
   if (!phrases.length) {
-    throw new Error('Descreva a refeição para que o Códex possa calibrar.');
+    throw new Error(language === 'en-US' ? 'Describe the meal so the Codex can calibrate it.' : 'Descreva a refeição para que o Códex possa calibrar.');
   }
 
-  const ingredients = phrases.map(phrase => buildIngredient(phrase, foods));
+  const ingredients = phrases.map(phrase => buildIngredient(phrase, foods, language));
   const totals = ingredients.reduce(
     (acc, ingredient) => {
       const ratio = ingredient.grams / 100;
@@ -493,7 +568,7 @@ export function analyzeNutritionText(input: string, foods: Food[] = []): Nutriti
   const confidence = clamp(64 + strongSources * 9 + detailSignals * 4 - unknownSources * 10, 45, 96);
 
   return {
-    mealName: mealNameFromIngredients(ingredients, input),
+    mealName: mealNameFromIngredients(ingredients, input, language),
     calories: Math.round(totals.calories),
     protein: roundMacro(totals.protein),
     carbs: roundMacro(totals.carbs),

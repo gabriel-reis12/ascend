@@ -312,7 +312,7 @@ export function Bosses() {
 
         {activeBattle && activeBattle.current_hp > 0 && (
           <button
-            onClick={() => void resetBattle(user.id)}
+            onClick={() => void resetBattle()}
             disabled={bossLoading}
             title={l('Resetar HP do Boss atual', 'Reset current Boss HP')}
             className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-xl border border-[#1e1e26] bg-black/50 text-gray-500 transition hover:border-gray-500/50 hover:text-white disabled:opacity-40"

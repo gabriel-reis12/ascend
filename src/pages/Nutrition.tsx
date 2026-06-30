@@ -557,7 +557,7 @@ export function Nutrition() {
   async function handleAnalyzeMealIa() {
     if (!user) return;
     if (!iaTextInput.trim()) {
-      setIaError('Descreva a refeição para que o Códex possa calibrar.');
+      setIaError(l('Descreva a refeição para que o Códex possa calibrar.', 'Describe the meal so the Codex can calibrate it.'));
       return;
     }
 
@@ -569,11 +569,11 @@ export function Nutrition() {
     setExpandedIaIngs(new Set());
 
     try {
-      setIaPreview(analyzeNutritionText(iaTextInput, foods));
+      setIaPreview(analyzeNutritionText(iaTextInput, foods, language));
 
     } catch (err: unknown) {
       console.error('[Códex IA] Erro ao processar:', err);
-      setIaError(err instanceof Error ? err.message : l('Houve uma anomalia na calibração neural. Tente novamente.', 'There was an anomaly in neural calibration. Try again.'));
+      setIaError(err instanceof Error ? (isEnglish ? translateUiText(err.message) : err.message) : l('Houve uma anomalia na calibração neural. Tente novamente.', 'There was an anomaly in neural calibration. Try again.'));
     } finally {
       setIaLoading(false);
     }
@@ -620,14 +620,14 @@ export function Nutrition() {
         throw logError;
       }
 
-      setIaRegistrationSuccess(`${iaPreview.mealName} foi registrado no diário.`);
+      setIaRegistrationSuccess(l(`${iaPreview.mealName} foi registrado no diário.`, `${iaPreview.mealName} was saved to the diary.`));
       setIaPreview(null);
       setIaEditing(false);
       setIaTextInput('');
       await fetchData();
     } catch (err: unknown) {
       console.error('[Códex IA] Erro ao registrar:', err);
-      setIaError(err instanceof Error ? err.message : 'Não foi possível registrar a refeição. Tente novamente.');
+      setIaError(err instanceof Error ? (isEnglish ? translateUiText(err.message) : err.message) : l('Não foi possível registrar a refeição. Tente novamente.', 'The meal could not be logged. Try again.'));
     } finally {
       setIaRegistering(false);
     }
@@ -1219,7 +1219,7 @@ export function Nutrition() {
                                             <tr className={ing.final.source_used === 'taco' ? 'text-purple-300 font-bold' : ''}>
                                               <td className="py-2.5 flex items-center gap-1.5">
                                                 <span className={`size-1.5 rounded-full ${ing.taco.found ? 'bg-purple-500' : 'bg-gray-700'}`} />
-                                                Tabela TACO
+                                                {l('Tabela TACO', 'TACO table')}
                                               </td>
                                               <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.kcal} kcal` : '--'}</td>
                                               <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.protein}g` : '--'}</td>
@@ -1229,7 +1229,7 @@ export function Nutrition() {
                                                 <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                                   ing.taco.found ? 'bg-purple-500/10 border border-purple-500/20 text-purple-400' : 'bg-white/5 text-gray-600'
                                                 }`}>
-                                                  {ing.taco.found ? l('Disponível', 'Available') : 'N/D'}
+                                                  {ing.taco.found ? l('Disponível', 'Available') : l('N/D', 'N/A')}
                                                 </span>
                                               </td>
                                             </tr>
@@ -1247,7 +1247,7 @@ export function Nutrition() {
                                                 <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                                   ing.catalog.found ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-white/5 text-gray-600'
                                                 }`}>
-                                                  {ing.catalog.found ? l('Disponível', 'Available') : 'N/D'}
+                                                  {ing.catalog.found ? l('Disponível', 'Available') : l('N/D', 'N/A')}
                                                 </span>
                                               </td>
                                             </tr>
@@ -1263,7 +1263,7 @@ export function Nutrition() {
                                               <td className="py-2.5 text-right">{ing.estimate.fat}g</td>
                                               <td className="py-2.5 text-right">
                                                 <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                                                  Ativo
+                                                  {l('Ativo', 'Active')}
                                                 </span>
                                               </td>
                                             </tr>

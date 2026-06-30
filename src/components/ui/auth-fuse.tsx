@@ -12,6 +12,15 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const HOVER_PARTICLES = [
+  { x: "43%", y: "48%", duration: 2.2, size: 3 },
+  { x: "56%", y: "42%", duration: 2.8, size: 5 },
+  { x: "49%", y: "55%", duration: 3.1, size: 4 },
+  { x: "61%", y: "51%", duration: 2.5, size: 6 },
+  { x: "45%", y: "39%", duration: 3.4, size: 4 },
+  { x: "54%", y: "58%", duration: 2.7, size: 5 },
+];
+
 /* ── Typewriter ─────────────────────────────────────────────── */
 interface TypewriterProps {
   text: string | string[];
@@ -257,15 +266,15 @@ function HoverImage({ src, alt }: { src: string; alt: string }) {
       {/* Floating particles around image on hover */}
       {isHovered && (
         <>
-          {[...Array(6)].map((_, i) => (
+          {HOVER_PARTICLES.map((particle, i) => (
             <motion.div
               key={i}
               className="absolute rounded-full pointer-events-none"
               initial={{
                 opacity: 0,
                 scale: 0,
-                x: `${50 + (Math.random() - 0.5) * 20}%`,
-                y: `${50 + (Math.random() - 0.5) * 20}%`,
+                x: particle.x,
+                y: particle.y,
               }}
               animate={{
                 opacity: [0, 0.8, 0],
@@ -273,14 +282,14 @@ function HoverImage({ src, alt }: { src: string; alt: string }) {
                 y: [`${40 + i * 10}%`, `${20 + i * 5}%`],
               }}
               transition={{
-                duration: 2 + Math.random() * 2,
+                duration: particle.duration,
                 repeat: Infinity,
                 delay: i * 0.3,
                 ease: "easeOut",
               }}
               style={{
-                width: 3 + Math.random() * 4,
-                height: 3 + Math.random() * 4,
+                width: particle.size,
+                height: particle.size,
                 background: i % 2 === 0
                   ? "rgba(59, 130, 246, 0.8)"
                   : "rgba(124, 58, 237, 0.8)",
@@ -531,7 +540,7 @@ export function AuthUI({ handlers, initialMode = "signin" }: AuthUIProps) {
 
         {/* Hero image with interactive hover effects */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full p-8">
-          <HoverImage src="/Login Screen.jpeg" alt="RPG Hero transformation" />
+          <HoverImage src="/optimized/Login Screen.jpg" alt="RPG Hero transformation" />
 
           {/* Quote panel below */}
           <motion.div

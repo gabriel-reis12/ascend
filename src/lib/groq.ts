@@ -58,16 +58,18 @@ Exemplo de resposta válida:
         "Authorization": `Bearer ${GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [
           {
             role: "user",
             content: prompt
           }
         ],
-        temperature: 0.8,
-        max_tokens: 300,
-        top_p: 1
+        temperature: 1,
+        max_completion_tokens: 1024,
+        top_p: 1,
+        stream: false,
+        stop: null
       })
     });
 

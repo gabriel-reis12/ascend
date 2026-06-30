@@ -1210,6 +1210,13 @@ const EXTRA_EXACT_ENGLISH: Record<string, string> = {
   'Seus hábitos, treinos, tarefas e planos alimentares NÃO serão afetados!': 'Your habits, workouts, tasks, and meal plans will NOT be affected!',
   'Isso irá deletar de forma definitiva todos os seus treinos, rotinas, hábitos, tarefas, registros de comida e conquistas. Sua classe será apagada e você recomeçará do zero.': 'This will permanently delete all your workouts, routines, habits, tasks, food logs, and achievements. Your class will be erased and you will start from zero.',
   'Confirmar Destruição': 'Confirm Destruction',
+  'Somente uma vez (Missão Única)': 'Only once (One-Time Quest)',
+  'Se ativado, esta quest será criada como uma missão única para hoje.': 'If active, this quest will be created as a one-time mission for today.',
+  'Nenhuma Transação Hoje': 'No Transactions Today',
+  'Desfazer \'Sem Transações\'': 'Undo \'No Transactions\'',
+  'Confirmado: Sem transações hoje': 'Confirmed: No transactions today',
+  'Apenas hoje (Missão Única)': 'Only today (One-Time Quest)',
+  'Esta quest expira ao final do dia e não se repetirá.': 'This quest will expire at the end of the day and won\'t repeat.',
 };
 
 const EXACT_ENGLISH: Record<string, string> = {
@@ -1529,7 +1536,7 @@ const RAW_REPLACEMENTS: Array<[string, string]> = [
 ];
 
 const REPLACEMENTS: Array<[RegExp, string]> = RAW_REPLACEMENTS.map(([word, replacement]) => {
-  const escaped = word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const escaped = word.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const regex = new RegExp('(?<![a-zA-ZáéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ])' + escaped + '(?![a-zA-ZáéíóúâêôãõçÁÉÍÓÚÂÊÔÃÕÇ])', 'gi');
   return [regex, replacement];
 });

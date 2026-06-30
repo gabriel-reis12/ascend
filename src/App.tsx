@@ -74,7 +74,7 @@ function App() {
   );
 }
 
-function ComingSoon({ title }: { title: string }) {
+export function ComingSoon({ title }: { title: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <p className="text-5xl">⚙️</p>

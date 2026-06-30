@@ -167,7 +167,7 @@ export function useHabits() {
     }
     setError(null);
 
-    let active = true;
+    const active = true;
 
     // Safety timeout de 10 segundos para dar tempo ao Supabase de acordar do cold start
     const safetyTimeout = setTimeout(() => {

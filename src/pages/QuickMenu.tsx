@@ -62,7 +62,7 @@ const cards: CommandCard[] = [
     icon: <LayoutDashboard className="h-5 w-5" />,
     color: 'border-blue-500/40 hover:border-blue-400/80',
     arrowColor: 'group-hover:border-blue-400/70 group-hover:bg-blue-500/25 group-hover:text-blue-200',
-    image: '/Cards/Status.jpeg',
+    image: '/optimized/Cards/Status.jpg',
   },
   {
     title: { pt: 'Quadro de Missões', en: 'Quest Board' },
@@ -78,7 +78,7 @@ const cards: CommandCard[] = [
     icon: <CheckSquare className="h-5 w-5" />,
     color: 'border-cyan-500/40 hover:border-cyan-300/80',
     arrowColor: 'group-hover:border-cyan-400/70 group-hover:bg-cyan-500/25 group-hover:text-cyan-200',
-    image: '/Cards/Quadro de Missoes.jpeg',
+    image: '/optimized/Cards/Quadro de Missoes.jpg',
   },
   {
     title: { pt: 'Centro de Treinamento', en: 'Training Center' },
@@ -94,7 +94,7 @@ const cards: CommandCard[] = [
     icon: <Dumbbell className="h-5 w-5" />,
     color: 'border-purple-500/40 hover:border-purple-400/80',
     arrowColor: 'group-hover:border-purple-400/70 group-hover:bg-purple-500/25 group-hover:text-purple-200',
-    image: '/Cards/Treinos.jpeg',
+    image: '/optimized/Cards/Treinos.jpg',
   },
   {
     title: { pt: 'Recuperação & Nutrição', en: 'Recovery & Nutrition' },
@@ -109,7 +109,7 @@ const cards: CommandCard[] = [
     icon: <Apple className="h-5 w-5" />,
     color: 'border-orange-500/35 hover:border-orange-400/70',
     arrowColor: 'group-hover:border-orange-400/60 group-hover:bg-orange-500/25 group-hover:text-orange-200',
-    image: '/Cards/Estudos-Nutricao.jpeg',
+    image: '/optimized/Cards/Estudos-Nutricao.jpg',
   },
   {
     title: { pt: 'Módulo Fortuna', en: 'Fortune Module' },
@@ -124,7 +124,7 @@ const cards: CommandCard[] = [
     icon: <Coins className="h-5 w-5" />,
     color: 'border-amber-500/35 hover:border-amber-400/70',
     arrowColor: 'group-hover:border-amber-400/60 group-hover:bg-amber-500/25 group-hover:text-amber-200',
-    image: '/Cards/Fortuna.jpeg',
+    image: '/optimized/Cards/Fortuna.jpg',
   },
   {
     title: { pt: 'Portal dos Chefes', en: 'Boss Portal' },
@@ -139,7 +139,7 @@ const cards: CommandCard[] = [
     icon: <Skull className="h-5 w-5" />,
     color: 'border-rose-500/35 hover:border-rose-400/70',
     arrowColor: 'group-hover:border-rose-400/60 group-hover:bg-rose-500/25 group-hover:text-rose-200',
-    image: '/Cards/Chefes Finais.jpeg',
+    image: '/optimized/Cards/Chefes Finais.jpg',
   },
   {
     title: { pt: 'Santuário do Descanso', en: 'Recovery Sanctuary' },
@@ -154,7 +154,7 @@ const cards: CommandCard[] = [
     icon: <Moon className="h-5 w-5" />,
     color: 'border-indigo-500/35 hover:border-indigo-400/70',
     arrowColor: 'group-hover:border-indigo-400/60 group-hover:bg-indigo-500/25 group-hover:text-indigo-200',
-    image: '/Cards/Descanso-Lazer.jpeg',
+    image: '/optimized/Cards/Descanso-Lazer.jpg',
   },
 ];
 
@@ -196,6 +196,7 @@ function PortalCard({ card, onOpen, isEnglish }: { card: CommandCard; onOpen: ()
           alt=""
           aria-hidden="true"
           loading="lazy"
+          decoding="async"
           className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035] ${
             isLocked ? 'grayscale-[40%] blur-[1px]' : ''
           }`}

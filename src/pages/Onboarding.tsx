@@ -167,7 +167,7 @@ const CLASSES = [
     color: 'border-blue-500/50 hover:border-blue-400',
     accent: 'text-blue-400',
     glow: 'shadow-[0_0_30px_rgba(59,130,246,0.3)]',
-    image: '/Classes/Warrior/Rank E.jpeg',
+    image: '/optimized/Classes/Warrior/Rank E.jpg',
     stats: 'FOR ▲▲▲  RES ▲▲  VIT ▲',
   },
   {
@@ -179,7 +179,7 @@ const CLASSES = [
     color: 'border-purple-500/50 hover:border-purple-400',
     accent: 'text-purple-400',
     glow: 'shadow-[0_0_30px_rgba(124,58,237,0.3)]',
-    image: '/Classes/Scholar/Rank E.jpeg',
+    image: '/optimized/Classes/Scholar/Rank E.jpg',
     stats: 'INT ▲▲▲  SAB ▲▲  DIS ▲',
   },
   {
@@ -191,7 +191,7 @@ const CLASSES = [
     color: 'border-amber-500/50 hover:border-amber-400',
     accent: 'text-amber-400',
     glow: 'shadow-[0_0_30px_rgba(251,191,36,0.3)]',
-    image: '/Classes/Creator/Rank E.jpeg',
+    image: '/optimized/Classes/Creator/Rank E.jpg',
     stats: 'INT ▲▲  DIS ▲▲  SAB ▲',
   },
   {
@@ -203,7 +203,7 @@ const CLASSES = [
     color: 'border-cyan-500/50 hover:border-cyan-400',
     accent: 'text-cyan-400',
     glow: 'shadow-[0_0_30px_rgba(6,182,212,0.3)]',
-    image: '/Classes/Monk/Rank E.jpeg',
+    image: '/optimized/Classes/Monk/Rank E.jpg',
     stats: 'VIT ▲▲▲  EQU ▲▲  RES ▲',
   },
   {
@@ -215,7 +215,7 @@ const CLASSES = [
     color: 'border-rose-500/50 hover:border-rose-400',
     accent: 'text-rose-400',
     glow: 'shadow-[0_0_30px_rgba(244,63,94,0.3)]',
-    image: '/Classes/Leader/Rank E.jpeg',
+    image: '/optimized/Classes/Leader/Rank E.jpg',
     stats: 'DIS ▲▲▲  SAB ▲▲  EQU ▲',
   },
 ];
@@ -388,9 +388,6 @@ const getRitualProgress = (step: OnboardingStep, currentQuestionIndex: number) =
   if (step === 'class-selection') return 100;
   return Math.round(((baseIndex + 1) / RITUAL_STEPS.length) * 100);
 };
-
-const getCurrentRitual = (step: OnboardingStep) =>
-  RITUAL_STEPS.find(item => item.id === step) || RITUAL_STEPS[0];
 
 // ─── Componente OptionCard ────────────────────────────────────────────────────
 function OptionCard({
@@ -1303,6 +1300,8 @@ export function Onboarding() {
                   <img
                     src={revealedClassData.image}
                     alt={revealedClassData.name}
+                    loading="lazy"
+                    decoding="async"
                     className="h-56 w-full object-cover md:h-full transition-transform duration-500 group-hover/img:scale-105"
                     style={{ imageRendering: 'auto' }}
                   />
@@ -1394,6 +1393,8 @@ export function Onboarding() {
                           <img
                             src={c.image}
                             alt={c.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100"
                             style={{ imageRendering: 'auto' }}
                           />
@@ -1473,8 +1474,10 @@ export function Onboarding() {
                     initial={{ opacity: 0, scale: 0.95, filter: 'blur(5px)' }}
                     animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                     transition={{ duration: 0.4 }}
-                    src={`/Classes/${previewClassId}/Rank ${previewRank}.jpeg`}
+                    src={`/optimized/Classes/${previewClassId}/Rank ${previewRank}.jpg`}
                     alt={`${previewClassId} Rank ${previewRank}`}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     style={{ imageRendering: 'auto' }}
                   />

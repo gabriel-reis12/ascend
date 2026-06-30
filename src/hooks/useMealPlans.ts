@@ -74,7 +74,7 @@ export function useMealPlans() {
     setLoading(true);
     setError(null);
 
-    let active = true;
+    const active = true;
 
     // Safety timeout de 5 segundos: garante que o visual de skeletons saia da tela
     // caso as queries paralelas do Supabase demorem ou travem temporariamente (ex: cold starts)

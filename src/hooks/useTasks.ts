@@ -20,6 +20,13 @@ export interface Task {
   created_at: string;
 }
 
+export interface SingleTaskMeta {
+  kind: 'single';
+  due_date?: string;
+  due_time?: string;
+  note?: string;
+}
+
 export interface CreateTaskInput {
   title: string;
   category: string;
@@ -27,6 +34,7 @@ export interface CreateTaskInput {
   xp_reward: number;
   stat_target: Task['stat_target'];
   stat_reward: number;
+  single_meta?: SingleTaskMeta;
 }
 
 export function useTasks() {
@@ -77,7 +85,7 @@ export function useTasks() {
     }
     setError(null);
 
-    let active = true;
+    const active = true;
 
     // Safety timeout de 10 segundos para dar tempo ao Supabase de acordar do cold start
     const safetyTimeout = setTimeout(() => {
@@ -119,13 +127,17 @@ export function useTasks() {
 
   const createTask = async (input: CreateTaskInput): Promise<{ data: Task | null; error: string | null }> => {
     if (!user) return { data: null, error: 'Usuário não autenticado' };
+    const { single_meta, ...taskInput } = input;
     const { data, error } = await supabase
       .from('tasks')
-      .insert({ ...input, xp_reward: normalizeActivityXp(input.xp_reward), user_id: user.id })
+      .insert({ ...taskInput, xp_reward: normalizeActivityXp(taskInput.xp_reward), user_id: user.id })
       .select()
       .single();
     if (!error && data) {
       updateTasksState((prev) => [data, ...prev]);
+      if (single_meta && (single_meta.due_date || single_meta.due_time || single_meta.note)) {
+        localStorage.setItem(`single_quest_meta_${data.id}`, JSON.stringify(single_meta));
+      }
     }
     return { data: data as Task | null, error: error?.message ?? null };
   };
@@ -192,6 +204,8 @@ export function useTasks() {
     if (!user) return;
     const { error } = await supabase.from('tasks').delete().eq('id', taskId);
     if (!error) {
+      localStorage.removeItem(`single_quest_meta_${taskId}`);
+      localStorage.removeItem(`bonus_quest_lore_${taskId}`);
       updateTasksState((prev) => prev.filter((t) => t.id !== taskId));
     }
   };

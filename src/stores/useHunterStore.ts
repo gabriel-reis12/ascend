@@ -513,6 +513,7 @@ export const useHunterStore = create<HunterState>()(
             trialEndsAt: data.trial_ends_at || null,
           });
 
+          void (async () => {
           if (
             shouldUpdateProfileInDb
             || data.xp_to_next_level !== recalibratedXpRequired
@@ -537,6 +538,9 @@ export const useHunterStore = create<HunterState>()(
           // Verificar streaks e conquistas após carregar
           await get().checkStreakMilestones(userId);
           await get().checkAchievements(userId);
+          })().catch((err) => {
+            console.warn('[useHunterStore] Sincronizacao secundaria ignorada:', err);
+          });
 
           // Carregar batalha de boss ativa em segundo plano para o caçador
           void import('./useBossStore').then(({ useBossStore }) => {

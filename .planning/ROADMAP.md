@@ -17,6 +17,7 @@
 - **Active-screen localization repair (2026-06-24):** Missões, Fenda de Anomalia IA, Consumo Diário, `PremiumGate` e paywalls de Treinos/Nutrição/Fortuna/Bosses agora usam frases completas PT-BR/EN-US para evitar traduções híbridas geradas pelo fallback.
 - **Nutrition Codex hardening (2026-06-24):** Códex nutricional passou a usar analisador local auditável com TACO, alimentos salvos, catálogo curado de fast foods/industrializados, porções caseiras PT-BR/EN-US e estimativas revisáveis; removida a promessa visual de consulta FatSecret/internet sem integração real.
 - **Premium/checkout localization repair (2026-06-24):** Preço premium consolidado em US$ 1.99/mês no checkout e paywall; logout em EN força sessão global + retorno ao login; Nutrição, presets de Treino e Códex de Quests receberam localização explícita para eliminar frases híbridas restantes.
+- **Initial performance and one-time quests (2026-06-26):** Login/portal/classes/bosses/workout imagery gained optimized copies under `public/optimized`; startup-critical auth now releases UI before secondary syncs; Quests supports `Missao Unica` with date, time and note using the existing tasks contract.
 - **Validation:** `npm.cmd run build` aprovado.
 
 ## Phase 1: Foundation & UI/UX Base

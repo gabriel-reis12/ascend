@@ -23,7 +23,7 @@ O **RPG Tracker: Hunter System** é uma aplicação web gamificada ultra-premium
 * **Codex do Caçador:** Uma tabela interativa RPG com presets holográficos e presets prontos de hábitos do mundo real (Leitura, Código, Academia, Alimentação) com conversão precisa em recompensas de XP e atributos.
 
 ### 4. 🌀 Fenda de Anomalia IA (Quest Extra Groq)
-* **Geração Inteligente:** Abra fendas diárias invocando a IA (`llama-3.1-8b-instant`) para gerar um desafio personalizado e uma lore imersiva baseada em sua classe atual e no foco escolhido.
+* **Geração Inteligente:** Abra fendas diárias invocando a IA (`meta-llama/llama-4-scout-17b-16e-instruct`) para gerar um desafio personalizado e uma lore imersiva baseada em sua classe atual e no foco escolhido.
 * **Restrição Solar Estrita:** Proteção nativa que detecta data e fuso horário, limitando a criação de quests IA a apenas uma por dia local.
 
 ### 5. 🏋️ Módulo de Treinamento & Logs

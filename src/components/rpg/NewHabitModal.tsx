@@ -25,8 +25,9 @@ const STAT_OPTIONS: { value: Habit['stat_target']; label: string }[] = [
 interface NewHabitModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (input: CreateHabitInput) => Promise<{ error: string | null } | void>;
+  onSubmit: (input: CreateHabitInput & { is_one_time?: boolean }) => Promise<{ error: string | null } | void>;
   initialData?: Partial<CreateHabitInput> | null;
+  isEditing?: boolean;
 }
 
 const DEFAULTS: CreateHabitInput = {
@@ -40,7 +41,7 @@ const DEFAULTS: CreateHabitInput = {
   scheduled_days: [0, 1, 2, 3, 4, 5, 6],
 };
 
-export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabitModalProps) {
+export function NewHabitModal({ open, onClose, onSubmit, initialData, isEditing = false }: NewHabitModalProps) {
   const { language } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => (isEnglish ? en : pt);
@@ -48,10 +49,12 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
   const [form, setForm] = useState<CreateHabitInput>(DEFAULTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOneTime, setIsOneTime] = useState(false);
 
   useEffect(() => {
     if (open) {
       setError(null);
+      setIsOneTime(false);
       setForm({
         title: initialData?.title ?? DEFAULTS.title,
         category: initialData?.category ?? DEFAULTS.category,
@@ -67,6 +70,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
     } else {
       setForm(DEFAULTS);
       setError(null);
+      setIsOneTime(false);
     }
   }, [open, initialData]);
 
@@ -79,8 +83,9 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
     const res = await onSubmit({ 
       ...form, 
       title: form.title.trim(), 
-      category: form.category.trim() 
-    });
+      category: form.category.trim(),
+      is_one_time: isOneTime
+    } as any);
     
     setLoading(false);
     
@@ -240,56 +245,78 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
-                  {l('Dias de Recorrência *', 'Recurrence days *')}
-                </label>
-                <div className="flex justify-between gap-1">
-                  {(language === 'en-US' ? [
-                    { label: 'S', value: 0 },
-                    { label: 'M', value: 1 },
-                    { label: 'T', value: 2 },
-                    { label: 'W', value: 3 },
-                    { label: 'T', value: 4 },
-                    { label: 'F', value: 5 },
-                    { label: 'S', value: 6 },
-                  ] : [
-                    { label: 'D', value: 0 },
-                    { label: 'S', value: 1 },
-                    { label: 'T', value: 2 },
-                    { label: 'Q', value: 3 },
-                    { label: 'Q', value: 4 },
-                    { label: 'S', value: 5 },
-                    { label: 'S', value: 6 },
-                  ]).map((day) => {
-                    const isSelected = form.scheduled_days?.includes(day.value);
-                    return (
-                      <button
-                        key={day.value}
-                        type="button"
-                        onClick={() => {
-                          const currentDays = form.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6];
-                          const newDays = currentDays.includes(day.value)
-                            ? currentDays.filter((d) => d !== day.value)
-                            : [...currentDays, day.value].sort();
-                          set('scheduled_days', newDays);
-                        }}
-                        className={`flex h-9 w-9 items-center justify-center rounded-xl border text-xs font-black transition-all duration-300 ${
-                          isSelected
-                            ? 'border-transparent text-white shadow-lg'
-                            : 'border-[#38384A] bg-[#0F0F13] text-[#555566] hover:border-gray-700 hover:text-[#E2E8F0]'
-                        }`}
-                        style={{
-                          backgroundColor: isSelected ? form.category_color : undefined,
-                          boxShadow: isSelected ? `0 0 12px ${form.category_color}40` : undefined,
-                        }}
-                      >
-                        {day.label}
-                      </button>
-                    );
-                  })}
+              {!isOneTime && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#94A3B8]">
+                    {l('Dias de Recorrência *', 'Recurrence days *')}
+                  </label>
+                  <div className="flex justify-between gap-1">
+                    {(language === 'en-US' ? [
+                      { label: 'S', value: 0 },
+                      { label: 'M', value: 1 },
+                      { label: 'T', value: 2 },
+                      { label: 'W', value: 3 },
+                      { label: 'T', value: 4 },
+                      { label: 'F', value: 5 },
+                      { label: 'S', value: 6 },
+                    ] : [
+                      { label: 'D', value: 0 },
+                      { label: 'S', value: 1 },
+                      { label: 'T', value: 2 },
+                      { label: 'Q', value: 3 },
+                      { label: 'Q', value: 4 },
+                      { label: 'S', value: 5 },
+                      { label: 'S', value: 6 },
+                    ]).map((day) => {
+                      const isSelected = form.scheduled_days?.includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => {
+                            const currentDays = form.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6];
+                            const newDays = currentDays.includes(day.value)
+                              ? currentDays.filter((d) => d !== day.value)
+                              : [...currentDays, day.value].sort();
+                            set('scheduled_days', newDays);
+                          }}
+                          className={`flex h-9 w-9 items-center justify-center rounded-xl border text-xs font-black transition-all duration-300 ${
+                            isSelected
+                              ? 'border-transparent text-white shadow-lg'
+                              : 'border-[#38384A] bg-[#0F0F13] text-[#555566] hover:border-gray-700 hover:text-[#E2E8F0]'
+                          }`}
+                          style={{
+                            backgroundColor: isSelected ? form.category_color : undefined,
+                            boxShadow: isSelected ? `0 0 12px ${form.category_color}40` : undefined,
+                          }}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {!isEditing && (
+                <div className="flex items-center gap-3 rounded-xl border border-[#38384A]/50 bg-black/20 p-4">
+                  <input
+                    type="checkbox"
+                    id="is_one_time"
+                    checked={isOneTime}
+                    onChange={(e) => setIsOneTime(e.target.checked)}
+                    className="size-5 rounded border-[#38384A] bg-[#0F0F13] text-[#7C3AED] focus:ring-[#7C3AED]/30"
+                  />
+                  <div>
+                    <label htmlFor="is_one_time" className="block text-sm font-medium text-[#E2E8F0]">
+                      {l('Somente uma vez (Missão Única)', 'Only once (One-Time Quest)')}
+                    </label>
+                    <p className="text-xs text-[#94A3B8]">
+                      {l('Se ativado, esta quest será criada como uma missão única para hoje.', 'If active, this quest will be created as a one-time mission for today.')}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-3 rounded-xl border border-[#38384A]/50 bg-black/20 p-4">
                 <input
@@ -332,7 +359,11 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData }: NewHabit
                 ) : (
                   <Plus size={16} />
                 )}
-                {loading ? l('Criando...', 'Creating...') : l('Criar Hábito', 'Create Habit')}
+                {loading 
+                  ? l('Criando...', 'Creating...') 
+                  : isOneTime 
+                    ? l('Criar Missão Única', 'Create One-Time Quest') 
+                    : l('Criar Hábito', 'Create Habit')}
               </motion.button>
             </form>
           </motion.div>

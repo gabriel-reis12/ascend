@@ -32,12 +32,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await loadProfile(currentUser.id);
     if (hasManualPremiumAccess(currentUser.email)) {
       useHunterStore.setState({ isPremium: true });
-      await supabase
+      void supabase
         .from('profiles')
         .update({ is_premium: true })
-        .eq('id', currentUser.id);
+        .eq('id', currentUser.id)
+        .then(({ error }) => {
+          if (error) console.warn('[AuthContext] Premium manual nao sincronizado:', error);
+        });
     }
-    await evaluateYesterdayNutrition(currentUser.id, {
+    void evaluateYesterdayNutrition(currentUser.id, {
       addXp: useHunterStore.getState().addXp,
       updateStat: useHunterStore.getState().updateStat,
       attackBoss: useBossStore.getState().attackActiveBoss,

@@ -41,6 +41,15 @@ import { supabase } from '../lib/supabase';
 import { INITIAL_XP_REQUIREMENT } from '../lib/progression';
 import { usePreferences } from '../contexts/preferences';
 
+const CLASS_IMAGE_FALLBACK = '/optimized/Classes/Warrior/Rank E.jpg';
+
+function handleClassImageError(event: React.SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+  if (image.dataset.fallbackApplied) return;
+  image.dataset.fallbackApplied = 'true';
+  image.src = CLASS_IMAGE_FALLBACK;
+}
+
 const ALL_POSSIBLE_ACHIEVEMENTS = [
   // Streak
   { key: '3d', title: 'Iniciante da Consistência', desc: 'Mantenha uma streak de 3 dias seguidos', icon: 'Flame', titleReward: 'Constante', xp: 30 },
@@ -414,7 +423,7 @@ export function Settings() {
           bgGlow: 'bg-blue-500/5',
           text: 'text-blue-400',
           icon: <Sword className="w-6 h-6 text-blue-400" />,
-          image: `/Classes/Warrior/${rankName}.jpeg`
+          image: `/optimized/Classes/Warrior/${rankName}.jpg`
         };
       case 'Scholar':
         return {
@@ -424,7 +433,7 @@ export function Settings() {
           bgGlow: 'bg-purple-500/5',
           text: 'text-purple-400',
           icon: <Book className="w-6 h-6 text-purple-400" />,
-          image: `/Classes/Scholar/${rankName}.jpeg`
+          image: `/optimized/Classes/Scholar/${rankName}.jpg`
         };
       case 'Monk':
         return {
@@ -434,7 +443,7 @@ export function Settings() {
           bgGlow: 'bg-cyan-500/5',
           text: 'text-cyan-400',
           icon: <Zap className="w-6 h-6 text-cyan-400" />,
-          image: `/Classes/Monk/${rankName}.jpeg`
+          image: `/optimized/Classes/Monk/${rankName}.jpg`
         };
       case 'Creator':
         return {
@@ -444,7 +453,7 @@ export function Settings() {
           bgGlow: 'bg-amber-500/5',
           text: 'text-amber-400',
           icon: <Zap className="w-6 h-6 text-amber-400" />,
-          image: `/Classes/Creator/${rankName}.jpeg`
+          image: `/optimized/Classes/Creator/${rankName}.jpg`
         };
       case 'Leader':
         return {
@@ -454,7 +463,7 @@ export function Settings() {
           bgGlow: 'bg-rose-500/5',
           text: 'text-rose-400',
           icon: <Shield className="w-6 h-6 text-rose-400" />,
-          image: `/Classes/Leader/${rankName}.jpeg`
+          image: `/optimized/Classes/Leader/${rankName}.jpg`
         };
 
       default:
@@ -465,7 +474,7 @@ export function Settings() {
           bgGlow: 'bg-purple-500/5',
           text: 'text-purple-400',
           icon: <User className="w-6 h-6 text-purple-400" />,
-          image: `/Classes/Warrior/${rankName}.jpeg`
+          image: `/optimized/Classes/Warrior/${rankName}.jpg`
         };
     }
   };
@@ -859,6 +868,9 @@ export function Settings() {
               <img 
                 src={classConfig.image} 
                 alt={classConfig.title} 
+                loading="lazy"
+                decoding="async"
+                onError={handleClassImageError}
                 className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />

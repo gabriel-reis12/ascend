@@ -98,7 +98,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             <div className="flex items-center justify-between border-b border-white/5 px-6 py-6">
               <div className="flex items-center gap-3">
                 <div className="flex size-[47px] shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_15px_rgba(139,92,246,0.5)]">
-                  <img src="/Icon 2.png" alt="ASCEND" className="size-[47px] object-cover" />
+                  <img src="/optimized/Icon 2.png" alt="ASCEND" decoding="async" className="size-[47px] object-cover" />
                 </div>
                 <span
                   className="text-lg font-black italic tracking-tighter text-white"

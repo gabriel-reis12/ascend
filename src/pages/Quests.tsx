@@ -33,9 +33,10 @@ import { supabase } from '@/lib/supabase';
 import { localDayBounds } from '@/lib/date';
 import { useHabits } from '@/hooks/useHabits';
 import { useTasks } from '@/hooks/useTasks';
-import type { Task } from '@/hooks/useTasks';
+import type { SingleTaskMeta, Task, CreateTaskInput } from '@/hooks/useTasks';
 import { generateBonusQuest } from '@/lib/groq';
 import { NewHabitModal } from '@/components/rpg/NewHabitModal';
+import { NewQuestModal } from '@/components/rpg/NewQuestModal';
 import { NeonCheckbox } from '@/components/ui/animated-check-box';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { DAILY_COMMON_XP_EFFECTIVE_MAX } from '@/lib/progression';
@@ -121,6 +122,34 @@ const CODEX_CATEGORIES: Array<{ category: string; icon: LucideIcon; color: strin
   },
 ];
 
+function readSingleQuestMeta(taskId: string): SingleTaskMeta | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(`single_quest_meta_${taskId}`);
+    return raw ? JSON.parse(raw) as SingleTaskMeta : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatSingleQuestDate(dateStr?: string) {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!year || !month || !day) return dateStr;
+  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+
+function buildSingleQuestDetails(meta: SingleTaskMeta | null) {
+  if (!meta) return null;
+  const schedule = [formatSingleQuestDate(meta.due_date), meta.due_time].filter(Boolean).join(' as ');
+  const parts = [schedule, meta.note].filter(Boolean);
+  return parts.length ? parts.join(' - ') : null;
+}
+
 function TimeBadgeInput({ time, onChange }: { time: string | null; onChange: (t: string | null) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -186,6 +215,8 @@ function MissionCard({
   const isBonus = type === 'task' && title.startsWith('[BÔNUS IA] ');
   const displayTitle = isBonus ? title.replace('[BÔNUS IA] ', '') : title;
   const bonusLore = isBonus ? localStorage.getItem(`bonus_quest_lore_${id}`) : null;
+  const singleQuestMeta = type === 'task' && !isBonus ? readSingleQuestMeta(id) : null;
+  const singleQuestDetails = buildSingleQuestDetails(singleQuestMeta);
   const nowTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   const missionStatus = done
     ? 'completed'
@@ -271,6 +302,11 @@ function MissionCard({
                 Flexível
               </span>
             )}
+            {singleQuestMeta && (
+              <span className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-300">
+                Unica
+              </span>
+            )}
             <motion.span
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -292,6 +328,11 @@ function MissionCard({
           {bonusLore && (
             <p className={`text-xs italic leading-relaxed font-semibold transition-colors max-w-xl ${done ? 'text-gray-600 line-through' : 'text-cyan-400/80'}`}>
               "{bonusLore}"
+            </p>
+          )}
+          {singleQuestDetails && (
+            <p className={`text-xs leading-relaxed font-semibold transition-colors max-w-xl ${done ? 'text-gray-600 line-through' : 'text-cyan-200/85'}`}>
+              {singleQuestDetails}
             </p>
           )}
         </div>
@@ -533,6 +574,7 @@ export function Quests() {
   
   const [tab, setTab] = useState<'daily' | 'manage' | 'codex'>('daily');
   const [modalOpen, setModalOpen] = useState(false);
+  const [questModalOpen, setQuestModalOpen] = useState(false);
   const [presetHabitData, setPresetHabitData] = useState<Partial<CreateHabitInput> | null>(null);
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [fissureExpanded, setFissureExpanded] = useState(false);
@@ -554,6 +596,13 @@ export function Quests() {
       try {
         const { startIso } = localDayBounds();
         const todayYYYYMMDD = startIso.split('T')[0];
+        
+        const noTxKey = `ascend_finance_no_tx_${user.id}_${todayYYYYMMDD}`;
+        if (localStorage.getItem(noTxKey) === 'true') {
+          setHasLoggedFinanceToday(true);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('financial_logs')
           .select('id')
@@ -681,7 +730,10 @@ export function Quests() {
     ...workoutMissions.map(m => ({ type: 'workout' as const, data: m, time: m.scheduled_time, endTime: m.scheduled_end_time })),
     ...mealMissions.map(m => ({ type: 'meal' as const, data: m, time: m.scheduled_time, endTime: m.scheduled_end_time })),
     ...activeHabits.map(h => ({ type: 'habit' as const, data: h, time: h.scheduled_time ? h.scheduled_time.slice(0, 5) : null, endTime: h.scheduled_end_time ? h.scheduled_end_time.slice(0, 5) : null })),
-    ...activeTasks.map(t => ({ type: 'task' as const, data: t, time: null, endTime: null })),
+    ...activeTasks.map(t => {
+      const meta = readSingleQuestMeta(t.id);
+      return { type: 'task' as const, data: t, time: meta?.due_time ?? null, endTime: null };
+    }),
     {
       type: 'finance' as const,
       data: {
@@ -756,6 +808,14 @@ export function Quests() {
 
   return (
     <>
+      <NewQuestModal
+        open={questModalOpen}
+        onClose={() => setQuestModalOpen(false)}
+        onSubmit={async (input) => {
+          await createTask(input);
+          setTab('daily');
+        }}
+      />
       <NewHabitModal
         open={modalOpen}
         onClose={() => {
@@ -767,9 +827,29 @@ export function Quests() {
           if (editingHabitId) {
             return updateHabit(editingHabitId, input);
           }
+          if ((input as any).is_one_time) {
+            const taskInput: CreateTaskInput = {
+              title: input.title,
+              category: input.category,
+              category_color: input.category_color,
+              xp_reward: input.xp_reward,
+              stat_target: input.stat_target,
+              stat_reward: input.stat_reward,
+              single_meta: {
+                kind: 'single',
+                due_time: input.scheduled_time || undefined
+              }
+            };
+            const res = await createTask(taskInput);
+            if (res && res.error) {
+              return { error: res.error };
+            }
+            return { error: null };
+          }
           return createHabit(input);
         }}
         initialData={presetHabitData}
+        isEditing={!!editingHabitId}
       />
 
       <div className="mx-auto max-w-6xl space-y-7">
@@ -796,13 +876,22 @@ export function Quests() {
             </h1>
           </div>
           
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out hover:bg-blue-500 hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] cursor-pointer"
-          >
-            <Plus size={18} strokeWidth={3} />
-            Nova Quest
-          </button>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              onClick={() => setQuestModalOpen(true)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-5 py-3 text-xs font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out hover:bg-cyan-500 hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] cursor-pointer"
+            >
+              <CalendarDays size={17} strokeWidth={3} />
+              Missao Unica
+            </button>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out hover:bg-blue-500 hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] cursor-pointer"
+            >
+              <RefreshCw size={17} strokeWidth={3} />
+              Quest Recorrente
+            </button>
+          </div>
         </div>
 
         {/* Global Progress */}
@@ -1270,7 +1359,45 @@ export function Quests() {
                               done={f.completed}
                               startTime={mission.time}
                               endTime={mission.endTime}
-                              onToggle={() => navigate('/fortuna')}
+                              onToggle={async () => {
+                                if (!user) return;
+                                const { startIso } = localDayBounds();
+                                const todayYYYYMMDD = startIso.split('T')[0];
+                                const noTxKey = `ascend_finance_no_tx_${user.id}_${todayYYYYMMDD}`;
+                                const isCurrentlyNoTx = localStorage.getItem(noTxKey) === 'true';
+                                
+                                if (isCurrentlyNoTx) {
+                                  localStorage.removeItem(noTxKey);
+                                  setHasLoggedFinanceToday(false);
+                                  const xpKey = `ascend_finance_no_tx_xp_${user.id}_${todayYYYYMMDD}`;
+                                  if (localStorage.getItem(xpKey) === 'true') {
+                                    await hunterProfile.addXp(-10, user.id, {
+                                      eventId: `finance-no-tx:${todayYYYYMMDD}`,
+                                    });
+                                    localStorage.removeItem(xpKey);
+                                  }
+                                } else {
+                                  const { data } = await supabase
+                                    .from('financial_logs')
+                                    .select('id')
+                                    .eq('user_id', user.id)
+                                    .eq('date', todayYYYYMMDD);
+                                  if (data && data.length > 0) {
+                                    alert(isEnglish ? 'You already have transactions registered today!' : 'Você já possui transações registradas hoje!');
+                                    return;
+                                  }
+                                  
+                                  localStorage.setItem(noTxKey, 'true');
+                                  setHasLoggedFinanceToday(true);
+                                  const xpKey = `ascend_finance_no_tx_xp_${user.id}_${todayYYYYMMDD}`;
+                                  if (localStorage.getItem(xpKey) !== 'true') {
+                                    await hunterProfile.addXp(10, user.id, {
+                                      eventId: `finance-no-tx:${todayYYYYMMDD}`,
+                                    });
+                                    localStorage.setItem(xpKey, 'true');
+                                  }
+                                }
+                              }}
                               onUpdateTime={handleUpdateTime}
                             />
                           );

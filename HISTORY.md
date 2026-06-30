@@ -20,6 +20,17 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-06-30 — Missão Única no Criador de Hábitos e Quest de Finanças "Sem Transações Hoje"
+- **Missão Única no Formulário de Hábitos (`NewHabitModal.tsx` & `Quests.tsx`):** Adicionado um checkbox "Somente uma vez (Missão Única)" ao criar hábitos. Ao ser selecionado, a seleção de dias de recorrência é oculta e, ao salvar, a missão é criada no Supabase como uma tarefa única (Task) para o dia atual usando `createTask` (do hook `useTasks`), atendendo ao papel de planner diário.
+- **Quest de Finanças "Sem Transações Hoje" (`Fortuna.tsx` & `Quests.tsx`):** Adicionado um novo botão secundário na Fortuna e suporte direto na quest diária financeira para marcar o dia como "Sem transações". A marcação é salva de forma resiliente no `localStorage` (associada ao ID do usuário e à data atual) e concede `+10 XP` (controlado por chave de prevenção de duplicidade). A caixa de marcação da quest financeira em `Quests.tsx` agora alterna este mesmo estado diretamente da listagem em vez de redirecionar para a Fortuna.
+- **Internacionalização das Novas Opções (`uiEnglish.ts`):** Inclusão de traduções em inglês para todas as novas strings geradas nas páginas e modais, garantindo conformidade bilíngue completa.
+- **Validação de Compilação:** Executado `npm run build` confirmando sucesso na compilação do TypeScript e Vite.
+
+### 2026-06-30 — Atualização de Modelo da Groq API e Atribuição de Usuário Premium
+- **Nova IA da Groq (`src/lib/groq.ts`):** Atualizado o modelo padrão para `meta-llama/llama-4-scout-17b-16e-instruct` e redefinidos os parâmetros de temperatura (1), limite de tokens (`max_completion_tokens: 1024`) e desativação do streaming (`stream: false`).
+- **Nova Migration de Premium Manual (`supabase/migrations/20260630_manual_premium_gabroreis.sql`):** Criada uma nova migration no Supabase para atualizar a flag `is_premium` para o usuário `gabroreis@gmail.com`. A atualização também foi aplicada diretamente na base de dados de produção do Supabase usando a ferramenta MCP.
+- **Documentação e Notas (`README.md`, `Ideias.txt`):** Atualizadas as menções do modelo Llama antigo para o novo modelo nas notas de referência de desenvolvimento e no arquivo de documentação principal.
+
 ### 2026-06-25 — Implementação de Trial de 7 Dias no Stripe e Ciclo de Vida do Assinante
 - **Trial de 7 Dias (`stripe-checkout`):** Adicionada a propriedade `trial_period_days: 7` na criação da sessão do Stripe Checkout, iniciando o período de testes grátis. A exigência do cartão de crédito imediatamente no checkout foi mantida (Opção A) para garantir a renovação automática.
 - **Tratamento de Inadimplência e Ciclo Completo (`stripe-webhook`):** Adicionado suporte para o evento `invoice.payment_failed` para remover imediatamente o acesso premium e marcar a conta como `past_due` caso a cobrança mensal falhe. Também implementada a busca ativa dos dados de assinatura em `checkout.session.completed` e atualização refinada em `customer.subscription.updated` e `customer.subscription.deleted`, tratando de forma robusta e persistente todas as transições de status do Stripe (`trialing`, `active`, `past_due`, `unpaid`, `canceled`).
@@ -975,3 +986,12 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Substituídas partículas aleatórias em render por uma configuração estável em `auth-fuse`, evitando comportamento não determinístico.
   - Simplificada a assinatura de reset de boss e separado o resultado do carregamento de perfil para eliminar erros de lint sem mudar a lógica.
   - Validados `npm.cmd run lint`, `npm.cmd run audit:i18n`, `npm.cmd run build` e `git diff --check`.
+
+### 2026-06-26
+- **Performance inicial, imagens otimizadas e Missao Unica:**
+  - Geradas copias leves em `public/optimized/` para login, logo, portal, avatares, bosses e presets de treino, preservando os assets originais.
+  - Atualizados login, portal, dashboard, onboarding, configuracoes, treinos e bosses para usar imagens menores com carregamento/decodificacao mais amigaveis.
+  - Removido trabalho secundario do caminho critico do login: premium manual, avaliacao nutricional, streaks/conquistas e sincronizacoes complementares rodam em segundo plano apos carregar o perfil.
+  - O teste de conexao do Supabase no layout ficou restrito ao ambiente de desenvolvimento, evitando query extra para usuarios em producao.
+  - Adicionada criacao de `Missao Unica` no Quadro de Missoes, com data, hora e nota opcional exibidas no card e ordenacao pelo horario quando informado.
+  - Build de producao validado com `npm.cmd run build`; restaram apenas avisos de chunk grande/code splitting do Vite.

@@ -46,7 +46,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementIcon: 'Sword',
     maxHp: 160,
     targetDays: 3,
-    image: '/Bosses/O Senhor da Procrastinação.jpeg',
+    image: '/optimized/Bosses/O Senhor da Procrastinação.jpg',
     lore: 'Uma entidade gigantesca feita de correntes, relógios quebrados e fumaça negra. Ao seu redor existem centenas de missões abandonadas, projetos inacabados e metas esquecidas.',
     victoryLore: 'Com foco inabalável, você cortou as correntes e destruiu os relógios quebrados. O tempo agora pertence a você. Você se tornou um Executor Implacável!',
     weakness: 'Completar tarefas diárias comuns e quests.',
@@ -64,7 +64,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementIcon: 'Flame',
     maxHp: 210,
     targetDays: 4,
-    image: '/Bosses/O Rei da Preguiça.jpeg',
+    image: '/optimized/Bosses/O Rei da Preguiça.jpg',
     lore: 'Uma criatura colossal sentada em um trono gigantesco de pedra e lodo. Ela não luta; apenas permanece imóvel. Correntes negras se espalham pelo chão, drenando a energia vital e a motivação de qualquer um que ouse se aproximar.',
     victoryLore: 'Seus treinos intensos e constância física fizeram o trono desmoronar e a letargia se dissipar. Nada pode parar o seu avanço!',
     weakness: 'Concluir treinos na aba Musculação (Workouts).',
@@ -82,7 +82,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementIcon: 'Brain',
     maxHp: 260,
     targetDays: 5,
-    image: '/Bosses/A Sereia da Distração.jpeg',
+    image: '/optimized/Bosses/A Sereia da Distração.jpg',
     lore: 'Uma entidade etérea que flutua acima de um oceano digital formado por telas luminosas. Ao seu redor brilham notificações, redes sociais e vídeos curtos. Os caçadores hipnotizados ficam presos olhando para as telas enquanto sua energia vital é sugada.',
     victoryLore: 'Você silenciou o ruído digital e recuperou sua atenção profunda. As luzes vazias não têm mais poder sobre a sua mente.',
     weakness: 'Hábitos e tarefas de Leitura, Estudo e Foco Profundo.',
@@ -100,7 +100,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementIcon: 'Heart',
     maxHp: 310,
     targetDays: 6,
-    image: '/Bosses/O Devorador do Progresso.jpeg',
+    image: '/optimized/Bosses/O Devorador do Progresso.jpg',
     lore: 'Uma criatura colossal e insaciável formada por energia escura e fragmentos de excessos, impulsos e gratificação imediata. Ele não destrói os caçadores por combate direto, mas os convence a abandonar seu potencial em troca de prazeres rápidos.',
     victoryLore: 'Sua rotina nutricional perfeita, controle calórico e hidratação enfraqueceram a criatura até que ela ficasse em silêncio. A disciplina é seu novo escudo.',
     weakness: 'Marcar refeições, manter metas nutricionais de calorias/água e sono no horário.',
@@ -118,7 +118,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementIcon: 'Scale',
     maxHp: 360,
     targetDays: 7,
-    image: '/Bosses/O Mercador das Dívidas.jpeg',
+    image: '/optimized/Bosses/O Mercador das Dívidas.jpg',
     lore: 'Sentado dentro de um mercado dimensional infinito cheio de ouro e armaduras lendárias, o Mercador domina pela sedução. Ele nunca obriga ninguém; ele apenas oferece. Mas atrás de cada item fácil existe uma corrente invisível que prende sua liberdade futura.',
     victoryLore: 'Ao registrar seus gastos e controlar suas compras por impulso, você quebrou o contrato dourado do Mercador e conquistou sua verdadeira liberdade.',
     weakness: 'Hábitos de Finanças, controle de despesas e aportes de investimento.',
@@ -136,7 +136,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementIcon: 'Compass',
     maxHp: 410,
     targetDays: 8,
-    image: '/Bosses/O Arauto do Caos.jpeg',
+    image: '/optimized/Bosses/O Arauto do Caos.jpg',
     lore: 'Uma catástrofe silenciosa. Ele não ataca com força física, mas transforma toda a sua vida em ruído e confusão. Sob sua influência, as prioridades somem, os planos se misturam e você acorda muito ocupado, mas nunca produtivo.',
     victoryLore: 'Ao definir metas claras, planejar suas semanas e organizar sua rotina, o nevoeiro do Arauto se dissipou. O caminho agora está limpo.',
     weakness: 'Planejamento semanal, metas de prioridade e organização de ambiente.',
@@ -154,7 +154,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementIcon: 'Crown',
     maxHp: 500,
     targetDays: 10,
-    image: '/Bosses/O Reflexo da Autossabotagem.jpeg',
+    image: '/optimized/Bosses/O Reflexo da Autossabotagem.jpg',
     lore: 'A origem de todos os males. Após derrotar todos os chefes anteriores, você alcança o último portal e encontra apenas um espelho. Dentro dele está você mesmo: a soma de todas as versões de você que desistiram no passado.',
     victoryLore: 'Ao manter sua consistência e não desistir diante das dificuldades, você purificou a versão mais fraca de si mesmo. O sistema foi totalmente dominado.',
     weakness: 'Manter a consistência diária ativa e streaks consecutivas longas.',
@@ -174,7 +174,7 @@ interface BossStoreState {
   loadActiveBattle: (userId: string) => Promise<void>;
   attackActiveBoss: (userId: string, baseDamage: number, actionType: string) => Promise<void>;
   purifyActiveBoss: (userId: string) => Promise<void>;
-  resetBattle: (userId: string) => Promise<void>;
+  resetBattle: () => Promise<void>;
 }
 
 const normalizeActionType = (actionType: string) => {
@@ -532,7 +532,7 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
     }
   },
 
-  resetBattle: async (userId: string) => {
+  resetBattle: async () => {
     const { activeBattle } = get();
     if (!activeBattle) return;
 

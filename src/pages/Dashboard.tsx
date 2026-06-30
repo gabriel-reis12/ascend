@@ -21,7 +21,6 @@ import {
   TrendingUp,
   Trophy,
   X,
-  Zap,
 } from 'lucide-react';
 import { useHunterStore, type HunterStats } from '@/stores/useHunterStore';
 import { RadarChart } from '@/components/ui/RadarChart';
@@ -39,6 +38,23 @@ import {
 import { usePreferences } from '@/contexts/preferences';
 
 type StatKey = keyof HunterStats;
+
+const HUNTER_AVATAR_FALLBACK = '/optimized/Classes/Warrior/Rank E.jpg';
+const HUNTER_CLASS_IMAGE_IDS = new Set(['Warrior', 'Scholar', 'Creator', 'Monk', 'Leader']);
+
+function resolveHunterAvatar(hunterClass: string | null | undefined, rank: string | null | undefined) {
+  const safeClass = hunterClass && HUNTER_CLASS_IMAGE_IDS.has(hunterClass) ? hunterClass : 'Warrior';
+  const upperRank = String(rank || 'E').toUpperCase();
+  const imageRank = ['E', 'D', 'C', 'B', 'A', 'S'].includes(upperRank) ? upperRank : 'S';
+  return `/optimized/Classes/${safeClass}/Rank ${imageRank}.jpg`;
+}
+
+function handleHunterAvatarError(event: React.SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+  if (image.dataset.fallbackApplied) return;
+  image.dataset.fallbackApplied = 'true';
+  image.src = HUNTER_AVATAR_FALLBACK;
+}
 
 interface EvolutionEvent {
   id: string;
@@ -267,10 +283,7 @@ export function Dashboard() {
   }, [user?.id, workoutStatusKey, completedToday]);
 
   const characterAvatar = React.useMemo(() => {
-    const hunterClass = state.hunterClass || 'Warrior';
-    const upperRank = String(state.rank || 'E').toUpperCase();
-    const imageRank = ['E', 'D', 'C', 'B', 'A', 'S'].includes(upperRank) ? upperRank : 'S';
-    return `/Classes/${hunterClass}/Rank ${imageRank}.jpeg`;
+    return resolveHunterAvatar(state.hunterClass, state.rank);
   }, [state.hunterClass, state.rank]);
 
   const statVariation = React.useMemo(() => {
@@ -466,6 +479,10 @@ export function Dashboard() {
             <img
               src={characterAvatar}
               alt={`Avatar de ${state.username || 'Hunter'}`}
+              decoding="async"
+              loading="eager"
+              fetchPriority="high"
+              onError={handleHunterAvatarError}
               className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
@@ -851,7 +868,7 @@ export function Dashboard() {
               exit={{ opacity: 0, scale: 0.92 }}
               className="relative z-10 aspect-[4/5] w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl"
             >
-              <img src={characterAvatar} alt="Avatar ampliado do Caçador" className="h-full w-full object-cover" />
+              <img src={characterAvatar} alt="Avatar ampliado do Caçador" loading="lazy" decoding="async" onError={handleHunterAvatarError} className="h-full w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent p-6">
                 <p className="text-xl font-black uppercase text-white font-orbitron">{state.username || 'Hunter'}</p>
                 <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-300">
