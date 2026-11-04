@@ -20,6 +20,12 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-04 — Etapa 03.3 (Refinamento Final): Polimento Visual da Home do Caçador (QuickMenu.tsx)
+- **Distribuição Vertical do Painel HUNTER STATUS (src/pages/QuickMenu.tsx & src/components/ui/hud-card.tsx):** Adicionada prop contentClassName ao HudCard (lex h-full flex-col justify-between gap-4) e agrupado o bloco central de Nível, Rank e XP em superfície tática dedicada (g-black/30 p-4 rounded-xl), eliminando espaços vazios na base do card em telas desktop.
+- **Legibilidade Completa em Quick Actions (src/pages/QuickMenu.tsx & src/components/ui/tactical-button.tsx):** Reorganizados os botões táticos em md:grid-cols-3 com títulos completos sem truncamento (Concluir missão, Registrar treino, Registrar refeição) e subtítulos integrados aos contadores diários.
+- **Módulos do Sistema Minimalistas (System Modules):** Removidas completamente as imagens de fundo (/optimized/Cards/*) dos quatro cards inferiores (Portal dos Chefes, Módulo Fortuna, Santuário do Descanso e Ficha de Atributos), convertendo-os em componentes tecnológicos minimalistas em grafite (#10121A) com ícones semânticos à esquerda, hierarquia tipográfica clara e alturas uniformes.
+- **Refinamento Tipográfico:** Elevados tamanhos mínimos de textos funcionais e labels (11px–15px), priorizando Inter para leitura rápida e reservando Orbitron com espaçamento moderado para títulos e indicadores numéricos.
+
 ### 2026-11-04 — Etapa 03.3: Redesign Mobile Premium da Home do Caçador (QuickMenu.tsx)
 - **Hero do Jogador & Painel HUNTER STATUS (src/pages/QuickMenu.tsx):** Redesenho mobile-first da Home (/) utilizando os componentes oficiais do **ASCEND HUD v2** (HudCard, TacticalButton, NeonProgressBar, NeonProgressRing, RankBadge) e arte real otimizada da classe/rank do usuário (/optimized/Classes//Rank .jpg).
 - **Progresso Diário Real & Próxima Missão:** Integração direta com useHunterStore, useBossStore, useHabits e useTasks para calcular o percentual diário consolidado (hábitos, treinos, refeições e tarefas concluídas hoje) e sugerir dinamicamente a próxima atividade pendente.

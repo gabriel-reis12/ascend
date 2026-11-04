@@ -98,7 +98,7 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
           leftIcon && <span className="shrink-0">{leftIcon}</span>
         )}
 
-        <span className={cn('truncate', showSideBars && 'flex-1 text-center')}>
+        <span className={cn('min-w-0', showSideBars ? 'flex-1 text-center' : 'truncate')}>
           {children}
         </span>
 

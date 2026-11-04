@@ -90,6 +90,7 @@ interface QuickActionItem {
   badgeText: string;
   accent: TacticalButtonAccent;
   icon: React.ReactNode;
+  iconBgClass: string;
 }
 
 interface SecondaryModuleItem {
@@ -99,7 +100,8 @@ interface SecondaryModuleItem {
   meta: string;
   variant: HudCardVariant;
   icon: React.ReactNode;
-  image: string;
+  iconContainerClass: string;
+  metaColorClass: string;
 }
 
 export function QuickMenu() {
@@ -298,37 +300,40 @@ export function QuickMenu() {
     {
       path: '/quests',
       label: l('Concluir missão', 'Complete mission'),
-      sublabel: l('Hábitos e objetivos diários', 'Daily habits & objectives'),
+      sublabel: l('Hábitos diários', 'Daily habits'),
       badgeText:
         dailyStats.pendingQuestsTotal > 0
           ? `${dailyStats.pendingQuestsTotal} ${l('pendentes', 'pending')}`
           : `${dailyStats.habitsCompleted}/${dailyStats.habitsTotal} ${l('hoje', 'today')}`,
       accent: 'cyan',
       icon: <CheckSquare className="h-4 w-4 text-[#00F0FF]" />,
+      iconBgClass: 'border-[#00F0FF]/30 bg-[#00F0FF]/10',
     },
     {
       id: 'tour-shortcut-workouts',
       path: '/workouts',
       label: l('Registrar treino', 'Log workout'),
-      sublabel: l('Cargas, séries e cardio', 'Weights, sets & cardio'),
+      sublabel: l('Cargas e cardio', 'Weights & cardio'),
       badgeText:
         dailyStats.workoutsTotal > 0
           ? `${dailyStats.workoutsCompleted}/${dailyStats.workoutsTotal} ${l('hoje', 'today')}`
-          : l('Abrir fichas', 'Open routines'),
+          : l('Fichas ativas', 'Active routines'),
       accent: 'purple',
       icon: <Dumbbell className="h-4 w-4 text-[#A855F7]" />,
+      iconBgClass: 'border-[#A855F7]/30 bg-[#A855F7]/10',
     },
     {
       id: 'tour-shortcut-nutrition',
       path: '/nutrition',
       label: l('Registrar refeição', 'Register meal'),
-      sublabel: l('Dieta, macros e hidratação', 'Diet, macros & hydration'),
+      sublabel: l('Dieta e macros', 'Diet & macros'),
       badgeText:
         dailyStats.mealsTotal > 0
           ? `${dailyStats.mealsCompleted}/${dailyStats.mealsTotal} ${l('hoje', 'today')}`
-          : l('Registrar kcal', 'Log kcal'),
+          : l('Diário alimentar', 'Food log'),
       accent: 'cyan',
       icon: <Apple className="h-4 w-4 text-[#00F0FF]" />,
+      iconBgClass: 'border-[#00F0FF]/30 bg-[#00F0FF]/10',
     },
   ];
 
@@ -336,7 +341,7 @@ export function QuickMenu() {
     ? isEnglish
       ? translateUiText(activeBattle.name)
       : activeBattle.name
-    : l('Raid Semanal', 'Weekly Raid');
+    : l('Raid Semanal Ativa', 'Active Weekly Raid');
 
   const activeBossMeta =
     activeBattle && activeBattle.max_hp > 0
@@ -352,35 +357,39 @@ export function QuickMenu() {
       subtitle: activeBossName,
       meta: activeBossMeta,
       variant: 'crimson',
-      icon: <Skull className="h-4 w-4 text-[#EF4444]" />,
-      image: '/optimized/Cards/Chefes Finais.jpg',
+      icon: <Skull className="h-5 w-5 text-[#EF4444]" />,
+      iconContainerClass: 'border-[#EF4444]/30 bg-[#EF4444]/10 shadow-[0_0_14px_rgba(239,68,68,0.12)]',
+      metaColorClass: 'text-rose-300',
     },
     {
       path: '/fortuna',
       title: l('Módulo Fortuna', 'Fortune Module'),
-      subtitle: l('Finanças & Economia', 'Finances & Savings'),
+      subtitle: l('Finanças, metas e controle de recursos', 'Finances, goals & resource control'),
       meta: `${l('Sabedoria (SAB)', 'Wisdom (WIS)')} · ${state.stats.wisdom}`,
       variant: 'gold',
-      icon: <Coins className="h-4 w-4 text-[#F59E0B]" />,
-      image: '/optimized/Cards/Fortuna.jpg',
+      icon: <Coins className="h-5 w-5 text-[#F59E0B]" />,
+      iconContainerClass: 'border-[#F59E0B]/30 bg-[#F59E0B]/10 shadow-[0_0_14px_rgba(245,158,11,0.12)]',
+      metaColorClass: 'text-amber-300',
     },
     {
       path: '/rest',
       title: l('Santuário do Descanso', 'Recovery Sanctuary'),
-      subtitle: l('Sono & Recuperação Mental', 'Sleep & Mental Recovery'),
+      subtitle: l('Sono, pausa e recuperação mental', 'Sleep, rest & mental recovery'),
       meta: `${l('Equilíbrio (EQU)', 'Balance (BAL)')} · ${state.stats.balance}`,
       variant: 'cyan',
-      icon: <Moon className="h-4 w-4 text-[#00F0FF]" />,
-      image: '/optimized/Cards/Descanso-Lazer.jpg',
+      icon: <Moon className="h-5 w-5 text-[#00F0FF]" />,
+      iconContainerClass: 'border-[#00F0FF]/30 bg-[#00F0FF]/10 shadow-[0_0_14px_rgba(0,240,255,0.12)]',
+      metaColorClass: 'text-cyan-300',
     },
     {
       path: '/status',
       title: l('Ficha de Atributos', 'Attribute Sheet'),
-      subtitle: l('Radar e Domínios do Caçador', 'Hunter Radar & Domains'),
+      subtitle: l('Radar de evolução e 7 domínios', 'Evolution radar & 7 domains'),
       meta: `${l('Nível', 'Level')} ${state.level} · Rank ${state.rank || 'E'}`,
       variant: 'default',
-      icon: <LayoutDashboard className="h-4 w-4 text-slate-300" />,
-      image: '/optimized/Cards/Status.jpg',
+      icon: <LayoutDashboard className="h-5 w-5 text-[#A855F7]" />,
+      iconContainerClass: 'border-[#A855F7]/30 bg-[#A855F7]/10 shadow-[0_0_14px_rgba(168,85,247,0.12)]',
+      metaColorClass: 'text-purple-300',
     },
   ];
 
@@ -394,8 +403,8 @@ export function QuickMenu() {
       };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 pb-6 text-[var(--text-primary)]">
-      {/* ── SEÇÃO 3, 4 & 5: HERO DO JOGADOR + HUNTER STATUS + PROGRESSO DIÁRIO ── */}
+    <div className="mx-auto max-w-5xl space-y-6 pb-8 text-[var(--text-primary)]">
+      {/* ── SEÇÃO 1 & 2: HERO DO JOGADOR + HUNTER STATUS + PROGRESSO DIÁRIO ── */}
       <motion.section
         id="tour-portal-header"
         aria-label={l('Status Principal do Caçador', 'Primary Hunter Status')}
@@ -403,8 +412,8 @@ export function QuickMenu() {
         className="relative"
       >
         <div className="grid grid-cols-1 gap-0 lg:grid-cols-12 lg:gap-5 lg:items-stretch">
-          {/* 3. HERO DO JOGADOR (Compacto no mobile, conectado ao painel Hunter Status) */}
-          <div className="relative h-52 sm:h-60 lg:col-span-5 lg:h-auto lg:min-h-[340px] overflow-hidden rounded-t-2xl lg:rounded-2xl border border-b-0 lg:border-b border-[var(--hud-border-cyan)] bg-[#0A0C12] shadow-[0_0_28px_rgba(0,240,255,0.08)]">
+          {/* 1. HERO DO JOGADOR (Proporção equilibrada no mobile e desktop) */}
+          <div className="relative h-56 sm:h-64 lg:col-span-5 lg:h-auto overflow-hidden rounded-t-2xl lg:rounded-2xl border border-b-0 lg:border-b border-[var(--hud-border-cyan)] bg-[#0A0C12] shadow-[0_0_28px_rgba(0,240,255,0.08)]">
             <img
               src={characterAvatar}
               alt={`${hunterName} — ${hunterClassLabel} Rank ${state.rank || 'E'}`}
@@ -418,7 +427,7 @@ export function QuickMenu() {
             {/* Vinheta e iluminação holográfica discreta */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07080C] via-[#07080C]/35 to-black/30"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07080C] via-[#07080C]/30 to-black/25"
             />
             <div
               aria-hidden="true"
@@ -426,17 +435,17 @@ export function QuickMenu() {
             />
 
             {/* Topo do Hero: Link Neural + Classe Despertada */}
-            <div className="absolute inset-x-3.5 top-3 z-10 flex items-center justify-between gap-2">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-[#07080C]/75 px-2.5 py-1 backdrop-blur-md">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
-                <span className="font-orbitron text-[9px] font-bold uppercase tracking-[0.18em] text-slate-200">
+            <div className="absolute inset-x-4 top-3.5 z-10 flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#07080C]/80 px-3 py-1 backdrop-blur-md">
+                <span className="h-2 w-2 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-100">
                   {l('Sistema Ativo', 'System Online')}
                 </span>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#00F0FF]/35 bg-[#07080C]/80 px-2.5 py-1 backdrop-blur-md">
-                <Shield className="h-3 w-3 text-[#00F0FF]" aria-hidden="true" />
-                <span className="font-orbitron text-[9px] font-black uppercase tracking-[0.14em] text-[#00F0FF]">
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#00F0FF]/40 bg-[#07080C]/85 px-3 py-1 backdrop-blur-md">
+                <Shield className="h-3.5 w-3.5 text-[#00F0FF]" aria-hidden="true" />
+                <span className="font-orbitron text-[11px] font-bold uppercase tracking-[0.1em] text-[#00F0FF]">
                   {hunterClassLabel}
                 </span>
               </div>
@@ -445,17 +454,17 @@ export function QuickMenu() {
             {/* Base do Hero: Identidade do Caçador e Título */}
             <div className="absolute inset-x-4 bottom-6 lg:bottom-4 z-10 flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#F59E0B]">
-                  <Crown className="h-3 w-3 shrink-0 text-[#F59E0B]" aria-hidden="true" />
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#F59E0B]">
+                  <Crown className="h-3.5 w-3.5 shrink-0 text-[#F59E0B]" aria-hidden="true" />
                   <span className="truncate">{hunterTitle}</span>
                 </div>
-                <h1 className="mt-0.5 truncate font-orbitron text-xl sm:text-2xl font-black uppercase tracking-[0.08em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                <h1 className="mt-0.5 truncate font-orbitron text-xl sm:text-2xl font-black uppercase tracking-[0.06em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
                   {hunterName}
                 </h1>
               </div>
 
               {state.streak.current > 0 && (
-                <div className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/35 bg-[#07080C]/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-300 backdrop-blur-md font-orbitron">
+                <div className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-[#07080C]/85 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 backdrop-blur-md font-orbitron">
                   <Flame className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />
                   <span>{state.streak.current}d</span>
                 </div>
@@ -463,120 +472,123 @@ export function QuickMenu() {
             </div>
           </div>
 
-          {/* 4 & 5. PAINEL HUNTER STATUS + PROGRESSO DIÁRIO */}
+          {/* 2. PAINEL HUNTER STATUS + PROGRESSO DIÁRIO (Distribuição vertical equilibrada) */}
           <div className="relative z-10 -mt-4 lg:mt-0 lg:col-span-7">
             <HudCard
               variant="elevated"
               corners
               className="h-full border-[var(--hud-border-strong)] bg-[#10131D]/95 backdrop-blur-xl"
+              contentClassName="flex h-full flex-col justify-between gap-4"
             >
               {/* Cabeçalho HUNTER STATUS */}
-              <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-3">
+                <div className="flex items-center gap-2.5">
                   <span
                     aria-hidden="true"
-                    className="h-2 w-0.5 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]"
+                    className="h-3.5 w-1 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]"
                   />
-                  <h2 className="font-orbitron text-xs sm:text-sm font-black uppercase tracking-[0.22em] text-slate-100">
-                    {l('Hunter Status', 'Hunter Status')}
+                  <h2 className="font-orbitron text-xs sm:text-sm font-bold uppercase tracking-[0.16em] text-slate-100">
+                    {l('Status do Caçador', 'Hunter Status')}
                   </h2>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => navigate('/status')}
-                  className="inline-flex min-h-[32px] items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 font-orbitron text-[9px] font-bold uppercase tracking-[0.14em] text-[#00F0FF] transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+                  className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[#00F0FF] transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
                 >
                   <span>{l('Ver Status', 'Full Status')}</span>
-                  <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
 
-              {/* Nível Real & Rank Real */}
-              <div className="mt-3.5 flex items-center justify-between gap-4 px-1">
-                <div>
-                  <span className="block font-orbitron text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                    {l('Nível', 'Level')}
-                  </span>
-                  <div className="mt-0.5 flex items-baseline gap-2">
-                    <span className="font-orbitron text-3xl sm:text-4xl font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.45)] tabular-nums">
-                      {state.level}
+              {/* Bloco Central: Nível, Rank e Barra de XP */}
+              <div className="rounded-xl border border-white/[0.06] bg-black/30 p-3.5 sm:p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                      {l('Nível', 'Level')}
                     </span>
-                    {state.level >= MAX_LEVEL && (
-                      <span className="rounded border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-1.5 py-0.5 font-orbitron text-[9px] font-black uppercase text-[#F59E0B]">
-                        MAX
+                    <div className="mt-0.5 flex items-baseline gap-2">
+                      <span className="font-orbitron text-3xl sm:text-4xl font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.45)] tabular-nums">
+                        {state.level}
                       </span>
-                    )}
+                      {state.level >= MAX_LEVEL && (
+                        <span className="rounded border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-1.5 py-0.5 font-orbitron text-[10px] font-bold uppercase text-[#F59E0B]">
+                          MAX
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-[#F59E0B]">
+                        Rank
+                      </span>
+                      <span className="mt-0.5 block font-orbitron text-2xl sm:text-3xl font-black leading-none text-[#F59E0B] drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+                        {state.rank || 'E'}
+                      </span>
+                    </div>
+                    <RankBadge rank={state.rank || 'E'} size="md" showLabel />
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <span className="block font-orbitron text-[10px] font-bold uppercase tracking-[0.18em] text-[#F59E0B]">
-                      Rank
+                {/* Barra de XP com valores reais */}
+                <div className="mt-3.5 space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-orbitron text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      XP
                     </span>
-                    <span className="mt-0.5 block font-orbitron text-2xl sm:text-3xl font-black leading-none text-[#F59E0B] drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]">
-                      {state.rank || 'E'}
+                    <NeonProgressBar
+                      value={state.level >= MAX_LEVEL ? 100 : state.xp}
+                      max={state.level >= MAX_LEVEL ? 100 : safeXpRequired}
+                      variant="xp"
+                      size="md"
+                      ariaLabel={l(
+                        'Progresso de XP até o próximo nível',
+                        'XP progress to next level'
+                      )}
+                      className="flex-1"
+                    />
+                    <span className="font-orbitron text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      XP
                     </span>
                   </div>
-                  <RankBadge rank={state.rank || 'E'} size="md" showLabel />
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-300 tabular-nums">
+                    <span className="inline-flex items-center gap-1 text-[#00F0FF]">
+                      <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                      <strong className="font-orbitron text-xs font-bold">
+                        {state.xp} / {state.xpRequired} XP
+                      </strong>
+                    </span>
+                    <span className="text-slate-400">
+                      {state.level >= MAX_LEVEL
+                        ? l('Nível máximo alcançado', 'Maximum level reached')
+                        : `${Math.max(0, state.xpRequired - state.xp)} XP ${l(
+                            'para o Nível',
+                            'to Level'
+                          )} ${state.level + 1}`}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Barra de XP com valores reais */}
-              <div className="mt-3.5 space-y-1.5">
-                <div className="flex items-center gap-2.5">
-                  <span className="font-orbitron text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    XP
-                  </span>
-                  <NeonProgressBar
-                    value={state.level >= MAX_LEVEL ? 100 : state.xp}
-                    max={state.level >= MAX_LEVEL ? 100 : safeXpRequired}
-                    variant="xp"
-                    size="md"
-                    ariaLabel={l(
-                      'Progresso de XP até o próximo nível',
-                      'XP progress to next level'
-                    )}
-                    className="flex-1"
-                  />
-                  <span className="font-orbitron text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    XP
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] font-medium text-slate-400 tabular-nums">
-                  <span className="inline-flex items-center gap-1 text-[#00F0FF]">
-                    <Zap className="h-3 w-3" aria-hidden="true" />
-                    <strong className="font-orbitron text-[11px] font-bold">
-                      {state.xp} / {state.xpRequired} XP
-                    </strong>
-                  </span>
-                  <span>
-                    {state.level >= MAX_LEVEL
-                      ? l('Nível máximo alcançado', 'Maximum level reached')
-                      : `${Math.max(0, state.xpRequired - state.xp)} XP ${l(
-                          'para o Nível',
-                          'to Level'
-                        )} ${state.level + 1}`}
-                  </span>
-                </div>
-              </div>
-
-              {/* 5. PROGRESSO DIÁRIO (Anel Neon + Indicadores Reais) */}
-              <div className="mt-4 border-t border-white/[0.06] pt-4">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="font-orbitron text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200">
+              {/* Progresso Diário (Anel Neon + Indicadores Reais) */}
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-orbitron text-xs sm:text-[13px] font-bold uppercase tracking-[0.1em] text-slate-100">
                     {l('Progresso Diário', 'Daily Progress')} —{' '}
                     <span className="text-[#00F0FF]">{dailyStats.progress}%</span>
                   </span>
-                  <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
+                  <span className="text-xs font-semibold text-slate-300 tabular-nums">
                     +{todayXp} / {DAILY_COMMON_XP_EFFECTIVE_MAX} XP {l('hoje', 'today')}
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-                  <div className="flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex shrink-0 items-center justify-center">
                     <NeonProgressRing
                       value={dailyStats.progress}
                       secondaryValue={xpPct}
@@ -588,7 +600,7 @@ export function QuickMenu() {
                       <span className="font-orbitron text-xl font-black text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] tabular-nums">
                         {dailyStats.progress}%
                       </span>
-                      <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400 tabular-nums">
+                      <span className="mt-0.5 text-[11px] font-semibold text-slate-300 tabular-nums">
                         {dailyStats.completed}/{dailyStats.total} {l('feitos', 'done')}
                       </span>
                     </NeonProgressRing>
@@ -596,29 +608,29 @@ export function QuickMenu() {
 
                   {/* Resumo das 3 frentes diárias reais */}
                   <div className="grid w-full flex-1 grid-cols-3 gap-2 sm:grid-cols-1 sm:gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-2.5 py-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2">
+                      <span className="text-xs font-medium text-slate-300">
                         {l('Missões', 'Quests')}
                       </span>
-                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs font-bold text-[#00F0FF] tabular-nums">
+                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs sm:text-sm font-bold text-[#00F0FF] tabular-nums">
                         {dailyStats.habitsCompleted}/{dailyStats.habitsTotal}
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-2.5 py-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2">
+                      <span className="text-xs font-medium text-slate-300">
                         {l('Treinos', 'Workouts')}
                       </span>
-                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs font-bold text-[#A855F7] tabular-nums">
+                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs sm:text-sm font-bold text-[#A855F7] tabular-nums">
                         {dailyStats.workoutsCompleted}/{dailyStats.workoutsTotal}
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-2.5 py-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2">
+                      <span className="text-xs font-medium text-slate-300">
                         {l('Refeições', 'Meals')}
                       </span>
-                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs font-bold text-emerald-400 tabular-nums">
+                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs sm:text-sm font-bold text-emerald-400 tabular-nums">
                         {dailyStats.mealsCompleted}/{dailyStats.mealsTotal}
                       </span>
                     </div>
@@ -630,26 +642,26 @@ export function QuickMenu() {
         </div>
       </motion.section>
 
-      {/* ── SEÇÃO 6: AÇÕES RÁPIDAS (Tactical Controls inspirados em ascend-home.jpg) ── */}
+      {/* ── SEÇÃO 3: AÇÕES RÁPIDAS (Títulos completos e legíveis sem truncamento) ── */}
       <motion.section
         id="tour-portal-primary"
         aria-labelledby="quick-actions-heading"
         {...motionProps}
-        className="space-y-2.5"
+        className="space-y-3"
       >
         <div className="flex items-center justify-between px-1">
           <h2
             id="quick-actions-heading"
-            className="font-orbitron text-[10px] font-black uppercase tracking-[0.22em] text-slate-400"
+            className="font-orbitron text-xs font-bold uppercase tracking-[0.14em] text-slate-300"
           >
             {l('Ações Rápidas', 'Quick Actions')}
           </h2>
-          <span className="text-[10px] font-semibold text-slate-500">
+          <span className="text-xs font-medium text-slate-400">
             {l('Acesso direto', 'Direct access')}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {quickActions.map((action) => (
             <TacticalButton
               key={action.path}
@@ -658,21 +670,28 @@ export function QuickMenu() {
               accent={action.accent}
               fullWidth
               onClick={() => navigate(action.path)}
-              leftIcon={action.icon}
-              rightIcon={<ChevronRight className="h-4 w-4 text-slate-300" />}
-              className="min-h-[54px] px-4 py-2.5"
-            >
-              <span className="flex w-full items-center justify-between gap-2 text-left">
-                <span className="min-w-0">
-                  <span className="block truncate font-orbitron text-xs sm:text-[13px] font-bold uppercase tracking-[0.08em] text-slate-100">
-                    {action.label}
-                  </span>
-                  <span className="block truncate text-[11px] font-normal text-slate-400">
-                    {action.sublabel}
-                  </span>
+              leftIcon={
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg border ${action.iconBgClass}`}
+                >
+                  {action.icon}
                 </span>
-                <span className="shrink-0 rounded-md border border-white/10 bg-black/40 px-2 py-0.5 font-orbitron text-[9px] font-bold uppercase tracking-wider text-slate-300 tabular-nums">
-                  {action.badgeText}
+              }
+              rightIcon={<ChevronRight className="h-4 w-4 text-slate-300" />}
+              className="min-h-[64px] px-4 py-3"
+            >
+              <span className="flex w-full flex-col items-start text-left">
+                <span className="text-sm sm:text-[15px] font-bold leading-snug tracking-[0.01em] text-white">
+                  {action.label}
+                </span>
+                <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium text-slate-400">
+                  <span>{action.sublabel}</span>
+                  <span aria-hidden="true" className="text-slate-600">
+                    •
+                  </span>
+                  <span className="font-semibold text-slate-200 tabular-nums">
+                    {action.badgeText}
+                  </span>
                 </span>
               </span>
             </TacticalButton>
@@ -680,26 +699,26 @@ export function QuickMenu() {
         </div>
       </motion.section>
 
-      {/* ── PRÓXIMA MISSÃO RECOMENDADA (Dados Reais + Âncora do ProductTour) ── */}
+      {/* ── SEÇÃO 4: PRÓXIMA MISSÃO RECOMENDADA ── */}
       <motion.section
         id="tour-portal-recommended"
         aria-label={l('Missão Recomendada', 'Recommended Mission')}
         {...motionProps}
       >
-        <HudCard variant="purple" corners className="py-3.5 px-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#A855F7]/35 bg-[#A855F7]/15 text-[#A855F7]">
+        <HudCard variant="purple" corners className="p-4 sm:px-5 sm:py-4">
+          <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3.5 min-w-0">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#A855F7]/35 bg-[#A855F7]/15 text-[#A855F7]">
                 <NextMissionIcon className="h-5 w-5" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-orbitron text-[9px] font-black uppercase tracking-[0.2em] text-[#A855F7]">
+                <p className="font-orbitron text-[11px] font-bold uppercase tracking-[0.12em] text-[#C084FC]">
                   {nextMission.eyebrow}
                 </p>
-                <p className="mt-0.5 truncate text-sm font-bold text-slate-100">
+                <p className="mt-0.5 text-sm sm:text-base font-bold leading-snug text-white">
                   {nextMission.title}
                 </p>
-                <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                <p className="mt-0.5 text-xs font-medium text-slate-300">
                   {nextMission.reward}
                 </p>
               </div>
@@ -708,30 +727,30 @@ export function QuickMenu() {
             <button
               type="button"
               onClick={() => navigate(nextMission.path)}
-              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#A855F7]/40 bg-[#A855F7]/15 px-4 py-2 font-orbitron text-[10px] font-black uppercase tracking-[0.14em] text-purple-200 transition-all hover:border-[#A855F7]/70 hover:bg-[#A855F7]/25 hover:text-white active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl border border-[#A855F7]/45 bg-[#A855F7]/15 px-4 py-2.5 font-orbitron text-xs font-bold uppercase tracking-[0.1em] text-purple-100 transition-all hover:border-[#A855F7]/75 hover:bg-[#A855F7]/25 hover:text-white active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
             >
               <span>{nextMission.cta}</span>
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </HudCard>
       </motion.section>
 
-      {/* ── SEÇÃO 7: MÓDULOS SECUNDÁRIOS (Bosses, Fortuna, Descanso e Status) ── */}
+      {/* ── SEÇÃO 5: MÓDULOS DO SISTEMA (Cards Tecnológicos Minimalistas sem Imagens de Fundo) ── */}
       <motion.section
         id="tour-portal-secondary"
         aria-labelledby="secondary-modules-heading"
         {...motionProps}
-        className="space-y-2.5"
+        className="space-y-3"
       >
         <div className="flex items-center justify-between px-1">
           <h2
             id="secondary-modules-heading"
-            className="font-orbitron text-[10px] font-black uppercase tracking-[0.22em] text-slate-400"
+            className="font-orbitron text-xs font-bold uppercase tracking-[0.14em] text-slate-300"
           >
             {l('Módulos do Sistema', 'System Modules')}
           </h2>
-          <span className="text-[10px] font-semibold text-slate-500">
+          <span className="text-xs font-medium text-slate-400">
             {l('Domínios complementares', 'Complementary domains')}
           </span>
         </div>
@@ -743,45 +762,36 @@ export function QuickMenu() {
               type="button"
               onClick={() => navigate(mod.path)}
               aria-label={`${l('Abrir', 'Open')} ${mod.title}`}
-              className="group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF] rounded-2xl active:scale-[0.99] transition-transform"
+              className="group h-full text-left rounded-2xl transition-transform duration-150 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
             >
               <HudCard
                 variant={mod.variant}
                 noPadding
-                className="relative flex min-h-[88px] items-center justify-between gap-3 overflow-hidden p-3.5 sm:p-4 hover:border-white/25"
+                className="h-full min-h-[96px] border-white/10 bg-[#10121A] transition-all duration-200 group-hover:border-white/25 group-hover:bg-[#141722]"
+                contentClassName="flex h-full items-center justify-between gap-4 p-4"
               >
-                {/* Arte de fundo sutil otimizada */}
-                <img
-                  src={mod.image}
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  decoding="async"
-                  className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20 transition-transform duration-500 group-hover:scale-105"
-                />
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#07080C]/95 via-[#10121A]/85 to-[#10121A]/65"
-                />
-
-                <div className="relative z-10 flex min-w-0 flex-1 items-center gap-3.5">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/55 backdrop-blur-md">
+                <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${mod.iconContainerClass}`}
+                  >
                     {mod.icon}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate font-orbitron text-xs font-black uppercase tracking-[0.1em] text-white">
+                    <h3 className="font-orbitron text-[13px] sm:text-sm font-bold uppercase tracking-[0.06em] text-white leading-snug">
                       {mod.title}
                     </h3>
-                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-300">
+                    <p className="mt-0.5 text-xs font-medium text-slate-300 leading-snug">
                       {mod.subtitle}
                     </p>
-                    <p className="mt-1 truncate font-orbitron text-[10px] font-bold uppercase tracking-wider text-slate-400 tabular-nums">
+                    <p
+                      className={`mt-1 text-xs font-semibold tabular-nums ${mod.metaColorClass}`}
+                    >
                       {mod.meta}
                     </p>
                   </div>
                 </div>
 
-                <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/50 text-slate-400 transition-all group-hover:translate-x-0.5 group-hover:border-white/25 group-hover:text-white">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-400 transition-all duration-150 group-hover:translate-x-0.5 group-hover:border-white/25 group-hover:bg-white/[0.07] group-hover:text-white">
                   <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </div>
               </HudCard>

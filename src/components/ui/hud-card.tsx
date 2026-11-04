@@ -18,6 +18,8 @@ export interface HudCardProps extends React.HTMLAttributes<HTMLDivElement> {
   radialGlow?: boolean;
   /** Remove o padding interno padrão (útil para cards com header ou imagem full-bleed) */
   noPadding?: boolean;
+  /** Classes adicionais para o container interno de conteúdo */
+  contentClassName?: string;
 }
 
 const variantClasses: Record<HudCardVariant, string> = {
@@ -54,6 +56,7 @@ export const HudCard = React.forwardRef<HTMLDivElement, HudCardProps>(
   (
     {
       className,
+      contentClassName,
       variant = 'default',
       corners = false,
       radialGlow = true,
@@ -117,7 +120,7 @@ export const HudCard = React.forwardRef<HTMLDivElement, HudCardProps>(
           </>
         )}
 
-        <div className="relative z-10">{children}</div>
+        <div className={cn('relative z-10', contentClassName)}>{children}</div>
       </div>
     );
   }
