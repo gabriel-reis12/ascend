@@ -20,6 +20,14 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-04 — Remoção Completa da Monetização e Desbloqueio Universal
+- **Eliminação Total de Paywalls Comerciais:** Removido o componente `PremiumGate` e todas as suas invocações. Os módulos Fortuna (`src/pages/Fortuna.tsx`), Códex de Nutrição (`src/pages/Nutrition.tsx`) e Histórico & Evolução Física de Treinos (`src/pages/Workouts.tsx`) foram desbloqueados para todos os caçadores sem exceção.
+- **Liberação dos Chefes Rank S (`src/pages/Bosses.tsx`):** Eliminadas as restrições comerciais que travavam as raids dos chefes finais (`boss_05`, `boss_06`, `boss_07`), restaurando a progressão exclusivamente por mérito de jogabilidade (status de raid e requisitos de nível/rank).
+- **Limpeza do Stripe e Faturamento em Configurações (`src/pages/Settings.tsx`):** Removidos o painel de faturamento/assinatura, botões de checkout, abertura do portal de gerenciamento, estados de carregamento e imports do `CreditCard`.
+- **Eliminação de Sincronizações Manuais de Assinatura (`src/contexts/AuthContext.tsx`):** Removidas as chamadas de verificação de emails para premium manual (`hasManualPremiumAccess`) e atualizações de billing do ciclo de autenticação.
+- **Política Zero Waste e Limpeza de Edge Functions:** As funções do Stripe (`stripe-checkout`, `stripe-portal`, `stripe-webhook`) e componentes de monetização foram arquivados em `obsoleto/` e removidos do código ativo em `supabase/functions/` e `src/components/`.
+- **Validação de Contratos & Internacionalização:** Limpeza das strings comerciais obsoletas em `src/lib/uiEnglish.ts` e criação da suíte `execution/test_monetization_removal.mjs` (7/7 aprovados).
+
 ### 2026-11-04 — Correção Emergencial: Regressão de Autenticação e Redirecionamento ao Onboarding
 - **HunterGuard Resiliente (`src/App.tsx`):** Identificada condição de corrida onde o `HunterGuard` avaliava `hunterClass` de forma síncrona logo após o login/refresh antes da conclusão da requisição assíncrona ao Supabase (`profiles`). Implementada sincronização com `profileLoaded`, `profileLoading` e `profileError`: enquanto os dados estão sendo recuperados, o sistema exibe a transição "Sincronizando Caçador..."; caso haja erro de rede/RLS, uma interface de reconexão é apresentada com botão de tentativa, impedindo que o jogador seja redirecionado indevidamente para `/onboarding`.
 - **Controle de Estado de Perfil no Zustand (`src/stores/useHunterStore.ts`):** Adicionadas as propriedades `profileLoaded`, `profileLoading` e `profileError` ao `HunterState`. Em `loadProfile`, o estado de carregamento é acionado no início e `profileLoaded: true` é atribuído após hidratação completa dos atributos, XP, rank e classe. Em caso de erro na consulta, o fluxo é interrompido com segurança sem tentar recriar perfis ou sobrescrever dados existentes.

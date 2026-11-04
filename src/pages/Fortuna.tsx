@@ -18,7 +18,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
 import { usePreferences } from '@/contexts/preferences';
-import { PremiumGate } from '@/components/premium/PremiumGate';
 
 interface FinancialLog {
   id: string;
@@ -467,14 +466,7 @@ export function Fortuna() {
     : 0;
 
   return (
-    <PremiumGate
-      title={l('Módulo da Fortuna Restrito', 'Fortune Module Locked')}
-      description={l(
-        'O gerenciamento financeiro e controle do fluxo de moedas são privilégios de caçadores de alto nível. Desperte o Premium para acessar a Fortuna e derrotar o Mercador das Dívidas.',
-        'Financial management and coin-flow control are privileges for high-level hunters. Awaken Premium to access Fortune and defeat the Debt Merchant.'
-      )}
-    >
-      <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12">
         {/* Cabeçalho */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -1101,6 +1093,5 @@ export function Fortuna() {
 
         </div>
       </div>
-    </PremiumGate>
   );
 }

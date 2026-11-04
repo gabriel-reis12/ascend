@@ -28,7 +28,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore, BOSS_LIST } from '@/stores/useBossStore';
 import { usePreferences } from '@/contexts/preferences';
-import { PremiumGate } from '@/components/premium/PremiumGate';
 
 const EN_BOSS_COPY: Record<string, {
   name: string;
@@ -350,16 +349,7 @@ export function Bosses() {
           </button>
         </div>
       ) : activeBattle && bossDef ? (
-        ['boss_05', 'boss_06', 'boss_07'].includes(activeBattle.boss_id) && !hunterStore.isPremium ? (
-          <PremiumGate
-            title={l(`Invasão de Fenda Rank S: ${bossDef.name}`, `Rank S Gate Invasion: ${localizedBoss?.name || bossDef.name}`)}
-            description={l(
-              'As fendas finais dos caçadores de alto nível são classificadas como Rank S e estão seladas. Para lutar contra os últimos 3 chefes da campanha e purificar sua mente, desperte seu potencial premium.',
-              'The final gates for high-level hunters are classified as Rank S and remain sealed. To fight the last 3 campaign bosses and purify your mind, awaken your premium potential.'
-            )}
-          />
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Card do Boss (Visual) */}
           <div className="lg:col-span-7 space-y-6">
@@ -636,14 +626,13 @@ export function Bosses() {
             </div>
           </div>
         </div>
-        )
       ) : (
         <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-12 text-center shadow-xl">
           <p className="text-gray-500 font-orbitron uppercase tracking-widest">{l('Nenhuma raid ativa encontrada na fenda.', 'No active raid found in the Rift.')}</p>
         </div>
       )}
 
-      {activeBattle && bossDef && !(['boss_05', 'boss_06', 'boss_07'].includes(activeBattle.boss_id) && !hunterStore.isPremium) && (
+      {activeBattle && bossDef && (
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6">
             <div className="flex items-center justify-between">
@@ -725,9 +714,7 @@ export function Bosses() {
         {/* Grid de Bosses */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
           {BOSS_LIST.map((boss) => {
-            const isPremiumBoss = ['boss_05', 'boss_06', 'boss_07'].includes(boss.id);
-            const isPremiumLocked = isPremiumBoss && !hunterStore.isPremium;
-            const status = isPremiumLocked ? 'locked' : getBossStatus(boss.id);
+            const status = getBossStatus(boss.id);
             const isDefeated = status === 'defeated';
             const isActive = status === 'active';
             const isLocked = status === 'locked';
@@ -762,14 +749,12 @@ export function Bosses() {
                   <p className="w-full whitespace-normal break-words text-[10px] font-black leading-4 font-orbitron [overflow-wrap:anywhere] sm:text-[11px]">
                     {galleryBossName}
                   </p>
-                  <p className={`text-[10px] font-bold ${isDefeated ? 'text-emerald-400' : isActive ? 'text-purple-300' : isPremiumLocked ? 'text-purple-400/80 font-semibold' : 'text-gray-600'}`}>
+                  <p className={`text-[10px] font-bold ${isDefeated ? 'text-emerald-400' : isActive ? 'text-purple-300' : 'text-gray-600'}`}>
                     {isDefeated
                       ? l('Purificado', 'Purified')
                       : isActive
                         ? l('Em combate', 'In combat')
-                        : isPremiumLocked
-                          ? l('Premium', 'Premium')
-                          : l('Bloqueado', 'Locked')}
+                        : l('Bloqueado', 'Locked')}
                   </p>
                 </div>
                 
@@ -777,11 +762,7 @@ export function Bosses() {
                 <div className="absolute top-2 right-2">
                   {isDefeated && <CheckCircle2 size={10} className="text-emerald-400" />}
                   {isActive && <Zap size={10} className="text-purple-400 animate-bounce" />}
-                  {isPremiumLocked ? (
-                    <Sparkles size={10} className="text-purple-400 animate-pulse" />
-                  ) : (
-                    isLocked && <Lock size={10} className="text-gray-600" />
-                  )}
+                  {isLocked && <Lock size={10} className="text-gray-600" />}
                 </div>
               </motion.div>
             );

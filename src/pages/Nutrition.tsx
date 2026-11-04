@@ -35,7 +35,6 @@ import { useBossStore } from '@/stores/useBossStore';
 import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 import type { MealPlan } from '@/hooks/useMealPlans';
 import { usePreferences } from '@/contexts/preferences';
-import { PremiumGate } from '@/components/premium/PremiumGate';
 import { translateUiText } from '@/lib/uiEnglish';
 import { analyzeNutritionText, type NutritionAiIngredient } from '@/lib/nutritionAi';
 
@@ -980,14 +979,7 @@ export function Nutrition() {
 
               {/* Conteúdo: Códex da Alimentação (IA) */}
               {subTab === 'codex' && (
-                <PremiumGate
-                  title={l('Códex de Alimentação Restrito', 'Food Codex Locked')}
-                  description={l(
-                    'A calibração avançada de nutrientes, catálogo de fast foods e análise assistida requer ativação de assinatura premium.',
-                    'Advanced nutrient calibration, fast-food catalog matching, and assisted analysis require an active premium subscription.'
-                  )}
-                >
-                  <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
+                <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-purple-500/5 blur-3xl" />
                   
                   <div className="space-y-1 relative z-10">
@@ -1306,7 +1298,6 @@ export function Nutrition() {
                     )}
                   </AnimatePresence>
                   </div>
-                </PremiumGate>
               )}
 
               {/* Conteúdo: Biblioteca de Suprimentos */}

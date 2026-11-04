@@ -5,7 +5,6 @@ import { clearAllAuthSessionTokens } from '../lib/authStorage';
 import { useHunterStore } from '../stores/useHunterStore';
 import { useBossStore } from '../stores/useBossStore';
 import { evaluateYesterdayNutrition } from '../lib/nutritionDailyScore';
-import { hasManualPremiumAccess } from '../lib/premiumAccess';
 
 interface AuthContextValue {
   user: User | null;
@@ -32,16 +31,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const syncProfileAndDailyNutrition = async (currentUser: User) => {
     await loadProfile(currentUser.id);
-    if (hasManualPremiumAccess(currentUser.email)) {
-      useHunterStore.setState({ isPremium: true });
-      void supabase
-        .from('profiles')
-        .update({ is_premium: true })
-        .eq('id', currentUser.id)
-        .then(({ error }) => {
-          if (error) console.warn('[AuthContext] Premium manual nao sincronizado:', error);
-        });
-    }
     void evaluateYesterdayNutrition(currentUser.id, {
       addXp: useHunterStore.getState().addXp,
       updateStat: useHunterStore.getState().updateStat,

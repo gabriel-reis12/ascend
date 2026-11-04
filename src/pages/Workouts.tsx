@@ -37,7 +37,6 @@ import { localDateString } from '@/lib/date';
 import { WORKOUT_PROGRAM_PRESETS } from '@/data/workoutPresets';
 import type { WorkoutProgramPreset } from '@/data/workoutPresets';
 import { usePreferences } from '@/contexts/preferences';
-import { PremiumGate } from '@/components/premium/PremiumGate';
 import { translateUiText } from '@/lib/uiEnglish';
 
 interface Exercise {
@@ -1304,17 +1303,9 @@ export function Workouts() {
           )}
 
           {activeTab === 'progress' && (
-            <PremiumGate
-              title={l('Histórico e Evolução Físicos Restritos', 'Physical History & Progression Locked')}
-              description={l(
-                'O painel de evolução corporal, análise de carga e histórico detalhado de treinos realizados requer ativação de assinatura premium.',
-                'Body progression, load analysis, and detailed workout history require an active premium subscription.'
-              )}
-            >
-              <div className="space-y-6">
-                <WorkoutProgress />
-              </div>
-            </PremiumGate>
+            <div className="space-y-6">
+              <WorkoutProgress />
+            </div>
           )}
       </motion.div>
 

@@ -59,8 +59,6 @@ const samples = [
   ['Confirmar Senha', 'Confirm Password'],
   ['Fenda de Anomalia', 'Anomaly Gate'],
   ['Fenda Aberta', 'Gate Open'],
-  ['Requer Chave do Despertar (Nível Premium)', 'Requires Awakening Key (Premium Level)'],
-  ['Benefícios do Despertar Premium', 'Premium Awakening Benefits'],
   ['CONSUMO DIÁRIO', 'DAILY CONSUMPTION'],
   ['O Sistema ainda não detectou nutrientes hoje.', 'The System has not detected nutrients today.'],
 ];

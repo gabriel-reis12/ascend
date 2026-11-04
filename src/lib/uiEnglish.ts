@@ -1112,8 +1112,6 @@ const EXTRA_EXACT_ENGLISH: Record<string, string> = {
   'Fenda Aberta': 'Gate Open',
   'Portal Fechado': 'Portal Closed',
   'Gere uma quest bônus diária focada em um domínio.': 'Generate a daily bonus quest focused on one domain.',
-  'Requer Chave do Despertar (Nível Premium)': 'Requires Awakening Key (Premium Level)',
-  'Benefícios do Despertar Premium': 'Premium Awakening Benefits',
   'CONSUMO DIÁRIO': 'DAILY CONSUMPTION',
   'O Sistema ainda não detectou nutrientes hoje.': 'The System has not detected nutrients today.',
   'min registrados hoje': 'min logged today',
