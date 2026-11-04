@@ -83,6 +83,10 @@ export interface HunterState {
   subscriptionStatus: string | null;
   trialEndsAt: string | null;
 
+  profileLoaded: boolean;
+  profileLoading: boolean;
+  profileError: string | null;
+
   // Actions
   addXp: (amount: number, userId?: string, options?: XpAwardOptions) => Promise<XpAwardResult>;
   updateStat: (stat: keyof HunterStats, amount: number, userId?: string) => Promise<void>;
@@ -137,6 +141,9 @@ const INITIAL_STATE = {
   stripeSubscriptionId: null,
   subscriptionStatus: null,
   trialEndsAt: null,
+  profileLoaded: false,
+  profileLoading: false,
+  profileError: null,
 };
 
 const calculateCommonXp = (currentGainedToday: number, amount: number) => {
@@ -372,6 +379,8 @@ export const useHunterStore = create<HunterState>()(
       },
 
       loadProfile: async (userId) => {
+        set({ profileLoading: true, profileError: null });
+
         let { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -380,6 +389,7 @@ export const useHunterStore = create<HunterState>()(
 
         if (error) {
           console.error('[useHunterStore] Erro ao carregar profile:', error);
+          set({ profileLoading: false, profileError: error.message || 'Erro ao sincronizar dados com o Sistema' });
           return;
         }
 
@@ -410,6 +420,7 @@ export const useHunterStore = create<HunterState>()(
 
           if (createProfileError) {
             console.error('[useHunterStore] Erro ao criar profile ausente:', createProfileError);
+            set({ profileLoading: false, profileError: createProfileError.message || 'Erro ao inicializar perfil' });
             return;
           }
 
@@ -511,6 +522,9 @@ export const useHunterStore = create<HunterState>()(
             stripeSubscriptionId: data.stripe_subscription_id || null,
             subscriptionStatus: data.subscription_status || null,
             trialEndsAt: data.trial_ends_at || null,
+            profileLoaded: true,
+            profileLoading: false,
+            profileError: null,
           });
 
           void (async () => {

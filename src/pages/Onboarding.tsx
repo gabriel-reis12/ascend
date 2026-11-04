@@ -510,7 +510,7 @@ function DecisionFeedback({ message }: { message: string | null }) {
 export function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { hunterClass, setHunterClass } = useHunterStore();
+  const { hunterClass, setHunterClass, profileLoaded, profileLoading } = useHunterStore();
   const { language } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => isEnglish ? en : pt;
@@ -548,14 +548,17 @@ export function Onboarding() {
   });
 
   useEffect(() => {
+    // Se ainda estiver carregando o perfil, não inicia o fluxo de perguntas
+    if (profileLoading) return;
+
     if (hunterClass) {
-      const t = setTimeout(() => navigate('/'), 1500);
+      const t = setTimeout(() => navigate('/'), 1200);
       return () => clearTimeout(t);
-    } else {
-      const t = setTimeout(() => setStep('basic-info'), 3500);
+    } else if (profileLoaded) {
+      const t = setTimeout(() => setStep('basic-info'), 1500);
       return () => clearTimeout(t);
     }
-  }, [hunterClass, navigate]);
+  }, [hunterClass, profileLoaded, profileLoading, navigate]);
 
   // Animação de messages no awakening
   useEffect(() => {
@@ -600,35 +603,51 @@ export function Onboarding() {
 
   const handleSaveBasicInfo = async () => {
     if (!user || !form.fullName || !form.gender) return;
-    await supabase.from('profiles').update({
-      full_name: form.fullName,
-      birthday: form.birthday || null,
-      gender: form.gender || null,
-    }).eq('id', user.id);
+    try {
+      await supabase.from('profiles').update({
+        full_name: form.fullName,
+        birthday: form.birthday || null,
+        gender: form.gender || null,
+      }).eq('id', user.id);
+    } catch (err) {
+      console.warn('[Onboarding] Erro ao sincronizar informacoes basicas:', err);
+    }
     setStep('physical-profile');
   };
 
   const handleSavePhysicalProfile = async () => {
     if (!user) return;
-    await supabase.from('profiles').update({
-      height: form.height ? parseFloat(form.height) : null,
-      weight_current: form.weightCurrent ? parseFloat(form.weightCurrent) : null,
-      weight_target: form.weightTarget ? parseFloat(form.weightTarget) : null,
-      training_focus: form.trainingFocus || null,
-      nutrition_goal: form.nutritionGoal || 'maintain',
-    }).eq('id', user.id);
+    try {
+      await supabase.from('profiles').update({
+        height: form.height ? parseFloat(form.height) : null,
+        weight_current: form.weightCurrent ? parseFloat(form.weightCurrent) : null,
+        weight_target: form.weightTarget ? parseFloat(form.weightTarget) : null,
+        training_focus: form.trainingFocus || null,
+        nutrition_goal: form.nutritionGoal || 'maintain',
+      }).eq('id', user.id);
+    } catch (err) {
+      console.warn('[Onboarding] Erro ao sincronizar perfil fisico:', err);
+    }
     setStep('main-goal');
   };
 
   const handleSaveMainGoal = async () => {
     if (!user || !form.mainGoal) return;
-    await supabase.from('profiles').update({ main_goal: form.mainGoal }).eq('id', user.id);
+    try {
+      await supabase.from('profiles').update({ main_goal: form.mainGoal }).eq('id', user.id);
+    } catch (err) {
+      console.warn('[Onboarding] Erro ao sincronizar objetivo principal:', err);
+    }
     setStep('experience-level');
   };
 
   const handleSaveExperience = async () => {
     if (!user || !form.experienceLevel) return;
-    await supabase.from('profiles').update({ experience_level: form.experienceLevel }).eq('id', user.id);
+    try {
+      await supabase.from('profiles').update({ experience_level: form.experienceLevel }).eq('id', user.id);
+    } catch (err) {
+      console.warn('[Onboarding] Erro ao sincronizar nivel de experiencia:', err);
+    }
     setStep('architect-intro');
   };
 
@@ -649,11 +668,19 @@ export function Onboarding() {
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleConfirmClass = async () => {
-    if (!user || !selectedClass) return;
-    await setHunterClass(selectedClass, user.id);
-    localStorage.setItem('ascend_just_finished_onboarding', 'true');
-    navigate('/');
+    if (!user || !selectedClass || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await setHunterClass(selectedClass, user.id);
+      localStorage.setItem('ascend_just_finished_onboarding', 'true');
+      navigate('/');
+    } catch (err) {
+      console.error('[Onboarding] Erro ao confirmar classe:', err);
+      setIsSubmitting(false);
+    }
   };
 
   const currentAnswer = answers[questions[currentQuestionIndex]?.id];

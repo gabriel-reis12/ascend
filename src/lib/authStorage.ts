@@ -39,7 +39,45 @@ class WebLocalStorageAdapter implements IAuthStorage {
   getItem(key: string): string | null {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        return window.localStorage.getItem(key);
+        const val = window.localStorage.getItem(key);
+        if (val) return val;
+
+        // Migração transparente de tokens legados caso key seja ascend-auth-token
+        if (key === 'ascend-auth-token') {
+          // 1. Tenta encontrar chave legado sb-*-auth-token no localStorage
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i);
+            if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+              const legacyVal = window.localStorage.getItem(k);
+              if (legacyVal) {
+                try {
+                  window.localStorage.setItem(key, legacyVal);
+                } catch {
+                  // ignorar erro de escrita
+                }
+                return legacyVal;
+              }
+            }
+          }
+
+          // 2. Tenta encontrar chave legado no sessionStorage (versão anterior)
+          if (window.sessionStorage) {
+            for (let i = 0; i < window.sessionStorage.length; i++) {
+              const k = window.sessionStorage.key(i);
+              if (k && (k.startsWith('sb-') || k.includes('auth-token') || k === 'ascend-auth-token')) {
+                const legacyVal = window.sessionStorage.getItem(k);
+                if (legacyVal) {
+                  try {
+                    window.localStorage.setItem(key, legacyVal);
+                  } catch {
+                    // ignorar erro de escrita
+                  }
+                  return legacyVal;
+                }
+              }
+            }
+          }
+        }
       }
     } catch (err) {
       console.warn('[AuthStorage] Falha ao ler localStorage, usando fallback de memória:', err);
