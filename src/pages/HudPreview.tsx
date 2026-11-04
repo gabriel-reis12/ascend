@@ -7,7 +7,8 @@ import { RankBadge } from '@/components/ui/rank-badge';
 import { usePreferences } from '@/contexts/preferences';
 
 export function HudPreview() {
-  const { language, theme, toggleTheme } = usePreferences();
+  const { language, theme, setTheme } = usePreferences();
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
   const isEn = language === 'en-US';
   const [xpDemo, setXpDemo] = useState(68);
   const [bossHpDemo, setBossHpDemo] = useState(6500);
