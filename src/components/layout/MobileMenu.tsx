@@ -1,12 +1,26 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, X, LayoutGrid, Skull, Coins, Moon } from 'lucide-react';
+import {
+  LayoutDashboard,
+  CheckSquare,
+  Dumbbell,
+  Apple,
+  Settings,
+  LogOut,
+  X,
+  LayoutGrid,
+  Skull,
+  Coins,
+  Moon,
+} from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/preferences';
 import { MAX_LEVEL } from '@/lib/progression';
+import { RankBadge } from '@/components/ui/rank-badge';
+import { NeonProgressBar } from '@/components/ui/neon-progress';
 
 interface MobileMenuProps {
   open: boolean;
@@ -42,19 +56,21 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
   }, [location.pathname, onClose]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
 
-  const xpPct = state.level >= MAX_LEVEL
-    ? 100
-    : Math.min(100, (state.xp / Math.max(state.xpRequired, 1)) * 100);
+  const safeXpRequired = Math.max(state.xpRequired || 100, 1);
   const hunterName = state.username || state.fullName || 'Hunter';
   const hunterClass = state.hunterClass || t('common.classUndefined');
   const handleSignOut = async () => {
@@ -62,15 +78,6 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     onClose();
     navigate('/login', { replace: true });
   };
-
-  const classGlowMap: Record<string, string> = {
-    mage: 'glow-mage',
-    assassin: 'glow-assassin',
-    warrior: 'glow-warrior',
-    tank: 'glow-tank',
-    healer: 'glow-healer',
-  };
-  const activeGlow = state.hunterClass ? classGlowMap[state.hunterClass.toLowerCase()] || '' : '';
 
   return (
     <AnimatePresence>
@@ -80,7 +87,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/90 backdrop-blur-md"
+            className="fixed inset-0 z-40 bg-black/85 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -88,55 +95,60 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={cn(
-              "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/5 bg-[#0B0B0F]/90 backdrop-blur-xl shadow-2xl",
-              activeGlow
-            )}
+            transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+            className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-[var(--hud-border-strong)] bg-[var(--hud-bg,#07080C)]/95 backdrop-blur-xl shadow-2xl"
+            style={{
+              paddingTop: 'env(safe-area-inset-top, 0px)',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
           >
-            {/* Logo */}
-            <div className="flex items-center justify-between border-b border-white/5 px-6 py-6">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[var(--hud-border)] px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex size-[47px] shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_15px_rgba(139,92,246,0.5)]">
-                  <img src="/optimized/Icon 2.png" alt="ASCEND" decoding="async" className="size-[47px] object-cover" />
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                  <img
+                    src="/optimized/Icon 2.png"
+                    alt="ASCEND"
+                    decoding="async"
+                    className="size-10 object-cover"
+                  />
                 </div>
-                <span
-                  className="text-lg font-black italic tracking-tighter text-white"
-                  style={{ fontFamily: 'Orbitron, sans-serif' }}
-                >
+                <span className="font-orbitron text-base font-black tracking-[0.14em] text-[#00F0FF] text-glow-cyan">
                   ASCEND
                 </span>
               </div>
               <button
+                type="button"
                 onClick={onClose}
-                className="rounded-xl p-2 text-gray-500 hover:bg-white/5 hover:text-white"
+                aria-label="Close menu"
+                className="inline-flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-[#94A3B8] hover:text-white"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 space-y-1 px-4 py-6">
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4 scrollbar-none">
               {navItems.map((item, i) => {
                 const isActive = location.pathname === item.path;
                 const Icon = item.icon;
                 return (
                   <motion.div
                     key={item.path}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 + 0.1 }}
+                    transition={{ delay: i * 0.03 }}
                   >
                     <Link
                       to={item.path}
                       className={cn(
-                        'flex items-center gap-4 rounded-xl px-4 py-4 text-xs font-bold uppercase tracking-widest transition-all',
+                        'flex min-h-[46px] items-center gap-3.5 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-all',
                         isActive
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
-                          : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                          ? 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/35 shadow-[0_0_14px_rgba(0,240,255,0.12)]'
+                          : 'text-[#94A3B8] hover:bg-white/5 hover:text-white'
                       )}
                     >
-                      <Icon size={18} className={isActive ? 'text-blue-500' : ''} />
+                      <Icon size={18} className={isActive ? 'text-[#00F0FF]' : ''} />
                       {t(item.labelKey)}
                     </Link>
                   </motion.div>
@@ -145,41 +157,44 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             </nav>
 
             {/* Hunter footer */}
-            <div className="border-t border-white/5 p-6 space-y-6">
-              <div className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-black text-white shadow-lg">
-                  {state.rank}
-                </div>
+            <div className="border-t border-[var(--hud-border)] p-4 space-y-4">
+              <div className="flex items-center gap-3 rounded-2xl border border-[var(--hud-border)] bg-[var(--hud-surface)] p-3">
+                <RankBadge rank={state.rank} size="md" showLabel />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-black uppercase tracking-tight text-white">{hunterName}</p>
-                  <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.08em] text-gray-400">
-                    {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank}
+                  <p className="truncate text-xs font-black uppercase tracking-tight text-white">
+                    {hunterName}
                   </p>
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">{t('common.level')} {state.level}</p>
+                  <p className="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">
+                    {hunterClass} <span className="text-slate-600">•</span> Rank {state.rank}
+                  </p>
+                  <p className="mt-1 font-orbitron text-[10px] font-bold uppercase tracking-widest text-[#00F0FF]">
+                    {t('common.level')} {state.level}
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-[#94A3B8]">
                   <span>{t('common.systemXp')}</span>
-                  <span>{state.xp} / {state.xpRequired}</span>
+                  <span className="font-orbitron">
+                    {state.xp} / {state.xpRequired}
+                  </span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${xpPct}%` }}
-                    transition={{ duration: 0.8, delay: 0.3 }}
-                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
-                  />
-                </div>
+                <NeonProgressBar
+                  value={state.level >= MAX_LEVEL ? safeXpRequired : state.xp}
+                  max={safeXpRequired}
+                  variant="xp"
+                  size="sm"
+                  ariaLabel="System XP"
+                />
               </div>
 
               <button
                 type="button"
                 onClick={() => void handleSignOut()}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-600 transition-colors hover:bg-red-500/10 hover:text-red-500"
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-[#94A3B8] transition-colors hover:bg-red-500/10 hover:text-red-400"
               >
-                <LogOut size={18} />
+                <LogOut size={16} />
                 {t('common.disconnect')}
               </button>
             </div>

@@ -34,7 +34,7 @@ import { localDayBounds } from '@/lib/date';
 import { useHabits } from '@/hooks/useHabits';
 import { useTasks } from '@/hooks/useTasks';
 import type { SingleTaskMeta, Task, CreateTaskInput } from '@/hooks/useTasks';
-import { generateBonusQuest } from '@/lib/groq';
+
 import { NewHabitModal } from '@/components/rpg/NewHabitModal';
 import { NewQuestModal } from '@/components/rpg/NewQuestModal';
 import { NeonCheckbox } from '@/components/ui/animated-check-box';
@@ -212,8 +212,8 @@ function MissionCard({
   onUpdateTime: (id: string, type: 'habit'|'workout'|'meal'|'task'|'finance', field: 'start'|'end', t: string | null) => void;
   onDelete?: (id: string) => void;
 }) {
-  const isBonus = type === 'task' && title.startsWith('[BÔNUS IA] ');
-  const displayTitle = isBonus ? title.replace('[BÔNUS IA] ', '') : title;
+  const isBonus = type === 'task' && (title.startsWith('[BÔNUS] ') || title.startsWith('[BÔNUS IA] '));
+  const displayTitle = isBonus ? title.replace(/^\[BÔNUS( IA)?\]\s*/, '') : title;
   const bonusLore = isBonus ? localStorage.getItem(`bonus_quest_lore_${id}`) : null;
   const singleQuestMeta = type === 'task' && !isBonus ? readSingleQuestMeta(id) : null;
   const singleQuestDetails = buildSingleQuestDetails(singleQuestMeta);
@@ -577,7 +577,7 @@ export function Quests() {
   const [questModalOpen, setQuestModalOpen] = useState(false);
   const [presetHabitData, setPresetHabitData] = useState<Partial<CreateHabitInput> | null>(null);
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
-  const [fissureExpanded, setFissureExpanded] = useState(false);
+
   const [openCodexCategory, setOpenCodexCategory] = useState('Nutrição');
   const legacyCodexVisible = Boolean(import.meta.env.VITE_SHOW_LEGACY_QUEST_CODEX);
   const legacyMealBannerVisible = Boolean(import.meta.env.VITE_SHOW_LEGACY_MEAL_BANNER);
@@ -586,9 +586,7 @@ export function Quests() {
   const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = useState(false);
 
   // Estados locais para a Fenda de Anomalia IA
-  const [selectedCategory, setSelectedCategory] = useState<string>('Estudo');
-  const [generatingBonus, setGeneratingBonus] = useState<boolean>(false);
-  const [bonusError, setBonusError] = useState<string | null>(null);
+
 
   useEffect(() => {
     async function checkFinanceToday() {
@@ -652,64 +650,6 @@ export function Quests() {
   const calorieExcess = nutritionTargets.maxCalories
     ? Math.max(0, caloriesLoggedToday - nutritionTargets.maxCalories)
     : 0;
-  // Busca se já gerou a quest extra diária da IA hoje
-  const bonusQuestToday = tasks.find(t => t.title.startsWith('[BÔNUS IA] ') && isToday(t.created_at));
-
-  const handleAwakenBonusQuest = async () => {
-    if (generatingBonus || bonusQuestToday) return;
-    setGeneratingBonus(true);
-    setBonusError(null);
-    try {
-      // Coleta títulos de hábitos e missões para contexto da IA evitar duplicidade
-      const existingTitles = [
-        ...workoutMissions.map(m => m.title),
-        ...mealMissions.map(m => m.title),
-        ...activeHabits.map(h => h.title)
-      ];
-
-      const result = await generateBonusQuest(selectedCategory, existingTitles, hunterClass || 'Warrior');
-
-      const categoryColors: Record<string, string> = {
-        Treino: '#A855F7',
-        Cardio: '#EF4444',
-        Estudo: '#3B82F6',
-        Trabalho: '#06B6D4',
-        Saúde: '#10B981',
-        Hobbies: '#EC4899'
-      };
-
-      const categoryStats: Record<string, 'strength' | 'endurance' | 'intelligence' | 'discipline' | 'vitality'> = {
-        Treino: 'strength',
-        Cardio: 'endurance',
-        Estudo: 'intelligence',
-        Trabalho: 'discipline',
-        Saúde: 'vitality',
-        Hobbies: 'vitality'
-      };
-
-      const res = await createTask({
-        title: `[BÔNUS IA] ${result.title}`,
-        category: `Bônus ${selectedCategory}`,
-        category_color: categoryColors[selectedCategory] || '#F97316',
-        xp_reward: 30,
-        stat_target: categoryStats[selectedCategory] || null,
-        stat_reward: 2
-      });
-
-      if (res && res.data) {
-        // Armazena a lore gerada no localStorage indexada pelo ID
-        localStorage.setItem(`bonus_quest_lore_${res.data.id}`, result.lore);
-        setFissureExpanded(true);
-      } else if (res && res.error) {
-        setBonusError(res.error);
-      }
-    } catch (err: unknown) {
-      console.error("Falha ao despertar fenda de anomalia:", err);
-      setBonusError(err instanceof Error ? err.message : 'Falha na conexão neural com o Groq.');
-    } finally {
-      setGeneratingBonus(false);
-    }
-  };
 
   type FinanceMissionData = {
     id: string;
@@ -763,7 +703,7 @@ export function Quests() {
   };
   const nextMission = allMissions.find(mission => !missionIsDone(mission)) || null;
   const nextMissionTitle = nextMission
-    ? (nextMission.type === 'task' ? nextMission.data.title.replace('[BÔNUS IA] ', '') : nextMission.data.title)
+    ? (nextMission.type === 'task' ? nextMission.data.title.replace(/^\[BÔNUS( IA)?\]\s*/, '') : nextMission.data.title)
     : null;
   const nextMissionCategory = nextMission
     ? nextMission.type === 'workout'
@@ -1121,187 +1061,6 @@ export function Quests() {
                       </div>
                     </motion.div>
                   )}
-
-                  {/* FENDA DE ANOMALIA DA IA (WIDGET PREMIUM) */}
-                  <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#0F0F13] p-4 shadow-[0_0_20px_rgba(6,182,212,0.05)]">
-                    {/* Glowing effect inside the card */}
-                    <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gradient-to-br from-cyan-500/10 to-purple-500/10 blur-3xl animate-pulse" />
-                    <div className="absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-cyan-500/5 blur-3xl" />
-
-                    <div className="relative flex flex-col gap-4">
-                      {/* Header da Fenda */}
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-purple-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)] shrink-0">
-                            <Zap size={20} className="animate-pulse" />
-                          </div>
-                          <div>
-                            <h2 className="flex items-center gap-2 text-base font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                              {l('Fenda de Anomalia', 'Anomaly Gate')} <span className="text-cyan-400">{l('IA', 'AI')}</span>
-                            </h2>
-                            <p className="text-xs font-medium text-gray-500">
-                              {l('Gere uma quest bônus diária focada em um domínio.', 'Generate a daily bonus quest focused on one domain.')}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Status do Portal */}
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest ${
-                            bonusQuestToday 
-                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
-                              : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 animate-pulse'
-                          }`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${bonusQuestToday ? 'bg-purple-400' : 'bg-cyan-400 animate-ping'}`} />
-                            {bonusQuestToday ? l('Portal Fechado', 'Portal Closed') : l('Fenda Aberta', 'Gate Open')}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setFissureExpanded(current => !current)}
-                            className="flex size-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-colors hover:text-white"
-                            aria-label={fissureExpanded ? l('Recolher Fenda IA', 'Collapse AI Gate') : l('Expandir Fenda IA', 'Expand AI Gate')}
-                          >
-                            <ChevronDown className={`size-4 transition-transform ${fissureExpanded ? 'rotate-180' : ''}`} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Conteúdo dinâmico da Fenda */}
-                      <AnimatePresence initial={false}>
-                      {fissureExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
-                        >
-                      {bonusQuestToday ? (
-                        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div>
-                              <span className="text-[9px] font-black uppercase tracking-widest text-purple-400 block mb-1">
-                                {l('Anomalia Detectada Hoje:', 'Anomaly Detected Today:')}
-                              </span>
-                              <h4 className="text-base font-black text-white uppercase tracking-wide" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                {bonusQuestToday.title.replace('[BÔNUS IA] ', '')}
-                              </h4>
-                            </div>
-                            <span className={`rounded px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${
-                              bonusQuestToday.completed 
-                                ? 'bg-green-500/20 text-green-400 border-green-500/30' 
-                                : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse'
-                            }`}>
-                              {bonusQuestToday.completed ? l('COMPLETADA', 'COMPLETED') : l('EM EXECUÇÃO', 'IN PROGRESS')}
-                            </span>
-                          </div>
-
-                          {/* Exibição da lore */}
-                          {localStorage.getItem(`bonus_quest_lore_${bonusQuestToday.id}`) && (
-                            <p className="text-xs italic text-gray-400 leading-relaxed bg-black/35 p-3 rounded-lg border border-white/5 font-medium">
-                              "{localStorage.getItem(`bonus_quest_lore_${bonusQuestToday.id}`)}"
-                            </p>
-                          )}
-
-                          <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
-                            <span className="flex items-center gap-1 text-yellow-500">
-                              <Zap size={12} fill="currentColor" />
-                              +{bonusQuestToday.xp_reward} XP
-                            </span>
-                            {bonusQuestToday.stat_target && (
-                              <span className="flex items-center gap-1 text-blue-400">
-                                <Sword size={12} />
-                                +{bonusQuestToday.stat_reward} {
-                                  bonusQuestToday.stat_target === 'strength' ? 'FORÇA' :
-                                  bonusQuestToday.stat_target === 'intelligence' ? 'INTELIGÊNCIA' :
-                                  bonusQuestToday.stat_target === 'endurance' ? 'RESISTÊNCIA' :
-                                  bonusQuestToday.stat_target === 'discipline' ? 'DISCIPLINA' : 'VITALIDADE'
-                                }
-                              </span>
-                            )}
-                          </div>
-                          
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-purple-400/70 pt-1">
-                            ⚠️ Apenas uma anomalia pode ser invocada por ciclo solar. Retorne amanhã.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <p className="text-xs text-gray-400 leading-relaxed max-w-xl">
-                            Escolha um dos seus focos de evolução abaixo para recalibrar o Sistema. O Llama IA gerará uma missão bônus temporária única de altíssimo rendimento para a sua rotina de hoje.
-                          </p>
-
-                          {/* Chips de Categoria Premium */}
-                          <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
-                            {[
-                              { label: 'Treino', color: '#A855F7', icon: Dumbbell, shadow: 'rgba(168,85,247,0.4)' },
-                              { label: 'Cardio', color: '#EF4444', icon: Heart, shadow: 'rgba(239,68,68,0.4)' },
-                              { label: 'Estudo', color: '#3B82F6', icon: BookOpen, shadow: 'rgba(59,130,246,0.4)' },
-                              { label: 'Trabalho', color: '#06B6D4', icon: Briefcase, shadow: 'rgba(6,182,212,0.4)' },
-                              { label: 'Saúde', color: '#10B981', icon: ShieldCheck, shadow: 'rgba(16,185,129,0.4)' },
-                              { label: 'Hobbies', color: '#EC4899', icon: Music, shadow: 'rgba(236,72,153,0.4)' }
-                            ].map((cat) => {
-                              const CatIcon = cat.icon;
-                              const isSelected = selectedCategory === cat.label;
-                              return (
-                                <button
-                                  key={cat.label}
-                                  onClick={() => setSelectedCategory(cat.label)}
-                                  className="flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 relative overflow-hidden w-full"
-                                  style={{
-                                    borderColor: isSelected ? cat.color : '#1E1E26',
-                                    backgroundColor: isSelected ? `${cat.color}0D` : '#0F0F13',
-                                    color: isSelected ? '#FFFFFF' : '#888899',
-                                    boxShadow: isSelected ? `0 0 12px ${cat.shadow}` : 'none'
-                                  }}
-                                >
-                                  {isSelected && (
-                                    <span 
-                                      className="absolute left-0 top-0 h-full w-1" 
-                                      style={{ backgroundColor: cat.color }} 
-                                    />
-                                  )}
-                                  <CatIcon size={13} style={{ color: isSelected ? cat.color : '#555566' }} className="shrink-0" />
-                                  <span>{cat.label}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Botão de Despertar com Loading */}
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                            <button
-                              onClick={handleAwakenBonusQuest}
-                              disabled={generatingBonus}
-                              className={`flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-purple-600 px-6 py-3.5 text-xs font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
-                                !generatingBonus ? 'hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]' : ''
-                              }`}
-                            >
-                              {generatingBonus ? (
-                                <>
-                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                  <span>CALIBRANDO MATRIX...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Zap size={14} fill="currentColor" />
-                                  <span>Despertar Quest Extra</span>
-                                </>
-                              )}
-                            </button>
-                            
-                            {bonusError && (
-                              <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">
-                                ⚠️ Erro: {bonusError}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                        </motion.div>
-                      )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
 
                   {/* LISTAGEM DE MISSÕES DIÁRIAS */}
                   {allMissions.length === 0 ? (

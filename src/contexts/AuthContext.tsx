@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { clearAllAuthSessionTokens } from '../lib/authStorage';
 import { useHunterStore } from '../stores/useHunterStore';
 import { useBossStore } from '../stores/useBossStore';
 import { evaluateYesterdayNutrition } from '../lib/nutritionDailyScore';
@@ -13,6 +14,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, username: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  resetPasswordForEmail: (email: string, redirectTo?: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -66,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!active) return;
 
         if (error) {
-          console.error('[AuthContext] Erro ao obter sessão:', error);
+          console.error('[AuthContext] Erro ao obter sessão persistida:', error);
           setLoading(false);
           return;
         }
@@ -108,10 +110,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const newUserId = newSession?.user?.id ?? null;
 
+      // Evento de deslogamento explícito ou expiração total
+      if (event === 'SIGNED_OUT') {
+        currentUserRef.current = null;
+        setSession(null);
+        setUser(null);
+        reset();
+        clearAllAuthSessionTokens();
+        if (active) setLoading(false);
+        return;
+      }
+
       // Ignora eventos que não mudam o usuário (ex: TOKEN_REFRESHED com mesmo ID)
-      // para evitar loops de re-render e re-carregamento de dados
       if (event === 'TOKEN_REFRESHED' && newUserId === currentUserRef.current) {
-        // Apenas atualiza a sessão silenciosamente (o token mudou, mas o usuário não)
         setSession(newSession);
         return;
       }
@@ -168,6 +179,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const resetPasswordForEmail = async (
+    email: string,
+    redirectTo?: string
+  ): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectTo || (typeof window !== 'undefined' ? `${window.location.origin}/settings` : undefined),
+    });
+    return { error: error?.message ?? null };
+  };
+
   const signOut = async () => {
     try {
       currentUserRef.current = null;
@@ -175,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error('[AuthContext] Erro no signOut do Supabase:', err);
     } finally {
+      clearAllAuthSessionTokens();
       setSession(null);
       setUser(null);
       reset();
@@ -182,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPasswordForEmail }}>
       {children}
     </AuthContext.Provider>
   );

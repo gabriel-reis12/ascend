@@ -1,0 +1,323 @@
+export interface DeterministicBonusQuest {
+  title: string;
+  lore: string;
+}
+
+export type HunterClass = 'Warrior' | 'Scholar' | 'Monk' | 'Titan' | 'Creator' | 'Leader' | string;
+
+/**
+ * Catálogo determinístico de missões diárias de anomalia calibradas por Categoria e Classe do Caçador.
+ * Garante variedade, progressão segura e recompensas equilibradas sem necessidade de serviços externos de IA.
+ */
+const QUEST_CATALOG: Record<string, Record<string, DeterministicBonusQuest[]>> = {
+  Treino: {
+    Warrior: [
+      {
+        title: "Executar 4 séries de flexões até a falha técnica",
+        lore: "O Guerreiro forja seu poder na resistência inabalável contra o próprio peso corporal."
+      },
+      {
+        title: "Completar 3 minutos de prancha isométrica contínua",
+        lore: "Fortalecer o núcleo de força estabiliza sua armadura viva contra impactos devastadores."
+      },
+      {
+        title: "Realizar 50 agachamentos com pausa de 2 segundos",
+        lore: "Membros inferiores de ferro sustentam a imponência de um caçador de linha de frente."
+      },
+      {
+        title: "Superar 3 séries de barra fixa ou remada invertida",
+        lore: "A tração das costas expande a musculatura dorsal como asas de combate."
+      }
+    ],
+    Scholar: [
+      {
+        title: "Sessão de 15 minutos de postura e alinhamento corporal",
+        lore: "O recipiente físico deve ser lapidado com precisão métrica para canalizar sabedoria ilimitada."
+      },
+      {
+        title: "Mobilidade articular completa para ombros e coluna",
+        lore: "Desbloquear a fluidez postural acelera o fluxo de oxigenação sináptica cerebral."
+      },
+      {
+        title: "3 séries de 20 agachamentos calistênicos lentos",
+        lore: "O equilíbrio dos pés ao crânio estabelece a estabilidade necessária para cálculos táticos."
+      }
+    ],
+    Monk: [
+      {
+        title: "Sequência de 15 minutos de calistenia fluida e equilíbrio",
+        lore: "A força verdadeira não reside na rigidez, mas no fluxo ininterrupto de energia vital."
+      },
+      {
+        title: "3 séries de flexões hindus com respiração coordenada",
+        lore: "Unir respiração e esforço muscular harmoniza a circulação interna dos seus meridianos."
+      },
+      {
+        title: "Permanecer 90 segundos em apoio unipodal em cada perna",
+        lore: "O equilíbrio corporal inabalável reflete a estabilidade imperturbável da mente zen."
+      }
+    ],
+    Titan: [
+      {
+        title: "Circuito de 100 repetições acumuladas de agachamento e flexão",
+        lore: "O Titã não recua diante do volume; ele absorve a carga e avança como uma força tectônica."
+      },
+      {
+        title: "4 minutos de sustentação isométrica em parede",
+        lore: "Pernas enraizadas na terra resistem a qualquer tempestade ou investida inimiga."
+      },
+      {
+        title: "Sessão pesada de elevação pélvica e panturrilhas",
+        lore: "A base de sustentação do Titã é impenetrável por qualquer impacto externo."
+      }
+    ],
+    default: [
+      {
+        title: "Executar 3 séries de prancha isométrica e flexões",
+        lore: "O treinamento metódico do corpo recalibra todos os parâmetros físicos do caçador."
+      },
+      {
+        title: "Completar 40 agachamentos e 20 polichinelos focados",
+        lore: "Superar a inércia corporal ativa a circulação e eleva o rendimento de combate diário."
+      }
+    ]
+  },
+  Cardio: {
+    Warrior: [
+      {
+        title: "Executar 8 tiros curtos de aceleração de 30 segundos",
+        lore: "A velocidade súbita transforma a força do guerreiro em um golpe cinético demolidor."
+      },
+      {
+        title: "15 minutos de corda naval ou polichinelos em alta intensidade",
+        lore: "Pulmões blindados garantem fôlego contínuo durante os confrontos mais desgastantes."
+      }
+    ],
+    Scholar: [
+      {
+        title: "Caminhada acelerada de 20 minutos com respiração rítmica",
+        lore: "O cardio ritmado estimula o fator neurotrófico cerebral e catalisa clareza de pensamento."
+      },
+      {
+        title: "15 minutos de bicicleta ou esteira em zona 2 constante",
+        lore: "A base aeróbica sólida alimenta a resistência mental para longas jornadas intelectuais."
+      }
+    ],
+    Monk: [
+      {
+        title: "15 minutos de corrida consciente sincronizada à respiração",
+        lore: "O deslocamento veloz sem quebra do padrão respiratório une o caçador ao seu ambiente."
+      },
+      {
+        title: "Circuito de sombra de socos e esquivas com alta mobilidade",
+        lore: "Agilidade evasiva dissipa ataques antes mesmo que eles encontrem o alvo."
+      }
+    ],
+    Titan: [
+      {
+        title: "20 minutos de subida contínua de escadas ou inclinação",
+        lore: "A resistência cardiovascular do Titã é uma marcha inexorável que jamais cessa."
+      },
+      {
+        title: "12 tiros de cardio intervalado com recuperação ativa",
+        lore: "Treinar o coração para absorver picos de estresse amplia os limites da sua fortitude."
+      }
+    ],
+    default: [
+      {
+        title: "Completar 20 minutos de exercício aeróbico contínuo",
+        lore: "O bombeamento vigoroso de sangue eleva sua taxa metabólica e dissipa a fadiga residual."
+      },
+      {
+        title: "Realizar 10 tiros intervalados de 45 segundos com trote",
+        lore: "Estimular o limiar anaeróbico expande a reserva energética do caçador para o dia todo."
+      }
+    ]
+  },
+  Estudo: {
+    Scholar: [
+      {
+        title: "Leitura ativa de 20 páginas com anotação das teses centrais",
+        lore: "Decifrar conceitos densos expande o grimório mental do Erudito para patamares lendários."
+      },
+      {
+        title: "Resolver 5 problemas complexos sem recorrer a respostas prontas",
+        lore: "O raciocínio puro afia a inteligência como uma lâmina capaz de cortar qualquer mistério."
+      },
+      {
+        title: "Estruturar um mapa mental detalhado do aprendizado da semana",
+        lore: "A organização visual do saber consolida a memória de longo prazo no núcleo neural."
+      }
+    ],
+    Warrior: [
+      {
+        title: "Dedicar 20 minutos à leitura técnica sobre sua área ou tática",
+        lore: "A mente instruída é a lâmina invisível que comanda a força bruta do guerreiro experiente."
+      },
+      {
+        title: "Estudo focado de 15 minutos em biomecânica ou estratégia",
+        lore: "Compreender as alavancas do conhecimento multiplica o alcance de cada ação de combate."
+      }
+    ],
+    Monk: [
+      {
+        title: "Leitura atenta de textos de sabedoria ou filosofia prática",
+        lore: "Nutrir o intelecto com princípios fundamentais alinha a conduta com as leis do universo."
+      },
+      {
+        title: "15 minutos de sintetização manuscrita dos princípios do dia",
+        lore: "Escrever à mão ancora a sabedoria no centro reflexivo da consciência."
+      }
+    ],
+    Titan: [
+      {
+        title: "Consumir 20 minutos de material aprofundado sobre gestão e execução",
+        lore: "A consistência do Titã exige fundações teóricas sólidas para erguer impérios perenes."
+      }
+    ],
+    default: [
+      {
+        title: "Dedicar 25 minutos de estudo concentrado sem distrações",
+        lore: "O foco deliberado no aprendizado amplia a percepção analítica e abre novos caminhos."
+      },
+      {
+        title: "Anotar e explicar para si mesmo 3 conceitos aprendidos hoje",
+        lore: "A capacidade de articular conhecimento transforma dados brutos em maestria aplicável."
+      }
+    ]
+  },
+  Trabalho: {
+    Warrior: [
+      {
+        title: "Eliminar a tarefa mais difícil do dia na primeira hora de foco",
+        lore: "O Guerreiro ataca de frente a maior adversidade antes que ela ganhe terreno na rotina."
+      },
+      {
+        title: "Concluir um bloco ininterrupto de 40 minutos em um entregável vital",
+        lore: "A execução disciplinada destrói gargalos de produtividade com força decisiva."
+      }
+    ],
+    Scholar: [
+      {
+        title: "Organizar o backlog de projetos e planejar os próximos 3 passos",
+        lore: "A clareza de visão tática dissipa o caos operacional e otimiza cada minuto de trabalho."
+      },
+      {
+        title: "Documentar um processo crítico ou refatorar fluxo de trabalho",
+        lore: "Sistemas bem documentados reduzem a entropia e elevam o nível de toda a equipe."
+      }
+    ],
+    Monk: [
+      {
+        title: "Completar 30 minutos de trabalho em silêncio absoluto e presença",
+        lore: "A ação disciplinada no meio do caos profissional flui serena como a correnteza de um rio."
+      },
+      {
+        title: "Encerrar todas as pendências de comunicação essenciais com clareza",
+        lore: "A comunicação concisa e sem ruídos preserva a energia vital para o que realmente importa."
+      }
+    ],
+    Titan: [
+      {
+        title: "Bater a meta de produção diária antes do encerramento do expediente",
+        lore: "A capacidade de entrega inexorável consolida a autoridade inquestionável do Titã."
+      }
+    ],
+    default: [
+      {
+        title: "Sessão de 30 minutos de hiperfoco na prioridade número um",
+        lore: "Canalizar toda a energia em um único ponto garante avanços estratégicos irreversíveis."
+      },
+      {
+        title: "Eliminar notificações e fechar 3 pendências paradas na fila",
+        lore: "Limpar o horizonte operacional liberta largura de banda mental para conquistas maiores."
+      }
+    ]
+  },
+  Saúde: {
+    Monk: [
+      {
+        title: "Praticar 10 minutos de respiração consciente diafragmática",
+        lore: "O domínio da respiração restabelece o equilíbrio fisiológico e clareia os sentimentos."
+      },
+      {
+        title: "Ingerir 1 litro de água pura antes do meio-dia e alongar a coluna",
+        lore: "A hidratação celular revitaliza a energia vital e purifica os canais energéticos."
+      }
+    ],
+    Warrior: [
+      {
+        title: "Dormir 30 minutos mais cedo hoje para maximizar síntese muscular",
+        lore: "A verdadeira força se regenera na calmaria das sombras do sono reparador."
+      },
+      {
+        title: "Refeição rica em micronutrientes com verduras escuras e hidratação",
+        lore: "Combustível puro e denso em nutrientes regenera as fibras de um guerreiro de alto escalão."
+      }
+    ],
+    default: [
+      {
+        title: "Garantir a meta hídrica completa e 10 minutos de luz natural",
+        lore: "O contato com os elementos vitais sincroniza o relógio biológico e eleva a imunidade."
+      },
+      {
+        title: "Desconectar telas 30 minutos antes do descanso noturno",
+        lore: "Desacelerar o sistema nervoso protege a qualidade do sono e restaura a vitalidade física."
+      }
+    ]
+  },
+  Hobbies: {
+    Creator: [
+      {
+        title: "Dedicar 20 minutos livres à experimentação criativa sem julgamentos",
+        lore: "A mente do Criador renasce quando desafia convenções e manifesta novas formas artísticas."
+      },
+      {
+        title: "Desenhar, esboçar ou compor uma ideia autoral rápida",
+        lore: "Externalizar a imaginação liberta a mana criativa contida na psique do caçador."
+      }
+    ],
+    default: [
+      {
+        title: "Dedicar 20 minutos a uma atividade prazerosa e descompromissada",
+        lore: "O lazer deliberado recarrega os espíritos e impede a erosão do esgotamento mental."
+      },
+      {
+        title: "Praticar música, leitura de ficção ou arte por 15 minutos",
+        lore: "Nutrir a alma com expressão artística restaura o brilho e o vigor da jornada."
+      }
+    ]
+  }
+};
+
+/**
+ * Retorna uma missão bônus diária do Sistema de forma determinística, imersiva e sem IA externa.
+ * Considera a data de hoje e o histórico de títulos existentes para evitar repetições imediatas.
+ */
+export function generateBonusQuest(
+  category: string,
+  existingQuestTitles: string[] = [],
+  hunterClass: HunterClass = 'Warrior'
+): DeterministicBonusQuest {
+  const categoryQuests = QUEST_CATALOG[category] || QUEST_CATALOG['Treino'];
+  const classQuests = categoryQuests[hunterClass] || categoryQuests['default'] || Object.values(categoryQuests)[0];
+
+  // Filtra itens já presentes nas missões de hoje para evitar duplicidade
+  const normalizedExisting = existingQuestTitles.map(t => t.toLowerCase().trim());
+  const availableQuests = classQuests.filter(q => 
+    !normalizedExisting.some(ex => ex.includes(q.title.toLowerCase().slice(0, 20)))
+  );
+
+  const pool = availableQuests.length > 0 ? availableQuests : classQuests;
+
+  // Seleciona um item baseado no dia do ano para consistência ao longo do dia,
+  // ou índice determinístico
+  const today = new Date();
+  const dayOfYear = Math.floor(
+    (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  const selectedIndex = (dayOfYear + category.length) % pool.length;
+  return pool[selectedIndex] || pool[0];
+}
+

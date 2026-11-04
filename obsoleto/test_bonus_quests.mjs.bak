@@ -1,0 +1,32 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import { generateBonusQuest } from '../src/lib/bonusQuests.ts';
+
+describe('Deterministic Bonus Quests Engine', () => {
+  it('deve gerar uma missão bônus válida para a classe Warrior na categoria Treino', () => {
+    const quest = generateBonusQuest('Treino', [], 'Warrior');
+    assert.ok(quest.title.length > 0, 'Título não deve ser vazio');
+    assert.ok(quest.lore.length > 0, 'Lore não deve ser vazia');
+  });
+
+  it('deve gerar missões personalizadas para diferentes classes', () => {
+    const warriorQuest = generateBonusQuest('Estudo', [], 'Warrior');
+    const scholarQuest = generateBonusQuest('Estudo', [], 'Scholar');
+    
+    assert.ok(warriorQuest.title.length > 0);
+    assert.ok(scholarQuest.title.length > 0);
+  });
+
+  it('deve evitar missões repetidas que já existam nas tarefas do dia', () => {
+    const existing = ["Executar 4 séries de flexões até a falha técnica"];
+    const quest = generateBonusQuest('Treino', existing, 'Warrior');
+    assert.notStrictEqual(quest.title, existing[0]);
+  });
+
+  it('deve lidar graciosamente com classes e categorias desconhecidas sem falhar', () => {
+    const quest = generateBonusQuest('CategoriaInexistente', [], 'ClasseDesconhecida');
+    assert.ok(quest.title);
+    assert.ok(quest.lore);
+  });
+});
+

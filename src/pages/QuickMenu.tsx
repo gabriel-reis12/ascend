@@ -1,394 +1,795 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Apple,
   ArrowRight,
+  CheckCircle2,
   CheckSquare,
+  ChevronRight,
   Coins,
+  Crown,
   Dumbbell,
+  Flame,
   LayoutDashboard,
-  Lock,
   Moon,
+  Shield,
   Skull,
   Sparkles,
+  Trophy,
   Zap,
 } from 'lucide-react';
-import { useHunterStore } from '../stores/useHunterStore';
+import { useHunterStore } from '@/stores/useHunterStore';
+import { useBossStore } from '@/stores/useBossStore';
+import { useHabits } from '@/hooks/useHabits';
+import { useTasks } from '@/hooks/useTasks';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/preferences';
 import { ProductTour } from '@/components/rpg/ProductTour';
-import { MAX_LEVEL } from '@/lib/progression';
+import { HudCard, type HudCardVariant } from '@/components/ui/hud-card';
+import { TacticalButton, type TacticalButtonAccent } from '@/components/ui/tactical-button';
+import { NeonProgressBar, NeonProgressRing } from '@/components/ui/neon-progress';
+import { RankBadge } from '@/components/ui/rank-badge';
+import { DAILY_COMMON_XP_EFFECTIVE_MAX, MAX_LEVEL } from '@/lib/progression';
+import { localDayBounds } from '@/lib/date';
+import { translateUiText } from '@/lib/uiEnglish';
 
-type PortalBadge = 'active' | 'new' | 'progress' | 'boss' | 'quest';
+const HUNTER_AVATAR_FALLBACK = '/optimized/Classes/Warrior/Rank E.jpg';
+const HUNTER_CLASS_IMAGE_IDS = new Set([
+  'Warrior',
+  'Scholar',
+  'Creator',
+  'Monk',
+  'Leader',
+  'Titan',
+]);
 
-interface LocalizedCopy {
-  pt: string;
-  en: string;
+function resolveHunterAvatar(
+  hunterClass: string | null | undefined,
+  rank: string | null | undefined
+): string {
+  const safeClass =
+    hunterClass && HUNTER_CLASS_IMAGE_IDS.has(hunterClass) ? hunterClass : 'Warrior';
+  const upperRank = String(rank || 'E').toUpperCase();
+  const imageRank = ['E', 'D', 'C', 'B', 'A', 'S'].includes(upperRank) ? upperRank : 'S';
+  return `/optimized/Classes/${safeClass}/Rank ${imageRank}.jpg`;
 }
 
-interface CommandCard {
-  title: LocalizedCopy;
-  desc: LocalizedCopy;
+function handleHunterAvatarError(event: React.SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+  if (image.dataset.fallbackApplied) return;
+  image.dataset.fallbackApplied = 'true';
+  image.src = HUNTER_AVATAR_FALLBACK;
+}
+
+function localizeHunterClass(
+  hunterClass: string | null | undefined,
+  isEnglish: boolean
+): string {
+  if (!hunterClass) {
+    return isEnglish ? 'Class not selected' : 'Classe não definida';
+  }
+  const map: Record<string, { pt: string; en: string }> = {
+    Warrior: { pt: 'Guerreiro', en: 'Warrior' },
+    Scholar: { pt: 'Erudito', en: 'Scholar' },
+    Creator: { pt: 'Criador', en: 'Creator' },
+    Monk: { pt: 'Monge', en: 'Monk' },
+    Leader: { pt: 'Líder', en: 'Leader' },
+    Titan: { pt: 'Titã', en: 'Titan' },
+  };
+  const entry = map[hunterClass];
+  if (!entry) return hunterClass;
+  return isEnglish ? entry.en : entry.pt;
+}
+
+interface QuickActionItem {
+  id?: string;
   path: string;
-  status: 'active' | 'locked';
-  badge: PortalBadge;
-  priority: 'primary' | 'secondary';
-  primaryLabel?: LocalizedCopy;
+  label: string;
+  sublabel: string;
+  badgeText: string;
+  accent: TacticalButtonAccent;
   icon: React.ReactNode;
-  color: string;
-  arrowColor: string;
+}
+
+interface SecondaryModuleItem {
+  path: string;
+  title: string;
+  subtitle: string;
+  meta: string;
+  variant: HudCardVariant;
+  icon: React.ReactNode;
   image: string;
 }
 
-const badgeStyles: Record<PortalBadge, string> = {
-  active: 'border-emerald-400/45 bg-emerald-950/75 text-emerald-300',
-  new: 'border-cyan-400/45 bg-cyan-950/75 text-cyan-200',
-  progress: 'border-blue-400/45 bg-blue-950/75 text-blue-200',
-  boss: 'border-rose-400/45 bg-rose-950/75 text-rose-300',
-  quest: 'border-amber-400/45 bg-amber-950/75 text-amber-200',
-};
-
-const cards: CommandCard[] = [
-  {
-    title: { pt: 'Status do Caçador', en: 'Hunter Status' },
-    desc: {
-      pt: 'Visualize atributos, nível, rank e evolução dos domínios.',
-      en: 'Review attributes, level, rank, and domain progression.',
-    },
-    path: '/status',
-    status: 'active',
-    badge: 'active',
-    priority: 'primary',
-    primaryLabel: { pt: 'Análise Principal', en: 'Core Analysis' },
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    color: 'border-blue-500/40 hover:border-blue-400/80',
-    arrowColor: 'group-hover:border-blue-400/70 group-hover:bg-blue-500/25 group-hover:text-blue-200',
-    image: '/optimized/Cards/Status.jpg',
-  },
-  {
-    title: { pt: 'Quadro de Missões', en: 'Quest Board' },
-    desc: {
-      pt: 'Gerencie hábitos, tarefas e quests bônus da IA.',
-      en: 'Manage habits, tasks, and AI-generated bonus quests.',
-    },
-    path: '/quests',
-    status: 'active',
-    badge: 'quest',
-    priority: 'primary',
-    primaryLabel: { pt: 'Centro de Quests', en: 'Quest Center' },
-    icon: <CheckSquare className="h-5 w-5" />,
-    color: 'border-cyan-500/40 hover:border-cyan-300/80',
-    arrowColor: 'group-hover:border-cyan-400/70 group-hover:bg-cyan-500/25 group-hover:text-cyan-200',
-    image: '/optimized/Cards/Quadro de Missoes.jpg',
-  },
-  {
-    title: { pt: 'Centro de Treinamento', en: 'Training Center' },
-    desc: {
-      pt: 'Registre cargas, repetições e acompanhe sua evolução.',
-      en: 'Log weights and reps while tracking your progression.',
-    },
-    path: '/workouts',
-    status: 'active',
-    badge: 'progress',
-    priority: 'primary',
-    primaryLabel: { pt: 'Módulo Físico', en: 'Physical Module' },
-    icon: <Dumbbell className="h-5 w-5" />,
-    color: 'border-purple-500/40 hover:border-purple-400/80',
-    arrowColor: 'group-hover:border-purple-400/70 group-hover:bg-purple-500/25 group-hover:text-purple-200',
-    image: '/optimized/Cards/Treinos.jpg',
-  },
-  {
-    title: { pt: 'Recuperação & Nutrição', en: 'Recovery & Nutrition' },
-    desc: {
-      pt: 'Monte refeições, registre alimentos e acompanhe sua estratégia.',
-      en: 'Build meals, log foods, and monitor your nutrition strategy.',
-    },
-    path: '/nutrition',
-    status: 'active',
-    badge: 'new',
-    priority: 'secondary',
-    icon: <Apple className="h-5 w-5" />,
-    color: 'border-orange-500/35 hover:border-orange-400/70',
-    arrowColor: 'group-hover:border-orange-400/60 group-hover:bg-orange-500/25 group-hover:text-orange-200',
-    image: '/optimized/Cards/Estudos-Nutricao.jpg',
-  },
-  {
-    title: { pt: 'Módulo Fortuna', en: 'Fortune Module' },
-    desc: {
-      pt: 'Controle finanças, economia e evolução do atributo WIS.',
-      en: 'Manage finances, savings, and progression of your WIS attribute.',
-    },
-    path: '/fortuna',
-    status: 'active',
-    badge: 'active',
-    priority: 'secondary',
-    icon: <Coins className="h-5 w-5" />,
-    color: 'border-amber-500/35 hover:border-amber-400/70',
-    arrowColor: 'group-hover:border-amber-400/60 group-hover:bg-amber-500/25 group-hover:text-amber-200',
-    image: '/optimized/Cards/Fortuna.jpg',
-  },
-  {
-    title: { pt: 'Portal dos Chefes', en: 'Boss Portal' },
-    desc: {
-      pt: 'Enfrente bosses semanais causados por hábitos ruins.',
-      en: 'Face weekly bosses created by destructive habits.',
-    },
-    path: '/bosses',
-    status: 'active',
-    badge: 'boss',
-    priority: 'secondary',
-    icon: <Skull className="h-5 w-5" />,
-    color: 'border-rose-500/35 hover:border-rose-400/70',
-    arrowColor: 'group-hover:border-rose-400/60 group-hover:bg-rose-500/25 group-hover:text-rose-200',
-    image: '/optimized/Cards/Chefes Finais.jpg',
-  },
-  {
-    title: { pt: 'Santuário do Descanso', en: 'Recovery Sanctuary' },
-    desc: {
-      pt: 'Monitore sono, descanso e equilíbrio mental.',
-      en: 'Track sleep, recovery, leisure, and mental balance.',
-    },
-    path: '/rest',
-    status: 'active',
-    badge: 'active',
-    priority: 'secondary',
-    icon: <Moon className="h-5 w-5" />,
-    color: 'border-indigo-500/35 hover:border-indigo-400/70',
-    arrowColor: 'group-hover:border-indigo-400/60 group-hover:bg-indigo-500/25 group-hover:text-indigo-200',
-    image: '/optimized/Cards/Descanso-Lazer.jpg',
-  },
-];
-
-const badgeCopy: Record<PortalBadge, LocalizedCopy> = {
-  active: { pt: 'Sistema ativo', en: 'System active' },
-  new: { pt: 'Novo', en: 'New' },
-  progress: { pt: 'Em progresso', en: 'In progress' },
-  boss: { pt: 'Boss disponível', en: 'Boss available' },
-  quest: { pt: 'Quest pendente', en: 'Quest pending' },
-};
-
-function StatusBadge({ badge, isEnglish }: { badge: PortalBadge; isEnglish: boolean }) {
-  return (
-    <span
-      className={`rounded-md border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] font-orbitron ${badgeStyles[badge]}`}
-    >
-      {isEnglish ? badgeCopy[badge].en : badgeCopy[badge].pt}
-    </span>
-  );
-}
-
-function PortalCard({ card, onOpen, isEnglish }: { card: CommandCard; onOpen: () => void; isEnglish: boolean }) {
-  const isLocked = card.status === 'locked';
-  const isPrimary = card.priority === 'primary';
-  const copy = (value: LocalizedCopy) => isEnglish ? value.en : value.pt;
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`${isEnglish ? 'Open' : 'Abrir'} ${copy(card.title)}`}
-      className={`theme-preserve-dark group relative flex w-full flex-col justify-between overflow-hidden rounded-2xl border bg-[#0F0F13] p-5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 motion-safe:hover:-translate-y-1 ${
-        isPrimary ? 'min-h-[244px] lg:min-h-[260px]' : 'min-h-[205px]'
-      } ${card.color} ${isLocked ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
-    >
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <img
-          src={card.image}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          decoding="async"
-          className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035] ${
-            isLocked ? 'grayscale-[40%] blur-[1px]' : ''
-          }`}
-        />
-        <div
-          className={`absolute inset-0 z-10 transition-opacity duration-500 ${
-            isPrimary
-              ? 'bg-gradient-to-t from-black/90 via-black/20 via-55% to-transparent'
-              : 'bg-gradient-to-t from-black/90 via-black/15 via-58% to-transparent'
-          }`}
-        />
-      </div>
-
-      <div className="relative z-20 flex w-full items-start justify-between gap-3">
-        <div
-          className={`flex size-10 shrink-0 items-center justify-center rounded-xl border backdrop-blur-md transition-all duration-300 ${
-            isLocked
-              ? 'border-[#1e1e26] bg-black/55 text-gray-500'
-              : 'border-white/25 bg-black/55 text-white group-hover:border-white/40 group-hover:bg-black/70'
-          }`}
-        >
-          {isLocked ? <Lock size={16} /> : card.icon}
-        </div>
-        <StatusBadge badge={card.badge} isEnglish={isEnglish} />
-      </div>
-
-      <div className="relative z-20 mt-10">
-        {isPrimary && (
-          <div className="mb-2 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-blue-300 font-orbitron">
-            <Sparkles className="h-3 w-3" />
-            {card.primaryLabel && copy(card.primaryLabel)}
-          </div>
-        )}
-        <h2
-          className={`font-orbitron font-black uppercase text-white transition-colors duration-300 ${
-            isPrimary ? 'text-lg tracking-[0.08em]' : 'text-[15px] tracking-[0.07em]'
-          }`}
-        >
-          {copy(card.title)}
-        </h2>
-        <p className={`mt-2 max-w-[96%] font-semibold leading-relaxed text-gray-300 ${isPrimary ? 'text-[13px]' : 'text-xs'}`}>
-          {copy(card.desc)}
-        </p>
-
-        <div className="mt-4 flex items-center justify-between">
-          <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-400 transition-colors group-hover:text-white">
-            {isEnglish ? 'Open module' : 'Acessar módulo'}
-          </span>
-          <div
-            className={`flex size-8 items-center justify-center rounded-lg border border-[#252530] bg-black/65 text-gray-500 transition-all duration-300 group-hover:translate-x-1 ${card.arrowColor}`}
-          >
-            <ArrowRight size={15} />
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
 export function QuickMenu() {
-  const { language, t } = usePreferences();
+  const { language } = usePreferences();
   const isEnglish = language === 'en-US';
-  const l = (pt: string, en: string) => isEnglish ? en : pt;
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
+
+  const { user } = useAuth();
   const state = useHunterStore();
-  const xpPct = state.level >= MAX_LEVEL
-    ? 100
-    : state.xpRequired > 0
-      ? Math.min(100, (state.xp / state.xpRequired) * 100)
-      : 0;
+  const activeBattle = useBossStore((s) => s.activeBattle);
+  const loadActiveBattle = useBossStore((s) => s.loadActiveBattle);
+
+  const {
+    activeHabits,
+    completedToday,
+    completedCount,
+    totalActive,
+    workoutMissions,
+    mealMissions,
+    xpEarnedToday,
+  } = useHabits();
+
+  const { tasks } = useTasks();
+
+  useEffect(() => {
+    if (user?.id && !activeBattle) {
+      void loadActiveBattle(user.id);
+    }
+  }, [user?.id, activeBattle, loadActiveBattle]);
+
+  const characterAvatar = useMemo(
+    () => resolveHunterAvatar(state.hunterClass, state.rank),
+    [state.hunterClass, state.rank]
+  );
+
   const hunterName = state.username || state.fullName || l('Caçador', 'Hunter');
-  const hunterClass = state.hunterClass || l('Classe não definida', 'Class not selected');
+  const hunterClassLabel = localizeHunterClass(state.hunterClass, isEnglish);
+  const hunterTitle = state.activeTitle
+    ? isEnglish
+      ? translateUiText(state.activeTitle)
+      : state.activeTitle
+    : l('Caçador Desperto', 'Awakened Hunter');
+
+  const safeXpRequired = Math.max(1, state.xpRequired || 100);
+  const xpPct =
+    state.level >= MAX_LEVEL
+      ? 100
+      : Math.min(100, Math.max(0, (state.xp / safeXpRequired) * 100));
+
+  const dailyStats = useMemo(() => {
+    const { startIso, endIso } = localDayBounds();
+    const startMs = new Date(startIso).getTime();
+    const endMs = new Date(endIso).getTime();
+
+    const tasksCompletedToday = tasks.filter((task) => {
+      if (!task.completed || !task.completed_at) return false;
+      const completedMs = new Date(task.completed_at).getTime();
+      return completedMs >= startMs && completedMs <= endMs;
+    }).length;
+
+    const pendingTasks = tasks.filter((task) => !task.completed).length;
+
+    const workoutsCompleted = workoutMissions.filter((m) => m.isCompleted).length;
+    const workoutsTotal = workoutMissions.length;
+
+    const mealsCompleted = mealMissions.filter((m) => m.isCompleted).length;
+    const mealsTotal = mealMissions.length;
+
+    const habitsCompleted = completedCount;
+    const habitsTotal = totalActive;
+
+    const total = habitsTotal + workoutsTotal + mealsTotal + tasksCompletedToday;
+    const completed =
+      habitsCompleted + workoutsCompleted + mealsCompleted + tasksCompletedToday;
+    const progress = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
+
+    const pendingHabits = Math.max(0, habitsTotal - habitsCompleted);
+    const pendingQuestsTotal = pendingHabits + pendingTasks;
+
+    return {
+      total,
+      completed,
+      progress,
+      habitsCompleted,
+      habitsTotal,
+      workoutsCompleted,
+      workoutsTotal,
+      mealsCompleted,
+      mealsTotal,
+      pendingQuestsTotal,
+    };
+  }, [
+    tasks,
+    workoutMissions,
+    mealMissions,
+    completedCount,
+    totalActive,
+  ]);
+
+  const todayXp = state.xpGainedToday || xpEarnedToday || 0;
+
+  const nextMission = useMemo(() => {
+    const pendingWorkout = workoutMissions.find((mission) => !mission.isCompleted);
+    if (pendingWorkout) {
+      return {
+        eyebrow: l('Missão Física Prioritária', 'Priority Physical Mission'),
+        title: isEnglish ? translateUiText(pendingWorkout.title) : pendingWorkout.title,
+        reward: `+${pendingWorkout.xp_reward} XP · ${
+          pendingWorkout.stat_target === 'strength' ? 'STR' : 'END'
+        } +${pendingWorkout.stat_reward}`,
+        path: '/workouts',
+        cta: l('Treinar', 'Train'),
+        icon: Dumbbell,
+      };
+    }
+
+    const pendingHabit = activeHabits.find((habit) => !completedToday.has(habit.id));
+    if (pendingHabit) {
+      return {
+        eyebrow: l('Próxima Missão Diária', 'Next Daily Mission'),
+        title: isEnglish ? translateUiText(pendingHabit.title) : pendingHabit.title,
+        reward: `+${pendingHabit.xp_reward} XP`,
+        path: '/quests',
+        cta: l('Missões', 'Quests'),
+        icon: CheckSquare,
+      };
+    }
+
+    const pendingMeal = mealMissions.find((meal) => !meal.isCompleted);
+    if (pendingMeal) {
+      return {
+        eyebrow: l('Protocolo Nutricional', 'Nutrition Protocol'),
+        title: isEnglish ? translateUiText(pendingMeal.title) : pendingMeal.title,
+        reward:
+          pendingMeal.xp_reward > 0
+            ? `+${pendingMeal.xp_reward} XP · VIT`
+            : `${pendingMeal.totalKcal} kcal`,
+        path: '/nutrition',
+        cta: l('Nutrição', 'Nutrition'),
+        icon: Apple,
+      };
+    }
+
+    const pendingTask = tasks.find((task) => !task.completed);
+    if (pendingTask) {
+      return {
+        eyebrow: l('Objetivo Tático Pendente', 'Pending Tactical Objective'),
+        title: isEnglish ? translateUiText(pendingTask.title) : pendingTask.title,
+        reward: `+${pendingTask.xp_reward} XP`,
+        path: '/quests',
+        cta: l('Abrir', 'Open'),
+        icon: Sparkles,
+      };
+    }
+
+    if (dailyStats.total > 0 && dailyStats.completed >= dailyStats.total) {
+      return {
+        eyebrow: l('Sincronização Diária Completa', 'Daily Sync Complete'),
+        title: l(
+          'Todas as missões programadas para hoje foram concluídas.',
+          'All scheduled missions for today have been completed.'
+        ),
+        reward: `+${todayXp} XP ${l('acumulados hoje', 'earned today')}`,
+        path: '/quests',
+        cta: l('Ver Quadro', 'View Board'),
+        icon: Trophy,
+      };
+    }
+
+    return {
+      eyebrow: l('Calibração de Rotina', 'Routine Calibration'),
+      title: l(
+        'Configure ou conclua suas missões diárias para iniciar a coleta de XP.',
+        'Configure or complete your daily missions to start earning XP.'
+      ),
+      reward: l('Recompensa imediata de XP e Atributos', 'Immediate XP & Attribute rewards'),
+      path: '/quests',
+      cta: l('Abrir Missões', 'Open Quests'),
+      icon: CheckCircle2,
+    };
+  }, [
+    workoutMissions,
+    activeHabits,
+    completedToday,
+    mealMissions,
+    tasks,
+    dailyStats.total,
+    dailyStats.completed,
+    todayXp,
+    isEnglish,
+  ]);
+
+  const quickActions: QuickActionItem[] = [
+    {
+      path: '/quests',
+      label: l('Concluir missão', 'Complete mission'),
+      sublabel: l('Hábitos e objetivos diários', 'Daily habits & objectives'),
+      badgeText:
+        dailyStats.pendingQuestsTotal > 0
+          ? `${dailyStats.pendingQuestsTotal} ${l('pendentes', 'pending')}`
+          : `${dailyStats.habitsCompleted}/${dailyStats.habitsTotal} ${l('hoje', 'today')}`,
+      accent: 'cyan',
+      icon: <CheckSquare className="h-4 w-4 text-[#00F0FF]" />,
+    },
+    {
+      id: 'tour-shortcut-workouts',
+      path: '/workouts',
+      label: l('Registrar treino', 'Log workout'),
+      sublabel: l('Cargas, séries e cardio', 'Weights, sets & cardio'),
+      badgeText:
+        dailyStats.workoutsTotal > 0
+          ? `${dailyStats.workoutsCompleted}/${dailyStats.workoutsTotal} ${l('hoje', 'today')}`
+          : l('Abrir fichas', 'Open routines'),
+      accent: 'purple',
+      icon: <Dumbbell className="h-4 w-4 text-[#A855F7]" />,
+    },
+    {
+      id: 'tour-shortcut-nutrition',
+      path: '/nutrition',
+      label: l('Registrar refeição', 'Register meal'),
+      sublabel: l('Dieta, macros e hidratação', 'Diet, macros & hydration'),
+      badgeText:
+        dailyStats.mealsTotal > 0
+          ? `${dailyStats.mealsCompleted}/${dailyStats.mealsTotal} ${l('hoje', 'today')}`
+          : l('Registrar kcal', 'Log kcal'),
+      accent: 'cyan',
+      icon: <Apple className="h-4 w-4 text-[#00F0FF]" />,
+    },
+  ];
+
+  const activeBossName = activeBattle
+    ? isEnglish
+      ? translateUiText(activeBattle.name)
+      : activeBattle.name
+    : l('Raid Semanal', 'Weekly Raid');
+
+  const activeBossMeta =
+    activeBattle && activeBattle.max_hp > 0
+      ? activeBattle.defeated
+        ? l('Boss Purificado', 'Boss Purified')
+        : `HP ${activeBattle.current_hp} / ${activeBattle.max_hp}`
+      : l('Enfrente chefes semanais', 'Face weekly bosses');
+
+  const secondaryModules: SecondaryModuleItem[] = [
+    {
+      path: '/bosses',
+      title: l('Portal dos Chefes', 'Boss Portal'),
+      subtitle: activeBossName,
+      meta: activeBossMeta,
+      variant: 'crimson',
+      icon: <Skull className="h-4 w-4 text-[#EF4444]" />,
+      image: '/optimized/Cards/Chefes Finais.jpg',
+    },
+    {
+      path: '/fortuna',
+      title: l('Módulo Fortuna', 'Fortune Module'),
+      subtitle: l('Finanças & Economia', 'Finances & Savings'),
+      meta: `${l('Sabedoria (SAB)', 'Wisdom (WIS)')} · ${state.stats.wisdom}`,
+      variant: 'gold',
+      icon: <Coins className="h-4 w-4 text-[#F59E0B]" />,
+      image: '/optimized/Cards/Fortuna.jpg',
+    },
+    {
+      path: '/rest',
+      title: l('Santuário do Descanso', 'Recovery Sanctuary'),
+      subtitle: l('Sono & Recuperação Mental', 'Sleep & Mental Recovery'),
+      meta: `${l('Equilíbrio (EQU)', 'Balance (BAL)')} · ${state.stats.balance}`,
+      variant: 'cyan',
+      icon: <Moon className="h-4 w-4 text-[#00F0FF]" />,
+      image: '/optimized/Cards/Descanso-Lazer.jpg',
+    },
+    {
+      path: '/status',
+      title: l('Ficha de Atributos', 'Attribute Sheet'),
+      subtitle: l('Radar e Domínios do Caçador', 'Hunter Radar & Domains'),
+      meta: `${l('Nível', 'Level')} ${state.level} · Rank ${state.rank || 'E'}`,
+      variant: 'default',
+      icon: <LayoutDashboard className="h-4 w-4 text-slate-300" />,
+      image: '/optimized/Cards/Status.jpg',
+    },
+  ];
+
+  const NextMissionIcon = nextMission.icon;
+  const motionProps = prefersReducedMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 10 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.32, ease: 'easeOut' as const },
+      };
 
   return (
-    <div className="space-y-8 pb-16 text-silver">
-      <section id="tour-portal-header" className="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-[#0F0F13] p-5 shadow-[0_0_25px_rgba(59,130,246,0.05)] sm:p-6">
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-500/5 blur-3xl" />
+    <div className="mx-auto max-w-5xl space-y-5 pb-6 text-[var(--text-primary)]">
+      {/* ── SEÇÃO 3, 4 & 5: HERO DO JOGADOR + HUNTER STATUS + PROGRESSO DIÁRIO ── */}
+      <motion.section
+        id="tour-portal-header"
+        aria-label={l('Status Principal do Caçador', 'Primary Hunter Status')}
+        {...motionProps}
+        className="relative"
+      >
+        <div className="grid grid-cols-1 gap-0 lg:grid-cols-12 lg:gap-5 lg:items-stretch">
+          {/* 3. HERO DO JOGADOR (Compacto no mobile, conectado ao painel Hunter Status) */}
+          <div className="relative h-52 sm:h-60 lg:col-span-5 lg:h-auto lg:min-h-[340px] overflow-hidden rounded-t-2xl lg:rounded-2xl border border-b-0 lg:border-b border-[var(--hud-border-cyan)] bg-[#0A0C12] shadow-[0_0_28px_rgba(0,240,255,0.08)]">
+            <img
+              src={characterAvatar}
+              alt={`${hunterName} — ${hunterClassLabel} Rank ${state.rank || 'E'}`}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              onError={handleHunterAvatarError}
+              className="h-full w-full object-cover object-[center_18%] transition-transform duration-700"
+            />
 
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,1)] animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-400 font-orbitron">
-                {l('Sistema de Integração Neural', 'Neural Integration System')}
-              </span>
+            {/* Vinheta e iluminação holográfica discreta */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07080C] via-[#07080C]/35 to-black/30"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,rgba(0,240,255,0.14)_0%,transparent_70%)]"
+            />
+
+            {/* Topo do Hero: Link Neural + Classe Despertada */}
+            <div className="absolute inset-x-3.5 top-3 z-10 flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-[#07080C]/75 px-2.5 py-1 backdrop-blur-md">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
+                <span className="font-orbitron text-[9px] font-bold uppercase tracking-[0.18em] text-slate-200">
+                  {l('Sistema Ativo', 'System Online')}
+                </span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#00F0FF]/35 bg-[#07080C]/80 px-2.5 py-1 backdrop-blur-md">
+                <Shield className="h-3 w-3 text-[#00F0FF]" aria-hidden="true" />
+                <span className="font-orbitron text-[9px] font-black uppercase tracking-[0.14em] text-[#00F0FF]">
+                  {hunterClassLabel}
+                </span>
+              </div>
             </div>
-            <h1 className="text-2xl font-black uppercase italic tracking-wider text-white font-orbitron text-glow-blue sm:text-3xl">
-              {t('pages.portal')}
-            </h1>
-            <p className="max-w-xl text-[11px] font-semibold uppercase leading-relaxed tracking-widest text-gray-500 sm:text-xs">
-              {l(
-                'Selecione um portal para acessar seu próximo eixo de evolução.',
-                'Select a portal to access your next path of progression.',
+
+            {/* Base do Hero: Identidade do Caçador e Título */}
+            <div className="absolute inset-x-4 bottom-6 lg:bottom-4 z-10 flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#F59E0B]">
+                  <Crown className="h-3 w-3 shrink-0 text-[#F59E0B]" aria-hidden="true" />
+                  <span className="truncate">{hunterTitle}</span>
+                </div>
+                <h1 className="mt-0.5 truncate font-orbitron text-xl sm:text-2xl font-black uppercase tracking-[0.08em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                  {hunterName}
+                </h1>
+              </div>
+
+              {state.streak.current > 0 && (
+                <div className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/35 bg-[#07080C]/80 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-300 backdrop-blur-md font-orbitron">
+                  <Flame className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />
+                  <span>{state.streak.current}d</span>
+                </div>
               )}
-            </p>
+            </div>
           </div>
 
-          <div className="w-full rounded-2xl border border-blue-500/15 bg-black/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_24px_rgba(59,130,246,0.06)] lg:max-w-[410px]">
-            <div className="flex items-center gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-lg font-black italic text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] font-orbitron">
-                {state.rank || 'E'}
+          {/* 4 & 5. PAINEL HUNTER STATUS + PROGRESSO DIÁRIO */}
+          <div className="relative z-10 -mt-4 lg:mt-0 lg:col-span-7">
+            <HudCard
+              variant="elevated"
+              corners
+              className="h-full border-[var(--hud-border-strong)] bg-[#10131D]/95 backdrop-blur-xl"
+            >
+              {/* Cabeçalho HUNTER STATUS */}
+              <div className="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-0.5 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]"
+                  />
+                  <h2 className="font-orbitron text-xs sm:text-sm font-black uppercase tracking-[0.22em] text-slate-100">
+                    {l('Hunter Status', 'Hunter Status')}
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/status')}
+                  className="inline-flex min-h-[32px] items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1 font-orbitron text-[9px] font-bold uppercase tracking-[0.14em] text-[#00F0FF] transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+                >
+                  <span>{l('Ver Status', 'Full Status')}</span>
+                  <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Nível Real & Rank Real */}
+              <div className="mt-3.5 flex items-center justify-between gap-4 px-1">
+                <div>
+                  <span className="block font-orbitron text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                    {l('Nível', 'Level')}
+                  </span>
+                  <div className="mt-0.5 flex items-baseline gap-2">
+                    <span className="font-orbitron text-3xl sm:text-4xl font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.45)] tabular-nums">
+                      {state.level}
+                    </span>
+                    {state.level >= MAX_LEVEL && (
+                      <span className="rounded border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-1.5 py-0.5 font-orbitron text-[9px] font-black uppercase text-[#F59E0B]">
+                        MAX
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <span className="block font-orbitron text-[10px] font-bold uppercase tracking-[0.18em] text-[#F59E0B]">
+                      Rank
+                    </span>
+                    <span className="mt-0.5 block font-orbitron text-2xl sm:text-3xl font-black leading-none text-[#F59E0B] drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+                      {state.rank || 'E'}
+                    </span>
+                  </div>
+                  <RankBadge rank={state.rank || 'E'} size="md" showLabel />
+                </div>
+              </div>
+
+              {/* Barra de XP com valores reais */}
+              <div className="mt-3.5 space-y-1.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-orbitron text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    XP
+                  </span>
+                  <NeonProgressBar
+                    value={state.level >= MAX_LEVEL ? 100 : state.xp}
+                    max={state.level >= MAX_LEVEL ? 100 : safeXpRequired}
+                    variant="xp"
+                    size="md"
+                    ariaLabel={l(
+                      'Progresso de XP até o próximo nível',
+                      'XP progress to next level'
+                    )}
+                    className="flex-1"
+                  />
+                  <span className="font-orbitron text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    XP
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-medium text-slate-400 tabular-nums">
+                  <span className="inline-flex items-center gap-1 text-[#00F0FF]">
+                    <Zap className="h-3 w-3" aria-hidden="true" />
+                    <strong className="font-orbitron text-[11px] font-bold">
+                      {state.xp} / {state.xpRequired} XP
+                    </strong>
+                  </span>
+                  <span>
+                    {state.level >= MAX_LEVEL
+                      ? l('Nível máximo alcançado', 'Maximum level reached')
+                      : `${Math.max(0, state.xpRequired - state.xp)} XP ${l(
+                          'para o Nível',
+                          'to Level'
+                        )} ${state.level + 1}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* 5. PROGRESSO DIÁRIO (Anel Neon + Indicadores Reais) */}
+              <div className="mt-4 border-t border-white/[0.06] pt-4">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="font-orbitron text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200">
+                    {l('Progresso Diário', 'Daily Progress')} —{' '}
+                    <span className="text-[#00F0FF]">{dailyStats.progress}%</span>
+                  </span>
+                  <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
+                    +{todayXp} / {DAILY_COMMON_XP_EFFECTIVE_MAX} XP {l('hoje', 'today')}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+                  <div className="flex items-center justify-center">
+                    <NeonProgressRing
+                      value={dailyStats.progress}
+                      secondaryValue={xpPct}
+                      size={112}
+                      strokeWidth={8}
+                      variant="cyan-purple"
+                      ariaLabel={l('Progresso diário de missões', 'Daily mission progress')}
+                    >
+                      <span className="font-orbitron text-xl font-black text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] tabular-nums">
+                        {dailyStats.progress}%
+                      </span>
+                      <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400 tabular-nums">
+                        {dailyStats.completed}/{dailyStats.total} {l('feitos', 'done')}
+                      </span>
+                    </NeonProgressRing>
+                  </div>
+
+                  {/* Resumo das 3 frentes diárias reais */}
+                  <div className="grid w-full flex-1 grid-cols-3 gap-2 sm:grid-cols-1 sm:gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-2.5 py-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+                        {l('Missões', 'Quests')}
+                      </span>
+                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs font-bold text-[#00F0FF] tabular-nums">
+                        {dailyStats.habitsCompleted}/{dailyStats.habitsTotal}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-2.5 py-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+                        {l('Treinos', 'Workouts')}
+                      </span>
+                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs font-bold text-[#A855F7] tabular-nums">
+                        {dailyStats.workoutsCompleted}/{dailyStats.workoutsTotal}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-2.5 py-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+                        {l('Refeições', 'Meals')}
+                      </span>
+                      <span className="mt-0.5 sm:mt-0 font-orbitron text-xs font-bold text-emerald-400 tabular-nums">
+                        {dailyStats.mealsCompleted}/{dailyStats.mealsTotal}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </HudCard>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ── SEÇÃO 6: AÇÕES RÁPIDAS (Tactical Controls inspirados em ascend-home.jpg) ── */}
+      <motion.section
+        id="tour-portal-primary"
+        aria-labelledby="quick-actions-heading"
+        {...motionProps}
+        className="space-y-2.5"
+      >
+        <div className="flex items-center justify-between px-1">
+          <h2
+            id="quick-actions-heading"
+            className="font-orbitron text-[10px] font-black uppercase tracking-[0.22em] text-slate-400"
+          >
+            {l('Ações Rápidas', 'Quick Actions')}
+          </h2>
+          <span className="text-[10px] font-semibold text-slate-500">
+            {l('Acesso direto', 'Direct access')}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
+          {quickActions.map((action) => (
+            <TacticalButton
+              key={action.path}
+              id={action.id}
+              variant="secondary"
+              accent={action.accent}
+              fullWidth
+              onClick={() => navigate(action.path)}
+              leftIcon={action.icon}
+              rightIcon={<ChevronRight className="h-4 w-4 text-slate-300" />}
+              className="min-h-[54px] px-4 py-2.5"
+            >
+              <span className="flex w-full items-center justify-between gap-2 text-left">
+                <span className="min-w-0">
+                  <span className="block truncate font-orbitron text-xs sm:text-[13px] font-bold uppercase tracking-[0.08em] text-slate-100">
+                    {action.label}
+                  </span>
+                  <span className="block truncate text-[11px] font-normal text-slate-400">
+                    {action.sublabel}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-md border border-white/10 bg-black/40 px-2 py-0.5 font-orbitron text-[9px] font-bold uppercase tracking-wider text-slate-300 tabular-nums">
+                  {action.badgeText}
+                </span>
+              </span>
+            </TacticalButton>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* ── PRÓXIMA MISSÃO RECOMENDADA (Dados Reais + Âncora do ProductTour) ── */}
+      <motion.section
+        id="tour-portal-recommended"
+        aria-label={l('Missão Recomendada', 'Recommended Mission')}
+        {...motionProps}
+      >
+        <HudCard variant="purple" corners className="py-3.5 px-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#A855F7]/35 bg-[#A855F7]/15 text-[#A855F7]">
+                <NextMissionIcon className="h-5 w-5" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black uppercase tracking-[0.12em] text-white">{hunterName}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                  {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank || 'E'}
+                <p className="font-orbitron text-[9px] font-black uppercase tracking-[0.2em] text-[#A855F7]">
+                  {nextMission.eyebrow}
                 </p>
-                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.1em] text-blue-400">
-                  {l('Nível', 'Level')} {state.level} <span className="text-gray-600">—</span>{' '}
-                  <span className="text-amber-400"><Zap className="mr-0.5 inline h-3 w-3" fill="currentColor" />{state.xp} / {state.xpRequired} XP</span>
+                <p className="mt-0.5 truncate text-sm font-bold text-slate-100">
+                  {nextMission.title}
+                </p>
+                <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                  {nextMission.reward}
                 </p>
               </div>
             </div>
-            <div className="mt-4">
-              <div className="mb-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-600">
-                <span>{l('Progresso para o próximo nível', 'Progress to next level')}</span>
-                <span>{state.xp} / {state.xpRequired} XP</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 shadow-[0_0_10px_rgba(59,130,246,0.45)] transition-[width] duration-700"
-                  style={{ width: `${xpPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section id="tour-portal-recommended" className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-[#0F0F13] px-5 py-4 shadow-[0_0_24px_rgba(124,58,237,0.06)]">
-        <div className="absolute right-0 top-0 h-full w-40 bg-gradient-to-l from-purple-500/8 to-transparent" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-300">
-              <CheckSquare className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400 font-orbitron">
-                {l('Próxima ação recomendada', 'Recommended next action')}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-gray-200">
-                {l('Complete sua primeira missão diária para ganhar XP.', 'Complete your first daily quest to earn XP.')}
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate(nextMission.path)}
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#A855F7]/40 bg-[#A855F7]/15 px-4 py-2 font-orbitron text-[10px] font-black uppercase tracking-[0.14em] text-purple-200 transition-all hover:border-[#A855F7]/70 hover:bg-[#A855F7]/25 hover:text-white active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
+            >
+              <span>{nextMission.cta}</span>
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/quests')}
-            className="flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-purple-200 transition-all hover:border-purple-400/60 hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(124,58,237,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
+        </HudCard>
+      </motion.section>
+
+      {/* ── SEÇÃO 7: MÓDULOS SECUNDÁRIOS (Bosses, Fortuna, Descanso e Status) ── */}
+      <motion.section
+        id="tour-portal-secondary"
+        aria-labelledby="secondary-modules-heading"
+        {...motionProps}
+        className="space-y-2.5"
+      >
+        <div className="flex items-center justify-between px-1">
+          <h2
+            id="secondary-modules-heading"
+            className="font-orbitron text-[10px] font-black uppercase tracking-[0.22em] text-slate-400"
           >
-            {l('Abrir Quadro de Missões', 'Open Quest Board')}
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      </section>
-
-      <section aria-labelledby="primary-portals-title">
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-blue-500 font-orbitron">
-              {l('Núcleo do Sistema', 'System Core')}
-            </p>
-            <h2 id="primary-portals-title" className="mt-1 text-sm font-black uppercase tracking-wider text-white font-orbitron">
-              {l('Portais principais', 'Primary portals')}
-            </h2>
-          </div>
-          <span className="hidden text-[9px] font-bold uppercase tracking-widest text-gray-600 sm:block">
-            {l('3 módulos prioritários', '3 priority modules')}
+            {l('Módulos do Sistema', 'System Modules')}
+          </h2>
+          <span className="text-[10px] font-semibold text-slate-500">
+            {l('Domínios complementares', 'Complementary domains')}
           </span>
         </div>
-        <div id="tour-portal-primary" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.filter(card => card.priority === 'primary').map(card => (
-            <PortalCard key={card.path} card={card} isEnglish={isEnglish} onOpen={() => navigate(card.path)} />
-          ))}
-        </div>
-      </section>
 
-      <section aria-labelledby="secondary-portals-title">
-        <div className="mb-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.24em] text-gray-600 font-orbitron">
-            {l('Expansões conectadas', 'Connected expansions')}
-          </p>
-          <h2 id="secondary-portals-title" className="mt-1 text-sm font-black uppercase tracking-wider text-white font-orbitron">
-            {l('Módulos complementares', 'Complementary modules')}
-          </h2>
-        </div>
-        <div id="tour-portal-secondary" className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          {cards.filter(card => card.priority === 'secondary').map(card => (
-            <PortalCard key={card.path} card={card} isEnglish={isEnglish} onOpen={() => navigate(card.path)} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {secondaryModules.map((mod) => (
+            <button
+              key={mod.path}
+              type="button"
+              onClick={() => navigate(mod.path)}
+              aria-label={`${l('Abrir', 'Open')} ${mod.title}`}
+              className="group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF] rounded-2xl active:scale-[0.99] transition-transform"
+            >
+              <HudCard
+                variant={mod.variant}
+                noPadding
+                className="relative flex min-h-[88px] items-center justify-between gap-3 overflow-hidden p-3.5 sm:p-4 hover:border-white/25"
+              >
+                {/* Arte de fundo sutil otimizada */}
+                <img
+                  src={mod.image}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20 transition-transform duration-500 group-hover:scale-105"
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#07080C]/95 via-[#10121A]/85 to-[#10121A]/65"
+                />
+
+                <div className="relative z-10 flex min-w-0 flex-1 items-center gap-3.5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/55 backdrop-blur-md">
+                    {mod.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate font-orbitron text-xs font-black uppercase tracking-[0.1em] text-white">
+                      {mod.title}
+                    </h3>
+                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-300">
+                      {mod.subtitle}
+                    </p>
+                    <p className="mt-1 truncate font-orbitron text-[10px] font-bold uppercase tracking-wider text-slate-400 tabular-nums">
+                      {mod.meta}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/50 text-slate-400 transition-all group-hover:translate-x-0.5 group-hover:border-white/25 group-hover:text-white">
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </div>
+              </HudCard>
+            </button>
           ))}
         </div>
-      </section>
+      </motion.section>
+
       <ProductTour />
     </div>
   );

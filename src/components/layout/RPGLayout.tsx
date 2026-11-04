@@ -1,15 +1,31 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, CheckSquare, Dumbbell, Apple, Settings, LogOut, Menu, AlertTriangle, LayoutGrid, Skull, Coins, Moon } from 'lucide-react';
+import {
+  LayoutDashboard,
+  CheckSquare,
+  Dumbbell,
+  Apple,
+  Settings,
+  LogOut,
+  Menu,
+  AlertTriangle,
+  LayoutGrid,
+  Skull,
+  Coins,
+  Moon,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileMenu } from './MobileMenu';
+import { BottomNav } from './BottomNav';
 import { supabase } from '@/lib/supabase';
 import { usePreferences } from '@/contexts/preferences';
 import { MAX_LEVEL } from '@/lib/progression';
 import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
+import { RankBadge } from '@/components/ui/rank-badge';
+import { NeonProgressBar } from '@/components/ui/neon-progress';
 
 const navItems = [
   { path: '/', labelKey: 'nav.portal' as const, icon: LayoutGrid },
@@ -44,20 +60,18 @@ export function RPGLayout() {
         if (error) {
           setSupabaseError(error.message);
         }
-      } catch (err: any) {
-        setSupabaseError(err.message || String(err));
+      } catch (err: unknown) {
+        setSupabaseError(err instanceof Error ? err.message : String(err));
       }
     }
     void checkConnection();
   }, [t]);
 
-  // Se o username não estiver preenchido, talvez o profile ainda esteja carregando
-  // Mas vamos deixar renderizar com fallback se necessário.
-  const xpPct = state.level >= MAX_LEVEL
-    ? 100
-    : state.xpRequired > 0
-      ? Math.min(100, (state.xp / state.xpRequired) * 100)
-      : 0;
+  const safeXpRequired = Math.max(1, state.xpRequired || 100);
+  const xpPct =
+    state.level >= MAX_LEVEL
+      ? 100
+      : Math.min(100, (state.xp / safeXpRequired) * 100);
   const hunterName = state.username || state.fullName || 'Hunter';
   const hunterClass = state.hunterClass || t('common.classUndefined');
   const handleSignOut = async () => {
@@ -66,11 +80,9 @@ export function RPGLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-[#0B0B0F] text-[#C9CED6] overflow-hidden">
-
+    <div className="flex h-[100dvh] bg-[var(--hud-bg,#07080C)] text-[#C9CED6] overflow-hidden">
       {/* ── Desktop Sidebar ─────────────────────────────── */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-white/5 bg-[#0B0B0F]">
-
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-8">
           <div className="flex size-[52px] shrink-0 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_20px_rgba(139,92,246,0.4)]">
@@ -90,7 +102,7 @@ export function RPGLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto scrollbar-none">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -127,15 +139,17 @@ export function RPGLayout() {
         <div className="border-t border-white/5 p-4 space-y-4">
           {/* Avatar + info */}
           <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 p-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
-              {state.rank}
-            </div>
+            <RankBadge rank={state.rank} size="sm" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-black uppercase tracking-tight text-white">{hunterName}</p>
+              <p className="truncate text-xs font-black uppercase tracking-tight text-white">
+                {hunterName}
+              </p>
               <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.08em] text-gray-400">
                 {hunterClass} <span className="text-gray-600">•</span> Rank {state.rank}
               </p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">{t('common.level')} {state.level}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">
+                {t('common.level')} {state.level}
+              </p>
             </div>
           </div>
 
@@ -143,7 +157,9 @@ export function RPGLayout() {
           <div className="px-1">
             <div className="mb-1.5 flex justify-between text-[9px] font-bold uppercase tracking-widest text-gray-500">
               <span>{t('common.systemXp')}</span>
-              <span>{state.xp} / {state.xpRequired}</span>
+              <span>
+                {state.xp} / {state.xpRequired}
+              </span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
               <motion.div
@@ -167,38 +183,110 @@ export function RPGLayout() {
         </div>
       </aside>
 
-      {/* ── Mobile Menu ──────────────────────────────────── */}
+      {/* ── Mobile Menu Drawer (Acesso completo a Bosses, Fortuna, Descanso, Ajustes e Logout) ── */}
       <MobileMenu open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      {/* ── Main ─────────────────────────────────────────── */}
-      <main className="flex flex-1 flex-col overflow-hidden bg-[#0B0B0F]">
+      {/* ── Main Content Wrapper ─────────────────────────── */}
+      <main className="flex flex-1 flex-col overflow-hidden bg-[var(--hud-bg,#07080C)]">
+        {/* ── Mobile Compact HUD Header ──────────────────── */}
+        <header
+          className="md:hidden shrink-0 border-b border-[var(--hud-border-strong)] bg-[var(--hud-surface-glass)] backdrop-blur-xl z-20"
+          style={{
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+          }}
+        >
+          <div className="flex h-14 items-center justify-between gap-2 px-3 sm:px-4">
+            {/* Esquerda: Botão Menu de Módulos + Identidade ASCEND */}
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                aria-label={language === 'pt-BR' ? 'Abrir menu de módulos' : 'Open modules menu'}
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-[#94A3B8] transition-colors hover:border-[#00F0FF]/40 hover:text-white active:scale-95"
+              >
+                <Menu size={19} />
+              </button>
 
-        {/* Mobile top bar */}
-        <header className="md:hidden flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#0B0B0F] shrink-0">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="rounded-xl p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white"
-          >
-            <Menu size={24} />
-          </button>
-          <img
-            src="/optimized/Icon 2.png"
-            alt="ASCEND"
-            decoding="async"
-            className="h-[47px] w-[47px] object-cover rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.5)]"
-          />
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher compact />
-            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-black text-white shadow-lg">
-              {state.rank}
+              <Link
+                to="/"
+                className="flex min-w-0 items-center gap-2 rounded-lg py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+              >
+                <img
+                  src="/optimized/Icon 2.png"
+                  alt="ASCEND"
+                  decoding="async"
+                  className="size-7 shrink-0 rounded-lg object-cover shadow-[0_0_12px_rgba(0,240,255,0.28)]"
+                />
+                <span className="truncate font-orbitron text-sm sm:text-base font-black tracking-[0.14em] text-[#00F0FF] text-glow-cyan">
+                  ASCEND
+                </span>
+              </Link>
+
+              {location.pathname === '/' && (
+                <span className="hidden xs:inline-flex items-center rounded-md border border-white/15 bg-gradient-to-b from-slate-700/60 to-slate-900/80 px-2 py-0.5 font-orbitron text-[9px] font-bold uppercase tracking-[0.16em] text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+                  {language === 'en-US' ? 'PLAYER' : 'CAÇADOR'}
+                </span>
+              )}
+            </div>
+
+            {/* Direita: Indicador Compacto de Nível/XP (nas telas internas) + Idioma + Ajustes */}
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              {location.pathname !== '/' && (
+                <Link
+                  to="/status"
+                  aria-label={`${t('common.level')} ${state.level} — ${state.xp}/${state.xpRequired} XP`}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-1 transition-colors hover:border-[#00F0FF]/40"
+                >
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1.5 leading-none">
+                      <span className="font-orbitron text-[10px] font-black uppercase tracking-wider text-white">
+                        LV.{state.level}
+                      </span>
+                      <span className="hidden xs:inline font-orbitron text-[9px] font-semibold text-[#94A3B8] tabular-nums">
+                        {state.xp}/{state.xpRequired}
+                      </span>
+                    </div>
+                    <div className="mt-1 w-14 sm:w-20">
+                      <NeonProgressBar
+                        value={state.level >= MAX_LEVEL ? safeXpRequired : state.xp}
+                        max={safeXpRequired}
+                        variant="xp"
+                        size="sm"
+                        ariaLabel="Hunter XP"
+                      />
+                    </div>
+                  </div>
+                  <RankBadge rank={state.rank} size="sm" />
+                </Link>
+              )}
+
+              <LanguageSwitcher compact />
+
+              <Link
+                to="/settings"
+                aria-label={t('nav.settings')}
+                title={t('nav.settings')}
+                className={cn(
+                  'inline-flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors active:scale-95',
+                  location.pathname === '/settings'
+                    ? 'border-[#00F0FF]/50 bg-[#00F0FF]/10 text-[#00F0FF]'
+                    : 'border-white/10 bg-white/[0.03] text-[#94A3B8] hover:border-white/25 hover:text-white'
+                )}
+              >
+                <Settings size={18} />
+              </Link>
             </div>
           </div>
         </header>
 
-        {/* Desktop top bar */}
+        {/* ── Desktop Top Bar ────────────────────────────── */}
         <div className="hidden md:flex items-center justify-between border-b border-white/5 bg-[#0B0B0F] px-8 py-4 shrink-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">
-            {new Date().toLocaleDateString(language, { weekday: 'long', day: 'numeric', month: 'long' })}
+            {new Date().toLocaleDateString(language, {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })}
           </p>
           <div className="flex items-center gap-3">
             <LanguageSwitcher compact />
@@ -206,13 +294,15 @@ export function RPGLayout() {
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">
                 {t('common.status')}: {t('common.active')}
               </span>
-              <span className="text-xs font-black text-white uppercase tracking-tight">{state.username || 'Hunter'}</span>
+              <span className="text-xs font-black text-white uppercase tracking-tight">
+                {state.username || 'Hunter'}
+              </span>
             </div>
             <div className="size-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,1)] animate-pulse" />
           </div>
         </div>
 
-        {/* Page content */}
+        {/* ── Page Content Scroll Container ──────────────── */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {supabaseError && (
             <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-6">
@@ -221,16 +311,22 @@ export function RPGLayout() {
                 <span className="flex-1 font-orbitron text-[11px] leading-relaxed">
                   {t('common.warning')}: {t('errors.supabaseConnection')} ({supabaseError})
                 </span>
-                <Link to="/settings" className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 font-black transition-all active:scale-95 text-[10px] uppercase tracking-wider border border-rose-500/20 shrink-0">
+                <Link
+                  to="/settings"
+                  className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 font-black transition-all active:scale-95 text-[10px] uppercase tracking-wider border border-rose-500/20 shrink-0"
+                >
                   {t('common.diagnose')}
                 </Link>
               </div>
             </div>
           )}
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-4 pb-28 sm:pt-8 md:pb-8">
             <Outlet />
           </div>
         </div>
+
+        {/* ── Mobile Fixed Bottom Navigation ─────────────── */}
+        <BottomNav />
       </main>
     </div>
   );

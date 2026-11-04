@@ -1655,7 +1655,7 @@ export function Settings() {
                         {l('Status: Desperto (Premium)', 'Status: Awakened (Premium)')}
                       </h4>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {l('Você possui acesso ilimitado a todos os portais, fendas e IA do Sistema.', 'You have unlimited access to all system portals, rifts, and AI.')}
+                        {l('Você possui acesso ilimitado a todos os portais, fendas e recursos do Sistema.', 'You have unlimited access to all system portals, rifts, and features.')}
                       </p>
                     </div>
                   </div>
@@ -1682,7 +1682,7 @@ export function Settings() {
                         {l('Status: Iniciante (Gratuito)', 'Status: Beginner (Free)')}
                       </h4>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {l('Desbloqueie fendas Rank S, IA nutricional e ferramentas de finanças.', 'Unlock Rank S rifts, nutrition AI, and financial tools.')}
+                        {l('Desbloqueie fendas Rank S, análise nutricional avançada e ferramentas de finanças.', 'Unlock Rank S rifts, advanced nutrition analysis, and financial tools.')}
                       </p>
                     </div>
                   </div>

@@ -821,7 +821,7 @@ const EXTRA_EXACT_ENGLISH: Record<string, string> = {
   'Sequência': 'Streak',
   'Visualize atributos, nível, rank e evolução dos domínios.': 'View attributes, level, rank, and domain progression.',
   'Análise Principal': 'Main Analysis',
-  'Gerencie hábitos, tarefas e quests bônus da IA.': 'Manage habits, tasks, and AI bonus quests.',
+  'Gerencie hábitos, tarefas e quests bônus diárias.': 'Manage habits, tasks, and daily bonus quests.',
   'Registre cargas, repetições e acompanhe sua evolução.': 'Log loads, reps, and track your progression.',
 
   // Product tour
@@ -1152,7 +1152,7 @@ const EXTRA_EXACT_ENGLISH: Record<string, string> = {
   'Amplia capacidade cognitiva e profundidade de foco.': 'Expands cognitive capacity and depth of focus.',
   'Reforça constância diária e fortitude mental.': 'Reinforces daily consistency and mental fortitude.',
   'Reforça a constância diária e a fortitude mental.': 'Reinforces daily consistency and mental fortitude.',
-  'Bônus IA': 'AI Bonus',
+  'Bônus': 'Bonus',
   '[BÔNUS IA]': '[AI BONUS]',
   '[BÔNUS IA] ': '[AI BONUS] ',
   'Flexível': 'Flexible',

@@ -1,16 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { authStorageAdapter } from './authStorage'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-
-// Limpa tokens antigos persistidos no localStorage para forçar a transição limpa e segura para o sessionStorage
-if (typeof window !== 'undefined') {
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-      localStorage.removeItem(key);
-    }
-  });
-}
 
 // Aviso de desenvolvimento: ajuda a debugar configurações faltando
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -24,16 +16,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Usa sessionStorage para persistir sessão durante o refresh (F5), mas limpa ao fechar a aba/navegador
+    // Persistência estável adaptável para Web e Mobile (Capacitor)
     persistSession: true,
-    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
-    // Detecta sessão na URL (necessário para OAuth e links mágicos)
+    storage: authStorageAdapter,
+    storageKey: 'ascend-auth-token',
+    // Detecta sessão na URL (necessário para OAuth, links mágicos e reset de senha)
     detectSessionInUrl: true,
-    // Auto-refresh do token antes de expirar
+    // Auto-refresh do token em segundo plano antes da expiração
     autoRefreshToken: true,
+    // Evita expirar sessões abruptamente em background
+    flowType: 'pkce',
   },
   global: {
-    // Configurações para melhorar resiliência de rede
+    // Configurações para resiliência de rede
     fetch: (url, options = {}) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
@@ -46,7 +41,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     schema: 'public',
   },
   realtime: {
-    // Reconexão automática mais agressiva para evitar perda de conexão
     params: {
       eventsPerSecond: 10,
     },

@@ -8,6 +8,8 @@ export const LANGUAGE_KEY = 'ascend_language';
 
 export const translations = {
   'nav.portal': { 'pt-BR': 'Portal', 'en-US': 'Portal' },
+  'nav.home': { 'pt-BR': 'Início', 'en-US': 'Home' },
+  'nav.workoutsShort': { 'pt-BR': 'Treinos', 'en-US': 'Training' },
   'nav.status': { 'pt-BR': 'Status', 'en-US': 'Status' },
   'nav.quests': { 'pt-BR': 'Missões', 'en-US': 'Quests' },
   'nav.bosses': { 'pt-BR': 'Chefes', 'en-US': 'Bosses' },

@@ -20,6 +20,13 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-04 — Etapa 03.3: Redesign Mobile Premium da Home do Caçador (QuickMenu.tsx)
+- **Hero do Jogador & Painel HUNTER STATUS (src/pages/QuickMenu.tsx):** Redesenho mobile-first da Home (/) utilizando os componentes oficiais do **ASCEND HUD v2** (HudCard, TacticalButton, NeonProgressBar, NeonProgressRing, RankBadge) e arte real otimizada da classe/rank do usuário (/optimized/Classes//Rank .jpg).
+- **Progresso Diário Real & Próxima Missão:** Integração direta com useHunterStore, useBossStore, useHabits e useTasks para calcular o percentual diário consolidado (hábitos, treinos, refeições e tarefas concluídas hoje) e sugerir dinamicamente a próxima atividade pendente.
+- **Ações Rápidas & Módulos Secundários:** Substituídos os antigos portais verticais extensos por controles táticos compactos (min-h-[54px]) para Missões (/quests), Treinos (/workouts) e Alimentação (/nutrition), preservando os módulos secundários (/bosses, /fortuna, /rest, /status) e todas as âncoras do ProductTour.
+- **Prevenção de Duplicação no Header (src/components/layout/RPGLayout.tsx):** Ocultado o mini indicador redundante de LV./XP no cabeçalho global mobile exclusivamente quando na rota / (exibindo a tag CAÇADOR / PLAYER), mantendo-o ativo nas demais rotas internas.
+- **Testes Automatizados (execution/test_home_redesign.mjs):** Adicionada suíte com 6 asserções estruturais e funcionais (6/6 aprovadas), somada à auditoria bilíngue PT-BR/EN-US (udit_localization.mjs).
+
 ### 2026-06-30 — Missão Única no Criador de Hábitos e Quest de Finanças "Sem Transações Hoje"
 - **Missão Única no Formulário de Hábitos (`NewHabitModal.tsx` & `Quests.tsx`):** Adicionado um checkbox "Somente uma vez (Missão Única)" ao criar hábitos. Ao ser selecionado, a seleção de dias de recorrência é oculta e, ao salvar, a missão é criada no Supabase como uma tarefa única (Task) para o dia atual usando `createTask` (do hook `useTasks`), atendendo ao papel de planner diário.
 - **Quest de Finanças "Sem Transações Hoje" (`Fortuna.tsx` & `Quests.tsx`):** Adicionado um novo botão secundário na Fortuna e suporte direto na quest diária financeira para marcar o dia como "Sem transações". A marcação é salva de forma resiliente no `localStorage` (associada ao ID do usuário e à data atual) e concede `+10 XP` (controlado por chave de prevenção de duplicidade). A caixa de marcação da quest financeira em `Quests.tsx` agora alterna este mesmo estado diretamente da listagem em vez de redirecionar para a Fortuna.

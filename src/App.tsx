@@ -17,6 +17,7 @@ import { Rest } from './pages/Rest';
 import { useHunterStore } from './stores/useHunterStore';
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import { LocalizationBridge } from './components/preferences/LocalizationBridge';
+import { HudPreview } from './pages/HudPreview';
 
 function HunterGuard({ children }: { children: React.ReactNode }) {
   const hunterClass = useHunterStore((s) => s.hunterClass);
@@ -38,6 +39,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          {import.meta.env.DEV && <Route path="/dev/hud" element={<HudPreview />} />}
           <Route 
             path="/onboarding" 
             element={

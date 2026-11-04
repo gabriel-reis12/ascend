@@ -1,0 +1,85 @@
+import { supabase } from '@/lib/supabase';
+
+export interface GeneratedBonusQuest {
+  title: string;
+  lore: string;
+}
+
+/**
+ * Invoca a Supabase Edge Function 'generate-bonus-quest' com autenticação do usuário.
+ * Mantém fallbacks seguros caso a rede ou a IA fiquem temporariamente indisponíveis.
+ */
+export async function generateBonusQuest(
+  category: string,
+  existingQuestTitles: string[],
+  hunterClass: string
+): Promise<GeneratedBonusQuest> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+
+    if (!token) {
+      throw new Error("Sessão do usuário não encontrada. Faça login para usar a IA.");
+    }
+
+    const { data, error } = await supabase.functions.invoke<{ title: string; lore: string }>(
+      'generate-bonus-quest',
+      {
+        body: {
+          category,
+          existingQuestTitles,
+          hunterClass,
+        },
+      }
+    );
+
+    if (error) {
+      // Repassa mensagem tratada da Edge Function se disponível
+      throw new Error(error.message || 'Falha na comunicação com o servidor de IA.');
+    }
+
+    if (!data || !data.title || !data.lore) {
+      throw new Error('A resposta do oráculo de IA retornou em formato incompleto.');
+    }
+
+    return {
+      title: data.title,
+      lore: data.lore,
+    };
+  } catch (err) {
+    console.error("Falha ao gerar quest via Edge Function (Groq), usando fallback imersivo:", err);
+
+    // Fallbacks dinâmicos por categoria se a API falhar
+    const fallbacks: Record<string, GeneratedBonusQuest> = {
+      Treino: {
+        title: "Executar 3 minutos de prancha isométrica",
+        lore: "Fortalecer seu núcleo estabilizador garante uma guarda inquebrável contra qualquer impacto físico."
+      },
+      Cardio: {
+        title: "Completar 10 tiros de corrida de 30 segundos",
+        lore: "O bombeamento rápido de sangue eleva sua regeneração passiva de fadiga a novos patamares."
+      },
+      Estudo: {
+        title: "Anotar 3 conceitos principais do que estudou hoje",
+        lore: "Sintetizar o conhecimento decanta a sabedoria e expande permanentemente sua reserva mágica mental."
+      },
+      Trabalho: {
+        title: "Eliminar todas as distrações por 25 minutos focado",
+        lore: "Entrar em estado de foco absoluto cria uma barreira mental impenetrável contra agentes dispersores externos."
+      },
+      Saúde: {
+        title: "Realizar 5 minutos de alongamento dinâmico",
+        lore: "Desbloquear a amplitude das articulações restaura o fluxo harmonioso da sua energia interna."
+      },
+      Hobbies: {
+        title: "Dedicar 15 minutos extras à prática livre de arte",
+        lore: "Nutrir o espírito criativo recarrega sua mana de vitalidade e afasta as sombras da exaustão mental."
+      }
+    };
+
+    return fallbacks[category] || {
+      title: `Superar limite diário de ${category}`,
+      lore: "Aceitar a imprevisibilidade das fendas de anomalia solidifica sua posição no topo da hierarquia de caçadores."
+    };
+  }
+}
