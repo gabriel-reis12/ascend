@@ -151,12 +151,12 @@ export const NeonProgressRing = React.forwardRef<HTMLDivElement, NeonProgressRin
         : pct;
 
     const center = size / 2;
-    const outerRadius = center - strokeWidth - 4;
+    const outerRadius = center - strokeWidth / 2 - 2.5;
     const outerCircumference = 2 * Math.PI * outerRadius;
     const outerOffset = outerCircumference - (pct / 100) * outerCircumference;
 
-    const innerStroke = Math.max(4, strokeWidth - 2);
-    const innerRadius = outerRadius - strokeWidth - 4;
+    const innerStroke = Math.max(4, strokeWidth - 2.5);
+    const innerRadius = outerRadius - strokeWidth / 2 - innerStroke / 2 - 3.5;
     const innerCircumference = 2 * Math.PI * innerRadius;
     const innerOffset = innerCircumference - (innerPct / 100) * innerCircumference;
 
@@ -178,7 +178,7 @@ export const NeonProgressRing = React.forwardRef<HTMLDivElement, NeonProgressRin
           width={size}
           height={size}
           viewBox={`0 0 ${size} ${size}`}
-          className="-rotate-90 transform overflow-visible"
+          className="block -rotate-90 transform overflow-visible"
         >
           <defs>
             <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -247,7 +247,7 @@ export const NeonProgressRing = React.forwardRef<HTMLDivElement, NeonProgressRin
         </svg>
 
         {/* Conteúdo Central */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-2">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-3 text-center leading-none">
           {children}
         </div>
       </div>

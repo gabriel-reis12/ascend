@@ -5,6 +5,7 @@ import fs from 'node:fs';
 describe('ASCEND Etapa 03.3 — Redesign & Refinamento Mobile/Desktop: Home do Caçador (QuickMenu.tsx)', () => {
   const quickMenu = fs.readFileSync('src/pages/QuickMenu.tsx', 'utf-8');
   const rpgLayout = fs.readFileSync('src/components/layout/RPGLayout.tsx', 'utf-8');
+  const neonProgress = fs.readFileSync('src/components/ui/neon-progress.tsx', 'utf-8');
 
   it('Deve utilizar todos os componentes oficiais do ASCEND HUD v2', () => {
     const requiredComponents = [
@@ -35,6 +36,28 @@ describe('ASCEND Etapa 03.3 — Redesign & Refinamento Mobile/Desktop: Home do C
     assert.ok(quickMenu.includes('dailyStats.progress'), 'Progresso diário dinâmico ausente');
   });
 
+  it('Deve exibir o Rank apenas uma vez (dentro do hexágono RankBadge com showLabel={false}) e manter somente o rótulo externo RANK', () => {
+    assert.ok(
+      quickMenu.includes('<RankBadge rank={state.rank || \'E\'} size="md" showLabel={false} />'),
+      'RankBadge deve usar showLabel={false} para exibir apenas a letra do rank dentro do hexágono'
+    );
+    assert.ok(
+      !quickMenu.includes('>{state.rank || \'E\'}</span>'),
+      'Letra do rank não deve ser duplicada como texto solto fora do RankBadge'
+    );
+  });
+
+  it('Deve centralizar perfeitamente o conteúdo do NeonProgressRing (leading-none + whitespace-nowrap + raio interno otimizado)', () => {
+    assert.ok(
+      quickMenu.includes('whitespace-nowrap text-slate-300 tabular-nums'),
+      'Texto secundário do anel de progresso deve usar whitespace-nowrap e leading-none para não quebrar dentro do círculo'
+    );
+    assert.ok(
+      neonProgress.includes('outerRadius = center - strokeWidth / 2 - 2.5'),
+      'NeonProgressRing deve utilizar geometria de raio otimizada para ampliar a área livre central'
+    );
+  });
+
   it('Deve resolver dinamicamente a arte otimizada real da classe e rank do caçador no Hero com fallback seguro', () => {
     assert.ok(
       quickMenu.includes('/optimized/Classes/${safeClass}/Rank ${imageRank}.jpg'),
@@ -58,7 +81,7 @@ describe('ASCEND Etapa 03.3 — Redesign & Refinamento Mobile/Desktop: Home do C
       'Imagens de fundo antigas (/optimized/Cards/) ainda presentes nos módulos inferiores de QuickMenu.tsx'
     );
     assert.ok(
-      quickMenu.includes('contentClassName="flex h-full flex-col justify-between gap-4"'),
+      quickMenu.includes('contentClassName="flex h-full flex-col justify-between gap-3.5"'),
       'Distribuição vertical equilibrada (justify-between) ausente no painel Hunter Status'
     );
   });

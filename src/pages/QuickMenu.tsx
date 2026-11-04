@@ -478,16 +478,16 @@ export function QuickMenu() {
               variant="elevated"
               corners
               className="h-full border-[var(--hud-border-strong)] bg-[#10131D]/95 backdrop-blur-xl"
-              contentClassName="flex h-full flex-col justify-between gap-4"
+              contentClassName="flex h-full flex-col justify-between gap-3.5"
             >
               {/* Cabeçalho HUNTER STATUS */}
-              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-3">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-2.5">
                 <div className="flex items-center gap-2.5">
                   <span
                     aria-hidden="true"
                     className="h-3.5 w-1 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]"
                   />
-                  <h2 className="font-orbitron text-xs sm:text-sm font-bold uppercase tracking-[0.16em] text-slate-100">
+                  <h2 className="font-orbitron text-xs sm:text-[13px] font-bold uppercase tracking-[0.14em] text-slate-100">
                     {l('Status do Caçador', 'Hunter Status')}
                   </h2>
                 </div>
@@ -495,7 +495,7 @@ export function QuickMenu() {
                 <button
                   type="button"
                   onClick={() => navigate('/status')}
-                  className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[#00F0FF] transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+                  className="inline-flex min-h-[32px] items-center gap-1 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[#00F0FF] transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
                 >
                   <span>{l('Ver Status', 'Full Status')}</span>
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -503,14 +503,14 @@ export function QuickMenu() {
               </div>
 
               {/* Bloco Central: Nível, Rank e Barra de XP */}
-              <div className="rounded-xl border border-white/[0.06] bg-black/30 p-3.5 sm:p-4">
+              <div className="rounded-xl border border-white/[0.07] bg-[#0B0D14]/80 p-3.5 sm:px-4 sm:py-3.5">
                 <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+                  <div className="flex flex-col">
+                    <span className="font-orbitron text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-slate-400">
                       {l('Nível', 'Level')}
                     </span>
-                    <div className="mt-0.5 flex items-baseline gap-2">
-                      <span className="font-orbitron text-3xl sm:text-4xl font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.45)] tabular-nums">
+                    <div className="mt-1.5 flex items-baseline gap-2">
+                      <span className="font-orbitron text-3xl sm:text-[34px] font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.4)] tabular-nums">
                         {state.level}
                       </span>
                       {state.level >= MAX_LEVEL && (
@@ -521,23 +521,19 @@ export function QuickMenu() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-[#F59E0B]">
-                        Rank
-                      </span>
-                      <span className="mt-0.5 block font-orbitron text-2xl sm:text-3xl font-black leading-none text-[#F59E0B] drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]">
-                        {state.rank || 'E'}
-                      </span>
-                    </div>
-                    <RankBadge rank={state.rank || 'E'} size="md" showLabel />
+                  {/* Bloco de Rank: Rótulo externo "RANK" + letra exclusivamente dentro do hexágono */}
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-orbitron text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-[#F59E0B]">
+                      RANK
+                    </span>
+                    <RankBadge rank={state.rank || 'E'} size="md" showLabel={false} />
                   </div>
                 </div>
 
                 {/* Barra de XP com valores reais */}
-                <div className="mt-3.5 space-y-2">
+                <div className="mt-3 border-t border-white/[0.05] pt-3 space-y-2">
                   <div className="flex items-center gap-2.5">
-                    <span className="font-orbitron text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="shrink-0 font-orbitron text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
                       XP
                     </span>
                     <NeonProgressBar
@@ -551,19 +547,19 @@ export function QuickMenu() {
                       )}
                       className="flex-1"
                     />
-                    <span className="font-orbitron text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="shrink-0 font-orbitron text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
                       XP
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-300 tabular-nums">
-                    <span className="inline-flex items-center gap-1 text-[#00F0FF]">
-                      <Zap className="h-3.5 w-3.5" aria-hidden="true" />
-                      <strong className="font-orbitron text-xs font-bold">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs leading-none tabular-nums">
+                    <span className="inline-flex items-center gap-1 font-orbitron text-xs font-bold text-[#00F0FF]">
+                      <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span>
                         {state.xp} / {state.xpRequired} XP
-                      </strong>
+                      </span>
                     </span>
-                    <span className="text-slate-400">
+                    <span className="font-medium text-slate-300">
                       {state.level >= MAX_LEVEL
                         ? l('Nível máximo alcançado', 'Maximum level reached')
                         : `${Math.max(0, state.xpRequired - state.xp)} XP ${l(
@@ -575,10 +571,10 @@ export function QuickMenu() {
                 </div>
               </div>
 
-              {/* Progresso Diário (Anel Neon + Indicadores Reais) */}
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-orbitron text-xs sm:text-[13px] font-bold uppercase tracking-[0.1em] text-slate-100">
+              {/* Bloco Progresso Diário (Anel Neon Centralizado + Indicadores Reais) */}
+              <div className="rounded-xl border border-white/[0.07] bg-[#0B0D14]/60 p-3.5 sm:px-4 sm:py-3.5">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-orbitron text-[11px] sm:text-xs font-bold uppercase tracking-[0.12em] text-slate-100">
                     {l('Progresso Diário', 'Daily Progress')} —{' '}
                     <span className="text-[#00F0FF]">{dailyStats.progress}%</span>
                   </span>
@@ -592,15 +588,15 @@ export function QuickMenu() {
                     <NeonProgressRing
                       value={dailyStats.progress}
                       secondaryValue={xpPct}
-                      size={112}
-                      strokeWidth={8}
+                      size={116}
+                      strokeWidth={7}
                       variant="cyan-purple"
                       ariaLabel={l('Progresso diário de missões', 'Daily mission progress')}
                     >
-                      <span className="font-orbitron text-xl font-black text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] tabular-nums">
+                      <span className="font-orbitron text-lg sm:text-xl font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.35)] tabular-nums">
                         {dailyStats.progress}%
                       </span>
-                      <span className="mt-0.5 text-[11px] font-semibold text-slate-300 tabular-nums">
+                      <span className="mt-1.5 text-[10px] font-semibold leading-none whitespace-nowrap text-slate-300 tabular-nums">
                         {dailyStats.completed}/{dailyStats.total} {l('feitos', 'done')}
                       </span>
                     </NeonProgressRing>
@@ -608,7 +604,7 @@ export function QuickMenu() {
 
                   {/* Resumo das 3 frentes diárias reais */}
                   <div className="grid w-full flex-1 grid-cols-3 gap-2 sm:grid-cols-1 sm:gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                       <span className="text-xs font-medium text-slate-300">
                         {l('Missões', 'Quests')}
                       </span>
@@ -617,7 +613,7 @@ export function QuickMenu() {
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                       <span className="text-xs font-medium text-slate-300">
                         {l('Treinos', 'Workouts')}
                       </span>
@@ -626,7 +622,7 @@ export function QuickMenu() {
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-white/[0.06] bg-black/35 px-3 py-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                       <span className="text-xs font-medium text-slate-300">
                         {l('Refeições', 'Meals')}
                       </span>

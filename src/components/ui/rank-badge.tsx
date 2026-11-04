@@ -157,8 +157,8 @@ export const RankBadge = React.forwardRef<HTMLDivElement, RankBadgeProps>(
           )}
           <span
             className={cn(
-              'font-orbitron font-black tracking-tight',
-              sizeStyle.letter
+              'font-orbitron font-black leading-none tracking-tight',
+              !showLabel && size === 'md' ? 'text-xl' : sizeStyle.letter
             )}
             style={{ color: theme.textColor }}
           >
