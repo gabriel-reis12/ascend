@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { useHunterStore } from './useHunterStore';
 
+export type RaidLifecycleState =
+  | 'waiting_start'
+  | 'active_battle'
+  | 'boss_defeated'
+  | 'expired_loss'
+  | 'next_raid';
+
 export interface BossDefinition {
   id: string;
   name: string;
@@ -33,6 +40,20 @@ export interface BossBattle {
   started_at: string;
   last_attack_at: string | null;
   defeated_at: string | null;
+  expires_at?: string | null;
+  status?: 'active' | 'defeated' | 'expired' | string | null;
+  ended_at?: string | null;
+}
+
+export interface RaidTimeRemaining {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  totalMs: number;
+  isExpired: boolean;
+  isCritical: boolean; // Menos de 24 horas restantes
+  formattedString: string; // Ex: "03d 14h 22m 10s"
 }
 
 export const BOSS_LIST: BossDefinition[] = [
@@ -135,7 +156,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementDescription: 'Purificou o Arauto do Caos',
     achievementIcon: 'Compass',
     maxHp: 410,
-    targetDays: 8,
+    targetDays: 7, // Janela semanal real de até 7 dias
     image: '/optimized/Bosses/O Arauto do Caos.jpg',
     lore: 'Uma catástrofe silenciosa. Ele não ataca com força física, mas transforma toda a sua vida em ruído e confusão. Sob sua influência, as prioridades somem, os planos se misturam e você acorda muito ocupado, mas nunca produtivo.',
     victoryLore: 'Ao definir metas claras, planejar suas semanas e organizar sua rotina, o nevoeiro do Arauto se dissipou. O caminho agora está limpo.',
@@ -153,7 +174,7 @@ export const BOSS_LIST: BossDefinition[] = [
     achievementDescription: 'Superou a si mesmo e purificou o Reflexo da Autossabotagem',
     achievementIcon: 'Crown',
     maxHp: 500,
-    targetDays: 10,
+    targetDays: 7, // Janela semanal real de até 7 dias
     image: '/optimized/Bosses/O Reflexo da Autossabotagem.jpg',
     lore: 'A origem de todos os males. Após derrotar todos os chefes anteriores, você alcança o último portal e encontra apenas um espelho. Dentro dele está você mesmo: a soma de todas as versões de você que desistiram no passado.',
     victoryLore: 'Ao manter sua consistência e não desistir diante das dificuldades, você purificou a versão mais fraca de si mesmo. O sistema foi totalmente dominado.',
@@ -163,6 +184,116 @@ export const BOSS_LIST: BossDefinition[] = [
     xpReward: 400,
   },
 ];
+
+export const getBossRaidDeadline = (
+  battle: Pick<BossBattle, 'started_at' | 'expires_at' | 'boss_id'>,
+  targetDaysFallback = 7
+): Date => {
+  if (battle.expires_at) {
+    const parsed = new Date(battle.expires_at);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  const bossDef = BOSS_LIST.find(b => b.id === battle.boss_id);
+  const days = Math.min(bossDef?.targetDays ?? targetDaysFallback, 7);
+  const startedTime = new Date(battle.started_at).getTime();
+  return new Date(startedTime + days * 24 * 60 * 60 * 1000);
+};
+
+export const isBattleExpired = (
+  battle: Pick<BossBattle, 'started_at' | 'expires_at' | 'boss_id' | 'status'>,
+  referenceTime = Date.now()
+): boolean => {
+  if (battle.status === 'expired') return true;
+  const deadline = getBossRaidDeadline(battle);
+  return referenceTime >= deadline.getTime();
+};
+
+export const getRaidLifecycleState = (
+  battle: BossBattle | null | undefined,
+  referenceTime = Date.now()
+): RaidLifecycleState => {
+  if (!battle) return 'waiting_start';
+  if (battle.defeated || battle.current_hp <= 0) return 'boss_defeated';
+  if (battle.status === 'expired') return 'expired_loss';
+
+  const deadline = getBossRaidDeadline(battle);
+  if (referenceTime >= deadline.getTime()) {
+    return 'expired_loss';
+  }
+  return 'active_battle';
+};
+
+export const calculateRaidRemainingTime = (
+  deadlineToCalculate: Date | string | null | undefined,
+  referenceTime = Date.now()
+): RaidTimeRemaining => {
+  if (!deadlineToCalculate) {
+    return {
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      totalMs: 0,
+      isExpired: true,
+      isCritical: false,
+      formattedString: '00d 00h 00m 00s',
+    };
+  }
+
+  const deadlineMs = typeof deadlineToCalculate === 'string'
+    ? new Date(deadlineToCalculate).getTime()
+    : deadlineToCalculate.getTime();
+  const diffMs = deadlineMs - referenceTime;
+
+  if (diffMs <= 0) {
+    return {
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      totalMs: 0,
+      isExpired: true,
+      isCritical: false,
+      formattedString: '00d 00h 00m 00s',
+    };
+  }
+
+  const seconds = Math.floor((diffMs / 1000) % 60);
+  const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
+  const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const isCritical = diffMs < 24 * 60 * 60 * 1000;
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const formattedString = `${pad(days)}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+
+  return {
+    days,
+    hours,
+    minutes,
+    seconds,
+    totalMs: diffMs,
+    isExpired: false,
+    isCritical,
+    formattedString,
+  };
+};
+
+export const formatRaidDeadlineLocal = (
+  deadline: Date | string | null | undefined,
+  locale = 'pt-BR'
+): string => {
+  if (!deadline) return '--';
+  const date = typeof deadline === 'string' ? new Date(deadline) : deadline;
+  return new Intl.DateTimeFormat(locale === 'en-US' ? 'en-US' : 'pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
 
 interface BossStoreState {
   activeBattle: BossBattle | null;
@@ -175,6 +306,8 @@ interface BossStoreState {
   attackActiveBoss: (userId: string, baseDamage: number, actionType: string) => Promise<void>;
   purifyActiveBoss: (userId: string) => Promise<void>;
   resetBattle: () => Promise<void>;
+  retryExpiredBattle: (userId: string) => Promise<void>;
+  startNextRaid: (userId: string) => Promise<void>;
 }
 
 const normalizeActionType = (actionType: string) => {
@@ -237,6 +370,93 @@ const withTimeout = async <T,>(promise: PromiseLike<T>, label: string, ms = 1200
   }
 };
 
+const safeUpdateBossBattle = async (
+  id: string,
+  userId: string,
+  updates: Record<string, any>
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('boss_battles')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .maybeSingle();
+
+    if (!error) return { data: data as BossBattle | null, error: null };
+
+    // Fallback defensivo para colunas novas (expires_at, status, ended_at) se a migration ainda não foi executada no Supabase
+    const errorMsg = (error.message || '').toLowerCase();
+    if (
+      errorMsg.includes('expires_at') ||
+      errorMsg.includes('status') ||
+      errorMsg.includes('ended_at') ||
+      error.code === 'PGRST204' ||
+      error.code === '42703'
+    ) {
+      const coreUpdates = { ...updates };
+      delete coreUpdates.expires_at;
+      delete coreUpdates.status;
+      delete coreUpdates.ended_at;
+
+      const fallbackRes = await supabase
+        .from('boss_battles')
+        .update(coreUpdates)
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .maybeSingle();
+
+      return { data: fallbackRes.data as BossBattle | null, error: fallbackRes.error };
+    }
+
+    return { data: null, error };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+};
+
+const safeInsertBossBattle = async (
+  battleObj: Record<string, any>
+) => {
+  try {
+    const { data, error } = await supabase
+      .from('boss_battles')
+      .insert(battleObj)
+      .select()
+      .single();
+
+    if (!error) return { data: data as BossBattle | null, error: null };
+
+    const errorMsg = (error.message || '').toLowerCase();
+    if (
+      errorMsg.includes('expires_at') ||
+      errorMsg.includes('status') ||
+      errorMsg.includes('ended_at') ||
+      error.code === 'PGRST204' ||
+      error.code === '42703'
+    ) {
+      const coreObj = { ...battleObj };
+      delete coreObj.expires_at;
+      delete coreObj.status;
+      delete coreObj.ended_at;
+
+      const fallbackRes = await supabase
+        .from('boss_battles')
+        .insert(coreObj)
+        .select()
+        .single();
+
+      return { data: fallbackRes.data as BossBattle | null, error: fallbackRes.error };
+    }
+
+    return { data: null, error };
+  } catch (err: any) {
+    return { data: null, error: err };
+  }
+};
+
 const persistCombatEvent = (
   userId: string,
   event: { id: string; damage: number; critical: boolean; occurredAt: string; bossName: string }
@@ -294,46 +514,55 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
 
       if (active) {
         const activeDefinition = BOSS_LIST.find(boss => boss.id === active.boss_id);
-        let normalizedBattle = active;
+        const targetDays = Math.min(activeDefinition?.targetDays ?? 7, 7);
+        const deadline = getBossRaidDeadline(active, targetDays);
+        const isExpired = Date.now() >= deadline.getTime() && active.current_hp > 0;
+
+        let normalizedBattle: BossBattle = {
+          ...active,
+          expires_at: active.expires_at || deadline.toISOString(),
+          status: isExpired ? 'expired' : active.status || 'active',
+        };
 
         if (activeDefinition && active.current_hp > 0 && active.max_hp !== activeDefinition.maxHp) {
           const remainingRatio = active.max_hp > 0 ? active.current_hp / active.max_hp : 1;
           const scaledCurrentHp = Math.max(1, Math.round(activeDefinition.maxHp * remainingRatio));
-          const { data: scaledBattle, error: scaleError } = await supabase
-            .from('boss_battles')
-            .update({
+          const { data: scaledBattle, error: scaleError } = await safeUpdateBossBattle(
+            active.id,
+            userId,
+            {
               current_hp: scaledCurrentHp,
               max_hp: activeDefinition.maxHp,
-            })
-            .eq('id', active.id)
-            .eq('user_id', userId)
-            .select()
-            .single();
+            }
+          );
 
-          if (scaleError) throw scaleError;
-          normalizedBattle = scaledBattle;
+          if (!scaleError && scaledBattle) {
+            normalizedBattle = {
+              ...scaledBattle,
+              expires_at: scaledBattle.expires_at || deadline.toISOString(),
+              status: isExpired ? 'expired' : scaledBattle.status || 'active',
+            };
+          }
         }
 
         set({ activeBattle: normalizedBattle, defeatedBossIds, loading: false });
-        if (active.current_hp <= 0) {
-          queueMicrotask(() => {
-            void get().purifyActiveBoss(userId);
-          });
-        }
         return;
       }
 
       // Encontrar o primeiro Boss na sequência de BOSS_LIST que não está na lista de concluídos
       let nextBossDef = BOSS_LIST.find(b => !completedIds.includes(b.id));
 
-      // Se todos foram derrotados, o caçador completou a campanha.
-      // Podemos reiniciar ou instanciar o boss final novamente para desafios infinitos (ou reiniciar a lista).
+      // Se todos foram derrotados, o caçador completou a campanha: reinicia no boss_01 para nova jornada
       if (!nextBossDef) {
-        // Se já derrotou tudo, reinicia no boss_01 para uma nova jornada de prestígio
         nextBossDef = BOSS_LIST[0];
       }
 
-      // 3. Criar a nova batalha no Supabase
+      // 3. Criar a nova batalha no Supabase com prazo semanal persistente
+      const targetDays = Math.min(nextBossDef.targetDays || 7, 7);
+      const now = new Date();
+      const startedAt = now.toISOString();
+      const expiresAt = new Date(now.getTime() + targetDays * 24 * 60 * 60 * 1000).toISOString();
+
       const newBattleObj = {
         user_id: userId,
         boss_id: nextBossDef.id,
@@ -342,21 +571,27 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         current_hp: nextBossDef.maxHp,
         max_hp: nextBossDef.maxHp,
         defeated: false,
-        started_at: new Date().toISOString()
+        started_at: startedAt,
+        expires_at: expiresAt,
+        status: 'active',
       };
 
       const { data: created, error: createErr } = await withTimeout(
-        supabase
-          .from('boss_battles')
-          .insert(newBattleObj)
-          .select()
-          .single(),
+        safeInsertBossBattle(newBattleObj),
         'A criacao da batalha ativa'
       );
 
       if (createErr) throw createErr;
 
-      set({ activeBattle: created, defeatedBossIds, loading: false });
+      const createdBattle: BossBattle = created || {
+        id: `local-${Date.now()}`,
+        ...newBattleObj,
+        last_attack_at: null,
+        defeated_at: null,
+        ended_at: null,
+      };
+
+      set({ activeBattle: createdBattle, defeatedBossIds, loading: false });
     } catch (err: any) {
       console.error('[useBossStore] Erro ao carregar/iniciar batalha:', err);
       set({ error: err.message || 'Erro desconhecido', loading: false });
@@ -370,6 +605,18 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
 
     const { activeBattle } = get();
     if (!activeBattle || activeBattle.defeated || activeBattle.current_hp <= 0) return;
+
+    // BLOQUEIO DE PRAZO EXPIRADO:
+    // Se o prazo da raid encerrou, rejeita o ataque e não permite aplicar dano.
+    if (isBattleExpired(activeBattle)) {
+      console.warn('[useBossStore] Ataque rejeitado: o prazo da raid encerrou.');
+      set((state) => ({
+        activeBattle: state.activeBattle
+          ? { ...state.activeBattle, status: 'expired' }
+          : null,
+      }));
+      return;
+    }
 
     // Encontra a definição estática do Boss para aplicar bônus
     const bossDef = BOSS_LIST.find(b => b.id === activeBattle.boss_id);
@@ -409,16 +656,17 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
       occurredAt: new Date().toISOString(),
       bossName: activeBattle.name,
     });
+
     set({
       activeBattle: {
         ...activeBattle,
         current_hp: newHp,
-        last_attack_at: new Date().toISOString()
+        last_attack_at: new Date().toISOString(),
       },
       recentDamage: { id: damageEventId, damage: actualDamage, isCritical }
     });
 
-    // Limpa o indicador de dano recente após 2 segundos
+    // Limpa o indicador de dano recente após 2.5 segundos
     setTimeout(() => {
       if (get().recentDamage?.id === damageEventId) {
         set({ recentDamage: null });
@@ -427,18 +675,15 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
 
     try {
       // Atualiza o banco de dados de forma silenciosa em background
-      const { error: updateError } = await supabase
-        .from('boss_battles')
-        .update({
+      const { error: updateError } = await safeUpdateBossBattle(
+        activeBattle.id,
+        userId,
+        {
           current_hp: newHp,
-          last_attack_at: new Date().toISOString()
-        })
-        .eq('id', activeBattle.id);
+          last_attack_at: new Date().toISOString(),
+        }
+      );
       if (updateError) throw updateError;
-
-      if (newHp === 0) {
-        await get().purifyActiveBoss(userId);
-      }
     } catch (err) {
       console.error('[useBossStore] Erro ao persistir ataque ao boss:', err);
       set({ error: 'O ataque não pôde ser persistido. Sincronizando novamente...' });
@@ -450,16 +695,21 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
     const { activeBattle } = get();
     if (!activeBattle || activeBattle.current_hp > 0 || activeBattle.defeated) return;
 
+    // Batalha expirada sem vitória não pode ser purificada
+    if (activeBattle.status === 'expired' && activeBattle.current_hp > 0) return;
+
     set({ loading: true, error: null });
     try {
       const now = new Date().toISOString();
-      
-      // 1. Atualizar o status da batalha no Supabase para derrotada
+
+      // 1. Atualizar o status da batalha no Supabase para derrotada (atômico e idempotente)
       const { data: finalizedBattles, error: updateErr } = await supabase
         .from('boss_battles')
         .update({
           defeated: true,
-          defeated_at: now
+          defeated_at: now,
+          status: 'defeated',
+          ended_at: now,
         })
         .eq('id', activeBattle.id)
         .eq('user_id', userId)
@@ -467,8 +717,27 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         .lte('current_hp', 0)
         .select('id');
 
-      if (updateErr) throw updateErr;
-      if (!finalizedBattles?.length) {
+      if (updateErr) {
+        // Fallback defensivo caso colunas status/ended_at ainda não estejam criadas
+        const { data: fallbackFinalized, error: fallbackErr } = await supabase
+          .from('boss_battles')
+          .update({
+            defeated: true,
+            defeated_at: now,
+          })
+          .eq('id', activeBattle.id)
+          .eq('user_id', userId)
+          .eq('defeated', false)
+          .lte('current_hp', 0)
+          .select('id');
+
+        if (fallbackErr) throw fallbackErr;
+        if (!fallbackFinalized?.length) {
+          set({ activeBattle: null, loading: false });
+          await get().loadActiveBattle(userId);
+          return;
+        }
+      } else if (!finalizedBattles?.length) {
         set({ activeBattle: null, loading: false });
         await get().loadActiveBattle(userId);
         return;
@@ -484,7 +753,7 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         : `Purificou o chefe ${activeBattle.name} e conquistou o título "${titleReward}".`;
       const achievementIcon = bossDef ? bossDef.achievementIcon : 'Award';
 
-      // 3. Adicionar uma conquista para desbloquear o título
+      // 3. Adicionar conquista para desbloquear título (idempotente)
       const { data: existingAchievement, error: existingAchievementErr } = await supabase
         .from('achievements')
         .select('id')
@@ -502,13 +771,13 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
             title: achievementTitle,
             description: achievementDescription,
             icon: achievementIcon,
-            unlocked_at: now
+            unlocked_at: now,
           });
 
         if (achievementErr) throw achievementErr;
       }
 
-      // 4. Conceder XP bônus ao caçador
+      // 4. Conceder XP bônus ao caçador (idempotente via eventId)
       const hunterStore = useHunterStore.getState();
       await hunterStore.addXp(xpReward, userId, {
         source: 'bonus',
@@ -517,10 +786,10 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
         checkAchievements: false,
       });
 
-      // Opcional: Equipa o novo título automaticamente
+      // Equipa o novo título desbloqueado
       await hunterStore.equipTitle(titleReward, userId);
 
-      // 5. Recarregar batalha ativa, que irá instanciar automaticamente o próximo boss
+      // 5. Recarregar batalha ativa, instanciando automaticamente o próximo boss
       set((state) => ({
         activeBattle: null,
         defeatedBossIds: [...new Set([...state.defeatedBossIds, activeBattle.boss_id])]
@@ -538,21 +807,36 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
 
     set({ loading: true });
     try {
-      const { error } = await supabase
-        .from('boss_battles')
-        .update({
+      const bossDef = BOSS_LIST.find(b => b.id === activeBattle.boss_id);
+      const targetDays = Math.min(bossDef?.targetDays ?? 7, 7);
+      const now = new Date();
+      const startedAt = now.toISOString();
+      const expiresAt = new Date(now.getTime() + targetDays * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data, error } = await safeUpdateBossBattle(
+        activeBattle.id,
+        activeBattle.user_id,
+        {
           current_hp: activeBattle.max_hp,
-          last_attack_at: null
-        })
-        .eq('id', activeBattle.id);
+          last_attack_at: null,
+          started_at: startedAt,
+          expires_at: expiresAt,
+          status: 'active',
+          defeated: false,
+        }
+      );
 
       if (error) throw error;
 
       set({
-        activeBattle: {
+        activeBattle: data || {
           ...activeBattle,
           current_hp: activeBattle.max_hp,
-          last_attack_at: null
+          last_attack_at: null,
+          started_at: startedAt,
+          expires_at: expiresAt,
+          status: 'active',
+          defeated: false,
         },
         loading: false
       });
@@ -560,5 +844,61 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
       console.error('[useBossStore] Erro ao resetar batalha:', err);
       set({ error: err.message || 'Erro ao resetar batalha', loading: false });
     }
-  }
+  },
+
+  retryExpiredBattle: async (userId: string) => {
+    const { activeBattle } = get();
+    if (!activeBattle) return;
+
+    set({ loading: true, error: null });
+    try {
+      const bossDef = BOSS_LIST.find(b => b.id === activeBattle.boss_id) || BOSS_LIST[0];
+      const targetDays = Math.min(bossDef.targetDays || 7, 7);
+      const now = new Date();
+      const startedAt = now.toISOString();
+      const expiresAt = new Date(now.getTime() + targetDays * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data, error } = await safeUpdateBossBattle(
+        activeBattle.id,
+        userId,
+        {
+          current_hp: bossDef.maxHp,
+          max_hp: bossDef.maxHp,
+          defeated: false,
+          started_at: startedAt,
+          expires_at: expiresAt,
+          status: 'active',
+          last_attack_at: null,
+          defeated_at: null,
+          ended_at: null,
+        }
+      );
+
+      if (error) throw error;
+
+      set({
+        activeBattle: data || {
+          ...activeBattle,
+          current_hp: bossDef.maxHp,
+          max_hp: bossDef.maxHp,
+          defeated: false,
+          started_at: startedAt,
+          expires_at: expiresAt,
+          status: 'active',
+          last_attack_at: null,
+          defeated_at: null,
+          ended_at: null,
+        },
+        loading: false
+      });
+    } catch (err: any) {
+      console.error('[useBossStore] Erro ao reiniciar raid expirada:', err);
+      set({ error: err.message || 'Erro ao reiniciar batalha', loading: false });
+    }
+  },
+
+  startNextRaid: async (userId: string) => {
+    set({ loading: true, error: null });
+    await get().loadActiveBattle(userId);
+  },
 }));

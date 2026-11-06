@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Palette, RefreshCw } from 'lucide-react';
+import { X, Plus, Palette, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { CreateHabitInput, Habit } from '@/hooks/useHabits';
 import { usePreferences } from '@/contexts/preferences';
 import { translateUiText } from '@/lib/uiEnglish';
@@ -376,7 +376,7 @@ export function NewHabitModal({ open, onClose, onSubmit, initialData, isEditing 
                 displayFont
                 loading={loading}
                 disabled={loading || !form.title.trim() || !form.category.trim()}
-                leftIcon={<Plus size={16} strokeWidth={2.5} />}
+                leftIcon={isEditing ? <CheckCircle2 size={16} strokeWidth={2.5} /> : <Plus size={16} strokeWidth={2.5} />}
                 className="mt-2"
               >
                 {loading 

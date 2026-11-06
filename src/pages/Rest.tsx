@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Moon, 
@@ -10,14 +10,20 @@ import {
   Sparkles,
   Smile,
   Heart,
-  Activity
+  Activity,
+  Shield,
+  Zap,
+  Wind
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
-import { useHunterStore } from '../stores/useHunterStore';
-import { useBossStore } from '../stores/useBossStore';
-import { usePreferences } from '../contexts/preferences';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useHunterStore } from '@/stores/useHunterStore';
+import { useBossStore } from '@/stores/useBossStore';
+import { usePreferences } from '@/contexts/preferences';
 import { translateUiText } from '@/lib/uiEnglish';
+import { HudCard } from '@/components/ui/hud-card';
+import { TacticalButton } from '@/components/ui/tactical-button';
+import { NeonProgressBar } from '@/components/ui/neon-progress';
 
 interface RestLog {
   id: string;
@@ -232,8 +238,8 @@ export function Rest() {
     }
   }
 
-  // Cálculos Estatísticos (Últimos 7 dias)
-  const stats = React.useMemo(() => {
+  // Cálculos Estatísticos
+  const stats = useMemo(() => {
     const sleepLogs = logs.filter(l => l.type === 'sleep');
     const medLogs = logs.filter(l => l.type === 'meditation');
     const hobbyLogs = logs.filter(l => l.type === 'hobby');
@@ -263,15 +269,16 @@ export function Rest() {
       todayHobby,
     };
   }, [logs]);
+
   const sleepProgress = Math.min(100, (Number(stats.lastSleep) / 8) * 100);
   const meditationProgress = Math.min(100, (stats.todayMeditation / 10) * 100);
   const hobbyProgress = Math.min(100, (stats.todayHobby / 60) * 100);
   const balanceProgress = Math.round((sleepProgress + meditationProgress + hobbyProgress) / 3);
   const balanceStatus = balanceProgress >= 80 
-    ? l('Equilíbrio restaurado', 'Balance restored') 
+    ? l('Equilíbrio Restaurado', 'Balance Restored') 
     : balanceProgress >= 45 
-      ? l('Recuperação em progresso', 'Recovery in progress') 
-      : l('Mana em recuperação', 'Mana recovering');
+      ? l('Recuperação em Progresso', 'Recovery in Progress') 
+      : l('Mana em Recuperação', 'Mana Recovering');
 
   function toggleTimer() {
     setIsMeditationActive(!isMeditationActive);
@@ -290,54 +297,67 @@ export function Rest() {
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-indigo-500/20 bg-[#0F0F13] p-6 shadow-[0_0_26px_rgba(99,102,241,0.06)]">
-        <div className="absolute right-0 top-0 h-full w-72 bg-gradient-to-l from-indigo-500/10 to-transparent" />
-        <div className="relative grid gap-6 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+    <div className="space-y-6 pb-28 sm:pb-32">
+      {/* ── CABEÇALHO HUD v2 ── */}
+      <HudCard variant="cyan" corners radialGlow className="relative overflow-hidden p-5 sm:p-6">
+        <div className="relative grid gap-6 lg:grid-cols-[1.1fr_1.2fr] lg:items-center">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-4 bg-indigo-500" />
-              <span className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-400">Rest & Recharge</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                Rest & Recovery
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                {l('Atributo: EQU / BAL (Equilíbrio)', 'Stat: EQU / BAL (Balance)')}
+              </span>
             </div>
-            <h1 className="mt-2 text-3xl font-black uppercase tracking-tight text-white italic font-orbitron">
-              {t('pages.rest')}
+
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black uppercase tracking-tight text-white italic font-orbitron">
+              {l('Módulo', 'Module')} <span className="text-cyan-400">{l('Descanso', 'Recovery')}</span>
             </h1>
-            <p className="mt-2 text-sm leading-relaxed text-gray-400">{l('Regenere sua mana e calibre o atributo Equilíbrio (EQU).', 'Regenerate your mana and calibrate the Balance (BAL) attribute.')}</p>
+
+            <p className="mt-2 text-xs sm:text-sm leading-relaxed text-gray-400">
+              {l(
+                'Regenere sua mana vital, calibre o sono reparador e treine a mente com respiração guiada.',
+                'Regenerate your vital mana, calibrate restful sleep, and train your mind with guided breathing.'
+              )}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          {/* Grid de Métricas do Cabeçalho */}
+          <div className="grid grid-cols-2 gap-2.5">
             {[
-              { label: l('Sono atual', 'Current sleep'), value: `${stats.lastSleep}h`, icon: Moon, tone: 'text-indigo-300' },
-              { label: l('Meditação acumulada', 'Accumulated meditation'), value: `${stats.totalMed} min`, icon: Compass, tone: 'text-purple-300' },
-              { label: l('Lazer offline', 'Offline leisure'), value: `${stats.totalHobby}h`, icon: Smile, tone: 'text-cyan-300' },
-              { label: l('Estado de equilíbrio', 'Balance state'), value: balanceStatus, icon: Activity, tone: balanceProgress >= 80 ? 'text-emerald-300' : 'text-amber-300' },
+              { label: l('Sono Registrado', 'Current Sleep'), value: `${stats.lastSleep}h`, icon: Moon, tone: 'text-indigo-300' },
+              { label: l('Meditação Total', 'Total Meditation'), value: `${stats.totalMed} min`, icon: Compass, tone: 'text-purple-300' },
+              { label: l('Lazer Offline', 'Offline Leisure'), value: `${stats.totalHobby}h`, icon: Smile, tone: 'text-cyan-300' },
+              { label: l('Estado Geral', 'Overall State'), value: balanceStatus, icon: Activity, tone: balanceProgress >= 80 ? 'text-emerald-300' : 'text-amber-300' },
             ].map(item => (
-              <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3 transition-colors hover:border-white/10">
+              <div key={item.label} className="rounded-xl border border-white/5 bg-black/40 p-3 transition-colors hover:border-white/10">
                 <item.icon className={`size-4 ${item.tone}`} />
-                <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
-                <p className={`mt-1 truncate text-sm font-bold ${item.tone}`}>{item.value}</p>
+                <p className="mt-2 text-[10px] font-black uppercase tracking-wider text-gray-500">{item.label}</p>
+                <p className={`mt-0.5 truncate text-xs sm:text-sm font-black font-orbitron ${item.tone}`}>{item.value}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </HudCard>
 
-      {/* Recompensa flutuante (Toast RPG) */}
+      {/* ── TOAST RPG DE RECOMPENSA ── */}
       <AnimatePresence>
         {showReward && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed left-1/2 top-24 z-50 flex -translate-x-1/2 items-center gap-4 rounded-3xl border border-amber-500/30 bg-black/90 p-6 shadow-[0_0_30px_rgba(245,158,11,0.25)] backdrop-blur-md"
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed left-1/2 top-20 z-50 flex -translate-x-1/2 items-center gap-3.5 rounded-2xl border border-cyan-500/40 bg-black/95 p-4 shadow-[0_0_30px_rgba(0,240,255,0.25)] backdrop-blur-md"
           >
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-              <Sparkles size={24} />
+            <div className="flex size-11 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">
+              <Sparkles size={20} className="animate-pulse" />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-widest text-amber-500 font-orbitron">{l('Mana Restaurada!', 'Mana Restored!')}</p>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <p className="text-xs font-black uppercase tracking-widest text-cyan-300 font-orbitron">
+                {l('Mana & Equilíbrio Restaurados!', 'Mana & Balance Restored!')}
+              </p>
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest mt-0.5">
                 +{showReward.xp} XP • +{showReward.val} {showReward.stat}
               </p>
             </div>
@@ -345,80 +365,104 @@ export function Rest() {
         )}
       </AnimatePresence>
 
-      {/* Cards de Resumo */}
+      {/* ── CARDS DE RESUMO TÁTICO (3 METAS) ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Sono */}
-        <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-indigo-500/25">
-          <div className="absolute -right-4 -top-4 size-20 bg-indigo-500/5 blur-2xl" />
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-300 font-orbitron">{l('Sono', 'Sleep')}</span>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400">
+        <HudCard variant="cyan" className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-gray-300 font-orbitron">
+              {l('Sono Noturno', 'Night Sleep')}
+            </span>
+            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
               <Moon size={16} />
             </div>
           </div>
+
           <div>
-            <p className="text-3xl font-black text-white font-orbitron">{stats.lastSleep}<span className="text-xs text-gray-500 font-bold ml-1">H</span></p>
-            <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-              <span className="text-gray-500">{l('Meta diária: 8h', 'Daily target: 8h')}</span>
-              <span className={sleepProgress >= 100 ? 'text-emerald-300' : 'text-indigo-300'}>{sleepProgress >= 100 ? l('Meta alcançada', 'Target achieved') : `${Math.round(sleepProgress)}%`}</span>
+            <p className="text-2xl sm:text-3xl font-black text-white font-orbitron">
+              {stats.lastSleep}<span className="text-xs text-gray-500 font-bold ml-1">H</span>
+            </p>
+            <div className="mt-3 flex items-center justify-between text-[10px] font-bold">
+              <span className="text-gray-400">{l('Meta diária: 8h', 'Daily target: 8h')}</span>
+              <span className={sleepProgress >= 100 ? 'text-emerald-400' : 'text-indigo-400 font-orbitron'}>
+                {sleepProgress >= 100 ? l('Meta alcançada', 'Goal reached') : `${Math.round(sleepProgress)}%`}
+              </span>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/50">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${sleepProgress}%` }} className="h-full rounded-full bg-gradient-to-r from-indigo-700 to-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
+            <div className="mt-1.5">
+              <NeonProgressBar value={Number(stats.lastSleep)} max={8} variant="cyan" />
             </div>
-            <p className="mt-2 text-xs text-gray-500">{l('Média registrada:', 'Logged average:')} {stats.avgSleep}h</p>
+            <p className="mt-2 text-[10px] text-gray-500">
+              {l('Média recente:', 'Recent average:')} <b className="text-gray-300 font-orbitron">{stats.avgSleep}h</b>
+            </p>
           </div>
-        </motion.div>
+        </HudCard>
 
         {/* Meditação */}
-        <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-purple-500/25">
-          <div className="absolute -right-4 -top-4 size-20 bg-purple-500/5 blur-2xl" />
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-300 font-orbitron">{l('Meditação', 'Meditation')}</span>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
+        <HudCard variant="purple" className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-gray-300 font-orbitron">
+              {l('Meditação', 'Meditation')}
+            </span>
+            <div className="flex size-8 items-center justify-center rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30">
               <Compass size={16} />
             </div>
           </div>
+
           <div>
-            <p className="text-3xl font-black text-white font-orbitron">{stats.totalMed}<span className="text-xs text-gray-500 font-bold ml-1">MIN</span></p>
-            <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-              <span className="text-gray-500">{l('Meta diária: 10 min', 'Daily target: 10 min')}</span>
-              <span className={meditationProgress >= 100 ? 'text-emerald-300' : 'text-purple-300'}>{meditationProgress >= 100 ? l('Foco calibrado', 'Focus calibrated') : `${Math.round(meditationProgress)}%`}</span>
+            <p className="text-2xl sm:text-3xl font-black text-white font-orbitron">
+              {stats.totalMed}<span className="text-xs text-gray-500 font-bold ml-1">MIN</span>
+            </p>
+            <div className="mt-3 flex items-center justify-between text-[10px] font-bold">
+              <span className="text-gray-400">{l('Meta diária: 10 min', 'Daily target: 10 min')}</span>
+              <span className={meditationProgress >= 100 ? 'text-emerald-400' : 'text-purple-400 font-orbitron'}>
+                {meditationProgress >= 100 ? l('Calibrado', 'Calibrated') : `${Math.round(meditationProgress)}%`}
+              </span>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/50">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${meditationProgress}%` }} className="h-full rounded-full bg-gradient-to-r from-purple-700 to-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]" />
+            <div className="mt-1.5">
+              <NeonProgressBar value={stats.todayMeditation} max={10} variant="xp" />
             </div>
-            <p className="mt-2 text-xs text-gray-500">{stats.todayMeditation} {l('min registrados hoje', 'min logged today')}</p>
+            <p className="mt-2 text-[10px] text-gray-500">
+              {stats.todayMeditation} {l('min registrados hoje', 'min logged today')}
+            </p>
           </div>
-        </motion.div>
+        </HudCard>
 
         {/* Lazer Offline */}
-        <motion.div whileHover={{ y: -2 }} className="relative overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-cyan-500/25">
-          <div className="absolute -right-4 -top-4 size-20 bg-cyan-500/5 blur-2xl" />
-          <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-300 font-orbitron">{l('Lazer Offline', 'Offline Leisure')}</span>
-            <div className="flex size-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
+        <HudCard variant="cyan" className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-wider text-gray-300 font-orbitron">
+              {l('Lazer Offline', 'Offline Leisure')}
+            </span>
+            <div className="flex size-8 items-center justify-center rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
               <Smile size={16} />
             </div>
           </div>
+
           <div>
-            <p className="text-3xl font-black text-white font-orbitron">{stats.totalHobby}<span className="text-xs text-gray-500 font-bold ml-1">H</span></p>
-            <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-              <span className="text-gray-500">{l('Meta diária: 60 min', 'Daily target: 60 min')}</span>
-              <span className={hobbyProgress >= 100 ? 'text-emerald-300' : 'text-cyan-300'}>{hobbyProgress >= 100 ? l('Desconexão completa', 'Complete disconnect') : `${Math.round(hobbyProgress)}%`}</span>
+            <p className="text-2xl sm:text-3xl font-black text-white font-orbitron">
+              {stats.totalHobby}<span className="text-xs text-gray-500 font-bold ml-1">H</span>
+            </p>
+            <div className="mt-3 flex items-center justify-between text-[10px] font-bold">
+              <span className="text-gray-400">{l('Meta diária: 60 min', 'Daily target: 60 min')}</span>
+              <span className={hobbyProgress >= 100 ? 'text-emerald-400' : 'text-cyan-400 font-orbitron'}>
+                {hobbyProgress >= 100 ? l('Desconectado', 'Disconnected') : `${Math.round(hobbyProgress)}%`}
+              </span>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/50">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${hobbyProgress}%` }} className="h-full rounded-full bg-gradient-to-r from-cyan-700 to-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.4)]" />
+            <div className="mt-1.5">
+              <NeonProgressBar value={stats.todayHobby} max={60} variant="cyan" />
             </div>
-            <p className="mt-2 text-xs text-gray-500">{stats.todayHobby} {l('min longe das telas hoje', 'min away from screens today')}</p>
+            <p className="mt-2 text-[10px] text-gray-500">
+              {stats.todayHobby} {l('min longe das telas hoje', 'min off-screen today')}
+            </p>
           </div>
-        </motion.div>
+        </HudCard>
       </div>
 
-      {/* Sub-abas de Navegação */}
-      <div className="grid grid-cols-1 gap-2 rounded-2xl border border-[#1E1E26] bg-[#0B0B0F] p-2 sm:grid-cols-2">
+      {/* ── NAVEGAÇÃO DE SUB-ABAS (SONO & LAZER vs MEDITAÇÃO) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border border-white/5 bg-black/40 p-1.5">
         {[
-          { id: 'sleep_lazer' as const, title: l('Sono & Lazer', 'Sleep & Leisure'), subtitle: l('registro de descanso e hobbies', 'log rest and hobbies'), icon: Moon, tone: 'indigo' },
-          { id: 'meditation' as const, title: l('Templo da Mente', 'Mind Temple'), subtitle: l('respiração, meditação e foco', 'breathing, meditation and focus'), icon: Compass, tone: 'purple' },
+          { id: 'sleep_lazer' as const, title: l('Sono & Lazer', 'Sleep & Leisure'), subtitle: l('registros de descanso, noites e hobbies', 'log nights, rest, and hobbies'), icon: Moon, tone: 'indigo' },
+          { id: 'meditation' as const, title: l('Templo da Mente', 'Mind Temple'), subtitle: l('respiração guiada e meditação com foco', 'guided breathing and focused meditation'), icon: Compass, tone: 'purple' },
         ].map(item => {
           const ItemIcon = item.icon;
           const isActive = activeSubTab === item.id;
@@ -427,84 +471,86 @@ export function Rest() {
               key={item.id}
               type="button"
               onClick={() => setActiveSubTab(item.id)}
-              className={`group relative flex min-h-[72px] items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-all duration-200 active:scale-[0.99] ${
+              className={`flex min-h-[64px] items-center gap-3.5 rounded-xl border px-4 py-3 text-left transition-all ${
                 isActive
                   ? item.tone === 'indigo'
-                    ? 'border-indigo-500/40 bg-indigo-500/10 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.12)]'
-                    : 'border-purple-500/40 bg-purple-500/10 text-purple-200 shadow-[0_0_20px_rgba(168,85,247,0.12)]'
-                  : 'border-transparent bg-white/[0.025] text-gray-500 hover:border-white/10 hover:bg-white/[0.045] hover:text-gray-200'
+                    ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                    : 'border-purple-500/50 bg-purple-500/15 text-purple-200 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
+                  : 'border-transparent bg-transparent text-gray-500 hover:border-white/10 hover:bg-white/[0.03] hover:text-gray-300'
               }`}
             >
-              <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${
-                isActive ? 'border-current/20 bg-current/10' : 'border-white/5 bg-black/20 group-hover:border-white/10'
+              <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl border ${
+                isActive ? 'border-current/30 bg-current/10' : 'border-white/5 bg-white/5'
               }`}>
                 <ItemIcon className="size-5" />
-              </span>
-              <span>
-                <span className="block text-sm font-black font-orbitron">{item.title}</span>
-                <span className={`mt-1 block text-xs ${isActive ? 'text-white/60' : 'text-gray-600 group-hover:text-gray-500'}`}>{item.subtitle}</span>
-              </span>
-              {isActive && <motion.span layoutId="rest-active-tab" className="absolute inset-x-4 bottom-0 h-px bg-current shadow-[0_0_8px_currentColor]" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="block text-xs sm:text-sm font-black font-orbitron uppercase tracking-wider">{item.title}</span>
+                <span className="block text-[11px] text-gray-400 truncate">{item.subtitle}</span>
+              </div>
             </button>
           );
         })}
       </div>
 
-      {/* Conteúdo das Abas */}
-      <motion.div
-        key={activeSubTab}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="space-y-6"
-      >
+      {/* ── CONTEÚDO DAS ABAS ── */}
+      <AnimatePresence mode="wait">
         {dataError && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
-            <span className="font-black uppercase tracking-widest text-rose-400">{l('Erro:', 'Error:')} </span>
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300">
             {dataError}
           </div>
         )}
 
         {/* ─── ABA 1: SONO & LAZER ─── */}
         {activeSubTab === 'sleep_lazer' && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Formulários */}
+          <motion.div
+            key="sleep_lazer"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="grid grid-cols-1 gap-6 lg:grid-cols-3"
+          >
+            {/* Formulários (Coluna 1) */}
             <div className="lg:col-span-1 space-y-4">
               {/* Registro de Sono */}
-              <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-indigo-500/20">
-                <div className="mb-5 flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
-                    <Moon className="size-5" />
+              <HudCard variant="default" corners className="p-5 space-y-4">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                  <div className="flex size-9 items-center justify-center rounded-xl border border-indigo-500/30 bg-indigo-500/15 text-indigo-400">
+                    <Moon className="size-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-black text-white font-orbitron">{l('Registrar Sono', 'Log Sleep')}</h2>
-                    <p className="mt-1 text-xs text-gray-500">{l('Informe duração e percepção de qualidade.', 'Report duration and quality perception.')}</p>
+                    <h2 className="text-xs sm:text-sm font-black uppercase text-white font-orbitron">{l('Registrar Sono', 'Log Sleep')}</h2>
+                    <p className="text-[10px] text-gray-500">+20 XP • +2 EQU / BAL</p>
                   </div>
                 </div>
-                <div className="space-y-4">
+
+                <div className="space-y-3.5">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Horas dormidas', 'Hours slept')}</label>
-                    <div className="flex items-center justify-between rounded-xl bg-white/5 p-2.5">
+                    <label className="mb-1.5 block text-xs font-semibold text-gray-300">{l('Horas dormidas', 'Hours slept')}</label>
+                    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/40 p-2">
                       <button 
+                        type="button"
                         onClick={() => setSleepHours(Math.max(1, sleepHours - 0.5))}
-                        className="size-8 flex items-center justify-center rounded-lg bg-[#1E1E26] text-gray-400 hover:bg-indigo-600 hover:text-white transition-all"
+                        className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-base font-bold text-gray-300 hover:border-indigo-500/40 hover:bg-indigo-500/20 hover:text-white transition-all active:scale-95"
                       >-</button>
                       <span className="text-base font-black text-white font-orbitron">{sleepHours.toFixed(1)}h</span>
                       <button 
+                        type="button"
                         onClick={() => setSleepHours(Math.min(24, sleepHours + 0.5))}
-                        className="size-8 flex items-center justify-center rounded-lg bg-[#1E1E26] text-gray-400 hover:bg-indigo-600 hover:text-white transition-all"
+                        className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-base font-bold text-gray-300 hover:border-indigo-500/40 hover:bg-indigo-500/20 hover:text-white transition-all active:scale-95"
                       >+</button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Qualidade do sono', 'Sleep quality')}</label>
-                    <div className="flex items-center justify-center gap-2 rounded-xl bg-white/5 p-3">
+                    <label className="mb-1.5 block text-xs font-semibold text-gray-300">{l('Qualidade do sono', 'Sleep quality')}</label>
+                    <div className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/40 p-2.5">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
+                          type="button"
                           onClick={() => setSleepQuality(star)}
-                          className={`text-lg transition-transform hover:scale-125 ${
+                          className={`flex size-8 items-center justify-center text-xl transition-transform hover:scale-125 ${
                             star <= sleepQuality ? 'text-indigo-400' : 'text-gray-600'
                           }`}
                         >
@@ -514,89 +560,103 @@ export function Rest() {
                     </div>
                   </div>
 
-                  <button
+                  <TacticalButton
                     onClick={handleLogSleep}
                     disabled={isSubmitting}
-                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-black text-white transition-all hover:bg-indigo-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] active:scale-[0.98] disabled:opacity-50"
-                    style={{ fontFamily: 'Orbitron, sans-serif' }}
+                    variant="primary"
+                    accent="cyan"
+                    displayFont
+                    className="w-full min-h-[44px] text-xs"
                   >
                     <Moon size={14} />
-                    {isSubmitting ? l('Registrando...', 'Logging...') : l('Registrar Descanso', 'Log Rest')}
-                  </button>
+                    {isSubmitting ? l('Registrando...', 'Logging...') : l('Registrar Sono (+20 XP)', 'Log Sleep (+20 XP)')}
+                  </TacticalButton>
                 </div>
-              </div>
+              </HudCard>
 
               {/* Registro de Lazer */}
-              <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 transition-colors hover:border-cyan-500/20">
-                <div className="mb-5 flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-400">
-                    <Smile className="size-5" />
+              <HudCard variant="default" corners className="p-5 space-y-4">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                  <div className="flex size-9 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/15 text-cyan-400">
+                    <Smile className="size-4" />
                   </div>
                   <div>
-                    <h2 className="text-base font-black text-white font-orbitron">{l('Registrar Lazer', 'Log Leisure')}</h2>
-                    <p className="mt-1 text-xs text-gray-500">{l('Registre uma pausa offline que ajudou sua recuperação.', 'Log an offline break that helped your recovery.')}</p>
+                    <h2 className="text-xs sm:text-sm font-black uppercase text-white font-orbitron">{l('Registrar Lazer', 'Log Leisure')}</h2>
+                    <p className="text-[10px] text-gray-500">+15 XP • +1 EQU / BAL</p>
                   </div>
                 </div>
-                <div className="space-y-4">
+
+                <div className="space-y-3.5">
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Duração em minutos', 'Duration in minutes')}</label>
-                    <div className="flex items-center justify-between rounded-xl bg-white/5 p-2.5">
+                    <label className="mb-1.5 block text-xs font-semibold text-gray-300">{l('Duração em minutos', 'Duration in minutes')}</label>
+                    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/40 p-2">
                       <button 
+                        type="button"
                         onClick={() => setHobbyDuration(Math.max(10, hobbyDuration - 10))}
-                        className="size-8 flex items-center justify-center rounded-lg bg-[#1E1E26] text-gray-400 hover:bg-cyan-600 hover:text-white transition-all"
+                        className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-base font-bold text-gray-300 hover:border-cyan-500/40 hover:bg-cyan-500/20 hover:text-white transition-all active:scale-95"
                       >-</button>
                       <span className="text-base font-black text-white font-orbitron">{hobbyDuration} min</span>
                       <button 
+                        type="button"
                         onClick={() => setHobbyDuration(Math.min(300, hobbyDuration + 10))}
-                        className="size-8 flex items-center justify-center rounded-lg bg-[#1E1E26] text-gray-400 hover:bg-cyan-600 hover:text-white transition-all"
+                        className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-base font-bold text-gray-300 hover:border-cyan-500/40 hover:bg-cyan-500/20 hover:text-white transition-all active:scale-95"
                       >+</button>
                     </div>
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">{l('Hobby ou atividade', 'Hobby or activity')}</label>
+                    <label className="mb-1.5 block text-xs font-semibold text-gray-300">{l('Hobby ou atividade', 'Hobby or activity')}</label>
                     <input 
                       type="text"
                       placeholder={l('Ex: Leitura, Violão, Caminhada...', 'e.g., Reading, Guitar, Walking...')}
                       value={hobbyNotes}
                       onChange={(e) => setHobbyNotes(e.target.value)}
-                      className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:border-cyan-500/50 focus:outline-none"
+                      className="w-full min-h-[44px] rounded-xl border border-white/10 bg-black/40 px-3.5 py-2 text-xs text-white placeholder:text-gray-600 focus:border-cyan-500/50 focus:outline-none"
                     />
                   </div>
 
-                  <button
+                  <TacticalButton
                     onClick={handleLogHobby}
                     disabled={isSubmitting}
-                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-sm font-black text-white transition-all hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-[0.98] disabled:opacity-50"
-                    style={{ fontFamily: 'Orbitron, sans-serif' }}
+                    variant="primary"
+                    accent="cyan"
+                    displayFont
+                    className="w-full min-h-[44px] text-xs"
                   >
                     <Smile size={14} />
-                    {isSubmitting ? l('Registrando...', 'Logging...') : l('Registrar Lazer', 'Log Leisure')}
-                  </button>
+                    {isSubmitting ? l('Registrando...', 'Logging...') : l('Registrar Lazer (+15 XP)', 'Log Leisure (+15 XP)')}
+                  </TacticalButton>
                 </div>
-              </div>
+              </HudCard>
             </div>
 
-            {/* Lista Histórica */}
+            {/* Lista Histórica (Coluna 2 e 3) */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 flex flex-col h-full">
-                <h2 className="text-base font-black uppercase italic text-white tracking-tight mb-4 font-orbitron">
-                  {l('Histórico de', 'History of')} <span className="text-indigo-400">{l('Recuperação', 'Recovery')}</span>
-                </h2>
+              <HudCard variant="default" className="p-5 sm:p-6 flex flex-col h-full">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4">
+                  <h2 className="text-xs sm:text-sm font-black uppercase text-white font-orbitron">
+                    {l('Histórico de Recuperação', 'Recovery History')}
+                  </h2>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+                    {logs.length} {l('registros', 'entries')}
+                  </span>
+                </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 max-h-[500px]">
+                <div className="flex-1 overflow-y-auto space-y-2.5 max-h-[620px] pr-1">
                   {loading ? (
                     Array(4).fill(0).map((_, i) => (
-                      <div key={i} className="h-16 animate-pulse rounded-2xl bg-white/5 border border-white/5" />
+                      <div key={i} className="h-16 animate-pulse rounded-xl bg-white/5 border border-white/5" />
                     ))
                   ) : logs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-indigo-500/20 bg-indigo-500/[0.025] px-6 py-16 text-center">
-                      <div className="flex size-14 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/20 px-6 py-16 text-center">
+                      <div className="flex size-12 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
                         <Heart className="size-6" />
                       </div>
-                      <p className="mt-5 text-sm font-bold text-white">{l('O Sistema ainda não detectou registros de recuperação.', 'The System has not detected recovery logs yet.')}</p>
-                      <p className="mt-2 max-w-md text-[13px] leading-relaxed text-gray-500">
-                        {l('Registre sono, meditação ou lazer para iniciar sua trilha de equilíbrio.', 'Log sleep, meditation, or leisure to begin your balance path.')}
+                      <p className="mt-4 text-xs sm:text-sm font-bold text-white font-orbitron">
+                        {l('Nenhum registro de recuperação detectado.', 'No recovery records detected yet.')}
+                      </p>
+                      <p className="mt-1 max-w-sm text-xs text-gray-500 leading-relaxed">
+                        {l('Registre suas noites de sono, pausas de lazer ou sessões de respiração para iniciar a calibragem de Equilíbrio.', 'Log your sleep, leisure breaks, or breathing sessions to start calibrating Balance.')}
                       </p>
                     </div>
                   ) : (
@@ -605,33 +665,35 @@ export function Rest() {
                       const hours = (log.duration_min / 60).toFixed(1);
 
                       return (
-                        <div key={log.id} className="flex items-center justify-between rounded-2xl border border-[#1E1E26] bg-white/5 p-4 hover:border-indigo-500/30 transition-all">
-                          <div className="flex items-center gap-4">
-                            <div className={`flex size-10 items-center justify-center rounded-xl ${
-                              log.type === 'sleep' ? 'bg-indigo-500/10 text-indigo-400' :
-                              log.type === 'meditation' ? 'bg-purple-500/10 text-purple-400' : 'bg-cyan-500/10 text-cyan-400'
+                        <div key={log.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-3.5 hover:border-cyan-500/30 hover:bg-cyan-500/[0.02] transition-all">
+                          <div className="flex items-center gap-3.5">
+                            <div className={`flex size-10 items-center justify-center rounded-xl border ${
+                              log.type === 'sleep' ? 'border-indigo-500/30 bg-indigo-500/15 text-indigo-400' :
+                              log.type === 'meditation' ? 'border-purple-500/30 bg-purple-500/15 text-purple-400' : 'border-cyan-500/30 bg-cyan-500/15 text-cyan-400'
                             }`}>
                               {log.type === 'sleep' ? <Moon size={18} /> : 
                                log.type === 'meditation' ? <Compass size={18} /> : <Smile size={18} />}
                             </div>
                             <div>
-                              <h4 className="text-xs font-black uppercase tracking-widest text-white">
-                                {log.type === 'sleep' ? l('Repouso Noturno', 'Nightly Rest') : 
-                                 log.type === 'meditation' ? l('Meditação / Calma', 'Meditation / Calm') : l('Hobby & Desconexão', 'Hobby & Disconnection')}
+                              <h4 className="text-xs font-black uppercase tracking-wider text-white font-orbitron">
+                                {log.type === 'sleep' ? l('Sono Noturno', 'Night Sleep') : 
+                                 log.type === 'meditation' ? l('Meditação / Calma', 'Meditation / Calm') : l('Hobby Offline', 'Offline Hobby')}
                               </h4>
-                              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-0.5">
+                              <p className="text-[10px] text-gray-500 mt-0.5">
                                 {date} • {log.notes ? l(log.notes, translateUiText(log.notes)) : l('Sem observações', 'No notes')}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4">
-                            <span className="text-xs font-black font-orbitron text-white">
-                              {log.type === 'sleep' || log.type === 'hobby' ? `${hours}H` : `${log.duration_min}Min`}
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs sm:text-sm font-black font-orbitron text-white">
+                              {log.type === 'sleep' || log.type === 'hobby' ? `${hours}h` : `${log.duration_min} min`}
                             </span>
                             <button
+                              type="button"
                               onClick={() => handleDeleteLog(log.id)}
-                              className="rounded-lg p-1.5 text-gray-600 hover:bg-red-500/20 hover:text-red-500 transition-colors"
+                              className="rounded-lg p-1.5 text-gray-600 hover:bg-rose-500/15 hover:text-rose-400 transition-colors"
+                              title={l('Excluir registro', 'Delete log')}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -641,28 +703,38 @@ export function Rest() {
                     })
                   )}
                 </div>
-              </div>
+              </HudCard>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* ─── ABA 2: TEMPLO DA MENTE (MEDITAÇÃO) ─── */}
+        {/* ─── ABA 2: TEMPLO DA MENTE (MEDITAÇÃO GUIADA) ─── */}
         {activeSubTab === 'meditation' && (
-          <div className="flex flex-col items-center justify-center rounded-3xl border border-purple-500/15 bg-[#0F0F13] px-6 py-12 shadow-[0_0_28px_rgba(168,85,247,0.05)]">
-            <div className="max-w-md w-full text-center space-y-8">
+          <motion.div
+            key="meditation"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex flex-col items-center justify-center rounded-3xl border border-purple-500/20 bg-[#0F0F13] px-6 py-12 shadow-[0_0_32px_rgba(168,85,247,0.08)]"
+          >
+            <div className="max-w-md w-full text-center space-y-6">
               <div className="space-y-1.5">
-                <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-400 font-orbitron">{l('Templo do Silêncio', 'Silence Temple')}</span>
+                <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-400 font-orbitron">
+                  {l('Templo do Silêncio', 'Silence Sanctuary')}
+                </span>
                 <h2 className="text-2xl font-black uppercase tracking-tight text-white font-orbitron">
-                  {l('Meditação', 'Guided')} <span className="text-purple-400">{l('Guiada', 'Meditation')}</span>
+                  {l('Respiração &', 'Guided')} <span className="text-purple-400">{l('Meditação', 'Meditation')}</span>
                 </h2>
-                <p className="mx-auto max-w-sm text-sm leading-relaxed text-gray-400">
-                  {l('Acalme sua mente para recuperar mana. Siga o pulso de respiração para sincronizar seus batimentos.', 'Calm your mind to recover mana. Follow the breathing pulse to sync your heartbeat.')}
+                <p className="mx-auto max-w-sm text-xs sm:text-sm leading-relaxed text-gray-400">
+                  {l(
+                    'Acalme a mente para regenerar mana. Siga o pulso de respiração de 4 fases para sincronizar sua clareza mental.',
+                    'Calm your mind to regenerate mana. Follow the 4-phase breathing pulse to sync your mental focus.'
+                  )}
                 </p>
               </div>
 
               {/* Círculo de Meditação Pulsante */}
-              <div className="relative flex items-center justify-center mx-auto w-64 h-64">
-                {/* Círculos de pulso */}
+              <div className="relative flex items-center justify-center mx-auto w-64 h-64 my-4">
                 <AnimatePresence>
                   {isMeditationActive && (
                     <>
@@ -682,19 +754,23 @@ export function Rest() {
 
                 {/* Círculo Principal */}
                 <motion.div
-                  className="relative z-10 flex h-52 w-52 flex-col items-center justify-center rounded-full border-2 border-purple-500 bg-purple-950/20 shadow-[0_0_48px_rgba(168,85,247,0.18)]"
+                  className="relative z-10 flex h-52 w-52 flex-col items-center justify-center rounded-full border-2 border-purple-500 bg-purple-950/30 shadow-[0_0_48px_rgba(168,85,247,0.22)]"
                   animate={isMeditationActive ? { 
-                    scale: breatheState === 'Inspire' || breatheState === 'Segure' ? [1, 1.18] : [1.18, 1],
+                    scale: breatheState === 'Inspire' || breatheState === 'Segure' ? [1, 1.15] : [1.15, 1],
                     boxShadow: breatheState === 'Inspire' || breatheState === 'Segure' 
-                      ? '0 0 45px rgba(168,85,247,0.45)' 
-                      : '0 0 15px rgba(168,85,247,0.15)'
+                      ? '0 0 50px rgba(168,85,247,0.5)' 
+                      : '0 0 18px rgba(168,85,247,0.2)'
                   } : { scale: 1 }}
                   transition={isMeditationActive ? { duration: 4, ease: 'easeInOut' } : { duration: 0.5 }}
                 >
                   <span className="text-xs font-black uppercase tracking-[0.16em] text-purple-400 font-orbitron">
-                    {isMeditationActive ? l(breatheState, breatheState === 'Inspire' ? 'Inhale' : breatheState === 'Segure' ? 'Hold' : breatheState === 'Expire' ? 'Exhale' : 'Hold') : l('PRONTO', 'READY')}
+                    {isMeditationActive ? (
+                      breatheState === 'Inspire' ? l('Inspire', 'Inhale') :
+                      breatheState === 'Segure' ? l('Segure', 'Hold') :
+                      breatheState === 'Expire' ? l('Expire', 'Exhale') : l('Prenda', 'Hold')
+                    ) : l('PRONTO', 'READY')}
                   </span>
-                  <span className="mt-2 text-4xl font-black text-white font-orbitron drop-shadow-[0_0_12px_rgba(168,85,247,0.28)]">
+                  <span className="mt-2 text-4xl font-black text-white font-orbitron drop-shadow-[0_0_12px_rgba(168,85,247,0.35)]">
                     {formatTime(timeLeft)}
                   </span>
                   <span className="mt-2 text-xs font-semibold text-gray-500">
@@ -709,53 +785,51 @@ export function Rest() {
                   {[1, 5, 10, 15, 20].map((mins) => (
                     <button
                       key={mins}
+                      type="button"
                       onClick={() => {
                         setMeditationTime(mins);
                         setTimeLeft(mins * 60);
                       }}
-                      className={`min-h-10 rounded-xl border px-2 py-2 text-xs font-black transition-all ${
+                      className={`min-h-[44px] rounded-xl border px-2 py-2 text-xs font-black font-orbitron transition-all ${
                         meditationTime === mins
-                          ? 'border-purple-500 bg-purple-500/20 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.14)]'
-                          : 'border-[#1E1E26] bg-[#0F0F13] text-gray-500 hover:border-purple-500/50 hover:text-purple-400'
+                          ? 'border-purple-500 bg-purple-500/25 text-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.25)]'
+                          : 'border-white/10 bg-black/40 text-gray-400 hover:border-purple-500/40 hover:text-white'
                       }`}
-                      style={{ fontFamily: 'Orbitron, sans-serif' }}
                     >
-                      {mins} Min
+                      {mins}m
                     </button>
                   ))}
                 </div>
               )}
 
               {/* Botões de Ação */}
-              <div className="flex justify-center gap-3">
-                <button
+              <div className="flex justify-center gap-3 pt-2">
+                <TacticalButton
                   onClick={toggleTimer}
-                  className={`flex min-h-12 items-center gap-2 rounded-xl px-9 text-sm font-black text-white transition-all active:scale-[0.98] ${
-                    isMeditationActive 
-                      ? 'bg-amber-600 hover:bg-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
-                      : 'bg-purple-600 hover:bg-purple-500 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]'
-                  }`}
-                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                  variant="primary"
+                  accent="purple"
+                  displayFont
+                  className="min-h-[48px] px-8 text-xs font-black"
                 >
-                  {isMeditationActive ? <Pause size={14} /> : <Play size={14} />}
-                  {isMeditationActive ? l('Pausar', 'Pause') : l('Iniciar', 'Start')}
-                </button>
+                  {isMeditationActive ? <Pause size={16} /> : <Play size={16} />}
+                  {isMeditationActive ? l('Pausar', 'Pause') : l('Iniciar Meditação', 'Start Meditation')}
+                </TacticalButton>
 
                 {timeLeft < meditationTime * 60 && (
-                  <button
+                  <TacticalButton
                     onClick={resetTimer}
-                    className="flex min-h-12 items-center gap-2 rounded-xl border border-[#1E1E26] bg-white/5 px-6 text-sm font-black text-gray-400 transition-all hover:bg-white/10 hover:text-white"
-                    style={{ fontFamily: 'Orbitron, sans-serif' }}
+                    variant="ghost"
+                    className="min-h-[48px] px-5 text-xs font-bold"
                   >
-                    <RotateCcw size={14} />
-                    {l('Reiniciar', 'Restart')}
-                  </button>
+                    <RotateCcw size={16} />
+                    {l('Reiniciar', 'Reset')}
+                  </TacticalButton>
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
-      </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

@@ -63,7 +63,7 @@ const AppInput = ({
 
       <div className="group relative">
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400/0 via-violet-500/0 to-orange-400/0 opacity-0 blur-xl transition-opacity duration-300 group-focus-within:opacity-60" />
-        <div className="relative flex h-[56px] items-center rounded-2xl border border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-xl transition-all duration-300 hover:border-cyan-300/25 hover:bg-white/[0.065] focus-within:border-cyan-300/55 focus-within:bg-white/[0.075] focus-within:ring-2 focus-within:ring-cyan-300/15">
+        <div className="relative flex h-[48px] sm:h-[54px] items-center rounded-2xl border border-white/10 bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-xl transition-all duration-300 hover:border-cyan-300/25 hover:bg-white/[0.065] focus-within:border-cyan-300/55 focus-within:bg-white/[0.075] focus-within:ring-2 focus-within:ring-cyan-300/15">
           {icon && (
             <div
               className={`ml-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 transition-colors duration-300 ${
@@ -183,7 +183,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
           mounted ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'
         }`}
       >
-        <div className="relative flex min-h-screen flex-col px-5 py-6 sm:px-8 lg:px-12 xl:px-16">
+        <div className="relative flex min-h-screen flex-col px-4 py-5 sm:px-8 lg:px-12 xl:px-16">
           <div className="pointer-events-none absolute inset-y-0 right-[-12%] hidden w-[36%] bg-gradient-to-r from-transparent via-violet-500/12 to-cyan-300/10 blur-3xl lg:block" />
 
           <header className="relative z-10 flex items-center justify-between">
@@ -210,21 +210,21 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
 
           <div className="relative z-10 flex flex-1 items-center py-8 lg:py-10">
             <div className="w-full">
-              <div className="mb-7 max-w-[560px]">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-violet-100 shadow-[0_0_30px_rgba(124,58,237,0.16)] backdrop-blur-xl">
+              <div className="mb-5 sm:mb-7 max-w-[560px]">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1.5 text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-violet-100 shadow-[0_0_30px_rgba(124,58,237,0.16)] backdrop-blur-xl">
                   <Zap className="h-3.5 w-3.5 text-cyan-200" />
                   Ascend System v2.7
                 </div>
 
-                <h1 className="max-w-[520px] text-[2.45rem] font-black font-orbitron leading-[0.95] tracking-normal text-white sm:text-[3.25rem] lg:text-[3.55rem]">
+                <h1 className="max-w-[520px] text-2xl sm:text-3xl lg:text-4xl font-black font-orbitron leading-tight tracking-normal text-white">
                   {title}
                 </h1>
-                <p className="mt-4 max-w-[450px] text-base leading-7 text-slate-300 sm:text-[17px]">
+                <p className="mt-2.5 max-w-[450px] text-xs sm:text-sm leading-relaxed text-slate-300">
                   {subtitle}
                 </p>
               </div>
 
-              <div className="mb-7 grid grid-cols-3 gap-2.5 sm:gap-3">
+              <div className="mb-5 hidden sm:grid grid-cols-3 gap-2.5 sm:gap-3">
                 {systemStats.map((stat) => {
                   const Icon = stat.icon;
                   return (
@@ -242,7 +242,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 })}
               </div>
 
-              <div className="mb-8 rounded-3xl border border-cyan-200/15 bg-black/24 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
+              <div className="mb-6 hidden sm:block rounded-3xl border border-cyan-200/15 bg-black/24 p-4 shadow-[0_24px_70px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
                 <div className="mb-3 flex items-center justify-between gap-4">
                   <div>
                     <p className="text-[10px] font-black font-orbitron uppercase tracking-[0.22em] text-cyan-200/70">{l('Protocolo ativo', 'Active protocol')}</p>
@@ -345,7 +345,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative mt-2 flex h-[58px] w-full items-center justify-center overflow-hidden rounded-2xl border border-cyan-100/25 bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 text-[13px] font-black font-orbitron uppercase tracking-[0.2em] text-white shadow-[0_18px_55px_rgba(124,58,237,0.36),0_0_34px_rgba(34,211,238,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_75px_rgba(124,58,237,0.48),0_0_46px_rgba(34,211,238,0.26)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#03040a]"
+                  className="group relative mt-2 flex h-[48px] sm:h-[54px] w-full items-center justify-center overflow-hidden rounded-2xl border border-cyan-100/25 bg-gradient-to-r from-cyan-400 via-violet-500 to-fuchsia-500 text-[13px] font-black font-orbitron uppercase tracking-[0.2em] text-white shadow-[0_18px_55px_rgba(124,58,237,0.36),0_0_34px_rgba(34,211,238,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_75px_rgba(124,58,237,0.48),0_0_46px_rgba(34,211,238,0.26)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#03040a]"
                 >
                   <span className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.34)_45%,transparent_60%)] opacity-0 transition-all duration-700 group-hover:translate-x-full group-hover:opacity-100" />
                   {loading ? (

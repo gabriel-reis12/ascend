@@ -41,7 +41,12 @@ import { calculateNutritionTargets } from '@/lib/nutritionTargets';
 import type { MealPlan } from '@/hooks/useMealPlans';
 import { usePreferences } from '@/contexts/preferences';
 import { translateUiText } from '@/lib/uiEnglish';
-import { analyzeNutritionText, type NutritionAiIngredient } from '@/lib/nutritionAi';
+import {
+  analyzeNutritionText,
+  type NutritionAiIngredient,
+  type NutritionAiPreview,
+  type NutritionCandidate,
+} from '@/lib/nutritionAi';
 import { HudCard } from '@/components/ui/hud-card';
 import { TacticalButton } from '@/components/ui/tactical-button';
 import { NeonProgressBar, NeonProgressRing } from '@/components/ui/neon-progress';
@@ -102,24 +107,31 @@ const DEFAULT_MEAL_SLOTS: Array<{
 
 const NUTRITION_PROMPTS = [
   {
+    label: { 'pt-BR': 'Arroz + Frango', 'en-US': 'Rice + Chicken' },
+    text: {
+      'pt-BR': '150 g de arroz + 100 g de frango',
+      'en-US': '150 g rice + 100 g chicken',
+    },
+  },
+  {
     label: { 'pt-BR': 'Prato completo', 'en-US': 'Full plate' },
     text: {
-      'pt-BR': '150g de frango, 150g de arroz, 100g de feijão e salada',
-      'en-US': '150g grilled chicken, 150g rice, 100g beans and salad',
+      'pt-BR': '150g de frango grelhado, 150g de arroz branco, 100g de feijão carioca e salada',
+      'en-US': '150g grilled chicken, 150g white rice, 100g pinto beans and salad',
     },
   },
   {
     label: { 'pt-BR': 'Lanche rápido', 'en-US': 'Quick snack' },
     text: {
-      'pt-BR': 'Iogurte natural, banana, aveia e mel',
-      'en-US': 'Plain yogurt, banana, oats and honey',
+      'pt-BR': '1 iogurte natural, 1 banana, 2 colheres de aveia e 1 colher de mel',
+      'en-US': '1 plain yogurt, 1 banana, 2 tbsp oats and 1 tbsp honey',
     },
   },
   {
     label: { 'pt-BR': 'Café proteico', 'en-US': 'Protein breakfast' },
     text: {
-      'pt-BR': 'Omelete com 3 ovos, queijo e pão integral',
-      'en-US': 'Omelet with 3 eggs, cheese and whole wheat bread',
+      'pt-BR': '2 ovos cozidos, queijo mussarela e 1 fatia de pão integral',
+      'en-US': '2 boiled eggs, mozzarella cheese and 1 slice whole wheat bread',
     },
   },
 ];
@@ -167,16 +179,7 @@ export function Nutrition() {
   const [iaLoading, setIaLoading] = useState(false);
   const [iaError, setIaError] = useState<string | null>(null);
 
-  const [iaPreview, setIaPreview] = useState<{
-    mealName: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    totalGrams: number;
-    confidence: number;
-    ingredients: NutritionAiIngredient[];
-  } | null>(null);
+  const [iaPreview, setIaPreview] = useState<NutritionAiPreview | null>(null);
   const [expandedIaIngs, setExpandedIaIngs] = useState<Set<number>>(new Set());
 
   const toggleIaIngExpanded = (index: number) => {
@@ -623,6 +626,194 @@ export function Nutrition() {
       setIaRegistering(false);
     }
   }
+
+  const handleSelectCandidate = (ingIndex: number, candidate: NutritionCandidate) => {
+    if (!iaPreview) return;
+    setIaPreview((current) => {
+      if (!current) return null;
+      const updatedIngs = [...current.ingredients];
+      const target = updatedIngs[ingIndex];
+      if (!target) return current;
+
+      updatedIngs[ingIndex] = {
+        ...target,
+        name: candidate.name,
+        status: 'matched',
+        isAmbiguous: false,
+        final: {
+          source_used: candidate.source,
+          kcal: candidate.kcal,
+          protein: candidate.protein,
+          carbs: candidate.carbs,
+          fat: candidate.fat,
+        },
+        taco: {
+          found: candidate.source === 'taco',
+          kcal: candidate.kcal,
+          protein: candidate.protein,
+          carbs: candidate.carbs,
+          fat: candidate.fat,
+          label: candidate.name,
+        },
+      };
+
+      const totals = updatedIngs.reduce(
+        (acc, ing) => {
+          if (ing.final.source_used === 'unresolved' || ing.status === 'invalid_quantity') {
+            return { ...acc, totalGrams: acc.totalGrams + ing.grams };
+          }
+          const ratio = ing.grams / 100;
+          return {
+            calories: acc.calories + ing.final.kcal * ratio,
+            protein: acc.protein + ing.final.protein * ratio,
+            carbs: acc.carbs + ing.final.carbs * ratio,
+            fat: acc.fat + ing.final.fat * ratio,
+            totalGrams: acc.totalGrams + ing.grams,
+            coveredGrams: acc.coveredGrams + ing.grams,
+          };
+        },
+        { calories: 0, protein: 0, carbs: 0, fat: 0, totalGrams: 0, coveredGrams: 0 }
+      );
+
+      const unmatchedCount = updatedIngs.filter(
+        (ing) => ing.status === 'unmatched' || ing.final.source_used === 'unresolved'
+      ).length;
+      const ambiguousCount = updatedIngs.filter((ing) => ing.status === 'ambiguous').length;
+      const hasInvalidQuantity = updatedIngs.some(
+        (ing) => ing.status === 'invalid_quantity' || ing.grams <= 0
+      );
+
+      return {
+        ...current,
+        ingredients: updatedIngs,
+        calories: Math.round(totals.calories),
+        protein: Number(totals.protein.toFixed(1)),
+        carbs: Number(totals.carbs.toFixed(1)),
+        fat: Number(totals.fat.toFixed(1)),
+        totalGrams: Math.round(totals.totalGrams),
+        unmatchedCount,
+        ambiguousCount,
+        hasInvalidQuantity,
+        allMatched: unmatchedCount === 0 && !hasInvalidQuantity,
+        coverage: totals.totalGrams > 0 ? Math.round((totals.coveredGrams / totals.totalGrams) * 100) : 0,
+      };
+    });
+  };
+
+  const handleUpdateIngredientGrams = (ingIndex: number, newGrams: number) => {
+    if (!iaPreview) return;
+    const safeGrams = Math.max(0, newGrams);
+    setIaPreview((current) => {
+      if (!current) return null;
+      const updatedIngs = [...current.ingredients];
+      const target = updatedIngs[ingIndex];
+      if (!target) return current;
+
+      const newStatus =
+        safeGrams <= 0
+          ? 'invalid_quantity'
+          : target.status === 'invalid_quantity'
+          ? 'matched'
+          : target.status;
+
+      updatedIngs[ingIndex] = {
+        ...target,
+        grams: safeGrams,
+        status: newStatus,
+      };
+
+      const totals = updatedIngs.reduce(
+        (acc, ing) => {
+          if (ing.final.source_used === 'unresolved' || ing.status === 'invalid_quantity') {
+            return { ...acc, totalGrams: acc.totalGrams + ing.grams };
+          }
+          const ratio = ing.grams / 100;
+          return {
+            calories: acc.calories + ing.final.kcal * ratio,
+            protein: acc.protein + ing.final.protein * ratio,
+            carbs: acc.carbs + ing.final.carbs * ratio,
+            fat: acc.fat + ing.final.fat * ratio,
+            totalGrams: acc.totalGrams + ing.grams,
+            coveredGrams: acc.coveredGrams + ing.grams,
+          };
+        },
+        { calories: 0, protein: 0, carbs: 0, fat: 0, totalGrams: 0, coveredGrams: 0 }
+      );
+
+      const unmatchedCount = updatedIngs.filter(
+        (ing) => ing.status === 'unmatched' || ing.final.source_used === 'unresolved'
+      ).length;
+      const ambiguousCount = updatedIngs.filter((ing) => ing.status === 'ambiguous').length;
+      const hasInvalidQuantity = updatedIngs.some(
+        (ing) => ing.status === 'invalid_quantity' || ing.grams <= 0
+      );
+
+      return {
+        ...current,
+        ingredients: updatedIngs,
+        calories: Math.round(totals.calories),
+        protein: Number(totals.protein.toFixed(1)),
+        carbs: Number(totals.carbs.toFixed(1)),
+        fat: Number(totals.fat.toFixed(1)),
+        totalGrams: Math.round(totals.totalGrams),
+        unmatchedCount,
+        ambiguousCount,
+        hasInvalidQuantity,
+        allMatched: unmatchedCount === 0 && !hasInvalidQuantity,
+        coverage: totals.totalGrams > 0 ? Math.round((totals.coveredGrams / totals.totalGrams) * 100) : 0,
+      };
+    });
+  };
+
+  const handleRemoveIngredient = (ingIndex: number) => {
+    if (!iaPreview) return;
+    setIaPreview((current) => {
+      if (!current) return null;
+      const updatedIngs = current.ingredients.filter((_, idx) => idx !== ingIndex);
+      if (updatedIngs.length === 0) return null;
+
+      const totals = updatedIngs.reduce(
+        (acc, ing) => {
+          if (ing.final.source_used === 'unresolved' || ing.status === 'invalid_quantity') {
+            return { ...acc, totalGrams: acc.totalGrams + ing.grams };
+          }
+          const ratio = ing.grams / 100;
+          return {
+            calories: acc.calories + ing.final.kcal * ratio,
+            protein: acc.protein + ing.final.protein * ratio,
+            carbs: acc.carbs + ing.final.carbs * ratio,
+            fat: acc.fat + ing.final.fat * ratio,
+            totalGrams: acc.totalGrams + ing.grams,
+            coveredGrams: acc.coveredGrams + ing.grams,
+          };
+        },
+        { calories: 0, protein: 0, carbs: 0, fat: 0, totalGrams: 0, coveredGrams: 0 }
+      );
+
+      const unmatchedCount = updatedIngs.filter(
+        (ing) => ing.status === 'unmatched' || ing.final.source_used === 'unresolved'
+      ).length;
+      const ambiguousCount = updatedIngs.filter((ing) => ing.status === 'ambiguous').length;
+      const hasInvalidQuantity = updatedIngs.some(
+        (ing) => ing.status === 'invalid_quantity' || ing.grams <= 0
+      );
+
+      return {
+        ...current,
+        ingredients: updatedIngs,
+        calories: Math.round(totals.calories),
+        protein: Number(totals.protein.toFixed(1)),
+        carbs: Number(totals.carbs.toFixed(1)),
+        fat: Number(totals.fat.toFixed(1)),
+        totalGrams: Math.round(totals.totalGrams),
+        unmatchedCount,
+        ambiguousCount,
+        hasInvalidQuantity,
+        allMatched: unmatchedCount === 0 && !hasInvalidQuantity,
+        coverage: totals.totalGrams > 0 ? Math.round((totals.coveredGrams / totals.totalGrams) * 100) : 0,
+      };
+    });
+  };
 
   const filteredFoods = foods.filter((f) => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
   const modalFilteredFoods = foods
@@ -1218,7 +1409,7 @@ export function Nutrition() {
               })}
             </div>
 
-            {/* Primary CTA Button (+ ADD FOOD — Ref: ascend-nutrition.jpg) */}
+            {/* Primary CTA Button (ADD FOOD — Ref: ascend-nutrition.jpg) */}
             <div className="pt-1">
               <TacticalButton
                 variant="primary"
@@ -1227,7 +1418,7 @@ export function Nutrition() {
                 leftIcon={<Plus className="size-4" />}
                 onClick={() => openAddFoodForMeal()}
               >
-                {l('+ ADICIONAR ALIMENTO', '+ ADD FOOD')}
+                {l('ADICIONAR ALIMENTO', 'ADD FOOD')}
               </TacticalButton>
             </div>
           </div>
@@ -1333,7 +1524,7 @@ export function Nutrition() {
                               <Apple className="size-5" />
                             </div>
                             <div className="min-w-0">
-                              <h3 className="truncate font-orbitron text-xs font-black uppercase text-white sm:text-sm">
+                              <h3 className="line-clamp-2 font-orbitron text-xs font-black uppercase text-white sm:text-sm leading-snug break-words">
                                 {tx(food.name)}
                               </h3>
                               <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
@@ -1374,7 +1565,7 @@ export function Nutrition() {
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-orbitron text-xs font-black uppercase text-white">
+                            <p className="line-clamp-2 font-orbitron text-xs font-black uppercase text-white leading-snug break-words">
                               {tx(food.name)}
                             </p>
                             <p className="mt-0.5 font-mono text-[10px] font-semibold text-slate-400">
@@ -1402,19 +1593,19 @@ export function Nutrition() {
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.2em] text-purple-300">
-                      {l('TABELA TACO & CATÁLOGO LOCAL', 'TACO TABLE & LOCAL CATALOG')}
+                      {l('PROCESSAMENTO DETERMINÍSTICO · TABELA TACO', 'DETERMINISTIC PROCESSING · TACO TABLE')}
                     </span>
                     <span className="rounded-md border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
-                      TACO
+                      100% LOCAL
                     </span>
                   </div>
                   <h3 className="mt-1 font-orbitron text-base font-black uppercase text-white sm:text-lg">
-                    {l('Calculadora de Refeição por Texto', 'Text Meal Calculator')}
+                    {l('Registro de Refeição por Texto', 'Text Meal Registration')}
                   </h3>
                   <p className="mt-1 text-xs leading-relaxed text-slate-300">
                     {l(
-                      'Digite os alimentos e quantidades (ex: "150g de frango, 150g de arroz, 100g de feijão") para calcular calorias e macronutrientes pela Tabela TACO.',
-                      'Enter foods and quantities (e.g. "150g chicken, 150g rice, 100g beans") to calculate calories and macros via the TACO table.',
+                      'Digite os alimentos e quantidades com linguagem natural (ex: "150 g de arroz + 100 g de frango"). O Códex calcula calorias e macros reais a partir da Tabela TACO. Nenhuma IA — cálculo 100% determinístico e auditável.',
+                      'Enter foods and quantities in natural language (e.g. "150g rice + 100g chicken"). The Codex calculates real calories and macros via the TACO table. Zero AI — 100% deterministic and auditable calculation.',
                     )}
                   </p>
                 </div>
@@ -1424,14 +1615,17 @@ export function Nutrition() {
                     value={iaTextInput}
                     onChange={(e) => setIaTextInput(e.target.value)}
                     placeholder={l(
-                      'Ex: 150g de filé de frango, 200g de arroz integral, 100g de feijão carioca...',
-                      'Ex: 150g grilled chicken, 200g brown rice, 100g beans...',
+                      'Ex: 150 g de arroz + 100 g de frango, 2 ovos cozidos, 1 fatia de pão integral...',
+                      'Ex: 150g rice + 100g chicken, 2 boiled eggs, 1 slice whole wheat bread...',
                     )}
                     rows={3}
                     className="w-full resize-none rounded-2xl border border-white/10 bg-[#090B12] p-3.5 text-sm leading-relaxed text-white placeholder:text-slate-500 focus:border-purple-400 focus:outline-none"
                   />
 
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">
+                      {l('Exemplos:', 'Examples:')}
+                    </span>
                     {NUTRITION_PROMPTS.map((prompt) => (
                       <button
                         key={prompt.label['pt-BR']}
@@ -1467,6 +1661,21 @@ export function Nutrition() {
                       {iaLoading ? l('Calculando...', 'Calculating...') : l('Calcular Nutrientes', 'Calculate Nutrients')}
                     </TacticalButton>
                   </div>
+
+                  {/* Switch to traditional search */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubTab('library');
+                        openAddFoodForMeal(iaMealType);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition-colors"
+                    >
+                      <Search className="size-3.5" />
+                      <span>{l('Ou use a Busca Normal no Catálogo TACO →', 'Or use Normal Search in TACO Catalog →')}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {iaError && (
@@ -1487,7 +1696,7 @@ export function Nutrition() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <span className="font-orbitron text-[10px] font-black uppercase tracking-widest text-purple-300">
-                          {l('Resultado do Cálculo TACO', 'TACO Calculation Result')}
+                          {l('Resultado do Cálculo Determinístico', 'Deterministic Calculation Result')}
                         </span>
                         {iaEditing ? (
                           <input
@@ -1506,11 +1715,14 @@ export function Nutrition() {
                           </h4>
                         )}
                       </div>
-                      <span className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-bold text-emerald-300">
-                        {iaPreview.confidence}% TACO
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 font-mono text-xs font-bold text-cyan-300">
+                          {iaPreview.coverage}% {l('cobertura TACO', 'TACO coverage')}
+                        </span>
+                      </div>
                     </div>
 
+                    {/* Macro Summary Grid */}
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                       {[
                         { key: 'calories' as const, label: l('Energia', 'Energy'), unit: 'kcal', tone: 'text-cyan-300' },
@@ -1551,86 +1763,199 @@ export function Nutrition() {
                       ))}
                     </div>
 
-                    {/* Ingredients List (Responsive without horizontal table scroll) */}
-                    <div className="space-y-2">
-                      {iaPreview.ingredients.map((ing, idx) => (
-                        <div
-                          key={idx}
-                          className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleIaIngExpanded(idx)}
-                            className="flex w-full items-center justify-between gap-2 p-3 text-left"
-                          >
-                            <div className="min-w-0">
-                              <span className="text-xs font-bold text-white">{ing.name}</span>
-                              <span className="ml-1.5 font-mono text-[11px] text-slate-400">({ing.grams}g)</span>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <span className="rounded border border-purple-400/30 bg-purple-500/10 px-2 py-0.5 text-[9px] font-bold uppercase text-purple-300">
-                                {ing.final.source_used === 'taco'
-                                  ? 'TACO'
-                                  : ing.final.source_used === 'catalog'
-                                    ? l('Catálogo', 'Catalog')
-                                    : l('Estimativa', 'Estimate')}
-                              </span>
-                              <ChevronDown
-                                className={cn(
-                                  'size-4 text-slate-400 transition-transform',
-                                  expandedIaIngs.has(idx) && 'rotate-180',
-                                )}
-                              />
-                            </div>
-                          </button>
-
-                          {expandedIaIngs.has(idx) && (
-                            <div className="grid grid-cols-1 gap-2 border-t border-white/5 bg-black/40 p-3 text-xs sm:grid-cols-3">
-                              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                                <p className="font-bold text-purple-300">TACO (100g)</p>
-                                <p className="mt-0.5 font-mono text-[11px] text-slate-300">
-                                  {ing.taco.found
-                                    ? `${ing.taco.kcal}kcal · P:${ing.taco.protein}g C:${ing.taco.carbs}g G:${ing.taco.fat}g`
-                                    : l('Não encontrado', 'Not found')}
-                                </p>
-                              </div>
-                              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                                <p className="font-bold text-cyan-300">{l('Catálogo (100g)', 'Catalog (100g)')}</p>
-                                <p className="mt-0.5 font-mono text-[11px] text-slate-300">
-                                  {ing.catalog.found
-                                    ? `${ing.catalog.kcal}kcal · P:${ing.catalog.protein}g C:${ing.catalog.carbs}g G:${ing.catalog.fat}g`
-                                    : l('Não encontrado', 'Not found')}
-                                </p>
-                              </div>
-                              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-                                <p className="font-bold text-amber-300">{l('Estimativa (100g)', 'Estimate (100g)')}</p>
-                                <p className="mt-0.5 font-mono text-[11px] text-slate-300">
-                                  {`${ing.estimate.kcal}kcal · P:${ing.estimate.protein}g C:${ing.estimate.carbs}g G:${ing.estimate.fat}g`}
-                                </p>
-                              </div>
-                            </div>
+                    {/* Unmatched / Invalid Quantity Alert */}
+                    {!iaPreview.allMatched && (
+                      <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+                        <AlertTriangle className="size-4 shrink-0 text-amber-400 mt-0.5" />
+                        <span>
+                          {l(
+                            'Atenção: Alguns itens não foram localizados na Tabela TACO ou possuem quantidade inválida (0g). O Códex não inventa valores nutricionais sintéticos. Ajuste ou selecione uma opção para poder registrar.',
+                            'Notice: Some items were not identified in the TACO table or have invalid quantity (0g). The Codex does not invent synthetic nutrition values. Please resolve them before registering.',
                           )}
-                        </div>
-                      ))}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Ingredients Breakdown List */}
+                    <div className="space-y-2.5">
+                      <span className="font-orbitron text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        {l('Alimentos Identificados & Proporções:', 'Identified Foods & Portions:')}
+                      </span>
+
+                      {iaPreview.ingredients.map((ing, idx) => {
+                        const isUnmatched = ing.status === 'unmatched' || ing.final.source_used === 'unresolved';
+                        const isInvalidQty = ing.status === 'invalid_quantity' || ing.grams <= 0;
+                        const isAmbiguous = ing.status === 'ambiguous' && ing.candidates && ing.candidates.length > 0;
+
+                        return (
+                          <div
+                            key={idx}
+                            className={cn(
+                              'overflow-hidden rounded-xl border p-3 space-y-2 transition-all',
+                              isUnmatched || isInvalidQty
+                                ? 'border-amber-500/35 bg-amber-500/5'
+                                : 'border-white/[0.08] bg-white/[0.02]',
+                            )}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs sm:text-sm font-bold text-white truncate">{ing.name}</span>
+                                  {isUnmatched && (
+                                    <span className="rounded border border-amber-500/40 bg-amber-500/20 px-1.5 py-0.5 font-orbitron text-[9px] font-bold uppercase text-amber-300">
+                                      {l('Não Encontrado', 'Not Found')}
+                                    </span>
+                                  )}
+                                  {isAmbiguous && (
+                                    <span className="rounded border border-purple-400/40 bg-purple-500/20 px-1.5 py-0.5 font-orbitron text-[9px] font-bold uppercase text-purple-300">
+                                      {l('Ambíguo', 'Ambiguous')}
+                                    </span>
+                                  )}
+                                  {isInvalidQty && (
+                                    <span className="rounded border border-rose-500/40 bg-rose-500/20 px-1.5 py-0.5 font-orbitron text-[9px] font-bold uppercase text-rose-300">
+                                      {l('Quantidade 0g', 'Quantity 0g')}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                  {ing.rawPhrase}
+                                </p>
+                              </div>
+
+                              {/* Stepper / Portion Grams Input */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/50 px-2 py-1">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    min="0"
+                                    value={ing.grams || ''}
+                                    onChange={(e) => handleUpdateIngredientGrams(idx, Number(e.target.value))}
+                                    className="w-16 bg-transparent text-center font-mono text-xs font-bold text-white focus:outline-none"
+                                    aria-label={l('Gramas do alimento', 'Ingredient grams')}
+                                  />
+                                  <span className="text-xs font-medium text-slate-400">g</span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveIngredient(idx)}
+                                  className="flex size-7 items-center justify-center rounded-lg border border-white/10 text-slate-400 hover:border-rose-500/30 hover:text-rose-300 transition-colors"
+                                  aria-label={l('Remover alimento', 'Remove food')}
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Macro values for this specific portion */}
+                            {!isUnmatched && !isInvalidQty && (
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2 text-[11px]">
+                                <span className="font-mono text-cyan-300 font-bold">
+                                  {Math.round((ing.final.kcal * ing.grams) / 100)} kcal
+                                </span>
+                                <span className="text-slate-400">
+                                  P: {((ing.final.protein * ing.grams) / 100).toFixed(1)}g · C: {((ing.final.carbs * ing.grams) / 100).toFixed(1)}g · G: {((ing.final.fat * ing.grams) / 100).toFixed(1)}g
+                                </span>
+                                <span className="rounded border border-purple-400/30 bg-purple-500/10 px-1.5 py-0.5 font-orbitron text-[9px] font-bold uppercase text-purple-300">
+                                  {ing.final.source_used === 'taco'
+                                    ? 'TACO'
+                                    : ing.final.source_used === 'catalog'
+                                    ? l('Catálogo', 'Catalog')
+                                    : l('Manual', 'Manual')}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Ambiguity Disambiguation Pills */}
+                            {isAmbiguous && ing.candidates && (
+                              <div className="space-y-1.5 border-t border-purple-500/20 pt-2">
+                                <p className="text-[11px] font-semibold text-purple-200">
+                                  {l(
+                                    'Várias opções no acervo TACO. Toque para selecionar a preparação exata:',
+                                    'Multiple options in TACO. Tap to select the exact cut/preparation:',
+                                  )}
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {ing.candidates.slice(0, 4).map((c, cIdx) => (
+                                    <button
+                                      key={cIdx}
+                                      type="button"
+                                      onClick={() => handleSelectCandidate(idx, c)}
+                                      className={cn(
+                                        'rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all text-left',
+                                        ing.name === c.name
+                                          ? 'border-emerald-400/50 bg-emerald-500/20 text-emerald-200 font-bold'
+                                          : 'border-white/10 bg-white/[0.04] text-slate-300 hover:border-cyan-400/40 hover:text-white',
+                                      )}
+                                    >
+                                      <span>{c.name}</span>
+                                      <span className="ml-1 text-[10px] text-slate-400">({c.kcal} kcal/100g)</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Unmatched Food Resolution Options */}
+                            {isUnmatched && (
+                              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-amber-500/20 pt-2 text-xs">
+                                <span className="text-amber-200/90 text-[11px]">
+                                  {ing.unrecognizedUnit
+                                    ? l(
+                                        `Unidade "${ing.unrecognizedUnit}" não reconhecida. Ajuste para gramas (g).`,
+                                        `Unit "${ing.unrecognizedUnit}" not recognized. Adjust to grams (g).`,
+                                      )
+                                    : l(
+                                        'Item não localizado no acervo. Nenhuma estimativa inventada.',
+                                        'Item not found in catalog. No synthetic values created.',
+                                      )}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSubTab('library');
+                                    openAddFoodForMeal(iaMealType);
+                                  }}
+                                  className="inline-flex items-center gap-1 font-bold text-cyan-300 hover:underline"
+                                >
+                                  <Search className="size-3" />
+                                  <span>{l('Buscar na TACO', 'Search TACO')}</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-2">
                       <TacticalButton
                         variant="secondary"
                         fullWidth
                         onClick={() => setIaEditing((current) => !current)}
                       >
-                        {iaEditing ? l('Concluir Edição', 'Done Editing') : l('Ajustar Valores', 'Adjust Values')}
+                        {iaEditing ? l('Concluir Edição', 'Done Editing') : l('Ajustar Valores Totais', 'Adjust Total Values')}
                       </TacticalButton>
                       <TacticalButton
                         variant="primary"
                         fullWidth
                         displayFont
-                        disabled={iaRegistering || iaPreview.totalGrams <= 0 || !iaPreview.mealName.trim()}
+                        disabled={iaRegistering || !iaPreview.allMatched || iaPreview.totalGrams <= 0 || !iaPreview.mealName.trim()}
                         onClick={() => void handleRegisterIaMeal()}
                       >
                         {iaRegistering ? l('Salvando...', 'Saving...') : l('Registrar no Diário', 'Save to Diary')}
                       </TacticalButton>
+                    </div>
+
+                    {/* Medical / Clinical Disclaimer */}
+                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-center">
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        {l(
+                          'Aviso de Integridade: Os valores apresentados são calculados estritamente a partir da Tabela TACO (NEPA/UNICAMP) e catálogo alimentar local para acompanhamento de rotina e hábitos no RPG. Esta ferramenta não substitui avaliação clínica, orientação médica ou de nutricionista.',
+                          'Integrity Notice: Nutritional values are calculated strictly from the TACO Table (NEPA/UNICAMP) and local food catalog for routine habit tracking. This tool does not replace clinical evaluation or medical dietary advice.',
+                        )}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1684,7 +2009,7 @@ export function Nutrition() {
                       ? l('EDITAR REGISTRO', 'EDIT RECORD')
                       : l('REGISTRO DE ALIMENTO', 'LOG FOOD')}
                   </span>
-                  <h2 className="truncate font-orbitron text-base font-black uppercase text-white sm:text-lg">
+                  <h2 className="line-clamp-2 font-orbitron text-base font-black uppercase text-white sm:text-lg leading-tight break-words">
                     {selectedFood ? tx(selectedFood.name) : l('Selecionar Alimento', 'Select Food')}
                   </h2>
                 </div>
@@ -1742,7 +2067,7 @@ export function Nutrition() {
                           className="flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-[#090B12] px-3.5 py-2.5 text-left transition-colors hover:border-cyan-400/40"
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-xs font-bold uppercase text-white">{tx(food.name)}</p>
+                            <p className="line-clamp-2 text-xs font-bold uppercase text-white leading-snug break-words">{tx(food.name)}</p>
                             <p className="text-[10px] text-slate-400">
                               P:{food.protein_per_100g}g · C:{food.carbs_per_100g}g · G:{food.fat_per_100g}g
                             </p>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,13 +6,16 @@ import { useHunterStore, type HunterClass, type HunterGender } from '../stores/u
 import { supabase } from '../lib/supabase';
 import { MatrixLoader } from '../components/ui/matrix-loader';
 import {
-  Shield, Sword, Book, Zap, ChevronRight, Lightbulb, Crown,
+  Shield, Sword, Book, Zap, ChevronRight, ChevronLeft, Lightbulb, Crown,
   User, Calendar, Ruler, Weight, Target, Brain, Dumbbell, Star,
   CheckCircle2, ArrowRight, Sparkles, Activity, ScanLine, Trophy,
-  Maximize2, X
+  Maximize2, X, AlertTriangle, ArrowLeft, LogOut
 } from 'lucide-react';
 import { usePreferences } from '@/contexts/preferences';
 import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
+import { HudCard } from '@/components/ui/hud-card';
+import { TacticalButton } from '@/components/ui/tactical-button';
+import { NeonProgressBar } from '@/components/ui/neon-progress';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type OnboardingStep =
@@ -163,7 +166,7 @@ const CLASSES = [
     name: 'WARRIOR',
     tagline: 'O Corpo é a Arma',
     description: 'Especialista em Força Bruta. Sua jornada é pavimentada por ferro e superação física.',
-    icon: <Sword className="w-10 h-10 text-blue-400" />,
+    icon: <Sword className="w-8 h-8 text-blue-400" />,
     color: 'border-blue-500/50 hover:border-blue-400',
     accent: 'text-blue-400',
     glow: 'shadow-[0_0_30px_rgba(59,130,246,0.3)]',
@@ -175,7 +178,7 @@ const CLASSES = [
     name: 'SCHOLAR',
     tagline: 'A Mente é o Campo de Batalha',
     description: 'Mestre da Mente. Evolução pelo conhecimento, foco e disciplina intelectual.',
-    icon: <Book className="w-10 h-10 text-purple-400" />,
+    icon: <Book className="w-8 h-8 text-purple-400" />,
     color: 'border-purple-500/50 hover:border-purple-400',
     accent: 'text-purple-400',
     glow: 'shadow-[0_0_30px_rgba(124,58,237,0.3)]',
@@ -187,7 +190,7 @@ const CLASSES = [
     name: 'CREATOR',
     tagline: 'Criar é Evoluir',
     description: 'Arquiteto de Mundos. Evolui construindo, expressando e inovando sem limites.',
-    icon: <Sparkles className="w-10 h-10 text-amber-400" />,
+    icon: <Sparkles className="w-8 h-8 text-amber-400" />,
     color: 'border-amber-500/50 hover:border-amber-400',
     accent: 'text-amber-400',
     glow: 'shadow-[0_0_30px_rgba(251,191,36,0.3)]',
@@ -199,7 +202,7 @@ const CLASSES = [
     name: 'MONK',
     tagline: 'O Equilíbrio é Poder',
     description: 'Harmonia Total. Busca a perfeição entre o corpo e a mente através da vitalidade.',
-    icon: <Zap className="w-10 h-10 text-cyan-400" />,
+    icon: <Zap className="w-8 h-8 text-cyan-400" />,
     color: 'border-cyan-500/50 hover:border-cyan-400',
     accent: 'text-cyan-400',
     glow: 'shadow-[0_0_30px_rgba(6,182,212,0.3)]',
@@ -211,7 +214,7 @@ const CLASSES = [
     name: 'LEADER',
     tagline: 'Quem Lidera, Multiplica',
     description: 'Comandante Supremo. Cresce elevando os que estão ao seu redor.',
-    icon: <Crown className="w-10 h-10 text-rose-400" />,
+    icon: <Crown className="w-8 h-8 text-rose-400" />,
     color: 'border-rose-500/50 hover:border-rose-400',
     accent: 'text-rose-400',
     glow: 'shadow-[0_0_30px_rgba(244,63,94,0.3)]',
@@ -369,13 +372,6 @@ const RITUAL_STEPS_EN: typeof RITUAL_STEPS = [
   { id: 'class-selection', label: 'Class Awakening', phase: 'Phase VIII' },
 ];
 
-const RITUAL_PARTICLES = Array.from({ length: 14 }, (_, index) => ({
-  id: index,
-  left: `${6 + ((index * 19) % 88)}%`,
-  top: `${8 + ((index * 31) % 82)}%`,
-  delay: `${(index % 7) * 0.3}s`,
-}));
-
 const getRitualProgress = (step: OnboardingStep, currentQuestionIndex: number) => {
   if (step === 'loading') return 0;
   const baseIndex = RITUAL_STEPS.findIndex(item => item.id === step);
@@ -405,49 +401,32 @@ function OptionCard({
 }) {
   const { language } = usePreferences();
   return (
-    <motion.div
+    <motion.button
+      type="button"
       role="button"
       aria-pressed={isSelected}
-      initial={{ opacity: 0, x: -16 }}
+      initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.985 }}
-      transition={{ delay, duration: 0.3 }}
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ delay, duration: 0.25 }}
       onClick={onClick}
       className={`
-        group relative flex items-center gap-3 p-4 rounded-xl border-l-4 cursor-pointer select-none overflow-hidden
-        transition-all duration-200 ease-out active:scale-[0.99]
+        w-full group relative flex min-h-[52px] items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border-l-4 cursor-pointer select-none overflow-hidden text-left
+        transition-all duration-200 ease-out
         ${isSelected
-          ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_24px_rgba(124,58,237,0.42)] ring-1 ring-purple-500/50'
-          : 'bg-purple-950/30 border-purple-700/60 hover:bg-purple-900/40 hover:border-purple-500 hover:shadow-[0_0_18px_rgba(124,58,237,0.18)]'}
+          ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(124,58,237,0.35)] ring-1 ring-purple-500/50'
+          : 'bg-[#12131A] border-purple-900/40 hover:bg-purple-950/30 hover:border-purple-600/70 hover:shadow-[0_0_15px_rgba(124,58,237,0.12)]'}
       `}
     >
-      <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-[radial-gradient(circle_at_12%_50%,rgba(124,58,237,0.18),transparent_38%)] pointer-events-none" />
       {icon && <span className="flex-shrink-0">{icon}</span>}
-      <p className={`relative text-sm font-medium leading-snug flex-1 ${isSelected ? 'text-purple-100' : 'text-purple-200/80'}`}>
+      <p className={`text-xs sm:text-sm font-medium leading-snug flex-1 ${isSelected ? 'text-purple-100 font-semibold' : 'text-gray-300'}`}>
         {label}
       </p>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.6 }}
-        animate={{ opacity: isSelected ? 1 : 0, scale: isSelected ? 1 : 0.6 }}
-        transition={{ duration: 0.2 }}
-        className="relative"
-      >
-        <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
-      </motion.div>
-      {isSelected && (
-        <>
-          <motion.div layoutId="option-glow" className="absolute inset-0 rounded-xl bg-purple-500/10 pointer-events-none" />
-          <motion.div
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="absolute right-3 top-2 text-[8px] font-orbitron uppercase tracking-[0.24em] text-purple-300/70"
-          >
-            {language === 'en-US' ? 'Recorded' : 'Registrado'}
-          </motion.div>
-        </>
-      )}
-    </motion.div>
+      <div className="flex-shrink-0">
+        <CheckCircle2 className={`w-4 h-4 transition-colors ${isSelected ? 'text-purple-400' : 'text-gray-600'}`} />
+      </div>
+    </motion.button>
   );
 }
 
@@ -455,65 +434,33 @@ function OptionCard({
 function StepHeader({ step, total, label, progress }: { step: number; total: number; label: string; progress?: number }) {
   const { language } = usePreferences();
   return (
-    <div className="space-y-4 text-center mb-8">
+    <div className="space-y-3 text-center mb-6">
       {typeof progress === 'number' && (
-        <div className="mx-auto max-w-sm rounded-2xl border border-purple-500/20 bg-purple-950/20 p-3 shadow-[0_0_24px_rgba(124,58,237,0.12)]">
-          <div className="mb-2 flex items-center justify-between text-[9px] font-orbitron uppercase tracking-[0.22em] text-purple-400">
-            <span className="flex items-center gap-1.5"><ScanLine className="w-3 h-3" /> {language === 'en-US' ? 'Synchronization' : 'Sincronização'}</span>
-            <span>{progress}%</span>
+        <div className="mx-auto max-w-sm rounded-xl border border-purple-500/20 bg-purple-950/20 p-2.5 shadow-[0_0_20px_rgba(124,58,237,0.1)]">
+          <div className="mb-1.5 flex items-center justify-between text-[9px] font-orbitron uppercase tracking-widest text-purple-400">
+            <span className="flex items-center gap-1.5"><ScanLine className="w-3 h-3" /> {language === 'en-US' ? 'Awakening Progress' : 'Progresso do Despertar'}</span>
+            <span className="font-bold">{progress}%</span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-purple-950/70">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-purple-600 to-blue-500 shadow-[0_0_14px_rgba(124,58,237,0.65)]"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.7, ease: 'easeOut' }}
-            />
-          </div>
+          <NeonProgressBar value={progress} max={100} variant="xp" size="sm" />
         </div>
       )}
-      <div className="flex items-center justify-center gap-2">
-        {Array.from({ length: total }).map((_, i) => (
-          <motion.div
-            key={i}
-            className={`h-0.5 rounded-full transition-all duration-500 ${i < step ? 'bg-purple-400 w-8' : i === step - 1 ? 'bg-purple-500 w-12' : 'bg-purple-900/60 w-4'}`}
-          />
-        ))}
-      </div>
-      <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">
-        {language === 'en-US' ? `Step ${step} of ${total}` : `Etapa ${step} de ${total}`} · {label}
+      <span className="inline-block text-[10px] font-orbitron text-purple-400 tracking-[0.25em] uppercase">
+        {language === 'en-US' ? `Phase ${step} of ${total}` : `Fase ${step} de ${total}`} · {label}
       </span>
     </div>
   );
 }
 
-function DecisionFeedback({ message }: { message: string | null }) {
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          key={message}
-          initial={{ opacity: 0, y: 10, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8 }}
-          className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-purple-500/25 bg-purple-500/10 px-4 py-2 text-[10px] font-orbitron uppercase tracking-[0.18em] text-purple-200 shadow-[0_0_24px_rgba(124,58,237,0.18)]"
-        >
-          <Activity className="w-3 h-3 text-purple-300" />
-          {message}
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export function Onboarding() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { hunterClass, setHunterClass, profileLoaded, profileLoading, profileError, loadProfile } = useHunterStore();
+  const hunterStore = useHunterStore();
+  const { hunterClass, setHunterClass, profileLoaded, profileLoading, profileError, loadProfile } = hunterStore;
   const { language } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => isEnglish ? en : pt;
+
   const questions = isEnglish ? QUESTIONS_EN : QUESTIONS;
   const classes = CLASSES.map(hunterClassData => ({
     ...hunterClassData,
@@ -530,6 +477,7 @@ export function Onboarding() {
   const [selectedClass, setSelectedClass] = useState<HunterClass | null>(null);
   const [awakeningMsgIdx, setAwakeningMsgIdx] = useState(0);
   const [decisionFeedback, setDecisionFeedback] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const [previewClassId, setPreviewClassId] = useState<HunterClass | null>(null);
   const [previewRank, setPreviewRank] = useState<'E' | 'D' | 'C' | 'B' | 'A' | 'S'>('E');
@@ -547,43 +495,93 @@ export function Onboarding() {
     experienceLevel: '',
   });
 
+  // 1. Redirecionamento Imediato de Perfil Completo (Sem Esperas Artificiais)
+  useEffect(() => {
+    if (hunterClass) {
+      navigate('/', { replace: true });
+    }
+  }, [hunterClass, navigate]);
+
+  // 2. Garantir sincronização se o profile ainda não foi lido
   useEffect(() => {
     if (user?.id && !profileLoaded && !profileLoading && !profileError) {
       void loadProfile(user.id);
     }
   }, [user?.id, profileLoaded, profileLoading, profileError, loadProfile]);
 
+  // 3. Preenchimento Inteligente com Dados Já Existentes do Caçador
   useEffect(() => {
-    // Se ainda estiver carregando o perfil, não inicia o fluxo de perguntas
-    if (profileLoading) return;
-
-    if (hunterClass) {
-      const t = setTimeout(() => navigate('/'), 1200);
-      return () => clearTimeout(t);
-    } else if (profileLoaded) {
-      const t = setTimeout(() => setStep('basic-info'), 1500);
-      return () => clearTimeout(t);
+    if (profileLoaded && user) {
+      setForm(prev => ({
+        fullName: prev.fullName || hunterStore.fullName || '',
+        birthday: prev.birthday || hunterStore.birthday || '',
+        gender: prev.gender || (hunterStore.gender as HunterGender) || '',
+        height: prev.height || (hunterStore.height ? String(hunterStore.height) : ''),
+        weightCurrent: prev.weightCurrent || (hunterStore.weightCurrent ? String(hunterStore.weightCurrent) : ''),
+        weightTarget: prev.weightTarget || (hunterStore.weightTarget ? String(hunterStore.weightTarget) : ''),
+        trainingFocus: prev.trainingFocus || hunterStore.trainingFocus || '',
+        nutritionGoal: prev.nutritionGoal || hunterStore.nutritionGoal || 'maintain',
+        mainGoal: prev.mainGoal || hunterStore.mainGoal || '',
+        experienceLevel: prev.experienceLevel || hunterStore.experienceLevel || '',
+      }));
     }
-  }, [hunterClass, profileLoaded, profileLoading, navigate]);
+  }, [profileLoaded, user, hunterStore]);
 
-  // Animação de messages no awakening
+  // 4. Restauração de Rascunho do Quiz
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const savedQuiz = localStorage.getItem(`ascend_onboarding_quiz_${user.id}`);
+      if (savedQuiz) {
+        const parsed = JSON.parse(savedQuiz);
+        if (parsed && typeof parsed === 'object') {
+          setAnswers(parsed);
+        }
+      }
+    } catch {}
+  }, [user?.id]);
+
+  // 5. Restauração de Etapa Adequada (Sem Repetir Passos Desnecessariamente)
+  useEffect(() => {
+    if (profileLoading) return;
+    if (hunterClass) return;
+
+    if (profileLoaded && step === 'loading') {
+      // Determina a etapa ideal de retomada
+      if (hunterStore.experienceLevel) {
+        setStep('architect-intro');
+      } else if (hunterStore.mainGoal) {
+        setStep('experience-level');
+      } else if (hunterStore.trainingFocus || hunterStore.height || hunterStore.weightCurrent) {
+        setStep('main-goal');
+      } else if (hunterStore.fullName && hunterStore.gender) {
+        setStep('physical-profile');
+      } else {
+        setStep('basic-info');
+      }
+    }
+  }, [hunterClass, profileLoaded, profileLoading, hunterStore, step]);
+
+  // Animação de mensagens na síntese de mana (awakening)
   useEffect(() => {
     if (step !== 'awakening') return;
     const interval = setInterval(() => {
       setAwakeningMsgIdx(prev => {
         if (prev >= awakeningMessages.length - 1) {
           clearInterval(interval);
-          setTimeout(() => setStep('class-selection'), 800);
+          setTimeout(() => setStep('class-selection'), 600);
           return prev;
         }
         return prev + 1;
       });
-    }, 750);
+    }, 700);
     return () => clearInterval(interval);
   }, [awakeningMessages.length, step]);
 
-  const setField = <K extends keyof FormData>(key: K, value: FormData[K]) =>
+  const setField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
+    setValidationError(null);
     setForm(prev => ({ ...prev, [key]: value }));
+  };
 
   const registerDecision = <K extends keyof FormData>(key: K, value: FormData[K], message: string) => {
     setField(key, value);
@@ -607,60 +605,132 @@ export function Onboarding() {
     return topClass;
   };
 
+  // ─── Handlers de Validação e Avanço ───
   const handleSaveBasicInfo = async () => {
-    if (!user || !form.fullName || !form.gender) return;
-    try {
-      await supabase.from('profiles').update({
-        full_name: form.fullName,
-        birthday: form.birthday || null,
-        gender: form.gender || null,
-      }).eq('id', user.id);
-    } catch (err) {
-      console.warn('[Onboarding] Erro ao sincronizar informacoes basicas:', err);
+    setValidationError(null);
+    if (!form.fullName.trim() || form.fullName.trim().length < 2) {
+      setValidationError(l('Por favor, informe seu nome ou codinome (mínimo 2 letras).', 'Please enter your name or codename (minimum 2 characters).'));
+      return;
+    }
+    if (!form.gender) {
+      setValidationError(l('Por favor, selecione seu gênero para calibrar a imagem do caçador.', 'Please select your gender to calibrate your hunter profile.'));
+      return;
+    }
+    if (form.birthday) {
+      const birthDate = new Date(form.birthday);
+      const now = new Date();
+      if (isNaN(birthDate.getTime()) || birthDate > now || birthDate.getFullYear() < 1900) {
+        setValidationError(l('Data de nascimento inválida.', 'Invalid date of birth.'));
+        return;
+      }
+    }
+
+    if (user) {
+      try {
+        await supabase.from('profiles').update({
+          full_name: form.fullName.trim(),
+          birthday: form.birthday || null,
+          gender: form.gender || null,
+        }).eq('id', user.id);
+        useHunterStore.setState({
+          fullName: form.fullName.trim(),
+          birthday: form.birthday || '',
+          gender: form.gender || null,
+        });
+      } catch (err) {
+        console.warn('[Onboarding] Falha ao sincronizar dados básicos:', err);
+      }
     }
     setStep('physical-profile');
   };
 
   const handleSavePhysicalProfile = async () => {
-    if (!user) return;
-    try {
-      await supabase.from('profiles').update({
-        height: form.height ? parseFloat(form.height) : null,
-        weight_current: form.weightCurrent ? parseFloat(form.weightCurrent) : null,
-        weight_target: form.weightTarget ? parseFloat(form.weightTarget) : null,
-        training_focus: form.trainingFocus || null,
-        nutrition_goal: form.nutritionGoal || 'maintain',
-      }).eq('id', user.id);
-    } catch (err) {
-      console.warn('[Onboarding] Erro ao sincronizar perfil fisico:', err);
+    setValidationError(null);
+    const h = form.height ? parseFloat(form.height) : null;
+    const wc = form.weightCurrent ? parseFloat(form.weightCurrent) : null;
+    const wt = form.weightTarget ? parseFloat(form.weightTarget) : null;
+
+    if (h !== null && (isNaN(h) || h < 50 || h > 260)) {
+      setValidationError(l('Altura deve estar entre 50 e 260 cm.', 'Height must be between 50 and 260 cm.'));
+      return;
+    }
+    if (wc !== null && (isNaN(wc) || wc < 20 || wc > 350)) {
+      setValidationError(l('Peso atual deve estar entre 20 e 350 kg.', 'Current weight must be between 20 and 350 kg.'));
+      return;
+    }
+    if (wt !== null && (isNaN(wt) || wt < 20 || wt > 350)) {
+      setValidationError(l('Peso meta deve estar entre 20 e 350 kg.', 'Target weight must be between 20 and 350 kg.'));
+      return;
+    }
+
+    if (user) {
+      try {
+        await supabase.from('profiles').update({
+          height: h,
+          weight_current: wc,
+          weight_target: wt,
+          training_focus: form.trainingFocus || null,
+          nutrition_goal: form.nutritionGoal || 'maintain',
+        }).eq('id', user.id);
+        useHunterStore.setState({
+          height: h,
+          weightCurrent: wc,
+          weightTarget: wt,
+          trainingFocus: form.trainingFocus || null,
+          nutritionGoal: form.nutritionGoal || 'maintain',
+        });
+      } catch (err) {
+        console.warn('[Onboarding] Falha ao sincronizar perfil físico:', err);
+      }
     }
     setStep('main-goal');
   };
 
   const handleSaveMainGoal = async () => {
-    if (!user || !form.mainGoal) return;
-    try {
-      await supabase.from('profiles').update({ main_goal: form.mainGoal }).eq('id', user.id);
-    } catch (err) {
-      console.warn('[Onboarding] Erro ao sincronizar objetivo principal:', err);
+    setValidationError(null);
+    if (!form.mainGoal) {
+      setValidationError(l('Por favor, selecione seu objetivo central.', 'Please select your core mission.'));
+      return;
+    }
+    if (user) {
+      try {
+        await supabase.from('profiles').update({ main_goal: form.mainGoal }).eq('id', user.id);
+        useHunterStore.setState({ mainGoal: form.mainGoal });
+      } catch (err) {
+        console.warn('[Onboarding] Falha ao sincronizar objetivo principal:', err);
+      }
     }
     setStep('experience-level');
   };
 
   const handleSaveExperience = async () => {
-    if (!user || !form.experienceLevel) return;
-    try {
-      await supabase.from('profiles').update({ experience_level: form.experienceLevel }).eq('id', user.id);
-    } catch (err) {
-      console.warn('[Onboarding] Erro ao sincronizar nivel de experiencia:', err);
+    setValidationError(null);
+    if (!form.experienceLevel) {
+      setValidationError(l('Por favor, selecione seu nível de experiência.', 'Please select your experience rank.'));
+      return;
+    }
+    if (user) {
+      try {
+        await supabase.from('profiles').update({ experience_level: form.experienceLevel }).eq('id', user.id);
+        useHunterStore.setState({ experienceLevel: form.experienceLevel });
+      } catch (err) {
+        console.warn('[Onboarding] Falha ao sincronizar nível de experiência:', err);
+      }
     }
     setStep('architect-intro');
   };
 
   const handleSelectQuizOption = (value: string) => {
+    setValidationError(null);
     const questionId = questions[currentQuestionIndex].id;
-    setAnswers(prev => ({ ...prev, [questionId]: value }));
-    setDecisionFeedback(l('Resposta registrada. Assinatura de classe atualizada.', 'Answer recorded. Class signature updated.'));
+    const newAnswers = { ...answers, [questionId]: value };
+    setAnswers(newAnswers);
+    if (user?.id) {
+      try {
+        localStorage.setItem(`ascend_onboarding_quiz_${user.id}`, JSON.stringify(newAnswers));
+      } catch {}
+    }
+    setDecisionFeedback(l('Resposta registrada pelo Arquiteto.', 'Answer recorded by the Architect.'));
   };
 
   const handleNextQuestion = () => {
@@ -674,17 +744,30 @@ export function Onboarding() {
     }
   };
 
+  const handlePrevQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    } else {
+      setStep('architect-intro');
+    }
+  };
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleConfirmClass = async () => {
     if (!user || !selectedClass || isSubmitting) return;
     setIsSubmitting(true);
+    setValidationError(null);
     try {
       await setHunterClass(selectedClass, user.id);
       localStorage.setItem('ascend_just_finished_onboarding', 'true');
+      try {
+        localStorage.removeItem(`ascend_onboarding_quiz_${user.id}`);
+      } catch {}
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Onboarding] Erro ao confirmar classe:', err);
+      setValidationError(err.message || l('Falha ao registrar classe no Sistema. Tente novamente.', 'Failed to register class. Please try again.'));
       setIsSubmitting(false);
     }
   };
@@ -695,905 +778,794 @@ export function Onboarding() {
   const revealedClassData = classes.find(c => c.id === revealedClass);
 
   return (
-    <div className="relative min-h-screen bg-[#0B0B0F] text-white flex flex-col items-center justify-start pt-24 pb-12 px-6 overflow-y-auto">
-      <LanguageSwitcher className="absolute right-5 top-5 z-30" />
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_16%,rgba(124,58,237,0.12),transparent_32%),radial-gradient(circle_at_18%_82%,rgba(59,130,246,0.09),transparent_28%)]" />
-      {RITUAL_PARTICLES.map(particle => (
-        <span
-          key={particle.id}
-          className="onboarding-ritual-particle absolute h-1 w-1 rounded-full bg-purple-400/60 shadow-[0_0_14px_rgba(124,58,237,0.8)]"
-          style={{ left: particle.left, top: particle.top, animationDelay: particle.delay }}
-        />
-      ))}
+    <div className="relative min-h-screen bg-[#07080C] text-white flex flex-col items-center justify-start pt-16 sm:pt-20 pb-16 px-4 sm:px-6 overflow-y-auto">
+      
+      {/* Barra Superior com Seletor de Idioma e Status */}
+      <header className="absolute top-4 left-4 right-4 flex items-center justify-between z-30 pointer-events-auto">
+        <div className="flex items-center gap-2">
+          <div className="flex size-8 items-center justify-center rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-400">
+            <Sparkles size={16} />
+          </div>
+          <span className="text-[10px] font-black font-orbitron uppercase tracking-widest text-gray-400 hidden sm:inline">
+            ASCEND Awakening
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher compact />
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-gray-400 hover:text-white transition-colors"
+            title={l('Encerrar sessão', 'Sign out')}
+          >
+            <LogOut size={12} />
+            <span className="hidden sm:inline">{l('Sair', 'Sign Out')}</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Ambient background glow */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_12%,rgba(168,85,247,0.12),transparent_38%),radial-gradient(circle_at_20%_80%,rgba(0,240,255,0.08),transparent_35%)]" />
+
+      {/* Barra de Etapa Flutuante */}
       {step !== 'loading' && (
-        <div className="pointer-events-none absolute left-1/2 top-5 z-20 hidden -translate-x-1/2 items-center gap-3 rounded-full border border-purple-500/20 bg-[#0B0B0F]/70 px-4 py-2 backdrop-blur-xl md:flex">
-          <span className="text-[9px] font-orbitron uppercase tracking-[0.24em] text-purple-500">{currentRitual.phase}</span>
+        <div className="mb-6 flex items-center gap-2.5 rounded-full border border-purple-500/30 bg-[#0F0F13]/85 px-4 py-1.5 shadow-[0_0_20px_rgba(168,85,247,0.15)] backdrop-blur-md">
+          <span className="text-[9px] font-black font-orbitron uppercase tracking-widest text-purple-400">{currentRitual.phase}</span>
           <span className="h-1 w-1 rounded-full bg-purple-500" />
-          <span className="text-[9px] font-orbitron uppercase tracking-[0.24em] text-gray-500">{currentRitual.label}</span>
+          <span className="text-[9px] font-bold font-orbitron uppercase tracking-widest text-gray-300">{currentRitual.label}</span>
           <span className="h-1 w-1 rounded-full bg-purple-500" />
-          <span className="text-[9px] font-orbitron uppercase tracking-[0.24em] text-purple-400">{ritualProgress}%</span>
+          <span className="text-[9px] font-black font-orbitron text-cyan-400">{ritualProgress}%</span>
         </div>
       )}
+
+      {/* Feedback de Validação / Erro */}
+      <AnimatePresence>
+        {validationError && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mb-4 max-w-lg w-full rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-300 flex items-center gap-2.5"
+          >
+            <AlertTriangle size={16} className="text-rose-400 shrink-0" />
+            <span>{validationError}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
 
-        {/* ── LOADING ── */}
+        {/* ── LOADING & SINCRONIZAÇÃO ── */}
         {step === 'loading' && (
-          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center">
+          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center my-auto">
             {!profileLoaded && profileError ? (
-              <div className="max-w-md w-full bg-[#13131A] border border-red-500/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-                <h2 className="text-lg font-orbitron font-bold text-red-400 mb-2">
+              <HudCard variant="crimson" corners className="max-w-md w-full p-6 text-center space-y-4">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 mx-auto">
+                  <AlertTriangle size={24} />
+                </div>
+                <h2 className="text-lg font-orbitron font-black text-rose-400 uppercase">
                   {l('FALHA DE SINCRONIZAÇÃO', 'SYNCHRONIZATION FAILURE')}
                 </h2>
-                <p className="text-xs text-gray-400 mb-6 font-mono">{profileError}</p>
-                <button
-                  onClick={() => {
-                    if (user) void loadProfile(user.id);
-                  }}
-                  className="w-full py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 rounded-xl text-red-300 font-orbitron text-xs tracking-widest uppercase transition-all"
-                >
-                  {l('Tentar Reconectar ao Sistema', 'Retry System Connection')}
-                </button>
-              </div>
+                <p className="text-xs text-gray-400 font-mono leading-relaxed">{profileError}</p>
+                <div className="flex flex-col gap-2 pt-2">
+                  <TacticalButton
+                    onClick={() => {
+                      if (user) void loadProfile(user.id);
+                    }}
+                    variant="primary"
+                    accent="crimson"
+                    className="min-h-[44px] text-xs font-bold"
+                  >
+                    {l('Tentar Reconectar ao Sistema', 'Retry System Connection')}
+                  </TacticalButton>
+                  <TacticalButton
+                    onClick={() => void signOut()}
+                    variant="ghost"
+                    className="min-h-[40px] text-xs"
+                  >
+                    {l('Encerrar Sessão', 'Sign Out')}
+                  </TacticalButton>
+                </div>
+              </HudCard>
             ) : (
               <MatrixLoader />
             )}
           </motion.div>
         )}
 
-        {/* ── ETAPA 1: INFORMAÇÕES BÁSICAS ── */}
+        {/* ── FASE 1: INFORMAÇÕES BÁSICAS ── */}
         {step === 'basic-info' && (
-          <motion.div key="basic-info" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={1} total={8} label={l('Calibração Biológica', 'Biological Calibration')} progress={ritualProgress} />
+          <motion.div key="basic-info" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-lg w-full">
+            <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-5">
+              <StepHeader step={1} total={8} label={l('Calibração Biológica', 'Biological Calibration')} progress={ritualProgress} />
 
-            <div className="space-y-2 text-center mb-8">
-              <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Protocolo de Identificação</p>
-              <h1 className="text-2xl md:text-3xl font-orbitron font-bold text-white leading-tight">
-                {l('O Sistema precisa reconhecer o', 'The System must recognize the')} <span className="text-purple-400">{l('Caçador', 'Hunter')}</span>.
-              </h1>
-              <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                Sua assinatura inicial será gravada antes da abertura da primeira Fenda.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Nome */}
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[10px] font-orbitron text-purple-400 uppercase tracking-widest">
-                  <User className="w-3 h-3" /> {l('Nome do Caçador', 'Hunter Name')}
-                </label>
-                <input
-                  type="text"
-                  placeholder={l('Seu nome verdadeiro...', 'Your real name...')}
-                  value={form.fullName}
-                  onChange={e => setField('fullName', e.target.value)}
-                  className="w-full bg-[#13131A] border border-purple-900/60 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all font-medium"
-                />
+              <div className="text-center space-y-1">
+                <h1 className="text-xl sm:text-2xl font-orbitron font-bold text-white leading-tight">
+                  {l('O Sistema precisa reconhecer o', 'The System must recognize the')} <span className="text-purple-400">{l('Caçador', 'Hunter')}</span>
+                </h1>
+                <p className="text-xs text-gray-400">
+                  {l('Sua assinatura biológica será gravada antes da abertura da primeira Fenda.', 'Your biological signature is recorded before the first Rift opens.')}
+                </p>
               </div>
 
-              {/* Data de Nascimento */}
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[10px] font-orbitron text-purple-400 uppercase tracking-widest">
-                  <Calendar className="w-3 h-3" /> {l('Data de Nascimento', 'Date of Birth')}
-                </label>
-                <input
-                  type="date"
-                  value={form.birthday}
-                  onChange={e => setField('birthday', e.target.value)}
-                  className="w-full bg-[#13131A] border border-purple-900/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all"
-                  style={{ colorScheme: 'inherit' }}
-                />
-              </div>
-
-              {/* Gênero */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-[10px] font-orbitron text-purple-400 uppercase tracking-widest">
-                  <Shield className="w-3 h-3" /> {l('Sexo', 'Sex')}
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: 'male', label: l('Masculino', 'Male'), icon: '♂' },
-                    { value: 'female', label: l('Feminino', 'Female'), icon: '♀' },
-                  ].map(opt => (
-                    <motion.button
-                      key={opt.value}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => registerDecision(
-                        'gender',
-                        opt.value as HunterGender,
-                        isEnglish ? `${opt.label} recorded by the System` : `Sexo ${opt.label.toLowerCase()} registrado pelo Sistema`,
-                      )}
-                      className={`flex flex-col items-center justify-center gap-2 py-4 rounded-xl border-2 transition-all duration-150 ${
-                        form.gender === opt.value
-                          ? 'bg-purple-500/20 border-purple-400 shadow-[0_0_20px_rgba(124,58,237,0.3)]'
-                          : 'bg-purple-950/20 border-purple-900/60 hover:border-purple-700'
-                      }`}
-                    >
-                      <span className="text-2xl">{opt.icon}</span>
-                      <span className={`text-sm font-orbitron font-bold ${form.gender === opt.value ? 'text-purple-200' : 'text-gray-500'}`}>
-                        {opt.label}
-                      </span>
-                    </motion.button>
-                  ))}
-                </div>
-                <DecisionFeedback message={decisionFeedback} />
-              </div>
-            </div>
-
-            <div className="mt-8 flex justify-end">
-              <AnimatePresence>
-                {form.fullName.trim() && form.gender && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    onClick={handleSaveBasicInfo}
-                    className="btn-next-step"
-                  >
-                    <span>{l('PRÓXIMO PASSO', 'NEXT STEP')}</span>
-                    <ChevronRight strokeWidth={3} />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── ETAPA 2: PERFIL FÍSICO ── */}
-        {step === 'physical-profile' && (
-          <motion.div key="physical" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={2} total={8} label={l('Análise Corporal', 'Body Analysis')} progress={ritualProgress} />
-
-            <div className="space-y-2 text-center mb-8">
-              <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Varredura Biométrica</p>
-              <h1 className="text-2xl md:text-3xl font-orbitron font-bold leading-tight">
-                {l('O Sistema está lendo sua', 'The System is reading your')} <span className="text-purple-400">{l('base física', 'physical baseline')}</span>.
-              </h1>
-              <p className="text-sm text-gray-500">Cada métrica ajusta a dificuldade das primeiras missões.</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { key: 'height', label: l('Altura (cm)', 'Height (cm)'), placeholder: '175', icon: <Ruler className="w-3 h-3" /> },
-                  { key: 'weightCurrent', label: l('Peso Atual (kg)', 'Current Weight (kg)'), placeholder: '80', icon: <Weight className="w-3 h-3" /> },
-                  { key: 'weightTarget', label: l('Peso Meta (kg)', 'Target Weight (kg)'), placeholder: '75', icon: <Target className="w-3 h-3" /> },
-                ].map(field => (
-                  <div key={field.key} className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[9px] font-orbitron text-purple-400 uppercase tracking-widest">
-                      {field.icon} {field.label}
-                    </label>
-                    <input
-                      type="number"
-                      placeholder={field.placeholder}
-                      value={form[field.key as keyof FormData]}
-                      onChange={e => setField(field.key as keyof FormData, e.target.value)}
-                      className="w-full bg-[#13131A] border border-purple-900/60 rounded-xl px-3 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500 transition-all text-center font-orbitron font-bold"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[10px] font-orbitron text-purple-400 uppercase tracking-widest">
-                  <Target className="w-3 h-3" /> Objetivo Nutricional
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: 'lose', label: l('Perder peso', 'Lose weight') },
-                    { value: 'maintain', label: l('Manter peso', 'Maintain weight') },
-                    { value: 'gain', label: l('Ganhar peso', 'Gain weight') },
-                  ].map(goal => (
-                    <motion.button
-                      key={goal.value}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => registerDecision(
-                        'nutritionGoal',
-                        goal.value,
-                        isEnglish ? `Nutrition goal synchronized: ${goal.label}` : `Objetivo nutricional sincronizado: ${goal.label}`,
-                      )}
-                      className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
-                        form.nutritionGoal === goal.value
-                          ? 'bg-purple-500/20 border-purple-400 text-purple-100'
-                          : 'bg-purple-950/20 border-purple-900/60 text-gray-400 hover:border-purple-700'
-                      }`}
-                    >
-                      {goal.label}
-                    </motion.button>
-                  ))}
-                </div>
-                <DecisionFeedback message={decisionFeedback} />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[10px] font-orbitron text-purple-400 uppercase tracking-widest">
-                  <Dumbbell className="w-3 h-3" /> Foco de Treino
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    ['Musculação', 'Strength Training'],
-                    ['Funcional', 'Functional Training'],
-                    ['Cardio / Endurance', 'Cardio / Endurance'],
-                    ['Esportes de Combate', 'Combat Sports'],
-                    ['Calistenia', 'Calisthenics'],
-                    ['Flexibilidade / Yoga', 'Flexibility / Yoga'],
-                  ].map(([focus, focusLabel]) => (
-                    <motion.button
-                      key={focus}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => registerDecision(
-                        'trainingFocus',
-                        focus,
-                        isEnglish ? `Training focus recorded: ${focusLabel}` : `Foco de treino registrado: ${focus}`,
-                      )}
-                      className={`text-left px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
-                        form.trainingFocus === focus
-                          ? 'bg-purple-500/20 border-purple-400 text-purple-100'
-                          : 'bg-purple-950/20 border-purple-900/60 text-gray-400 hover:border-purple-700'
-                      }`}
-                    >
-                      {isEnglish ? focusLabel : focus}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex justify-end">
-              <motion.button
-                onClick={handleSavePhysicalProfile}
-                className="btn-next-step"
-              >
-                <span>{l('PRÓXIMO PASSO', 'NEXT STEP')}</span>
-                <ChevronRight strokeWidth={3} />
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── ETAPA 3: OBJETIVO PRINCIPAL ── */}
-        {step === 'main-goal' && (
-          <motion.div key="main-goal" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={3} total={8} label={l('Missão Central', 'Core Mission')} progress={ritualProgress} />
-
-            <div className="space-y-2 text-center mb-8">
-              <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Missão Central</p>
-              <h1 className="text-2xl md:text-3xl font-orbitron font-bold leading-tight">
-                {l('O Sistema detectou múltiplos caminhos. Qual representa sua', 'The System detected multiple paths. Which one represents your')} <span className="text-purple-400">{l('essência', 'essence')}</span>?
-              </h1>
-              <p className="text-sm text-gray-500 max-w-md mx-auto">
-                Esta escolha define o primeiro eixo das suas quests de evolução.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                { value: 'general', label: l('Evolução Geral', 'Overall Growth'), sub: l('Quero crescer em todas as áreas da vida.', 'I want to grow in every area of life.'), icon: <Star className="w-5 h-5" /> },
-                { value: 'health', label: l('Performance & Saúde', 'Performance & Health'), sub: l('Foco em físico, energia e saúde duradoura.', 'Focus on fitness, energy, and lasting health.'), icon: <Dumbbell className="w-5 h-5" /> },
-                { value: 'finance', label: l('Independência Financeira', 'Financial Independence'), sub: l('Construir riqueza e liberdade financeira real.', 'Build wealth and real financial freedom.'), icon: <Target className="w-5 h-5" /> },
-                { value: 'career', label: l('Carreira & Habilidades', 'Career & Skills'), sub: l('Dominar minha área e avançar na carreira.', 'Master my field and advance my career.'), icon: <Brain className="w-5 h-5" /> },
-              ].map((opt, idx) => (
-                <OptionCard
-                  key={opt.value}
-                  label={`${opt.label} — ${opt.sub}`}
-                  isSelected={form.mainGoal === opt.value}
-                  onClick={() => registerDecision(
-                    'mainGoal',
-                    opt.value,
-                    isEnglish ? `Core mission locked: ${opt.label}` : `Missão central travada: ${opt.label}`,
-                  )}
-                  icon={<span className={`${form.mainGoal === opt.value ? 'text-purple-300' : 'text-purple-600'}`}>{opt.icon}</span>}
-                  delay={idx * 0.06}
-                />
-              ))}
-            </div>
-            <DecisionFeedback message={decisionFeedback} />
-
-            <div className="mt-8 flex justify-end">
-              <AnimatePresence>
-                {form.mainGoal && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    onClick={handleSaveMainGoal}
-                    className="btn-next-step"
-                  >
-                    <span>{l('PRÓXIMO PASSO', 'NEXT STEP')}</span>
-                    <ChevronRight strokeWidth={3} />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── ETAPA 4: NÍVEL DE EXPERIÊNCIA ── */}
-        {step === 'experience-level' && (
-          <motion.div key="experience" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.4 }} className="max-w-lg w-full">
-            <StepHeader step={4} total={8} label={l('Calibração de Rank', 'Rank Calibration')} progress={ritualProgress} />
-
-            <div className="space-y-2 text-center mb-8">
-              <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Calibração de Rank</p>
-              <h1 className="text-2xl md:text-3xl font-orbitron font-bold leading-tight">
-                {l('Informe seu', 'Enter your initial')} <span className="text-purple-400">Rank</span> {l('inicial para calibrar a ameaça.', 'to calibrate the threat.')}
-              </h1>
-              <p className="text-sm text-gray-500">O Sistema ajustará as primeiras missões sem quebrar seu ritmo.</p>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                { value: 'beginner', rank: 'E', label: l('Iniciante', 'Beginner'), sub: l('Começando agora. Cada passo conta.', 'Starting now. Every step counts.'), color: 'text-gray-400' },
-                { value: 'intermediate', rank: 'C', label: l('Intermediário', 'Intermediate'), sub: l('Tenho consistência. Quero ir além.', 'I am consistent. I want to go further.'), color: 'text-blue-400' },
-                { value: 'advanced', rank: 'S', label: l('Avançado', 'Advanced'), sub: l('Alta performance. Busco o limite máximo.', 'High performance. I seek the highest limit.'), color: 'text-purple-400' },
-              ].map((opt, idx) => (
-                <OptionCard
-                  key={opt.value}
-                  label={`[Rank ${opt.rank}] ${opt.label} — ${opt.sub}`}
-                  isSelected={form.experienceLevel === opt.value}
-                  onClick={() => registerDecision(
-                    'experienceLevel',
-                    opt.value,
-                    isEnglish ? `Rank ${opt.rank} accepted by the System` : `Rank ${opt.rank} aceito pelo Sistema`,
-                  )}
-                  delay={idx * 0.07}
-                />
-              ))}
-            </div>
-            <DecisionFeedback message={decisionFeedback} />
-
-            <div className="mt-8 flex justify-end">
-              <AnimatePresence>
-                {form.experienceLevel && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    onClick={handleSaveExperience}
-                    className="btn-next-step"
-                  >
-                    <span>{l('AVANÇAR', 'CONTINUE')}</span>
-                    <ChevronRight strokeWidth={3} />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── O ARQUITETO: INTRODUÇÃO ── */}
-        {step === 'architect-intro' && (
-          <motion.div
-            key="architect"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="max-w-xl w-full text-center space-y-8"
-          >
-            {/* Glow de fundo */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-purple-900/20 blur-[120px]" />
-            </div>
-
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 20 }}
-              className="w-20 h-20 mx-auto rounded-full bg-purple-900/40 border border-purple-500/50 flex items-center justify-center shadow-[0_0_40px_rgba(124,58,237,0.5)]"
-            >
-              <Lightbulb className="w-10 h-10 text-purple-300" />
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="space-y-4">
-              <p className="text-[10px] font-orbitron text-purple-500 tracking-[0.4em] uppercase">Transmissão Recebida</p>
-              <h2 className="text-2xl md:text-3xl font-orbitron font-bold text-white leading-tight">
-                {l('Eu sou o', 'I am the')} <span className="text-purple-400">{l('Arquiteto', 'Architect')}</span>.
-              </h2>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }} className="space-y-5">
-              {(isEnglish ? [
-                'I built the Gate System. I gave hunters like Sung Jin-Woo a second chance.',
-                'Now I offer you the same opportunity.',
-                'But to calibrate your power, I need to understand what you are made of.',
-                '"Answer honestly. The System does not lie—and neither should you."',
-              ] : [
-                'Fui eu quem construiu o sistema das Fendas. Fui eu quem deu a caçadores como Sung Jin-Woo uma segunda chance.',
-                'Agora, eu te ofereço a mesma oportunidade.',
-                'Mas para calibrar seu poder, preciso entender do que você é feito.',
-                '"Responda com honestidade. O sistema não mente — e você também não deveria."',
-              ]).map((line, i) => (
-                <motion.p
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.2 + i * 0.25 }}
-                  className={`text-sm leading-relaxed ${i === 3 ? 'text-purple-300 italic font-medium border-l-2 border-purple-500 pl-4 text-left' : 'text-gray-400'}`}
-                >
-                  {line}
-                </motion.p>
-              ))}
-            </motion.div>
-
-            <motion.button
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2.4 }}
-              onClick={() => setStep('class-quiz')}
-              className="btn-next-step mx-auto"
-            >
-              <span>{l('ACEITAR O DESAFIO', 'ACCEPT THE CHALLENGE')}</span>
-              <ArrowRight strokeWidth={3} />
-            </motion.button>
-          </motion.div>
-        )}
-
-        {/* ── QUESTIONÁRIO DE CLASSES ── */}
-        {step === 'class-quiz' && (
-          <motion.div
-            key="class-quiz"
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.35 }}
-            className="max-w-2xl w-full flex flex-col items-center gap-8"
-          >
-
-            {/* Progresso */}
-            <div className="w-full space-y-3 text-center">
-              <div className="mx-auto max-w-md rounded-2xl border border-purple-500/20 bg-purple-950/20 p-3">
-                <div className="mb-2 flex items-center justify-between text-[9px] font-orbitron uppercase tracking-[0.22em] text-purple-400">
-                  <span className="flex items-center gap-1.5"><ScanLine className="w-3 h-3" /> Avaliação do Sistema</span>
-                  <span>{ritualProgress}%</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-purple-950/70">
-                  <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-purple-600 to-blue-500 shadow-[0_0_14px_rgba(124,58,237,0.65)]"
-                    animate={{ width: `${ritualProgress}%` }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
+              <div className="space-y-4">
+                {/* Nome */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    <User className="w-3.5 h-3.5" /> {l('Nome ou Codinome', 'Hunter Name or Codename')} *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={l('Ex: Gabriel Reis', 'e.g., Gabriel Reis')}
+                    value={form.fullName}
+                    onChange={e => setField('fullName', e.target.value)}
+                    className="w-full min-h-[46px] bg-black/50 border border-white/10 rounded-xl px-4 py-2 text-xs sm:text-sm text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none transition-all"
                   />
                 </div>
+
+                {/* Data de Nascimento */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    <Calendar className="w-3.5 h-3.5" /> {l('Data de Nascimento', 'Date of Birth')}
+                  </label>
+                  <input
+                    type="date"
+                    value={form.birthday}
+                    onChange={e => setField('birthday', e.target.value)}
+                    className="w-full min-h-[46px] bg-black/50 border border-white/10 rounded-xl px-4 py-2 text-xs sm:text-sm text-white focus:border-purple-500 focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Gênero */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    <Shield className="w-3.5 h-3.5" /> {l('Gênero do Avatar', 'Avatar Gender')} *
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { value: 'male', label: l('Masculino', 'Male'), icon: '♂' },
+                      { value: 'female', label: l('Feminino', 'Female'), icon: '♀' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => registerDecision(
+                          'gender',
+                          opt.value as HunterGender,
+                          isEnglish ? `${opt.label} recorded by the System` : `Gênero ${opt.label.toLowerCase()} registrado`,
+                        )}
+                        className={`flex min-h-[52px] items-center justify-center gap-2.5 rounded-xl border text-xs font-bold transition-all ${
+                          form.gender === opt.value
+                            ? 'border-purple-500 bg-purple-500/20 text-purple-200 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                            : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-lg">{opt.icon}</span>
+                        <span className="font-orbitron uppercase tracking-wider">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">
-                {l('Avaliação do Arquiteto', 'Architect Assessment')} · {currentQuestionIndex + 1} / {questions.length}
-              </span>
-              <div className="flex gap-1 justify-center">
-                {questions.map((_, i) => (
-                  <div key={i} className={`h-1 rounded-full transition-all duration-500 ${i < currentQuestionIndex ? 'bg-purple-400 w-10' : i === currentQuestionIndex ? 'bg-purple-500 w-14' : 'bg-purple-900/40 w-6'}`} />
+
+              <div className="pt-2 flex justify-end">
+                <TacticalButton
+                  onClick={handleSaveBasicInfo}
+                  variant="primary"
+                  accent="purple"
+                  displayFont
+                  className="min-h-[46px] px-6 text-xs"
+                >
+                  <span>{l('PRÓXIMO PASSO', 'NEXT STEP')}</span>
+                  <ChevronRight size={16} />
+                </TacticalButton>
+              </div>
+            </HudCard>
+          </motion.div>
+        )}
+
+        {/* ── FASE 2: PERFIL FÍSICO ── */}
+        {step === 'physical-profile' && (
+          <motion.div key="physical" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-lg w-full">
+            <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-5">
+              <StepHeader step={2} total={8} label={l('Análise Corporal', 'Body Analysis')} progress={ritualProgress} />
+
+              <div className="text-center space-y-1">
+                <h1 className="text-xl sm:text-2xl font-orbitron font-bold leading-tight">
+                  {l('Varredura Biomecânica', 'Biomechanical Baseline')}
+                </h1>
+                <p className="text-xs text-gray-400">
+                  {l('Métricas físicas ajustam o volume inicial e o cálculo calórico.', 'Physical metrics adjust starting load and calorie calculations.')}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2.5">
+                  {[
+                    { key: 'height', label: l('Altura (cm)', 'Height (cm)'), placeholder: '175', icon: <Ruler className="w-3 h-3" /> },
+                    { key: 'weightCurrent', label: l('Peso (kg)', 'Weight (kg)'), placeholder: '80', icon: <Weight className="w-3 h-3" /> },
+                    { key: 'weightTarget', label: l('Meta (kg)', 'Target (kg)'), placeholder: '75', icon: <Target className="w-3 h-3" /> },
+                  ].map(field => (
+                    <div key={field.key} className="space-y-1">
+                      <label className="flex items-center gap-1 text-[9px] font-orbitron text-purple-300 uppercase tracking-widest font-bold truncate">
+                        {field.icon} {field.label}
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        placeholder={field.placeholder}
+                        value={form[field.key as keyof FormData]}
+                        onChange={e => setField(field.key as keyof FormData, e.target.value)}
+                        className="w-full min-h-[46px] bg-black/50 border border-white/10 rounded-xl px-2 py-2 text-xs sm:text-sm text-center font-orbitron font-bold text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Objetivo Nutricional */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    {l('Objetivo Nutricional', 'Nutrition Goal')}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'lose', label: l('Déficit / Perder', 'Lose weight') },
+                      { value: 'maintain', label: l('Manter peso', 'Maintain weight') },
+                      { value: 'gain', label: l('Superávit / Ganhar', 'Gain weight') },
+                    ].map(goal => (
+                      <button
+                        key={goal.value}
+                        type="button"
+                        onClick={() => registerDecision('nutritionGoal', goal.value, goal.label)}
+                        className={`min-h-[44px] px-2 py-2 rounded-xl border text-[11px] font-bold transition-all ${
+                          form.nutritionGoal === goal.value
+                            ? 'border-purple-500 bg-purple-500/20 text-purple-200'
+                            : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        {goal.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Foco de Treino */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    {l('Foco de Treinamento', 'Training Focus')}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ['Musculação', 'Weightlifting'],
+                      ['Funcional', 'Functional'],
+                      ['Cardio / Endurance', 'Cardio / Endurance'],
+                      ['Calistenia', 'Calisthenics'],
+                      ['Esportes de Combate', 'Combat Sports'],
+                      ['Flexibilidade / Yoga', 'Flexibility / Yoga'],
+                    ].map(([focus, focusLabel]) => (
+                      <button
+                        key={focus}
+                        type="button"
+                        onClick={() => registerDecision('trainingFocus', focus, focus)}
+                        className={`min-h-[42px] px-3 py-2 rounded-xl border text-xs font-semibold transition-all text-left truncate ${
+                          form.trainingFocus === focus
+                            ? 'border-purple-500 bg-purple-500/20 text-purple-200'
+                            : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        {isEnglish ? focusLabel : focus}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de Ação com Voltar */}
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <TacticalButton
+                  onClick={() => setStep('basic-info')}
+                  variant="ghost"
+                  className="min-h-[46px] px-4 text-xs font-bold"
+                >
+                  <ChevronLeft size={16} />
+                  <span>{l('Voltar', 'Back')}</span>
+                </TacticalButton>
+
+                <TacticalButton
+                  onClick={handleSavePhysicalProfile}
+                  variant="primary"
+                  accent="purple"
+                  displayFont
+                  className="min-h-[46px] px-6 text-xs"
+                >
+                  <span>{l('PRÓXIMO PASSO', 'NEXT STEP')}</span>
+                  <ChevronRight size={16} />
+                </TacticalButton>
+              </div>
+            </HudCard>
+          </motion.div>
+        )}
+
+        {/* ── FASE 3: OBJETIVO PRINCIPAL ── */}
+        {step === 'main-goal' && (
+          <motion.div key="main-goal" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-lg w-full">
+            <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-5">
+              <StepHeader step={3} total={8} label={l('Missão Central', 'Core Mission')} progress={ritualProgress} />
+
+              <div className="text-center space-y-1">
+                <h1 className="text-xl sm:text-2xl font-orbitron font-bold leading-tight">
+                  {l('Qual é sua', 'What is your')} <span className="text-purple-400">{l('Missão Central', 'Core Mission')}</span>?
+                </h1>
+                <p className="text-xs text-gray-400">
+                  {l('Esta diretriz guiará suas primeiras quests na fenda.', 'This directive guides your first quests in the Rift.')}
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  { value: 'general', label: l('Evolução Geral', 'Overall Growth'), sub: l('Crescer em todas as áreas da vida com equilíbrio.', 'Grow across all life domains in balance.'), icon: <Star className="w-4 h-4 text-amber-400" /> },
+                  { value: 'health', label: l('Performance & Saúde', 'Performance & Health'), sub: l('Foco em condicionamento, energia e saúde física.', 'Focus on fitness, energy, and physical vitality.'), icon: <Dumbbell className="w-4 h-4 text-blue-400" /> },
+                  { value: 'finance', label: l('Independência Financeira', 'Financial Independence'), sub: l('Consistência em aportes e purificação de dívidas.', 'Contribution consistency and debt clearance.'), icon: <Target className="w-4 h-4 text-emerald-400" /> },
+                  { value: 'career', label: l('Carreira & Habilidades', 'Career & Skills'), sub: l('Dominar conhecimentos profundos e alta disciplina.', 'Master deep skills and high focus.'), icon: <Brain className="w-4 h-4 text-purple-400" /> },
+                ].map((opt, idx) => (
+                  <OptionCard
+                    key={opt.value}
+                    label={`${opt.label} — ${opt.sub}`}
+                    isSelected={form.mainGoal === opt.value}
+                    onClick={() => registerDecision(
+                      'mainGoal',
+                      opt.value,
+                      isEnglish ? `Core mission locked: ${opt.label}` : `Missão central travada: ${opt.label}`,
+                    )}
+                    icon={opt.icon}
+                    delay={idx * 0.05}
+                  />
                 ))}
               </div>
-              <AnimatePresence mode="wait">
-                <motion.h2
-                  key={currentQuestionIndex}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-xl md:text-2xl font-orbitron font-bold text-white leading-tight"
-                >
-                  {questions[currentQuestionIndex].title}
-                </motion.h2>
-              </AnimatePresence>
-            </div>
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentQuestionIndex}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.3 }}
-                className="w-full space-y-2.5"
-              >
+              {/* Botões com Voltar */}
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <TacticalButton
+                  onClick={() => setStep('physical-profile')}
+                  variant="ghost"
+                  className="min-h-[46px] px-4 text-xs font-bold"
+                >
+                  <ChevronLeft size={16} />
+                  <span>{l('Voltar', 'Back')}</span>
+                </TacticalButton>
+
+                <TacticalButton
+                  onClick={handleSaveMainGoal}
+                  disabled={!form.mainGoal}
+                  variant="primary"
+                  accent="purple"
+                  displayFont
+                  className="min-h-[46px] px-6 text-xs"
+                >
+                  <span>{l('PRÓXIMO PASSO', 'NEXT STEP')}</span>
+                  <ChevronRight size={16} />
+                </TacticalButton>
+              </div>
+            </HudCard>
+          </motion.div>
+        )}
+
+        {/* ── FASE 4: NÍVEL DE EXPERIÊNCIA ── */}
+        {step === 'experience-level' && (
+          <motion.div key="experience" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-lg w-full">
+            <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-5">
+              <StepHeader step={4} total={8} label={l('Calibração de Rank', 'Rank Calibration')} progress={ritualProgress} />
+
+              <div className="text-center space-y-1">
+                <h1 className="text-xl sm:text-2xl font-orbitron font-bold leading-tight">
+                  {l('Informe seu', 'Enter your initial')} <span className="text-purple-400">Rank</span> {l('inicial', 'rank')}
+                </h1>
+                <p className="text-xs text-gray-400">
+                  {l('Calibramos o desafio para você manter a consistência sem estafa.', 'We calibrate difficulty so you maintain daily streak without burnout.')}
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  { value: 'beginner', rank: 'E', label: l('Iniciante', 'Beginner'), sub: l('Construindo a base diária. Cada passo conta.', 'Building baseline habits. Every step counts.') },
+                  { value: 'intermediate', rank: 'C', label: l('Intermediário', 'Intermediate'), sub: l('Já possuo rotinas ativas. Quero acelerar o nível.', 'Already active. Want to accelerate growth.') },
+                  { value: 'advanced', rank: 'S', label: l('Avançado', 'Advanced'), sub: l('Alta disciplina e performance. Busco o limite máximo.', 'High performance discipline. Seeking max potential.') },
+                ].map((opt, idx) => (
+                  <OptionCard
+                    key={opt.value}
+                    label={`[Rank ${opt.rank}] ${opt.label} — ${opt.sub}`}
+                    isSelected={form.experienceLevel === opt.value}
+                    onClick={() => registerDecision(
+                      'experienceLevel',
+                      opt.value,
+                      isEnglish ? `Rank ${opt.rank} accepted by the System` : `Rank ${opt.rank} aceito pelo Sistema`,
+                    )}
+                    delay={idx * 0.05}
+                  />
+                ))}
+              </div>
+
+              {/* Botões com Voltar */}
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <TacticalButton
+                  onClick={() => setStep('main-goal')}
+                  variant="ghost"
+                  className="min-h-[46px] px-4 text-xs font-bold"
+                >
+                  <ChevronLeft size={16} />
+                  <span>{l('Voltar', 'Back')}</span>
+                </TacticalButton>
+
+                <TacticalButton
+                  onClick={handleSaveExperience}
+                  disabled={!form.experienceLevel}
+                  variant="primary"
+                  accent="purple"
+                  displayFont
+                  className="min-h-[46px] px-6 text-xs"
+                >
+                  <span>{l('AVANÇAR', 'CONTINUE')}</span>
+                  <ChevronRight size={16} />
+                </TacticalButton>
+              </div>
+            </HudCard>
+          </motion.div>
+        )}
+
+        {/* ── FASE 5: O ARQUITETO (INTRODUÇÃO) ── */}
+        {step === 'architect-intro' && (
+          <motion.div key="architect" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="max-w-xl w-full">
+            <HudCard variant="purple" corners radialGlow className="p-6 sm:p-8 text-center space-y-6">
+              <div className="size-16 mx-auto rounded-2xl bg-purple-900/40 border border-purple-500/50 flex items-center justify-center shadow-[0_0_30px_rgba(124,58,237,0.4)]">
+                <Lightbulb className="w-8 h-8 text-purple-300" />
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Transmissão Recebida</p>
+                <h2 className="text-2xl sm:text-3xl font-orbitron font-bold text-white">
+                  {l('Eu sou o', 'I am the')} <span className="text-purple-400">{l('Arquiteto', 'Architect')}</span>
+                </h2>
+              </div>
+
+              <div className="space-y-3.5 text-xs sm:text-sm text-gray-300 leading-relaxed max-w-md mx-auto">
+                <p>{l('Fui eu quem construiu o sistema das Fendas. Eu ofereço o caminho da evolução contínua.', 'I built the Gate System. I offer the path of continuous evolution.')}</p>
+                <p className="text-purple-200/90 italic font-semibold border-l-2 border-purple-500 pl-3.5 text-left my-2">
+                  “{l('Responda com honestidade às próximas 5 questões. O Sistema não mente — e você também não deveria.', 'Answer the next 5 questions honestly. The System does not lie — and neither should you.')}”
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <TacticalButton
+                  onClick={() => setStep('experience-level')}
+                  variant="ghost"
+                  className="min-h-[46px] px-4 text-xs font-bold"
+                >
+                  <ChevronLeft size={16} />
+                  <span>{l('Voltar', 'Back')}</span>
+                </TacticalButton>
+
+                <TacticalButton
+                  onClick={() => setStep('class-quiz')}
+                  variant="primary"
+                  accent="purple"
+                  displayFont
+                  className="min-h-[46px] px-6 text-xs"
+                >
+                  <span>{l('ACEITAR O DESAFIO', 'ACCEPT CHALLENGE')}</span>
+                  <ArrowRight size={16} />
+                </TacticalButton>
+              </div>
+            </HudCard>
+          </motion.div>
+        )}
+
+        {/* ── FASE 6: QUESTIONÁRIO DE CLASSES ── */}
+        {step === 'class-quiz' && (
+          <motion.div key="class-quiz" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-2xl w-full">
+            <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-6">
+              <StepHeader step={6} total={8} label={l('Avaliação do Sistema', 'System Assessment')} progress={ritualProgress} />
+
+              <div className="text-center space-y-2">
+                <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.25em] uppercase">
+                  {l('Questão', 'Question')} {currentQuestionIndex + 1} / {questions.length}
+                </span>
+                <h2 className="text-lg sm:text-xl font-orbitron font-bold text-white leading-snug max-w-xl mx-auto">
+                  {questions[currentQuestionIndex].title}
+                </h2>
+              </div>
+
+              <div className="space-y-2.5">
                 {questions[currentQuestionIndex].options.map((opt, idx) => (
                   <OptionCard
                     key={opt.id}
                     label={opt.label}
                     isSelected={currentAnswer === opt.id}
                     onClick={() => handleSelectQuizOption(opt.id)}
-                    delay={idx * 0.055}
+                    delay={idx * 0.04}
                   />
                 ))}
-              </motion.div>
-            </AnimatePresence>
-            <DecisionFeedback message={decisionFeedback} />
+              </div>
 
-            <AnimatePresence>
-              {currentAnswer && (
-                <motion.button
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
+              {/* Botões de Navegação do Quiz com Voltar */}
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <TacticalButton
+                  onClick={handlePrevQuestion}
+                  variant="ghost"
+                  className="min-h-[46px] px-4 text-xs font-bold"
+                >
+                  <ChevronLeft size={16} />
+                  <span>{l('Voltar', 'Back')}</span>
+                </TacticalButton>
+
+                <TacticalButton
                   onClick={handleNextQuestion}
-                  className="btn-next-step"
+                  disabled={!currentAnswer}
+                  variant="primary"
+                  accent="purple"
+                  displayFont
+                  className="min-h-[46px] px-6 text-xs"
                 >
                   <span>
                     {currentQuestionIndex === questions.length - 1
                       ? l('REVELAR MEU CAMINHO', 'REVEAL MY PATH')
                       : l('PRÓXIMA QUESTÃO', 'NEXT QUESTION')}
                   </span>
-                  <ChevronRight strokeWidth={3} />
-                </motion.button>
-              )}
-            </AnimatePresence>
+                  <ChevronRight size={16} />
+                </TacticalButton>
+              </div>
+            </HudCard>
           </motion.div>
         )}
 
-        {/* ── TELA DE DESPERTAR ── */}
+        {/* ── FASE 7: SÍNTESE DE MANA (AWAKENING) ── */}
         {step === 'awakening' && (
-          <motion.div
-            key="awakening"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="relative max-w-lg w-full text-center space-y-8"
-          >
-            {/* Glow de fundo pulsante */}
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              animate={{ opacity: [0.3, 0.7, 0.3] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-purple-900/30 blur-[100px]" />
-            </motion.div>
-
-            {/* Anel pulsante */}
-            <div className="relative flex items-center justify-center mx-auto w-32 h-32">
-              {[1, 2, 3].map(i => (
+          <motion.div key="awakening" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-md w-full text-center space-y-6 my-auto">
+            <HudCard variant="purple" corners radialGlow className="p-8 space-y-6">
+              <div className="relative flex items-center justify-center mx-auto w-28 h-28">
                 <motion.div
-                  key={i}
                   className="absolute inset-0 rounded-full border border-purple-500/40"
-                  animate={{ scale: [1, 1.5 + i * 0.3], opacity: [0.6, 0] }}
-                  transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.4, ease: 'easeOut' }}
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.6, 0.2, 0.6] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                 />
-              ))}
-              <div className="w-24 h-24 rounded-full bg-purple-900/60 border border-purple-500/60 flex items-center justify-center shadow-[0_0_60px_rgba(124,58,237,0.6)]">
-                <Sparkles className="w-12 h-12 text-purple-300" />
+                <div className="size-20 rounded-full bg-purple-900/60 border border-purple-500/60 flex items-center justify-center shadow-[0_0_40px_rgba(124,58,237,0.5)]">
+                  <Sparkles className="w-10 h-10 text-purple-300 animate-pulse" />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <p className="text-[10px] font-orbitron text-purple-500 tracking-[0.4em] uppercase">Sistema de Avaliação · Solo Leveling</p>
-              <h2 className="text-2xl font-orbitron font-bold text-white">Analisando Caçador...</h2>
-
-              {/* Mensagens de loading */}
-              <div className="h-8 flex items-center justify-center">
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={awakeningMsgIdx}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-sm text-purple-300/70 font-mono"
-                  >
+              <div className="space-y-2">
+                <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Avaliação de Mana em Curso</p>
+                <h2 className="text-xl font-orbitron font-bold text-white">{l('Analisando Caçador...', 'Analyzing Hunter...')}</h2>
+                <div className="h-6 flex items-center justify-center">
+                  <p className="text-xs text-purple-300 font-mono">
                     &gt; {awakeningMessages[awakeningMsgIdx]}
-                  </motion.p>
-                </AnimatePresence>
+                  </p>
+                </div>
               </div>
 
-              {/* Barra de progresso */}
-              <div className="w-64 mx-auto h-1 bg-purple-900/40 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-purple-600 to-blue-500 rounded-full"
-                  initial={{ width: '0%' }}
-                  animate={{ width: `${((awakeningMsgIdx + 1) / awakeningMessages.length) * 100}%` }}
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
-                />
-              </div>
-
-              {/* Linhas de lore */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.5 }}
-                className="text-xs text-gray-600 italic mt-4"
-              >
-                "O sistema não escolhe os fracos. Ele revela os escolhidos."
-              </motion.p>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 2.5 }}
-                className="text-[10px] text-gray-700 font-mono"
-              >
-                — O Arquiteto, Solo Leveling
-              </motion.p>
-            </div>
+              <NeonProgressBar value={awakeningMsgIdx + 1} max={awakeningMessages.length} variant="xp" size="sm" />
+            </HudCard>
           </motion.div>
         )}
 
-        {/* ── SELEÇÃO DE CLASSE ── */}
+        {/* ── FASE 8: SELEÇÃO & DESPERTAR DE CLASSE ── */}
         {step === 'class-selection' && (
-          <motion.div
-            key="classes"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-5xl w-full text-center space-y-10"
-          >
-            {/* Header */}
-            <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-              <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Resultado da Avaliação · Sistema do Arquiteto</p>
-              <h1 className="text-3xl md:text-4xl font-orbitron font-bold text-white tracking-tight">
-                Classe despertada:{' '}
-                <motion.span
-                  className="text-purple-400"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: [0.8, 1.12, 1] }}
-                  transition={{ delay: 0.5, duration: 0.65, type: 'spring' }}
-                >
-                  {revealedClass}
-                </motion.span>
+          <motion.div key="classes" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="max-w-5xl w-full space-y-6">
+            
+            {/* Cabeçalho */}
+            <div className="text-center space-y-1.5">
+              <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">
+                {l('Resultado da Avaliação · Solo Leveling', 'Assessment Result · Solo Leveling')}
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-orbitron font-black text-white">
+                {l('Classe Despertada:', 'Awakened Class:')} <span className="text-purple-400">{revealedClass}</span>
               </h1>
-              <p className="text-gray-500 max-w-lg mx-auto text-sm leading-relaxed">
-                O Sistema identificou sua essência. Confirme o despertar ou escolha outro caminho antes de entrar na Fenda.
+              <p className="text-xs sm:text-sm text-gray-400 max-w-lg mx-auto">
+                {l('O Sistema identificou sua essência. Confirme o despertar ou selecione sua vocação preferida.', 'The System recognized your essence. Confirm or select your preferred vocation.')}
               </p>
-              <p className="text-[11px] text-purple-600/60 italic font-mono">
-                "A fraqueza não é uma limitação. É um ponto de partida." — Arquiteto, Solo Leveling
-              </p>
-            </motion.div>
+            </div>
 
+            {/* Card Destaque da Classe Recomendada */}
             {revealedClassData && (
-              <motion.div
-                initial={{ opacity: 0, y: 18, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ delay: 0.35, duration: 0.55, type: 'spring', stiffness: 170, damping: 18 }}
-                className="relative mx-auto grid max-w-3xl overflow-hidden rounded-3xl border border-purple-500/30 bg-purple-950/20 p-4 text-left shadow-[0_0_60px_rgba(124,58,237,0.28)] md:grid-cols-[180px_1fr] md:p-5"
-              >
-                <motion.div
-                  className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_18%_28%,rgba(124,58,237,0.28),transparent_34%),linear-gradient(120deg,transparent,rgba(255,255,255,0.08),transparent)]"
-                  animate={{ opacity: [0.45, 0.8, 0.45] }}
-                  transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                />
+              <HudCard variant="purple" corners radialGlow className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
                 <div
                   onClick={() => {
                     setPreviewClassId(revealedClassData.id);
                     setPreviewRank('E');
                   }}
-                  className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40 cursor-pointer group/img transition-all"
+                  className="md:col-span-4 relative aspect-[4/3] md:aspect-square rounded-2xl overflow-hidden border border-white/10 bg-black/40 cursor-pointer group"
                 >
                   <img
                     src={revealedClassData.image}
                     alt={revealedClassData.name}
                     loading="lazy"
                     decoding="async"
-                    className="h-56 w-full object-cover md:h-full transition-transform duration-500 group-hover/img:scale-105"
-                    style={{ imageRendering: 'auto' }}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-3 rounded-full border border-purple-400/40 bg-purple-600/30 px-3 py-1 text-[9px] font-orbitron uppercase tracking-[0.2em] text-purple-100">
-                    Desbloqueado
+                  <div className="absolute bottom-2.5 left-2.5 rounded-full border border-purple-400/40 bg-purple-600/40 px-2.5 py-0.5 text-[9px] font-orbitron uppercase text-purple-100 font-bold">
+                    {l('Despertar Recomendado', 'Recommended Awakening')}
                   </div>
-                  <div className="absolute top-3 right-3 rounded-full p-2 bg-black/60 border border-white/10 text-white/70 hover:text-white hover:bg-black/80 transition-all opacity-0 group-hover/img:opacity-100 md:opacity-100">
-                    <Maximize2 className="w-4 h-4" />
+                  <div className="absolute top-2.5 right-2.5 rounded-full p-1.5 bg-black/60 text-white/70 group-hover:text-white transition-colors">
+                    <Maximize2 size={14} />
                   </div>
                 </div>
-                <div className="relative flex flex-col justify-center p-4 md:p-6">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/40 shadow-inner">
+
+                <div className="md:col-span-8 space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-black/40">
                       {revealedClassData.icon}
                     </div>
                     <div>
-                      <p className="text-[10px] font-orbitron uppercase tracking-[0.24em] text-purple-400">Conquista de despertar</p>
-                      <h2 className={`font-orbitron text-2xl font-bold ${revealedClassData.accent}`}>{revealedClassData.name}</h2>
+                      <span className="text-[10px] font-orbitron text-purple-400 uppercase tracking-widest">{revealedClassData.tagline}</span>
+                      <h2 className={`text-xl sm:text-2xl font-orbitron font-black ${revealedClassData.accent}`}>{revealedClassData.name}</h2>
                     </div>
                   </div>
-                  <p className="text-sm leading-relaxed text-gray-400">{revealedClassData.description}</p>
-                  <div className="mt-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
-                    <p className="mb-1 text-[9px] font-orbitron uppercase tracking-[0.22em] text-gray-600">Atributos iniciais</p>
-                    <p className="font-mono text-xs tracking-wider text-purple-200">{revealedClassData.stats}</p>
-                  </div>
-                  <div className="mt-4 flex items-center gap-2 text-[10px] font-orbitron uppercase tracking-[0.2em] text-purple-300">
-                    <Trophy className="w-4 h-4" />
-                    Sua classe acabou de despertar.
+
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">{revealedClassData.description}</p>
+                  
+                  <div className="rounded-xl border border-white/10 bg-black/40 px-3.5 py-2 inline-block">
+                    <span className="text-[9px] font-orbitron text-gray-400 uppercase tracking-widest mr-2">{l('Atributos:', 'Stats:')}</span>
+                    <span className="font-mono text-xs font-bold text-purple-200">{revealedClassData.stats}</span>
                   </div>
                 </div>
-              </motion.div>
+              </HudCard>
             )}
 
-            {/* Grid de classes */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {classes.map((c, idx) => {
-                const isSuggested = revealedClass === c.id;
+            {/* Grid com Todas as 5 Classes */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {classes.map(c => {
                 const isSelected = selectedClass === c.id;
+                const isSuggested = revealedClass === c.id;
                 return (
-                  <motion.button
+                  <button
                     key={c.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ scale: 1.05, y: -8, transition: { type: 'spring', stiffness: 400, damping: 15 } }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ opacity: { delay: 0.15 + idx * 0.08 }, y: { delay: 0.15 + idx * 0.08 } }}
+                    type="button"
                     onClick={() => {
                       setSelectedClass(c.id);
-                      setDecisionFeedback(isEnglish ? `${c.name} selected for awakening` : `${c.name} selecionado para despertar`);
+                      setDecisionFeedback(isEnglish ? `${c.name} selected` : `${c.name} selecionado`);
                     }}
-                    className={`
-                      relative glass-panel p-5 flex flex-col items-center gap-4 group
-                      border-2 transition-colors duration-200 ${c.color} ${isSuggested ? c.glow : ''}
-                      ${isSelected ? 'ring-2 ring-purple-500 ring-offset-2 ring-offset-[#0B0B0F]' : ''}
-                    `}
+                    className={`rounded-2xl border p-3.5 text-center transition-all flex flex-col justify-between gap-3 ${
+                      isSelected
+                        ? 'border-purple-500 bg-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.3)] ring-1 ring-purple-500'
+                        : 'border-white/10 bg-[#0F0F13] hover:border-white/20'
+                    }`}
                   >
-                    {isSuggested && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.5 }}
-                        className="absolute -top-3 bg-purple-600 text-white text-[8px] font-orbitron uppercase tracking-widest px-2.5 py-1 rounded-full shadow-[0_0_12px_rgba(124,58,237,0.6)]"
-                      >
-                        ✦ {l('Recomendado', 'Recommended')}
-                      </motion.div>
-                    )}
-
-                    <div className="p-3 rounded-full bg-black/40 border border-white/10 shadow-inner">
-                      {c.icon}
-                    </div>
-
-                    <div className="space-y-1 text-center">
-                      <h3 className={`font-orbitron font-bold text-base ${c.accent}`}>{c.name}</h3>
-                      <p className="text-[9px] text-gray-500 uppercase tracking-widest">{c.tagline}</p>
-                    </div>
-
-                    {/* Imagem ou placeholder */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewClassId(c.id);
-                        setPreviewRank('E');
-                      }}
-                      className="w-full aspect-[3/4] relative rounded-lg overflow-hidden border border-white/10 group-hover:border-white/20 transition-colors cursor-zoom-in group/img"
-                    >
-                      {c.image ? (
-                        <>
-                          <img
-                            src={c.image}
-                            alt={c.name}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100"
-                            style={{ imageRendering: 'auto' }}
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                          <div className="absolute top-2 right-2 rounded-full p-1.5 bg-black/60 border border-white/10 text-white/50 group-hover/img:text-white transition-all opacity-0 group-hover/img:opacity-100">
-                            <Maximize2 className="w-3 h-3" />
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-black/40 gap-2">
-                          {c.icon}
-                          <p className="text-[9px] text-gray-600 font-orbitron uppercase tracking-widest">Em breve</p>
-                        </div>
+                    <div className="space-y-1.5">
+                      {isSuggested && (
+                        <span className="rounded bg-purple-600/80 px-1.5 py-0.5 text-[8px] font-orbitron uppercase text-white font-bold block truncate">
+                          ✦ {l('Sugerida', 'Suggested')}
+                        </span>
                       )}
+                      <div className="relative aspect-[3/4] rounded-xl overflow-hidden border border-white/10 mx-auto w-full">
+                        <img
+                          src={c.image}
+                          alt={c.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <h3 className={`text-xs sm:text-sm font-black font-orbitron ${c.accent}`}>{c.name}</h3>
+                      <p className="text-[9px] text-gray-500 line-clamp-2">{c.tagline}</p>
                     </div>
 
-                    <p className="text-[8px] text-gray-600 font-mono tracking-wider">{c.stats}</p>
-
-                    <p className="text-[9px] text-gray-500 leading-relaxed text-center">{c.description}</p>
-                  </motion.button>
+                    <div className="pt-1">
+                      <span className={`block w-full py-1 rounded text-[9px] font-bold font-orbitron uppercase ${
+                        isSelected ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-400'
+                      }`}>
+                        {isSelected ? l('Selecionada ✓', 'Selected ✓') : l('Escolher', 'Choose')}
+                      </span>
+                    </div>
+                  </button>
                 );
               })}
             </div>
 
-            <DecisionFeedback message={decisionFeedback} />
+            {/* Ações Inferiores com Voltar e Despertar */}
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <TacticalButton
+                onClick={() => {
+                  setCurrentQuestionIndex(4);
+                  setStep('class-quiz');
+                }}
+                variant="ghost"
+                className="min-h-[46px] px-5 text-xs font-bold w-full sm:w-auto"
+              >
+                <ChevronLeft size={16} />
+                <span>{l('Rever Perguntas', 'Review Questions')}</span>
+              </TacticalButton>
 
-            {/* Botão de Confirmação */}
-            <div className="flex justify-center pt-4">
-              <AnimatePresence>
-                {selectedClass && (
-                  <motion.button
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    onClick={handleConfirmClass}
-                    className="btn-next-step"
-                  >
-                    <span>{l('DESPERTAR PODER', 'AWAKEN POWER')}</span>
-                    <Sparkles strokeWidth={2} />
-                  </motion.button>
-                )}
-              </AnimatePresence>
+              <TacticalButton
+                onClick={handleConfirmClass}
+                disabled={!selectedClass || isSubmitting}
+                variant="primary"
+                accent="purple"
+                displayFont
+                className="min-h-[48px] px-8 text-xs font-black w-full sm:w-auto"
+              >
+                <Sparkles size={16} />
+                <span>{isSubmitting ? l('DESPERTANDO...', 'AWAKENING...') : l('DESPERTAR PODER', 'AWAKEN POWER')}</span>
+              </TacticalButton>
             </div>
           </motion.div>
         )}
 
-        {/* Lightbox para Visualização das Artes e Ranks */}
+        {/* Modal Lightbox de Preview dos Ranks E-S */}
         <AnimatePresence>
           {previewClassId && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               onClick={() => setPreviewClassId(null)}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0B0F]/95 p-4 md:p-6 backdrop-blur-md overflow-y-auto"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md overflow-y-auto"
             >
               <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-4xl rounded-3xl border border-purple-500/30 bg-[#13131A] p-5 shadow-[0_0_80px_rgba(124,58,237,0.35)] md:p-8 grid md:grid-cols-12 gap-6 items-center"
+                className="relative w-full max-w-2xl rounded-2xl border border-purple-500/40 bg-[#0F0F13] p-5 shadow-2xl space-y-4"
               >
-                {/* Botão Fechar */}
                 <button
+                  type="button"
                   onClick={() => setPreviewClassId(null)}
-                  className="absolute top-4 right-4 rounded-full border border-purple-500/20 bg-purple-950/40 p-2 text-purple-400 hover:text-white hover:border-purple-400/50 hover:bg-purple-900/60 transition-all z-10"
+                  className="absolute top-3.5 right-3.5 rounded-lg border border-white/10 bg-white/5 p-1.5 text-gray-400 hover:text-white"
                 >
-                  <X className="w-5 h-5" />
+                  <X size={18} />
                 </button>
 
-                {/* Lado Esquerdo: Imagem da Classe no Rank Selecionado */}
-                <div className="md:col-span-6 relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-black/60 shadow-[0_0_30px_rgba(124,58,237,0.15)] flex items-center justify-center">
-                  <motion.img
-                    key={`${previewClassId}-${previewRank}`}
-                    initial={{ opacity: 0, scale: 0.95, filter: 'blur(5px)' }}
-                    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                    transition={{ duration: 0.4 }}
-                    src={`/optimized/Classes/${previewClassId}/Rank ${previewRank}.jpg`}
-                    alt={`${previewClassId} Rank ${previewRank}`}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                    style={{ imageRendering: 'auto' }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                  
-                  {/* Badge do Rank */}
-                  <div className={`absolute bottom-4 left-4 rank-badge rank-${previewRank.toLowerCase()} text-xs font-orbitron tracking-widest px-3 py-1.5`}>
-                    RANK {previewRank}
-                  </div>
-                </div>
-
-                {/* Lado Direito: Informações e Seletores */}
-                <div className="md:col-span-6 flex flex-col justify-between h-full space-y-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Evolução de Classe</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <div className="relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-black/50">
+                    <img
+                      src={`/optimized/Classes/${previewClassId}/Rank ${previewRank}.jpg`}
+                      alt={`${previewClassId} Rank ${previewRank}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-2.5 left-2.5 rounded bg-black/80 border border-purple-400/40 px-2 py-0.5 text-[10px] font-orbitron font-black text-purple-300">
+                      RANK {previewRank}
                     </div>
-                    <h2 className="font-orbitron text-3xl font-extrabold text-white tracking-tight uppercase">
-                      {classes.find(c => c.id === previewClassId)?.name}
-                    </h2>
-                    <p className="text-sm font-medium text-purple-300/80 font-orbitron tracking-wider mt-1">
-                      {classes.find(c => c.id === previewClassId)?.tagline}
-                    </p>
                   </div>
 
-                  {/* Seletor de Ranks */}
                   <div className="space-y-3">
-                    <p className="text-[10px] font-orbitron uppercase tracking-widest text-gray-500">Selecione o Nível de Rank</p>
-                    <div className="grid grid-cols-6 gap-2">
-                      {(['E', 'D', 'C', 'B', 'A', 'S'] as const).map((rk) => {
-                        const isCurrent = previewRank === rk;
-                        return (
+                    <div>
+                      <h3 className="text-xl font-black font-orbitron uppercase text-white">
+                        {classes.find(c => c.id === previewClassId)?.name}
+                      </h3>
+                      <p className="text-xs text-purple-300/80 font-orbitron">{classes.find(c => c.id === previewClassId)?.tagline}</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-orbitron text-gray-400 uppercase tracking-widest">{l('Nível de Rank:', 'Rank Level:')}</span>
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {(['E', 'D', 'C', 'B', 'A', 'S'] as const).map(rk => (
                           <button
                             key={rk}
+                            type="button"
                             onClick={() => setPreviewRank(rk)}
-                            className={`
-                              py-2.5 rounded-xl font-orbitron text-sm font-bold border transition-all duration-200
-                              ${isCurrent
-                                ? 'bg-purple-600 border-purple-400 text-white shadow-[0_0_15px_rgba(124,58,237,0.6)] scale-105'
-                                : 'bg-purple-950/20 border-purple-900/40 text-purple-300/50 hover:border-purple-500 hover:text-purple-300'}
-                            `}
+                            className={`py-1.5 rounded-lg text-xs font-black font-orbitron border transition-all ${
+                              previewRank === rk
+                                ? 'border-purple-400 bg-purple-500/30 text-white'
+                                : 'border-white/10 bg-white/5 text-gray-400'
+                            }`}
                           >
                             {rk}
                           </button>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Descrição Dinâmica do Rank */}
-                  <div className="rounded-2xl border border-white/10 bg-black/40 p-5 space-y-2">
-                    <p className="text-[9px] font-orbitron uppercase tracking-[0.2em] text-purple-400">Atributo & Potencial de Mana</p>
-                    <p className="text-sm text-gray-300 leading-relaxed min-h-[72px]">
-                      {rankDescriptions[previewClassId]?.[previewRank] || ""}
-                    </p>
-                  </div>
-
-                  <div className="text-[10px] text-gray-600 font-mono tracking-wider text-center md:text-left">
-                    Use o seletor para vislumbrar seu poder futuro no Rank S.
+                    <div className="p-3 rounded-xl border border-white/10 bg-black/40">
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        {rankDescriptions[previewClassId]?.[previewRank] || ''}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </motion.div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
+
       </AnimatePresence>
+
     </div>
   );
 }

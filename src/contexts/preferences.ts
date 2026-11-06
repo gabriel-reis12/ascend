@@ -17,6 +17,7 @@ export const translations = {
   'nav.nutrition': { 'pt-BR': 'Nutrição', 'en-US': 'Nutrition' },
   'nav.fortuna': { 'pt-BR': 'Fortuna', 'en-US': 'Fortune' },
   'nav.rest': { 'pt-BR': 'Descanso', 'en-US': 'Recovery' },
+  'nav.trophies': { 'pt-BR': 'Conquistas', 'en-US': 'Trophies' },
   'nav.settings': { 'pt-BR': 'Ajustes', 'en-US': 'Settings' },
   'common.active': { 'pt-BR': 'Ativo', 'en-US': 'Active' },
   'common.status': { 'pt-BR': 'Status', 'en-US': 'Status' },

@@ -13,6 +13,7 @@ import {
   Skull,
   Coins,
   Moon,
+  Trophy,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,7 @@ const navItems = [
   { path: '/nutrition', labelKey: 'nav.nutrition' as const, icon: Apple },
   { path: '/fortuna', labelKey: 'nav.fortuna' as const, icon: Coins },
   { path: '/rest', labelKey: 'nav.rest' as const, icon: Moon },
+  { path: '/trophies', labelKey: 'nav.trophies' as const, icon: Trophy },
   { path: '/settings', labelKey: 'nav.settings' as const, icon: Settings },
 ];
 

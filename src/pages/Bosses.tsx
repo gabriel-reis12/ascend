@@ -26,8 +26,19 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
-import { useBossStore, BOSS_LIST } from '@/stores/useBossStore';
+import { 
+  useBossStore, 
+  BOSS_LIST, 
+  getBossRaidDeadline, 
+  calculateRaidRemainingTime, 
+  getRaidLifecycleState, 
+  formatRaidDeadlineLocal 
+} from '@/stores/useBossStore';
 import { usePreferences } from '@/contexts/preferences';
+import { HudCard } from '@/components/ui/hud-card';
+import type { HudCardVariant } from '@/components/ui/hud-card';
+import { TacticalButton } from '@/components/ui/tactical-button';
+import { RankBadge } from '@/components/ui/rank-badge';
 
 const EN_BOSS_COPY: Record<string, {
   name: string;
@@ -99,6 +110,7 @@ export function Bosses() {
   const attackActiveBoss = useBossStore((state) => state.attackActiveBoss);
   const purifyActiveBoss = useBossStore((state) => state.purifyActiveBoss);
   const resetBattle = useBossStore((state) => state.resetBattle);
+  const retryExpiredBattle = useBossStore((state) => state.retryExpiredBattle);
   const { language, t } = usePreferences();
   const l = (pt: string, en: string) => language === 'en-US' ? en : pt;
   const reduceMotion = useReducedMotion();
@@ -107,6 +119,7 @@ export function Bosses() {
     : null;
   const [manualAttackUsedToday, setManualAttackUsedToday] = useState(false);
   const [purifying, setPurifying] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [showAttackFeed, setShowAttackFeed] = useState(false);
   const [feedDamage, setFeedDamage] = useState(0);
   const [feedCritical, setFeedCritical] = useState(false);
@@ -118,8 +131,9 @@ export function Bosses() {
     time: string;
   }>>([]);
 
+  // Atualização em tempo real do temporizador a cada 1 segundo (1000ms)
   useEffect(() => {
-    const timer = window.setInterval(() => setRaidReferenceTime(Date.now()), 60_000);
+    const timer = window.setInterval(() => setRaidReferenceTime(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -189,7 +203,7 @@ export function Bosses() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-gray-500 uppercase tracking-widest">
+        <p className="text-gray-500 uppercase tracking-widest font-orbitron">
           {l('Acesso restrito — Faça login para entrar na fenda.', 'Restricted access — Sign in to enter the Rift.')}
         </p>
       </div>
@@ -209,19 +223,32 @@ export function Bosses() {
         streak: 'streaks',
       }[bossDef.weaknessCategory] || bossDef.weaknessCategory)
     : bossDef?.weaknessCategory;
+
   const hpPercent = activeBattle ? (activeBattle.current_hp / activeBattle.max_hp) * 100 : 0;
   const damageDealt = activeBattle ? activeBattle.max_hp - activeBattle.current_hp : 0;
-  const raidDeadline = activeBattle
-    ? new Date(new Date(activeBattle.started_at).getTime() + (bossDef?.targetDays ?? 7) * 24 * 60 * 60 * 1000)
-    : null;
-  const remainingMs = raidDeadline ? Math.max(0, raidDeadline.getTime() - raidReferenceTime) : 0;
-  const remainingDays = Math.floor(remainingMs / (24 * 60 * 60 * 1000));
-  const remainingHours = Math.floor((remainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+
+  // Cálculo determinístico do prazo e contagem regressiva
+  const raidDeadline = activeBattle ? getBossRaidDeadline(activeBattle) : null;
+  const remaining = calculateRaidRemainingTime(raidDeadline, raidReferenceTime);
+  const lifecycleState = getRaidLifecycleState(activeBattle, raidReferenceTime);
+  const isRaidExpired = lifecycleState === 'expired_loss';
+  const isCriticalDeadline = remaining.isCritical && !remaining.isExpired && Boolean(activeBattle && activeBattle.current_hp > 0);
+  const formattedDeadlineSaoPaulo = formatRaidDeadlineLocal(raidDeadline, language);
+
   const raidRisk = hpPercent > 70 ? t('bosses.high') : hpPercent > 30 ? t('bosses.moderate') : t('bosses.controlled');
+
+  // Determinar o tom do card do cabeçalho
+  const headerCardVariant: HudCardVariant = isRaidExpired
+    ? 'crimson'
+    : lifecycleState === 'boss_defeated'
+      ? 'gold'
+      : isCriticalDeadline
+        ? 'gold'
+        : 'purple';
 
   // Handler para simular um ataque leve (para testes do usuário)
   const handleTestAttack = async () => {
-    if (!user.id || !activeBattle || activeBattle.current_hp <= 0 || manualAttackUsedToday) return;
+    if (!user.id || !activeBattle || activeBattle.current_hp <= 0 || isRaidExpired || manualAttackUsedToday) return;
     await attackActiveBoss(user.id, 15, 'workout');
     if (manualAttackKey) {
       localStorage.setItem(manualAttackKey, new Date().toLocaleDateString('en-CA'));
@@ -240,10 +267,18 @@ export function Bosses() {
     }
   };
 
-  // Busca conquistas do usuário para saber quais bosses já foram derrotados
-  // Verificamos no store de conquistas locais ou deduzimos a partir da BOSS_LIST e activeBattle
-  // Para mostrar a galeria de troféus, listaremos os bosses e marcaremos como derrotados os que
-  // têm IDs anteriores ao boss ativo, ou se já derrotou a campanha inteira.
+  // Handler para reiniciar um ciclo após prazo expirado
+  const handleRetryExpired = async () => {
+    if (!user.id) return;
+    setRetrying(true);
+    try {
+      await retryExpiredBattle(user.id);
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  // Status de cada chefe para a galeria
   const getBossStatus = (bossId: string) => {
     if (!activeBattle) return bossLoading ? 'locked' : 'locked';
 
@@ -270,25 +305,42 @@ export function Bosses() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Cabeçalho da Fenda */}
-      <div className="relative overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-6 shadow-[0_0_28px_rgba(168,85,247,0.07)]">
+      {/* Cabeçalho da Fenda HUD v2 */}
+      <HudCard variant={headerCardVariant} corners className="p-5 sm:p-6 shadow-[0_0_28px_rgba(168,85,247,0.08)]">
         <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_1.2fr] xl:items-center">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-xs font-bold text-purple-300">
-                {t('bosses.weeklyRaid')}
-              </span>
-              <span className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-300">
+              {isRaidExpired ? (
+                <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-300">
+                  {l('PRAZO ENCERRADO · CHEFE ESCAPOU', 'DEADLINE EXPIRED · BOSS ESCAPED')}
+                </span>
+              ) : lifecycleState === 'boss_defeated' ? (
+                <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-300">
+                  {l('ENTIDADE PURIFICADA · VITÓRIA', 'ENTITY PURIFIED · VICTORY')}
+                </span>
+              ) : isCriticalDeadline ? (
+                <span className="rounded-md border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-300 animate-pulse">
+                  {l('ALERTA: PRAZO CRÍTICO (<24H)', 'ALERT: CRITICAL DEADLINE (<24H)')}
+                </span>
+              ) : (
+                <span className="rounded-md border border-purple-500/20 bg-purple-500/10 px-2.5 py-1 text-xs font-bold text-purple-300">
+                  {t('bosses.weeklyRaid')}
+                </span>
+              )}
+              <span className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-xs font-bold text-cyan-300">
                 {t('bosses.synced')}
               </span>
             </div>
             <h1 className="mt-3 text-2xl font-black uppercase tracking-wider text-white sm:text-3xl font-orbitron">
               {t('bosses.title')}
             </h1>
-            <p className="mt-2 text-sm leading-relaxed text-gray-400">
-              {l('Caçador', 'Hunter')} <span className="font-bold text-white">{hunterStore.fullName || hunterStore.username}</span> · Rank <span className="text-amber-300">{hunterStore.rank}</span> · {l('Classe', 'Class')} <span className="text-purple-300">{hunterStore.hunterClass || l('Nenhuma', 'None')}</span>
-            </p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-sm leading-relaxed text-slate-300">
+              <RankBadge rank={hunterStore.rank} size="sm" showLabel={false} />
+              <span>
+                {l('Caçador', 'Hunter')} <strong className="text-white">{hunterStore.fullName || hunterStore.username}</strong> · Rank <strong className="text-amber-300">{hunterStore.rank}</strong> · {l('Classe', 'Class')} <strong className="text-purple-300">{hunterStore.hunterClass || l('Nenhuma', 'None')}</strong>
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -296,30 +348,51 @@ export function Bosses() {
               { label: t('bosses.weekBoss'), value: localizedBoss?.name || bossDef?.name || '...', icon: Crown, tone: 'text-purple-300' },
               { label: t('bosses.hpRemaining'), value: activeBattle ? `${activeBattle.current_hp} / ${activeBattle.max_hp}` : '--', icon: Heart, tone: 'text-rose-300' },
               { label: t('bosses.damageDealt'), value: activeBattle ? `${damageDealt} HP` : '--', icon: Swords, tone: 'text-amber-300' },
-              { label: t('bosses.deadline'), value: activeBattle ? `${remainingDays}d ${remainingHours}h` : '--', icon: Timer, tone: 'text-blue-300' },
+              {
+                label: t('bosses.deadline'),
+                value: activeBattle
+                  ? isRaidExpired
+                    ? `00d 00h 00m 00s (${l('Expirado', 'Expired')})`
+                    : lifecycleState === 'boss_defeated'
+                      ? l('Purificado!', 'Purified!')
+                      : remaining.formattedString
+                  : '--',
+                icon: isRaidExpired ? ShieldAlert : Timer,
+                tone: isRaidExpired
+                  ? 'text-rose-400 font-mono font-black'
+                  : lifecycleState === 'boss_defeated'
+                    ? 'text-emerald-300 font-mono font-black'
+                    : isCriticalDeadline
+                      ? 'text-amber-300 font-mono font-black animate-pulse'
+                      : 'text-cyan-300 font-mono font-black',
+                subtext: raidDeadline ? `${l('Até', 'Ends')} ${formattedDeadlineSaoPaulo}` : undefined,
+              },
               { label: t('bosses.reward'), value: bossDef ? `+${bossDef.xpReward} XP` : '--', icon: Gift, tone: 'text-emerald-300' },
               { label: t('bosses.titleReward'), value: localizedBoss?.titleReward || bossDef?.titleReward || '--', icon: Award, tone: 'text-yellow-300' },
             ].map(item => (
-              <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3 transition-colors hover:border-white/10">
+              <div key={item.label} className="rounded-xl border border-white/5 bg-black/35 p-3 transition-colors hover:border-white/10">
                 <item.icon className={`size-4 ${item.tone}`} />
-                <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
-                <p className={`mt-1 truncate text-sm font-bold ${item.tone}`}>{item.value}</p>
+                <p className="mt-2 text-xs font-medium text-slate-400">{item.label}</p>
+                <p className={`mt-1 truncate text-xs sm:text-sm font-bold ${item.tone}`}>{item.value}</p>
+                {item.subtext && (
+                  <p className="mt-0.5 truncate text-[10px] text-slate-500 font-mono">{item.subtext}</p>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {activeBattle && activeBattle.current_hp > 0 && (
+        {activeBattle && activeBattle.current_hp > 0 && !isRaidExpired && (
           <button
             onClick={() => void resetBattle()}
             disabled={bossLoading}
-            title={l('Resetar HP do Boss atual', 'Reset current Boss HP')}
-            className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-xl border border-[#1e1e26] bg-black/50 text-gray-500 transition hover:border-gray-500/50 hover:text-white disabled:opacity-40"
+            title={l('Reiniciar ciclo desta Raid', 'Reset current Raid cycle')}
+            className="absolute right-4 top-4 z-20 flex size-9 items-center justify-center rounded-xl border border-[#1e1e26] bg-black/50 text-slate-400 transition hover:border-slate-500/50 hover:text-white disabled:opacity-40"
           >
             <RotateCcw size={15} className={bossLoading ? 'animate-spin' : ''} />
           </button>
         )}
-      </div>
+      </HudCard>
 
       {/* Área Principal da Batalha */}
       {bossLoading && !activeBattle ? (
@@ -356,12 +429,16 @@ export function Bosses() {
             <div 
               className="theme-preserve-dark relative rounded-3xl border border-[#1e1e26] bg-[#0c0c0f] overflow-hidden flex flex-col justify-end aspect-[4/5] w-full group shadow-2xl"
               style={{
-                boxShadow: `0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 30px -5px ${bossDef.color}20`
+                boxShadow: isRaidExpired
+                  ? '0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 30px -5px rgba(239,68,68,0.2)'
+                  : `0 10px 30px -10px rgba(0, 0, 0, 0.7), 0 0 30px -5px ${bossDef.color}20`
               }}
             >
-              {/* Imagem do Chefe */}
+              {/* Imagem do Chefe com filtro desativado quando expirado */}
               <motion.div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-105"
+                className={`absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-105 ${
+                  isRaidExpired ? 'grayscale opacity-35' : ''
+                }`}
                 style={{ 
                   backgroundImage: `url('${bossDef.image}')` 
                 }}
@@ -374,9 +451,27 @@ export function Bosses() {
               <div 
                 className="absolute inset-0 opacity-15 mix-blend-color bg-gradient-to-tr pointer-events-none"
                 style={{
-                  backgroundImage: `radial-gradient(circle at center, ${bossDef.color}, transparent 60%)`
+                  backgroundImage: `radial-gradient(circle at center, ${isRaidExpired ? '#ef4444' : bossDef.color}, transparent 60%)`
                 }}
               />
+
+              {/* Overlay visual de colapso quando a Raid expirou */}
+              {isRaidExpired && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/75 p-6 text-center backdrop-blur-xs">
+                  <div className="size-14 rounded-2xl border border-rose-500/30 bg-rose-500/10 flex items-center justify-center text-rose-400 shadow-[0_0_24px_rgba(244,63,94,0.3)] mb-3">
+                    <ShieldAlert size={28} />
+                  </div>
+                  <span className="rounded-md border border-rose-500/40 bg-rose-500/20 px-3 py-1 text-xs font-black uppercase tracking-wider text-rose-300 font-orbitron">
+                    {l('Fenda Desestabilizada', 'Rift Destabilized')}
+                  </span>
+                  <h3 className="mt-2 text-xl font-black uppercase text-white font-orbitron">
+                    {l('O Chefe Escapou', 'The Boss Escaped')}
+                  </h3>
+                  <p className="mt-1.5 max-w-xs text-xs text-rose-200/70">
+                    {l('O tempo semanal esgotou. A entidade retornou às profundezas da fenda.', 'The weekly timer ran out. The entity returned into the rift depths.')}
+                  </p>
+                </div>
+              )}
 
               {/* Feed de Dano Flutuante */}
               <AnimatePresence mode="wait">
@@ -392,14 +487,14 @@ export function Bosses() {
                     <div 
                       className={`font-orbitron font-black text-4xl sm:text-5xl uppercase italic select-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] flex items-center gap-1.5 ${
                         feedDamage < 0 
-                          ? 'text-green-500' 
+                          ? 'text-rose-400' 
                           : feedCritical 
                             ? 'text-yellow-400 animate-pulse text-shadow-glow' 
                             : 'text-red-500'
                       }`}
                       style={{
                         textShadow: feedDamage < 0 
-                          ? '0 0 15px rgba(34,197,94,0.6)' 
+                          ? '0 0 15px rgba(244,63,94,0.6)' 
                           : feedCritical 
                             ? '0 0 20px rgba(234,179,8,0.8)' 
                             : '0 0 15px rgba(239,68,68,0.6)'
@@ -421,7 +516,7 @@ export function Bosses() {
                 
                 {/* ID e Título de Recompensa */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest font-orbitron" style={{ color: bossDef.color }}>
+                  <span className="text-[10px] font-black uppercase tracking-widest font-orbitron" style={{ color: isRaidExpired ? '#ef4444' : bossDef.color }}>
                     {bossDef.title}
                   </span>
                   <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -448,9 +543,11 @@ export function Bosses() {
                       style={{ 
                         color: activeBattle.current_hp === 0 
                           ? '#10b981' 
-                          : activeBattle.current_hp / activeBattle.max_hp < 0.25 
-                            ? '#ef4444' 
-                            : '#ffffff' 
+                          : isRaidExpired
+                            ? '#ef4444'
+                            : activeBattle.current_hp / activeBattle.max_hp < 0.25 
+                              ? '#ef4444' 
+                              : '#ffffff' 
                       }}
                     >
                       {activeBattle.current_hp} <span className="text-xs text-gray-600">/ {activeBattle.max_hp} HP</span>
@@ -462,8 +559,8 @@ export function Bosses() {
                     <motion.div
                       className="h-full rounded-full relative"
                       style={{
-                        backgroundColor: bossDef.color,
-                        boxShadow: `0 0 15px ${bossDef.color}`
+                        backgroundColor: isRaidExpired ? '#ef4444' : bossDef.color,
+                        boxShadow: `0 0 15px ${isRaidExpired ? '#ef4444' : bossDef.color}`
                       }}
                       animate={{
                         width: `${hpPercent}%`,
@@ -500,7 +597,7 @@ export function Bosses() {
                         <CheckCircle2 size={16} />
                       </div>
                       <h3 className="text-sm font-black uppercase tracking-wider font-orbitron">
-                        Entidade Purificada!
+                        {l('Entidade Purificada!', 'Entity Purified!')}
                       </h3>
                     </div>
                     
@@ -510,7 +607,7 @@ export function Bosses() {
 
                     <div className="rounded-2xl border border-emerald-500/10 bg-emerald-500/5 p-4 space-y-2.5">
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-orbitron">
-                        Recompensas da Purificação
+                        {l('Recompensas da Purificação', 'Purification Rewards')}
                       </h4>
                       <ul className="space-y-1.5 text-[10px] uppercase font-bold text-gray-400 tracking-wider">
                         <li className="flex items-center gap-2">
@@ -526,20 +623,86 @@ export function Bosses() {
                     </div>
                   </div>
 
-                  <button
+                  <TacticalButton
+                    variant="primary"
+                    accent="gold"
+                    displayFont
+                    fullWidth
                     onClick={handlePurify}
                     disabled={purifying}
-                    className="w-full mt-6 py-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-400 font-black text-xs uppercase tracking-widest transition duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.15)] active:scale-98 cursor-pointer disabled:opacity-50"
+                    leftIcon={<Sparkles size={14} className={purifying ? 'animate-pulse' : ''} />}
                   >
-                    <Sparkles size={14} className={purifying ? 'animate-pulse' : ''} />
                     {purifying ? l('Canalizando Energia...', 'Channeling Energy...') : l('Purificar Entidade & Avançar', 'Purify Entity & Advance')}
-                  </button>
+                  </TacticalButton>
+                </div>
+              ) : isRaidExpired ? (
+                /* Estado Expirado (Derrota por Prazo) */
+                <div className="space-y-6 flex-1 flex flex-col justify-between h-full">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2.5 text-rose-400">
+                      <div className="size-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.15)]">
+                        <ShieldAlert size={16} />
+                      </div>
+                      <h3 className="text-sm font-black uppercase tracking-wider font-orbitron">
+                        {l('Prazo Encerrado — Fenda Fechada', 'Deadline Expired — Rift Closed')}
+                      </h3>
+                    </div>
+
+                    <p className="text-xs text-gray-300 font-medium leading-relaxed italic border-l-2 border-rose-500/30 pl-4 bg-rose-500/5 py-3 rounded-r-xl">
+                      {l(
+                        'A janela semanal encerrou antes da neutralização total da entidade. O chefe recuou nas sombras e nenhuma recompensa foi conquistada neste ciclo.',
+                        'The weekly window ended before total neutralization. The boss retreated into shadows and no rewards were earned this cycle.'
+                      )}
+                    </p>
+
+                    <div className="rounded-2xl border border-rose-500/10 bg-rose-500/5 p-4 space-y-2.5">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400 font-orbitron">
+                        {l('Relatório da Incursão', 'Incursion Report')}
+                      </h4>
+                      <ul className="space-y-1.5 text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                        <li className="flex items-center gap-2">
+                          <Swords size={11} className="text-amber-400" /> {l('Dano Aplicado', 'Damage Dealt')}: <span className="text-white font-orbitron">{damageDealt} HP</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Heart size={11} className="text-rose-400" /> {l('HP Restante do Chefe', 'Boss Remaining HP')}: <span className="text-rose-300 font-orbitron">{activeBattle.current_hp} HP</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Timer size={11} className="text-blue-400" /> {l('Prazo Semanal', 'Weekly Window')}: <span className="text-gray-300 font-orbitron">{bossDef.targetDays} {l('dias esgotados', 'days expired')}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <TacticalButton
+                    variant="danger"
+                    accent="crimson"
+                    displayFont
+                    fullWidth
+                    onClick={handleRetryExpired}
+                    disabled={retrying}
+                    leftIcon={<RotateCcw size={15} className={retrying ? 'animate-spin' : ''} />}
+                  >
+                    {retrying ? l('Reabrindo Fenda...', 'Reopening Rift...') : l('Iniciar Novo Ciclo da Raid', 'Start New Raid Cycle')}
+                  </TacticalButton>
                 </div>
               ) : (
                 // Boss ainda Vivo (Luta Ativa)
                 <div className="space-y-6 flex-1 flex flex-col justify-between h-full">
                   <div className="space-y-5">
                     
+                    {/* Alerta de Prazo Crítico (<24h) */}
+                    {isCriticalDeadline && (
+                      <div className="flex items-center gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300 animate-pulse">
+                        <ShieldAlert size={16} className="shrink-0 text-amber-400" />
+                        <span className="text-xs font-bold leading-tight">
+                          {l(
+                            'ALERTA: Restam menos de 24 horas! Finalize suas atividades antes do colapso da fenda.',
+                            'ALERT: Less than 24 hours remaining! Complete your activities before the Rift collapses.'
+                          )}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Descrição Lore */}
                     <div className="space-y-2">
                       <h3 className="flex items-center gap-2 text-sm font-black text-white font-orbitron">
@@ -607,14 +770,17 @@ export function Bosses() {
                     </div>
                     
                     <div className="grid grid-cols-1 gap-2">
-                      <button
+                      <TacticalButton
+                        variant="primary"
+                        accent="purple"
+                        displayFont
+                        fullWidth
                         onClick={handleTestAttack}
-                        disabled={manualAttackUsedToday}
-                        className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-purple-500/25 bg-purple-500/10 text-sm font-black text-purple-200 transition hover:bg-purple-500/20 hover:text-white hover:shadow-[0_0_18px_rgba(168,85,247,0.18)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={manualAttackUsedToday || isRaidExpired}
+                        leftIcon={<Swords size={16} className="text-yellow-400" />}
                       >
-                        <Swords size={16} className="text-yellow-400" />
                         {manualAttackUsedToday ? l('Ataque diário utilizado', 'Daily attack used') : l('Executar ataque de treino', 'Perform training attack')}
-                      </button>
+                      </TacticalButton>
                     </div>
                     
                     <p className="text-xs text-center leading-relaxed text-gray-600">
@@ -655,20 +821,61 @@ export function Bosses() {
                     key={event.id}
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.025] px-4 py-3"
+                    className={`flex items-center justify-between rounded-xl border px-4 py-3 transition-colors ${
+                      event.damage < 0
+                        ? 'border-rose-500/30 bg-rose-500/5'
+                        : event.critical
+                          ? 'border-amber-400/40 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.08)]'
+                          : 'border-white/5 bg-white/[0.025]'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex size-9 items-center justify-center rounded-lg ${event.damage < 0 ? 'bg-red-500/10 text-red-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                        {event.damage < 0 ? <TrendingUp className="size-4" /> : <Swords className="size-4" />}
+                      <div
+                        className={`flex size-9 items-center justify-center rounded-lg ${
+                          event.damage < 0
+                            ? 'bg-rose-500/20 text-rose-400'
+                            : event.critical
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : 'bg-white/5 text-slate-300'
+                        }`}
+                      >
+                        {event.damage < 0 ? (
+                          <TrendingUp className="size-4" />
+                        ) : (
+                          <Swords className="size-4" />
+                        )}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white">
-                          {event.damage < 0 ? `Regeneração de ${Math.abs(event.damage)} HP` : `${event.damage} de dano aplicado`}
+                        <div className="flex items-center gap-2">
+                          <p
+                            className={`text-sm font-bold ${
+                              event.damage < 0
+                                ? 'text-rose-300'
+                                : event.critical
+                                  ? 'text-amber-300 font-orbitron'
+                                  : 'text-white'
+                            }`}
+                          >
+                            {event.damage < 0
+                              ? l(`Regeneração de +${Math.abs(event.damage)} HP`, `Regeneration of +${Math.abs(event.damage)} HP`)
+                              : l(`${event.damage} de dano aplicado`, `${event.damage} damage dealt`)}
+                          </p>
+                          {event.critical && event.damage > 0 && (
+                            <span className="rounded border border-amber-400/40 bg-amber-500/20 px-1.5 py-0.5 font-orbitron text-[9px] font-black uppercase text-amber-300">
+                              {l('CRÍTICO', 'CRITICAL')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {event.damage < 0
+                            ? l('Atividade desfeita · restauração de HP', 'Activity undone · HP restored')
+                            : event.critical
+                              ? l('Golpe crítico · multiplicador ativo', 'Critical strike · active multiplier')
+                              : l('Ataque registrado pelo Sistema', 'Attack registered by the System')}
                         </p>
-                        <p className="mt-0.5 text-xs text-gray-500">{event.critical ? 'Golpe crítico · multiplicador ativo' : 'Ataque registrado pelo Sistema'}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-semibold text-gray-600">{event.time}</span>
+                    <span className="text-xs font-semibold text-slate-500">{event.time}</span>
                   </motion.div>
                 ))
               )}

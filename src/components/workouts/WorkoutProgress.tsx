@@ -386,7 +386,7 @@ export function WorkoutProgress() {
                           {new Date(log.logged_at).toLocaleDateString(language)}
                         </span>
                       </div>
-                      <p className="mt-1.5 truncate font-orbitron text-xs font-black uppercase text-white">
+                      <p className="mt-1.5 line-clamp-2 font-orbitron text-xs font-black uppercase text-white leading-snug break-words">
                         {tx(log.exercise?.name || 'Exercício')}
                       </p>
                     </div>

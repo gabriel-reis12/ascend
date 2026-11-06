@@ -1216,10 +1216,10 @@ export function Quests() {
                   exit={{ opacity: 0, y: -8 }}
                   className="space-y-4"
                 >
-                  {/* Barra Compacta de Filtros Rápidos (Status & Categorias) */}
-                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Barra Coesa de Filtros Rápidos (Status & Tipos) */}
+                  <div className="flex flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[#0A0C12]/90 p-2 sm:flex-row sm:items-center sm:justify-between">
                     {/* Filtro de Status */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
                       <Filter className="mr-1 h-3.5 w-3.5 shrink-0 text-slate-400" />
                       {[
                         { id: 'all', label: l('Todas', 'All'), count: totalMissions },
@@ -1232,13 +1232,14 @@ export function Quests() {
                             key={f.id}
                             type="button"
                             onClick={() => setStatusFilter(f.id as typeof statusFilter)}
-                            className={`inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider transition-all ${active
-                                ? 'border-[#00F0FF]/45 bg-[#00F0FF]/12 text-[#00F0FF]'
-                                : 'border-white/8 bg-[var(--hud-surface)] text-slate-400 hover:border-white/20 hover:text-white'
-                              }`}
+                            className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider transition-all ${
+                              active
+                                ? 'border-[#00F0FF]/45 bg-[#00F0FF]/15 text-[#00F0FF] shadow-[0_0_12px_rgba(0,240,255,0.12)]'
+                                : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/20 hover:text-white'
+                            }`}
                           >
                             <span>{f.label}</span>
-                            <span className="rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] tabular-nums">
+                            <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] tabular-nums text-slate-300">
                               {f.count}
                             </span>
                           </button>
@@ -1247,7 +1248,7 @@ export function Quests() {
                     </div>
 
                     {/* Filtro por Tipo de Atividade */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 border-t border-white/[0.05] pt-2 sm:border-t-0 sm:pt-0">
                       {[
                         { id: 'all', label: l('Todos Tipos', 'All Types') },
                         { id: 'habit', label: l('Hábitos', 'Habits') },
@@ -1262,10 +1263,11 @@ export function Quests() {
                             key={tf.id}
                             type="button"
                             onClick={() => setTypeFilter(tf.id as typeof typeFilter)}
-                            className={`min-h-[36px] shrink-0 rounded-xl border px-2.5 py-1 text-xs font-semibold transition-all ${active
-                                ? 'border-[#A855F7]/50 bg-[#A855F7]/15 text-purple-200'
+                            className={`inline-flex min-h-[44px] shrink-0 items-center rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
+                              active
+                                ? 'border-[#A855F7]/50 bg-[#A855F7]/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.14)]'
                                 : 'border-white/8 bg-white/[0.02] text-slate-400 hover:border-white/15 hover:text-slate-200'
-                              }`}
+                            }`}
                           >
                             {tf.label}
                           </button>

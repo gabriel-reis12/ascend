@@ -1,4 +1,4 @@
-import tacoFoodsData from '@/data/tacoFoods.json';
+import tacoFoodsData from '../data/tacoFoods.json' with { type: 'json' };
 
 export interface TacoFood {
   id: number;
@@ -95,6 +95,21 @@ export function findTacoFood(query: string) {
   }
 
   return best && best.score >= 0.5 ? best : null;
+}
+
+export function searchTacoCandidates(query: string, limit = 5): Array<{ food: TacoFood; score: number }> {
+  if (!query || !query.trim()) return [];
+  const scored: Array<{ food: TacoFood; score: number }> = [];
+
+  for (const food of tacoFoods) {
+    const score = scoreCandidate(query, food);
+    if (score >= 0.35) {
+      scored.push({ food, score });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
 }
 
 export function calculateMealFromTaco(ingredients: TacoIngredientInput[]): TacoMealCalculation {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Activity,
   ArrowRight,
@@ -953,7 +953,7 @@ export function Dashboard() {
       >
         <div className="grid grid-cols-1 gap-0 lg:grid-cols-12 lg:gap-5 lg:items-stretch">
           {/* 1A. HERO HOLOGRÁFICO DO PERSONAGEM */}
-          <div className="relative h-60 sm:h-68 lg:col-span-5 lg:h-auto overflow-hidden rounded-t-2xl lg:rounded-2xl border border-b-0 lg:border-b border-[var(--hud-border-cyan)] bg-[#0A0C12] shadow-[0_0_28px_rgba(0,240,255,0.08)]">
+          <div className="relative h-64 sm:h-72 lg:col-span-5 lg:h-auto overflow-hidden rounded-t-2xl lg:rounded-2xl border border-b-0 lg:border-b border-[var(--hud-border-cyan)] bg-[#0A0C12] shadow-[0_0_28px_rgba(0,240,255,0.08)]">
             <img
               src={characterAvatar}
               alt={`Avatar de ${hunterName}`}
@@ -994,7 +994,7 @@ export function Dashboard() {
             </div>
 
             {/* Base do Hero: Título, Nome, Classe e Streak */}
-            <div className="absolute inset-x-4 bottom-6 lg:bottom-4 z-10 flex flex-col gap-2">
+            <div className="absolute inset-x-4 bottom-7 lg:bottom-4 z-10 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#F59E0B]">
@@ -1021,13 +1021,13 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* 1B. PAINEL DE NÍVEL, RANK E XP (HUD CARD ELEVATED) */}
-          <div className="relative z-10 -mt-4 lg:mt-0 lg:col-span-7">
+          {/* 1B. PAINEL DE NÍVEL, RANK E XP (HUD CARD ELEVATED - DISTRIBUIÇÃO EQUILIBRADA) */}
+          <div className="relative z-10 -mt-3 lg:mt-0 lg:col-span-7">
             <HudCard
               variant="elevated"
               corners
               className="h-full border-[var(--hud-border-strong)] bg-[#10131D]/95 backdrop-blur-xl"
-              contentClassName="flex h-full flex-col justify-between gap-4"
+              contentClassName="flex h-full flex-col justify-center gap-3 sm:gap-4"
             >
               {/* Cabeçalho do Card */}
               <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-2.5">
@@ -1344,10 +1344,19 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <span className="rounded-lg border border-[#F59E0B]/35 bg-[#F59E0B]/10 px-3 py-1 font-orbitron text-xs font-bold text-[#F59E0B] tabular-nums">
                 {unlockedAchievements.length} / {ALL_POSSIBLE_ACHIEVEMENTS.length}
               </span>
+
+              <Link
+                to="/trophies"
+                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider text-[#F59E0B] transition-colors hover:bg-[#F59E0B]/20 hover:border-[#F59E0B]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B]"
+                title={l('Acessar Salão de Troféus completo', 'Open complete Trophy Room')}
+              >
+                <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="hidden xs:inline sm:inline">{l('Salão de Troféus', 'Trophy Room')}</span>
+              </Link>
 
               <button
                 type="button"
@@ -1692,35 +1701,29 @@ export function Dashboard() {
                               <h3 className="font-orbitron text-xs font-bold uppercase text-white">
                                 {domain.name}
                               </h3>
-                              <span className="font-orbitron text-[10px] font-bold text-[#00F0FF]">
-                                Lvl {domain.level}
+                              <span className="rounded bg-white/[0.05] px-1.5 py-0.5 font-orbitron text-[9px] font-bold text-slate-400">
+                                {domain.attributes}
                               </span>
                             </div>
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                              {domain.attributes} · {domain.value} pts
+                            <p className="mt-0.5 text-[10px] font-semibold text-purple-300">
+                              {l('Meta:', 'Target:')} {domain.nextReward}
                             </p>
                           </div>
                         </div>
-                        <span className="font-orbitron text-xs font-bold text-slate-300 tabular-nums">
-                          {domain.progress}%
-                        </span>
+                        <div className="text-right">
+                          <span className="font-orbitron text-[10px] font-bold text-[#00F0FF] tabular-nums">
+                            {domain.value} pts
+                          </span>
+                        </div>
                       </div>
 
-                      <NeonProgressBar
-                        value={domain.progress}
-                        max={100}
-                        variant="xp"
-                        size="sm"
-                        ariaLabel={`${domain.name} progress`}
-                        className="mt-3"
-                      />
-
-                      <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px]">
-                        <span className="truncate font-medium text-slate-400">
+                      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-white/[0.05] pt-2 text-[10px]">
+                        <span className="truncate text-slate-400">
+                          <span className="text-slate-500 font-bold uppercase">{l('Último ganho: ', 'Last gain: ')}</span>
                           {domain.lastGain}
                         </span>
-                        <span className="shrink-0 font-semibold text-purple-300">
-                          {domain.nextReward}
+                        <span className="shrink-0 font-orbitron font-semibold text-slate-400 tabular-nums">
+                          {domain.progress}%
                         </span>
                       </div>
                     </div>

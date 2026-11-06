@@ -20,6 +20,190 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-06 — Etapa 03.13: Parser Determinístico de Refeições por Texto & Catálogo TACO (`src/lib/nutritionAi.ts`, `src/lib/taco.ts`, `src/pages/Nutrition.tsx`, `execution/test_deterministic_nutrition_parser.mjs`)
+- **Workflows `ascend-develop` & `ascend-design` Concluídos:** Aprimoramento completo do registro de refeições por texto em linguagem natural através de processamento **100% determinístico local**, integrando a Tabela TACO (NEPA/UNICAMP) e catálogo alimentar existente — com zero IA generativa, zero LLMs remotas e zero alucinação nutricional.
+- **Catálogo & Busca de Candidatos TACO (`src/lib/taco.ts`):**
+  - Implementada a função `searchTacoCandidates(query, limit = 5)` para identificar múltiplos cortes ou preparações compatíveis com pontuação de relevância (>= 0.35).
+  - Preservada normalização textual, decodificação anti-mojibake (`repairMojibake`), remoção de stop words e pontuação por sobreposição de tokens e contenção.
+- **Parser Determinístico Aprimorado (`src/lib/nutritionAi.ts`):**
+  - **Extração Robusta de Quantidades & Unidades (`extractQuantityGramsDetails`):**
+    - Suporte a decimais no padrão brasileiro com vírgula (`1,5 kg`), frações comuns (`1/2`, `1/4`, `3/4`) e notações compactas (`200g`).
+    - Conversão determinística de unidades de massa, volume e porções caseiras: gramas (`g`), quilogramas (`kg` $\rightarrow$ 1000g), mililitros (`ml`), litros (`l`), fatias (`inferSliceGrams`), colheres de sopa (15g), sobremesa (10g), chá/café (5g), conchas de feijão (130g/100g), xícaras/copos (160g arroz / 240g leite / 80g aveia via `inferCupGrams`), scoops/doses de suplemento (30g) e pratos (250g).
+  - **Eliminação de Alucinações Nutricionais (Zero Synthetic Macros):**
+    - Eliminado o fallback legado que inventava macros sintéticos arbitrários (`180 kcal, 8g prot, 20g carbo, 7g gordura`).
+    - Itens não encontrados recebem estritamente `source_used: 'unresolved'`, `status: 'unmatched'` e valores zerados (0 kcal / 0 macros), impedindo poluição do diário nutricional.
+  - **Tratamento Estrito de Quantidades Zero ou Inválidas:**
+    - Corrigido o bug que convertia silenciosamente `0g` em porção padrão (150g). Entradas com `0g` ou valores negativos são sinalizadas como `status: 'invalid_quantity'`, bloqueando o salvamento até correção.
+  - **Detecção de Unidades Não Reconhecidas:**
+    - Medidas não suportadas (ex: `baldes`, `galões`) são identificadas explicitamente (`unrecognizedUnit`), marcadas como `status: 'unmatched'` e destacadas para o usuário.
+  - **Identificação de Ambiguidades & Candidatos TACO:**
+    - Termos genéricos que possuem múltiplos preparos (ex: "frango" $\rightarrow$ cozido, grelhado, frito, assado) são marcados como `status: 'ambiguous'`, populando o array `candidates` e exigindo seleção explícita.
+  - **Fusão Determinística de Duplicatas (`mergeDuplicateIngredients`):**
+    - Entradas repetidas na mesma frase (ex: `100g de arroz + 50g de arroz`) são fundidas automaticamente em um único item consolidado de `150g`, com recálculo proporcional dos macronutrientes.
+  - **Métricas de Cobertura e Validação:**
+    - Adicionadas propriedades `coverage` (% de gramas cobertas por fontes oficiais), `unmatchedCount`, `ambiguousCount`, `hasInvalidQuantity` e `allMatched` (somente `true` quando não houver itens pendentes, ambíguos ou inválidos).
+- **Interface Tática & Ergonomia Mobile (`src/pages/Nutrition.tsx`):**
+  - **Aba "Registrar por Texto" (Codex):**
+    - Cabeçalho HUD v2 com chips indicadores: "PROCESSAMENTO DETERMINÍSTICO · TABELA TACO" e "100% LOCAL".
+    - Botões rápidos com exemplos reais de refeições brasileiras (`150 g de arroz + 100 g de frango`, `3 ovos mexidos + 2 fatias de pão integral`, etc.).
+    - Link rápido para alternar para a busca normal no Catálogo TACO.
+  - **Visualização de Métricas & Prévia:**
+    - Grid com cartões táticos para Energia (kcal), Proteína, Carboidratos, Gorduras, Peso Total (g) e badge com porcentagem de cobertura TACO.
+    - Banner de alerta visual em âmbar/vermelho indicando quantidade de pendências a resolver.
+  - **Cards Táticos de Ingredientes com Resolução Interativa:**
+    - Badge verde para itens confirmados na TACO/Catálogo, exibindo macros da porção e stepper ergonômico (+/- 10g) para ajuste manual de gramas.
+    - Badge roxo para itens ambíguos, renderizando botões interativos (pills) para selecionar instantaneamente a preparação desejada (ex: Peito grelhado, Frango assado, etc.).
+    - Badge âmbar para itens não reconhecidos com atalho para busca manual ou botão de remoção.
+    - Badge carmim para quantidades zeradas ou inválidas com campo numérico tático.
+  - **Trava de Segurança no Salvamento:**
+    - Botão "Registrar no Diário" desabilitado enquanto houver pendências (`!iaPreview.allMatched` ou `iaPreview.totalGrams <= 0`), garantindo que nenhuma refeição seja gravada sem consentimento e resolução de itens.
+  - **Disclaimer Médico & Clínico:**
+    - Banner de integridade esclarecendo que os valores são calculados a partir da TACO para rotina do RPG e não substituem avaliação clínica ou prescrição de nutricionista.
+  - **Preservação Integral de Métodos Manuais:**
+    - Mantidos intactos `handleLogFood`, `handleEditLog`, `handleDeleteLog` e `handleCreateFood`.
+- **Qualidade, Homologação & Testes Automatizados:**
+  - Criada nova suíte `execution/test_deterministic_nutrition_parser.mjs` com 11 testes cobrindo todas as unidades, 0g, frações, ambiguidades, duplicatas, disclaimer e contratos de UI.
+  - Todos os testes das suítes do repositório aprovados com 0 falhas (`node --test execution/test_*.mjs`).
+  - Auditoria de i18n aprovada com sucesso (`npm run audit:i18n`).
+  - Build de produção compilado em 2.00s sem erros (`npm run build`).
+
+### 2026-11-05 — Etapa 03.12: Ações Rápidas, Favoritos Manuais, Sugestões Determinísticas & Orientação do Caçador (`src/lib/quickActionsCatalog.ts`, `src/stores/useQuickActionsStore.ts`, `src/components/home/*`, `src/pages/QuickMenu.tsx`)
+- **Workflow `ascend-develop` & Revisão `ascend-design` Concluídos:** Desenvolvido sistema centralizado de Ações Rápidas e Favoritos Manuais no ASCEND HUD v2, permitindo que caçadores fixem seus atalhos prioritários, reordenem, recebam sugestões determinísticas e repitam refeições ou tarefas de forma rápida e segura — com zero IA, zero rastreamento de privacidade e total controle do usuário.
+- **Catálogo Centralizado de Ações Rápidas (`src/lib/quickActionsCatalog.ts`):**
+  - Mapeadas 10 ações essenciais do ecossistema do ASCEND (Missões, Treinos, Nutrição, Templo da Mente, Repetição de Refeição, Reativação de Tarefa, Módulo Fortuna, Portal dos Chefes, Salão de Troféus e Ficha de Atributos).
+  - Cada ação possui identificador estável, títulos e subtítulos bilíngues (PT-BR/EN-US), rota com parâmetros contextuais, cor de destaque tática (`TacticalButtonAccent`) e ícones oficiais.
+  - Conjunto padrão com 4 atalhos essenciais: Concluir Missão (`/quests`), Registrar Treino (`/workouts`), Registrar Refeição (`/nutrition`) e Templo da Mente (`/rest`).
+- **Store de Ações Rápidas com Persistência Local (`src/stores/useQuickActionsStore.ts`):**
+  - Gerenciamento de estado com Zustand e isolamento por usuário (`ascend_quick_actions_${userId}`).
+  - Limite estrito de fixação: de 1 a 6 atalhos simultâneos, evitando sobrecarga visual ou clutter no mobile.
+  - Métodos táticos: `pinAction`, `unpinAction`, `reorderAction` (subir/descer), `toggleRecentSuggestions`, `toggleHunterGuidance`, `resetToDefaults` e `clearHistory`.
+  - Histórico determinístico local de cliques (máximo de 20 entradas, sem chamadas a serviços externos, telemetria ou analytics).
+- **Modal de Personalização de Atalhos (`src/components/home/QuickActionsCustomizerModal.tsx`):**
+  - Interface tática no padrão HUD v2 com backdrop blur e componentes `<HudCard variant="elevated">`.
+  - Lista de atalhos fixados com controles de subida/descida e botão de desafixar (`PinOff`).
+  - Catálogo de atalhos disponíveis com botão direto de fixação (+ Fixar).
+  - Painel de privacidade e controle: alternadores para "Exibir Sugestões Recentes" e "Exibir Orientação do Caçador", além de botões para limpar histórico local e restaurar configurações padrão.
+- **Fluxo de Confirmação Segura de Repetições (`src/components/home/SafeActionConfirmModal.tsx`):**
+  - Prevenção de duplicações acidentais e ganho prematuro de XP: antes de duplicar uma refeição ou reativar uma tarefa, um modal tático apresenta o registro exato (alimento, gramas, calorias ou título da tarefa e categoria).
+  - Repetição de Refeição: insere nova entrada com confirmação explícita na tabela `food_logs`, sem duplicar XP indevidamente.
+  - Reativação de Tarefa: cria uma nova tarefa com estado `completed: false` para hoje; o XP só é concedido quando o usuário marcá-la como concluída.
+  - Bloqueio de cliques duplos com estado `disabled={loading}` e fallback gracioso para as telas correspondentes caso não haja histórico recente.
+- **Card de Orientação Opcional do Caçador (`src/components/home/HunterGuidanceCard.tsx`):**
+  - Fornece diretrizes e conselhos contextuais baseados exclusivamente nas respostas já persistidas no perfil do caçador (`trainingFocus`, `nutritionGoal`, `mainGoal`, `experienceLevel`, `hunterClass`).
+  - Resolução determinística sem IA (ex: foco Hipertrofia $\rightarrow$ foco em metas de proteína e progressão de carga; foco Mental/Erudito $\rightarrow$ respiração consciente e consistência diária).
+  - 100% não restritivo: informa explicitamente ao jogador que todos os 10 módulos permanecem totalmente disponíveis e permite dispensar/ocultar a qualquer momento.
+- **Integração na Home do Caçador (`src/pages/QuickMenu.tsx`):**
+  - A Seção 3 "Ações Rápidas" passa a renderizar dinamicamente os atalhos fixados pelo usuário em grid responsivo com badges de telemetria em tempo real.
+  - Exibição de sugestões determinísticas recentes (com botão para ocultar).
+  - Preservadas integralmente todas as âncoras do ProductTour (`tour-portal-header`, `tour-portal-primary`, `tour-portal-recommended`, `tour-portal-secondary`, `tour-shortcut-workouts`, `tour-shortcut-nutrition`).
+- **Qualidade, Homologação & Testes Automatizados:**
+  - Criada nova suíte `execution/test_quick_actions_and_guidance.mjs` com 8 testes determinísticos.
+  - Total de 121 testes aprovados em 8 suítes com 0 falhas (`node --test execution/test_*.mjs`).
+  - Auditoria de i18n aprovada com sucesso (`npm run audit:i18n`).
+  - Build de produção compilado em 1.95s sem erros (`npm run build`).
+
+### 2026-11-05 — Etapa 03.11: Redesign e Resiliência de Login, Registro e Onboarding (`/login`, `/register`, `/onboarding`)
+- **Workflows `ascend-design` & `ascend-develop` Concluídos:** Refinamento completo da experiência de entrada e despertar do caçador, corrigindo problemas de redirecionamento, perda de progresso intermediário, ausência de botão voltar e garantindo resiliência do estado de autenticação sem causar loading infinito nem re-onboarding indevido.
+- **Autenticação & Registro (`src/pages/auth/LoginPage.tsx` & `src/pages/auth/RegisterPage.tsx`):**
+  - **Prevenção de Armadilha de Sessão Ativa:** Adicionada verificação imediata de sessão: se o usuário já estiver autenticado e com classe definida, redireciona diretamente para a Home (`/`); se autenticado porém sem classe, redireciona para `/onboarding` para concluir o despertar. Evita que usuários logados fiquem presos no formulário de login/cadastro.
+  - **Tratamento Amigável de Erros & Confirmação:** Mapeamento de mensagens claras e localizadas (PT-BR/EN-US) para credenciais inválidas, e-mails não confirmados e limitação de taxa (rate limit). Adicionada validação de confirmação de senha e comprimento mínimo (>= 6 caracteres) no registro.
+- **Formulário de Entrada Mobile-First (`src/components/ui/hunter-login.tsx`):**
+  - **Ajuste Ergonômico de Teclado:** Substituído título estático excessivo por tipografia responsiva (`text-2xl sm:text-3xl lg:text-4xl`).
+  - **Visibilidade de Inputs Acima da Dobra:** Em telas mobile, o painel decorativo de atributos prévios e barra de XP é ocultado (`hidden sm:grid`, `hidden sm:block`) para evitar que a abertura do teclado virtual empurre os campos de login/senha para fora da tela.
+  - **Alvos de Toque Adequados:** Inputs calibrados para `min-h-[48px] sm:min-h-[54px]`, botões >= 44px com visual tático cyber-dark.
+- **Onboarding & Despertar de Classe (`src/pages/Onboarding.tsx`):**
+  - **Redirecionamento Imediato de Perfis Completos:** Eliminados os `setTimeout` artificiais de 1200ms e 1500ms que causavam efeito de loading infinito/travamento visual. Usuários com classe definida são redirecionados instantaneamente (`navigate('/', { replace: true })`).
+  - **Preenchimento Automático com Dados Existentes:** Caso o caçador já possua dados parciais no `useHunterStore` (`fullName`, `gender`, `birthday`, `height`, `weights`, `trainingFocus`, `nutritionGoal`, `mainGoal`, `experienceLevel`), o formulário é pré-preenchido automaticamente.
+  - **Restauração Inteligente de Etapa:** Detecta o maior avanço completado pelo caçador e retoma na etapa correspondente sem forçar a repetição de perguntas já salvas.
+  - **Navegação Bidirecional ("Voltar"):** Adicionados botões "Voltar" / "Back" acessíveis em todas as etapas: permite retornar entre os passos do perfil, recuar nas perguntas do quiz (da pergunta 5 até a 1 e de volta à introdução do Arquiteto) e retornar da tela de seleção de classe para o quiz.
+  - **Validação Rigorosa de Dados:**
+    - Nome ou codinome: mínimo de 2 caracteres.
+    - Gênero: seleção obrigatória para calibração estética e biológica.
+    - Data de nascimento: verificação de que não é data futura e que o ano é >= 1900.
+    - Altura e peso: limites fisiológicos válidos (altura 50–260 cm, peso 20–350 kg) com `inputMode="decimal"` para teclado numérico mobile nativo.
+  - **Persistência de Rascunho do Quiz:** As 5 respostas do quiz de classe são salvas em `localStorage` (`ascend_onboarding_quiz_${user.id}`) para proteger contra recarregamentos acidentais ou perda de foco na página. O rascunho é limpo automaticamente após a confirmação bem-sucedida da classe.
+  - **Diferenciação Robusta de Estados de Autenticação:** Tratamento visual explícito para estados de Carregando (com spinner HUD v2), Erro de Conexão/RLS (com botão tático de "Tentar Novamente" e opção de "Sair da Conta" sem zerar dados locais) e Sucesso de Despertar.
+  - **Padrão ASCEND HUD v2:** Utilização de `<HudCard variant="purple" corners radialGlow>`, `<TacticalButton>`, `<NeonProgressBar variant="xp">`, preservação da arte original das 5 classes e do modal de inspeção de Ranks E–S.
+- **Mapeamento de Respostas do Questionário & Módulos Futuros:**
+  - Elaborada a matriz técnica documentando como cada uma das 10 variáveis coletadas no onboarding servirá de alicerce para futuros módulos (Dashboard, Treinos, Nutrição, Quests, Raids e Troféus), sem implementar customizações prematuras nesta etapa.
+- **Qualidade, Homologação & Testes Automatizados:**
+  - Criada suíte `execution/test_auth_onboarding_redesign.mjs` com 9 testes determinísticos cobrindo todos os cenários críticos.
+  - Total de 113 testes aprovados em 8 suítes com 0 falhas (`node --test execution/test_*.mjs`).
+  - Auditoria de i18n aprovada com sucesso (`npm run audit:i18n`).
+  - Build de produção compilado em 1.96s sem erros (`npm run build`).
+
+### 2026-11-05 — Etapa 03.10: Redesign Premium Global — Fortuna, Descanso & Configurações (`src/pages/Fortuna.tsx`, `src/pages/Rest.tsx`, `src/pages/Settings.tsx`)
+- **Workflow `ascend-design` Concluído:** Finalizado o redesign visual completo das três rotas finais do ASCEND (`/fortuna`, `/rest` e `/settings`), alinhando-as 100% aos padrões do ASCEND HUD v2 (estética 70% funcionalidade / 30% atmosfera RPG, tokens oficiais `<HudCard>`, `<TacticalButton>`, `<NeonProgressBar>`, `<RankBadge>`, alvos de toque >= 44px e safe-area inferior `pb-28`/`pb-32`).
+- **Módulo Fortuna (`src/pages/Fortuna.tsx`):**
+  - **Modo de Privacidade Financeira:** Implementado alternador de visibilidade monetária com persistência em `localStorage` (`ascend_fortuna_privacy_mode`). Permite ocultar instantaneamente todos os valores monetários (`••••••`) em ambientes públicos e telas mobile sem afetar cálculos internos.
+  - **Cards Táticos de Fluxo & Balanço:** Reestruturação visual com `<HudCard>` diferenciando Ganhos (esmeralda), Gastos (carmim/rose), Aportes/WIS (ouro) e Saldo Líquido com tratamento claro para saldos positivos, negativos e zero, acompanhado de taxas de aporte e poupança.
+  - **Ergonomia de Lançamentos:** Formulário com seletor segmentado de tipos (Despesa, Receita, Aporte/WIS), `inputMode="decimal"` nos campos de valor monetário e feedback tático de persistência no Codex (+10 XP, +1 WIS em investimentos e dano de finanças ao Boss da Raid).
+  - **Ação Rápida "Sem Transações Hoje":** Botão tático permitindo registrar dia livre de gastos com concessão/reversão consistente de +10 XP.
+  - **Metas Financeiras & Quest do Sistema:** Quest permanente de purificação (meta de aportar 20% da receita) calibrada com `<NeonProgressBar variant="xp">`, além de gerenciamento ágil de metas com progresso percentual e recompensas (+50 XP e +2 WIS ao concluir).
+- **Módulo Descanso (`src/pages/Rest.tsx`):**
+  - **Painel de Equilíbrio (BAL / EQU):** Header enriquecido em `<HudCard variant="cyan" corners radialGlow>` com 4 visores táticos: sono atual, meditação acumulada, lazer offline e estado de equilíbrio em tempo real.
+  - **Métricas & Metas Táticas:** 3 cards com `<NeonProgressBar>` para Sono (meta 8h), Meditação (meta 10 min) e Lazer Offline (meta 60 min longe de telas).
+  - **Navegação Segmentada (Sono & Lazer vs Templo da Mente):** Sub-abas táticas com alvos ergonômicos e transições suaves via Framer Motion.
+  - **Registros Ergonômicos:** Steppers tácteis (alvos >= 44px) para horas de sono (+/- 0.5h) com seletor de qualidade por estrelas, e duração de hobbies offline (+/- 10 min), concedendo +20 XP / +2 BAL e +15 XP / +1 BAL com ataque de estudo/calma ao Boss da Raid.
+  - **Templo da Mente (Respiração Guiada & Meditação):** Cronômetro em fonte Orbitron com pulso visual de respiração em 4 fases (Inspire, Segure, Expire, Prenda a cada 4s) e seletores rápidos (1m, 5m, 10m, 15m, 20m), acionando +15 XP e +2 BAL ao concluir.
+  - **Histórico de Recuperação:** Lista organizada com badges táticas, remoção de logs e estado vazio acolhedor.
+- **Módulo Configurações (`src/pages/Settings.tsx`):**
+  - **Eliminação de Duplicações e Código Legado:** Removida a antiga lista de 18 conquistas inline que duplicava o novo Trophy Room. Criado card premium em `<HudCard variant="gold">` com link direto para `/trophies` ("Acessar ASCEND Trophy Room →") e seletor rápido para equipar títulos conquistados.
+  - **Redução do Bundle:** Tamanho final do bundle CSS reduzido de 237 kB para 222 kB e JS de 1.451 kB para 1.427 kB.
+  - **Organização Modular em Seções:**
+    1. *Preferências:* Alternadores visuais de Tema (Dark / Light) e Idioma (Português / English).
+    2. *Identidade & Arte de Vocação:* Hero card com arte da classe e rank badge hexagonal (`RankBadge`), nível e título equipado.
+    3. *Perfil & Biometria:* Codinome, nascimento, gênero, altura (cm), peso (kg), meta (kg) com `inputMode="decimal"`, foco de treino, objetivo nutricional e nível de experiência.
+    4. *Credenciais & Segurança:* Atualização segura de e-mail e nova senha com validação.
+    5. *Telemetria de Nuvem:* Diagnóstico de conexão com Supabase, ID do caçador autenticado e contagem de registros em nuvem.
+    6. *Zona de Perigo:* Reset de atributos de RPG (nível 1 e atributos 10 sem afetar hábitos/rotinas) e Reset Geral com confirmação explícita digitada ('DESTRUIR' / 'DELETE').
+  - **Zero Resíduos:** Rigorosamente livre de qualquer componente ou texto de monetização (Stripe), planos pagos e serviços de IA.
+- **Qualidade, Homologação & Testes Automatizados:**
+  - Criada nova suíte `execution/test_fortuna_rest_settings_redesign.mjs` com 7 testes determinísticos.
+  - Total de 104 testes aprovados em 8 suítes com 0 falhas (`node --test execution/test_*.mjs`).
+  - Auditoria de i18n aprovada com sucesso (`npm run audit:i18n`).
+  - Build de produção compilado em 1.94s sem warnings críticos (`npm run build`).
+
+### 2026-11-05 — Etapa 03.9: Trophy Room — Salão de Conquistas & Galeria de Prestígio (`src/pages/TrophyRoom.tsx`, `src/lib/achievementsData.ts`, `src/App.tsx`, `src/components/layout/*`)
+- **Nova Rota & Área Oficial (`/trophies`):** Implementada a tela `ASCEND TROPHY ROOM` estruturada como uma galeria RPG premium mobile-first, integrando todas as honrarias conquistadas no ecossistema do ASCEND.
+- **Catálogo Centralizado de Conquistas & Títulos (`src/lib/achievementsData.ts`):** Unificados os 18 feitos reais do sistema (4 marcos de streak: 3d, 7d, 15d, 30d; 7 metas de atributos: STR, END, INT, DIS, VIT, WIS, BAL em 20 pontos; e 7 chefes purificados na fenda) e os 19 títulos oficiais com metadados de raridade, recompensas em XP e traduções bilíngues PT-BR/EN-US.
+- **Galeria de Conquistas (Achievements):** Apresentação visual rica com `<HudCard variant="gold" corners>`, ícones contextuais, diferenciação clara entre conquistas desbloqueadas (glow âmbar, data formatada e badge `CONQUISTADA`) e bloqueadas (superfície grafite fosca, cadeado e requisitos explícitos), exibindo recompensas de XP e títulos.
+- **Salão de Títulos de Prestígio (Prestige Titles):** Destaque ao título atualmente equipado no perfil do caçador, acompanhado pelo grid dos 19 títulos disponíveis com seleção e equipamento direto em 1 toque (`hunterStore.equipTitle`), preservando a persistência na tabela `profiles`.
+- **Troféus de Raid & Relíquias de Chefes:** Exibição dos 7 chefes com ilustrações originais otimizadas, citações épicas de vitória (`victoryLore`), recompensas conquistadas e histórico de purificação (`defeated_at`), integrando atalho direto para o Portal de Raids (`/bosses`) quando o chefe estiver em combate ativo.
+- **Navegação Coerente & Preservação da BottomNav:** Acesso ao Salão de Troféus integrado no cabeçalho de conquistas do Player Status (`/status`), na seção de títulos de Ajustes (`/settings`), no menu desktop (`RPGLayout.tsx`) e na gaveta mobile (`MobileMenu.tsx`), preservando rigorosamente as 5 abas oficiais da Bottom Navigation (`BottomNav.tsx`) sem adições indevidas.
+- **Suíte de Testes Automatizada (`execution/test_trophy_room.mjs`):** Criada bateria com 7 testes determinísticos cobrindo rotas, catálogo de dados, galeria de medalhas, seleção de títulos, histórico de raid e regras de navegação, elevando a homologação para 97/97 testes aprovados em 8 suítes com zero regressões.
+
+### 2026-11-05 — Etapa 03.8: Boss Raid — Temporizador Semanal Persistente, Ciclo de Vida e Experiência de Batalha (`src/pages/Bosses.tsx`, `src/stores/useBossStore.ts`, `supabase/migrations/*`)
+- **Auditoria do Temporizador e Diagnóstico `0d 0h` (`src/stores/useBossStore.ts` & `src/pages/Bosses.tsx`):** Identificada a causa raiz de raids com contador congelado em `0d 0h`: ausência de transição formal de estado quando o tempo decorrido ultrapassava a janela semanal (`started_at + targetDays`), mantendo a batalha eternamente com `defeated = false` e permitindo dano fora do prazo.
+- **Sistema de Prazo Semanal Persistente & Contagem Regressiva em Tempo Real (`useBossStore.ts` & `Bosses.tsx`):**
+  - Implementada a função determinística `getBossRaidDeadline(battle)` com suporte a `expires_at` persistido ou cálculo seguro sobre `started_at` + `targetDays` (janela semanal real de até 7 dias).
+  - Implementada a função `calculateRaidRemainingTime(deadline, refTime)` gerando contagem regressiva viva com dias, horas, minutos e segundos (`DDd HHh MMm SSs`), flag de prazo crítico (`isCritical < 24h`) e flag de expiração (`isExpired`).
+  - Intervalo de atualização em `Bosses.tsx` ajustado para 1 segundo (1000ms), garantindo fluidez e sincronização em tempo real.
+  - Formatação de encerramento respeitando o fuso horário de Brasília (`America/Sao_Paulo` via `formatRaidDeadlineLocal`), exibindo o dia e horário exato do fechamento da fenda.
+  - Persistência em UTC no Supabase, garantindo que o cronômetro não reinicie ao atualizar a página, relogar ou alternar entre dispositivos.
+- **Ciclo de Vida Formal da Raid (`RaidLifecycleState`):**
+  - Implementados 5 estados formais: `waiting_start`, `active_battle`, `boss_defeated`, `expired_loss` e `next_raid`.
+  - **Estado Expirado (`expired_loss`):** Quando o prazo se encerra com HP > 0, a fenda colapsa ("O Chefe Escapou — Fenda Desestabilizada"), bloqueando ataques manuais e de atividades secundárias e impedindo ganho indevido de XP ou títulos. Botão de recuperação tática (`Iniciar Novo Ciclo da Raid` / `retryExpiredBattle`) reinicia a incursão com HP cheio e uma nova janela semanal completa.
+  - **Estado de Vitória (`boss_defeated`):** Quando a integridade do chefe chega a 0 dentro do prazo, a tela exibe o painel dourado/esmeralda de purificação com o lore de vitória. A purificação concede bônus de XP e título de forma idempotente (`eventId: boss:${battle.id}`) apenas uma vez por batalha, avançando para o próximo chefe da campanha.
+  - **Alerta de Prazo Crítico (`< 24h`):** Interface aciona pulso âmbar/ouro e aviso sonoro/visual alertando o caçador sobre a iminência do colapso da fenda.
+- **Resiliência e Retrocompatibilidade de Banco (`safeInsertBossBattle` & `safeUpdateBossBattle`):**
+  - Criada migration segura e idempotente `supabase/migrations/20261105_boss_raid_lifecycle.sql` adicionando `expires_at`, `status` (com check constraint), `ended_at` e índices de busca.
+  - A store possui fallback automático defensivo para operar perfeitamente mesmo antes da execução manual da migration no console remoto do Supabase.
+- **Histórico de Combate & Feedback Visual de Dano:**
+  - Diferenciação inequívoca entre dano normal (espadas brancas/ciano), dano crítico (amarelo brilhante com badge `CRÍTICO!`) e regeneração por atividades desfeitas (carmim com `Regeneração de +X HP` e tag de desfeita).
+- **Validação e Homologação (`execution/test_boss_raid_lifecycle.mjs`):**
+  - Criada suíte completa com 7 testes determinísticos cobrindo cálculo de prazos, contagem regressiva em tempo real, matriz de ciclo de vida, bloqueio de dano em raids expiradas, formatação de fuso horário de São Paulo, integridade da migration SQL e interface do usuário.
+  - Sucesso em 90/90 testes automatizados em 8 suítes no projeto, `audit:i18n` com status `ok` e build de produção sem erros (`tsc -b && vite build` em 1.98s).
+
+### 2026-11-05 — Polimento Global do HUD v2: Refinamento Visual e Experiência Mobile (`src/pages/*`, `src/components/*`)
+- **Portal dos Chefes (`src/pages/Bosses.tsx`):** Modernização visual completa com componentes HUD v2 (`<HudCard variant="purple" corners>`, `<TacticalButton>`, `<RankBadge>`), internacionalização bilíngue PT-BR/EN-US para o histórico de combate (`combatEvents`), e diferenciação visual tática de golpes críticos (ouro pulsante + badge), dano regular (espadas âmbar) e regeneração (carmim com ícone de alerta).
+- **Investigação da Raid Ativa `0d 0h` (`src/pages/Bosses.tsx`):** Documentada a causa raiz: a meta de prazo (`targetDays`, 3-7 dias) somada a `activeBattle.started_at` expirou no passado, fazendo `remainingMs` avaliar para `0` via `Math.max(0, ...)`. O indicador visual foi atualizado para exibir claramente `0d 0h (Prazo encerrado / Expired)` sem alterar as regras de temporização do backend.
+- **Ficha Player Status (`src/pages/Dashboard.tsx`):** Ajustada a altura e o espaçamento inferior do Hero holográfico no mobile para eliminar a compressão sobre o nome/título do jogador (`-mt-3`), balanceada a distribuição vertical do card de Nível e XP (`justify-center gap-3 sm:gap-4`) para eliminar espaços vazios em telas largas, e refinada a seção de Domínios de Evolução para focar em Marcos de Especialização, próximo bônus (`domain.nextReward`) e fonte do último ganho (`domain.lastGain`), eliminando duplicação visual com os atributos superiores.
+- **Missões Diárias & Hábitos (`src/pages/Quests.tsx` & `src/components/rpg/NewHabitModal.tsx`):** Unificada a barra de filtros de status e tipos de atividade em um contêiner coeso com alvos de toque ergonômicos de `44px` (`min-h-[44px]`), e atualizado o modal de hábitos para exibir dinamicamente o ícone de confirmação (`CheckCircle2`) ao editar uma rotina existente em vez de um símbolo de adição redundante.
+- **Training Center (`src/pages/Workouts.tsx` & `src/components/workouts/WorkoutProgress.tsx`):** Melhorada a legibilidade dos protocolos de treino (`presets`) substituindo truncamento rígido por divisão em múltiplas linhas (`line-clamp-2 leading-relaxed`), prevenindo compressão de botões em telas pequenas (320px–375px) com `min-w-0`, e garantindo que nomes de exercícios no histórico permaneçam legíveis.
+- **Nutrition Center (`src/pages/Nutrition.tsx`):** Aprimorada a apresentação de alimentos da Tabela TACO e catálogo com `line-clamp-2 break-words` no grid, na lista compacta e no modal de busca rápida, permitindo identificar cortes e modos de preparo longos. Removido o símbolo duplicado `+` do botão primário com ícone (`ADICIONAR ALIMENTO` / `ADD FOOD`).
+- **Suíte de Testes Automatizada (`execution/test_global_hud_polish.mjs`):** Criada suíte específica cobrindo as melhorias de todas as 6 telas, alcançando 83/83 testes aprovados em 8 suítes com zero regressões.
+
 ### 2026-11-05 — Etapa 03.7: Redesign Premium — Nutrition Center (`src/pages/Nutrition.tsx` & `src/components/nutrition/NutritionMealPlans.tsx`)
 - **Painel Nutricional Principal & Anel Central de Calorias (`src/pages/Nutrition.tsx`):** Redesenho mobile-first da tela `/nutrition` alinhado à direção de arte `design/references/ascend-nutrition.jpg`, integrando `<HudCard variant="cyan" corners>`, `<NeonProgressRing variant="cyan-purple" size={196} strokeWidth={12}>`, `<RankBadge>` e `<TacticalButton>`. O anel circular exibe o saldo calórico restante (`remainingCalories`), percentual da meta (`calorieProgress%`), calorias consumidas (`dailyMacros.kcal`), meta calórica diária (`nutritionTargets.targetCalories`) e objetivo (`localizedGoalLabel`), com centralização perfeita (`leading-none`, `whitespace-nowrap`) e tratamento explícito para metas não calibradas (`missingProfileFields`) e excesso calórico (`calorieStatus === 'exceeded'`).
 - **Resumo Compacto de Macronutrientes em 3 Colunas (`src/pages/Nutrition.tsx`):** Substituídos os três cards grandes por uma barra horizontal compacta em 3 colunas (`grid-cols-3 divide-x divide-white/10`) dentro de `<HudCard>` com `<NeonProgressBar>` para `Proteína` (`Protein`), `Carbos` (`Carbs`) e `Gorduras` (`Fats`), exibindo consumo real vs. meta recomendada em gramas.

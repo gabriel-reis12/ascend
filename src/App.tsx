@@ -13,6 +13,7 @@ import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
 import { QuickMenu } from './pages/QuickMenu';
 import { Bosses } from './pages/Bosses';
+import { TrophyRoom } from './pages/TrophyRoom';
 import { Fortuna } from './pages/Fortuna';
 import { Rest } from './pages/Rest';
 import { useHunterStore } from './stores/useHunterStore';
@@ -138,6 +139,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
             <Route path="fortuna" element={<Fortuna />} />
             <Route path="bosses" element={<Bosses />} />
+            <Route path="trophies" element={<TrophyRoom />} />
             <Route path="rest" element={<Rest />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

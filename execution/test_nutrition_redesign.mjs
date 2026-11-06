@@ -44,8 +44,8 @@ test('Etapa 03.7 — Nutrition.tsx implements structured TODAYS MEALS cards, man
     assert.match(nutritionSource, /DEFAULT_MEAL_SLOTS/);
     assert.match(nutritionSource, /REFEIÇÕES DE HOJE/);
     assert.match(nutritionSource, /TODAY'S MEALS/);
-    assert.match(nutritionSource, /\+ ADICIONAR ALIMENTO/);
-    assert.match(nutritionSource, /\+ ADD FOOD/);
+    assert.match(nutritionSource, /ADICIONAR ALIMENTO/);
+    assert.match(nutritionSource, /ADD FOOD/);
 
     // Manual food registration, editing, deletion, and custom food creation preserved
     assert.match(nutritionSource, /handleLogFood/);

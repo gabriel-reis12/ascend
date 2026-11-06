@@ -1609,7 +1609,7 @@ export function Workouts() {
                         <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
                           {l('Divisão semanal', 'Weekly split')}
                         </p>
-                        <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-300">
+                        <p className="mt-1 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-200">
                           {programSplit}
                         </p>
                       </div>
@@ -1617,22 +1617,26 @@ export function Workouts() {
                       <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
                         <TacticalButton
                           variant="secondary"
-                          leftIcon={<Eye className="size-3.5" />}
+                          className="px-2 text-xs min-w-0"
+                          leftIcon={<Eye className="size-3.5 shrink-0" />}
                           onClick={() => {
                             setSelectedPreset(program);
                             setIsPresetModalOpen(true);
                           }}
                         >
-                          {l('Visualizar', 'Inspect')}
+                          <span className="truncate">{l('Visualizar', 'Inspect')}</span>
                         </TacticalButton>
                         <TacticalButton
                           variant="secondary"
                           accent="gold"
+                          className="px-2 text-xs min-w-0"
                           disabled={loading}
-                          leftIcon={<Upload className="size-3.5" />}
+                          leftIcon={<Upload className="size-3.5 shrink-0" />}
                           onClick={() => handleImportProgram(program)}
                         >
-                          {loading && isImportingPreset ? l('Importando...', 'Importing...') : l('Importar', 'Import')}
+                          <span className="truncate">
+                            {loading && isImportingPreset ? l('Importando...', 'Importing...') : l('Importar', 'Import')}
+                          </span>
                         </TacticalButton>
                       </div>
                     </div>
