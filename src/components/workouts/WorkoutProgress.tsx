@@ -35,8 +35,9 @@ interface WorkoutLog {
 
 interface PersonalRecord {
   exercise_name: string;
+  muscle_group: string;
   max_weight: number;
-  max_reps: number;
+  max_set_volume: number;
   estimated_1rm: number;
   last_date: string;
 }
@@ -52,6 +53,7 @@ export function WorkoutProgress() {
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVolume, setTotalVolume] = useState(0);
+  const [selectedExerciseName, setSelectedExerciseName] = useState<string>('');
 
   const fetchProgress = useCallback(async () => {
     try {
@@ -81,30 +83,46 @@ export function WorkoutProgress() {
 
       typedLogs.forEach((log) => {
         const name = log.exercise?.name || 'Exercício Desconhecido';
+        const group = log.exercise?.muscle_group || 'Geral';
         const weight = log.weight_kg || 0;
         const reps = log.reps || 0;
-        const sets = log.sets || 0;
+        const sets = log.sets || 1;
 
         // Volume calculation
         volume += weight * reps * sets;
 
         // 1RM Calculation: Weight * (1 + 0.0333 * Reps)
-        const current1rm = weight * (1 + 0.0333 * reps);
+        const current1rm = reps > 1 ? weight * (1 + 0.0333 * reps) : weight;
+        const setVolume = weight * reps;
 
         const existing = prMap.get(name);
-        if (!existing || current1rm > existing.estimated_1rm) {
+        if (!existing) {
           prMap.set(name, {
             exercise_name: name,
+            muscle_group: group,
             max_weight: weight,
-            max_reps: reps,
+            max_set_volume: setVolume,
             estimated_1rm: current1rm,
             last_date: log.logged_at,
+          });
+        } else {
+          prMap.set(name, {
+            exercise_name: name,
+            muscle_group: group,
+            max_weight: Math.max(existing.max_weight, weight),
+            max_set_volume: Math.max(existing.max_set_volume, setVolume),
+            estimated_1rm: Math.max(existing.estimated_1rm, current1rm),
+            last_date: new Date(log.logged_at) > new Date(existing.last_date) ? log.logged_at : existing.last_date,
           });
         }
       });
 
-      setPrs(Array.from(prMap.values()).sort((a, b) => b.estimated_1rm - a.estimated_1rm));
+      const sortedPrs = Array.from(prMap.values()).sort((a, b) => b.estimated_1rm - a.estimated_1rm);
+      setPrs(sortedPrs);
       setTotalVolume(volume);
+      if (sortedPrs.length > 0 && !selectedExerciseName) {
+        setSelectedExerciseName(sortedPrs[0].exercise_name);
+      }
     } catch (err) {
       console.error('Error fetching progress:', err);
     } finally {
@@ -323,8 +341,7 @@ export function WorkoutProgress() {
                         {tx(pr.exercise_name)}
                       </h4>
                       <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                        {l('Pico:', 'Best:')} {pr.max_weight}kg × {pr.max_reps}r ·{' '}
-                        {new Date(pr.last_date).toLocaleDateString(language)}
+                        {l('Carga Máx:', 'Max Weight:')} <strong className="text-white">{pr.max_weight}kg</strong> · {l('Vol. Série:', 'Set Vol:')} <strong className="text-amber-300">{pr.max_set_volume}kg</strong>
                       </p>
                     </div>
                   </div>
@@ -357,6 +374,89 @@ export function WorkoutProgress() {
           )}
         </div>
       </div>
+
+      {/* 5.4. Strength Progression Timeline */}
+      {prs.length > 0 && selectedExerciseName && (
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+            <div className="flex items-center gap-2.5">
+              <TrendingUp className="size-4 text-purple-400" />
+              <h2 className="font-orbitron text-xs font-black uppercase tracking-[0.18em] text-white sm:text-sm">
+                {l('Progressão de', 'Strength')}{' '}
+                <span className="text-purple-400">{l('Força Histórica', 'Progression')}</span>
+              </h2>
+            </div>
+
+            {/* Exercise Selector */}
+            <select
+              value={selectedExerciseName}
+              onChange={(e) => setSelectedExerciseName(e.target.value)}
+              className="rounded-xl border border-white/10 bg-[#12131D] px-3 py-1.5 font-orbitron text-xs font-black uppercase text-cyan-300 focus:border-cyan-400 focus:outline-none"
+            >
+              {prs.map((p) => (
+                <option key={p.exercise_name} value={p.exercise_name} className="bg-[#12131D] text-white">
+                  {p.exercise_name} ({Math.round(p.estimated_1rm)}kg 1RM)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <HudCard variant="purple" corners className="p-4 sm:p-5">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs border-b border-white/10 pb-2.5">
+                <span className="font-orbitron font-bold text-slate-300">
+                  {selectedExerciseName}
+                </span>
+                <span className="font-mono text-[11px] text-purple-300">
+                  {logs.filter((l) => (l.exercise?.name || '') === selectedExerciseName).length}{' '}
+                  {l('registros históricos', 'historical records')}
+                </span>
+              </div>
+
+              {/* Recent Historical Log Points */}
+              <div className="space-y-2">
+                {logs
+                  .filter((l) => (l.exercise?.name || '') === selectedExerciseName)
+                  .slice(0, 5)
+                  .map((log) => {
+                    const est1rm = (log.weight_kg || 0) * (1 + 0.0333 * (log.reps || 0));
+                    const prObj = prs.find((p) => p.exercise_name === selectedExerciseName);
+                    const isPr = prObj && log.weight_kg >= prObj.max_weight && prObj.max_weight > 0;
+                    return (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl border border-white/5 bg-black/40 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="font-mono text-[10px] text-slate-400">
+                            {new Date(log.logged_at).toLocaleDateString(language)}
+                          </span>
+                          <span className="font-bold text-white">
+                            {log.weight_kg}kg × {log.reps} reps
+                          </span>
+                          {isPr && (
+                            <span className="rounded bg-amber-500/20 border border-amber-400/40 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                              PR
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            Vol: <strong className="text-slate-200">{(log.weight_kg || 0) * (log.reps || 0) * (log.sets || 1)}kg</strong>
+                          </span>
+                          <span className="font-mono font-bold text-cyan-300">
+                            1RM: {Math.round(est1rm)}kg
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </HudCard>
+        </div>
+      )}
 
       {/* History Log — Mobile Compact HUD Cards + Desktop HUD Table (No horizontal scroll on mobile) */}
       {logs.length > 0 && (

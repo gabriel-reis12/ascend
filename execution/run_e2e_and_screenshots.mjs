@@ -112,3 +112,4 @@ server.listen(PORT, '127.0.0.1', async () => {
   server.close();
   process.exit(0);
 });
+

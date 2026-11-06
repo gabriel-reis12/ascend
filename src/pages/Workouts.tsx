@@ -48,6 +48,10 @@ import { HudCard } from '@/components/ui/hud-card';
 import { TacticalButton } from '@/components/ui/tactical-button';
 import { NeonProgressBar } from '@/components/ui/neon-progress';
 import { RankBadge } from '@/components/ui/rank-badge';
+import { TrainingGeneratorModal } from '@/components/workouts/TrainingGeneratorModal';
+import { ActiveWorkoutSession } from '@/components/workouts/ActiveWorkoutSession';
+import { EXERCISE_ARSENAL } from '@/data/exerciseArsenal';
+import type { GeneratedProtocol } from '@/lib/trainingGenerator';
 
 interface Exercise {
   id: string;
@@ -168,6 +172,7 @@ export function Workouts() {
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [selectedRoutine, setSelectedRoutine] = useState<WorkoutRoutine | null>(null);
   const [savedFeedbackId, setSavedFeedbackId] = useState<string | null>(null);
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
 
   // Delete Confirmation State
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -535,6 +540,216 @@ export function Workouts() {
     }
   }
 
+  async function handleFinishWorkoutSession(sessionVolume: number, completedExIds: string[]) {
+    if (!user || !sessionRoutineId) return;
+    try {
+      const activeRoutine = routines.find((r) => r.id === sessionRoutineId);
+      const isCardio = activeRoutine
+        ? activeRoutine.name.toLowerCase().includes('cardio') ||
+          activeRoutine.exercises?.some((ex) => ex.exercise?.category?.toLowerCase() === 'cardio')
+        : false;
+
+      const xpReward = isCardio ? 25 : 30;
+      const statTarget = isCardio ? 'endurance' : 'strength';
+      const completionDate = localDateString();
+
+      await supabase.from('routine_completions').upsert(
+        {
+          user_id: user.id,
+          routine_id: sessionRoutineId,
+          completed_date: completionDate,
+          xp_awarded: xpReward,
+        },
+        { onConflict: 'user_id,routine_id,completed_date' },
+      );
+
+      const xpResult = await addXp(xpReward, user.id, {
+        eventId: `workout-routine:${sessionRoutineId}:${completionDate}`,
+      });
+
+      if (xpResult.awardedXp > 0) {
+        await updateStat(statTarget, 2, user.id);
+        await updateStat('vitality', 1, user.id);
+        await updateStat('discipline', 1, user.id);
+        await useBossStore.getState().attackActiveBoss(user.id, xpResult.awardedXp, 'workout');
+      }
+
+      // Persist completed exercise sets to workout_logs from active session
+      try {
+        const storedSets = localStorage.getItem(`ascend_session_sets_${sessionRoutineId}`);
+        if (storedSets) {
+          const sessionData = JSON.parse(storedSets);
+          for (const item of sessionData) {
+            const completedSets = item.setsData?.filter((s: any) => s.completed) || [];
+            if (completedSets.length > 0) {
+              const maxWeight = Math.max(...completedSets.map((s: any) => s.weight_kg || 0));
+              const totalReps = completedSets.reduce((sum: number, s: any) => sum + (s.reps || 0), 0);
+              const avgReps = Math.round(totalReps / completedSets.length);
+
+              await supabase.from('workout_logs').insert({
+                user_id: user.id,
+                exercise_id: item.exerciseId,
+                sets: completedSets.length,
+                reps: avgReps,
+                weight_kg: maxWeight,
+              });
+
+              await supabase
+                .from('routine_exercises')
+                .update({
+                  weight_kg: maxWeight,
+                  reps: avgReps,
+                  sets: completedSets.length,
+                })
+                .eq('id', item.routineExerciseId);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao registrar séries detalhadas:', err);
+      }
+
+      // Clean session storage keys
+      try {
+        localStorage.removeItem('ascend_active_workout_open');
+        localStorage.removeItem('ascend_active_workout_exercises');
+        localStorage.removeItem('ascend_active_workout_completed');
+        localStorage.removeItem('ascend_active_workout_routine_id');
+        localStorage.removeItem('ascend_workout_rest_target');
+        localStorage.removeItem(`ascend_workout_session_start_${sessionRoutineId}`);
+        localStorage.removeItem(`ascend_session_sets_${sessionRoutineId}`);
+        if (user.id) {
+          localStorage.removeItem(`ascend_active_workout_${user.id}`);
+        }
+      } catch (e) {
+        console.warn('Erro ao limpar cache de treino:', e);
+      }
+
+      setIsRoutineSessionOpen(false);
+      setSessionRoutineId(null);
+      setCompletedSessionExs([]);
+      setSessionExercises([]);
+      setIsResting(false);
+      setRestTimer(0);
+
+      alert(
+        l(
+          `Treino concluído com sucesso! Volume total: ${sessionVolume} kg (+${xpResult.awardedXp} XP)`,
+          `Workout completed successfully! Total volume: ${sessionVolume} kg (+${xpResult.awardedXp} XP)`,
+        ),
+      );
+
+      await fetchData();
+    } catch (err) {
+      console.error('Error finishing routine session:', err);
+    }
+  }
+
+  async function handleSaveGeneratedProtocol(protocol: GeneratedProtocol, startNow?: boolean) {
+    if (!user) return;
+    setLoading(true);
+    setIsGeneratorOpen(false);
+
+    try {
+      const currentExercises = [...exercises];
+      let firstCreatedRoutine: WorkoutRoutine | null = null;
+
+      for (const r of protocol.routines) {
+        const { data: newRoutine, error: routineErr } = await supabase
+          .from('workout_routines')
+          .insert({
+            user_id: user.id,
+            name: r.name,
+            scheduled_days: r.scheduled_days,
+          })
+          .select()
+          .single();
+
+        if (routineErr) throw routineErr;
+        if (!newRoutine) throw new Error('Erro ao criar rotina do protocolo.');
+
+        const routineExerciseList: RoutineExercise[] = [];
+
+        for (let i = 0; i < r.exercises.length; i++) {
+          const ex = r.exercises[i];
+          let matchedExercise = currentExercises.find(
+            (e) => e.name.toLowerCase().trim() === ex.name.toLowerCase().trim(),
+          );
+
+          let exerciseId = matchedExercise?.id;
+
+          if (!exerciseId) {
+            const { data: createdEx, error: createExErr } = await supabase
+              .from('exercises')
+              .insert({
+                name: ex.name,
+                muscle_group: ex.muscle_group,
+                category: ex.category,
+                is_custom: true,
+                created_by: user.id,
+              })
+              .select()
+              .single();
+
+            if (createExErr) throw createExErr;
+            if (!createdEx) throw new Error('Erro ao criar exercício.');
+
+            exerciseId = createdEx.id;
+            matchedExercise = createdEx;
+            currentExercises.push(createdEx);
+          }
+
+          const { data: routineExData, error: joinErr } = await supabase
+            .from('routine_exercises')
+            .insert({
+              routine_id: newRoutine.id,
+              exercise_id: exerciseId,
+              sets: ex.sets,
+              reps: ex.reps,
+              weight_kg: ex.weight_kg,
+              order_index: i,
+            })
+            .select('*, exercise:exercises(*)')
+            .single();
+
+          if (joinErr) throw joinErr;
+          if (routineExData) {
+            routineExerciseList.push(routineExData);
+          }
+        }
+
+        const fullRoutine: WorkoutRoutine = {
+          ...newRoutine,
+          exercises: routineExerciseList,
+        };
+
+        if (!firstCreatedRoutine) {
+          firstCreatedRoutine = fullRoutine;
+        }
+      }
+
+      setExercises(currentExercises);
+      await fetchData();
+
+      alert(
+        l(
+          `Protocolo "${protocol.name}" configurado com sucesso!`,
+          `Protocol "${protocol.nameEn || protocol.name}" configured successfully!`,
+        ),
+      );
+
+      if (startNow && firstCreatedRoutine) {
+        handleStartRoutine(firstCreatedRoutine);
+        setActiveTab('routines');
+      }
+    } catch (err) {
+      console.error('Erro ao salvar protocolo gerado:', err);
+      alert(l('Erro ao salvar protocolo gerado. Tente novamente.', 'Error saving generated protocol. Try again.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleAddExerciseToSession(exercise: Exercise) {
     if (!sessionRoutineId) return;
     try {
@@ -847,8 +1062,7 @@ export function Workouts() {
       return;
     }
     if (activeTab === 'presets') {
-      setSelectedPreset(WORKOUT_PROGRAM_PRESETS[0] || null);
-      setIsPresetModalOpen(Boolean(WORKOUT_PROGRAM_PRESETS[0]));
+      setIsGeneratorOpen(true);
       return;
     }
     if (activeTab === 'progress') {
@@ -865,7 +1079,7 @@ export function Workouts() {
 
   const contextualAction = {
     routines: { label: l('Nova Rotina', 'New Routine'), icon: Plus, variant: 'cyan' as const },
-    presets: { label: l('Explorar Modelos', 'Explore Models'), icon: Upload, variant: 'amber' as const },
+    presets: { label: l('Gerar Treino', 'Generate Workout'), icon: Sparkles, variant: 'cyan' as const },
     progress: { label: l('Registrar Série', 'Log Set'), icon: Zap, variant: 'purple' as const },
     library: { label: l('Novo Exercício', 'New Exercise'), icon: Plus, variant: 'cyan' as const },
   }[activeTab];
@@ -891,7 +1105,7 @@ export function Workouts() {
           <RankBadge rank={rank as 'E' | 'D' | 'C' | 'B' | 'A' | 'S'} size="sm" showLabel={false} />
           <TacticalButton
             variant="secondary"
-            accent={contextualAction.variant === 'amber' ? 'gold' : contextualAction.variant}
+            accent={contextualAction.variant}
             onClick={handleContextAction}
             leftIcon={<ContextActionIcon className="size-3.5" />}
           >
@@ -944,10 +1158,23 @@ export function Workouts() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setRestTimer((prev) => prev + 30)}
+                onClick={() => {
+                  setRestTimer(60);
+                  setIsResting(true);
+                }}
                 className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3 font-mono text-xs font-bold text-slate-200 hover:bg-white/10"
               >
-                +30s
+                60s
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRestTimer(90);
+                  setIsResting(true);
+                }}
+                className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3 font-mono text-xs font-bold text-slate-200 hover:bg-white/10"
+              >
+                90s
               </button>
               <button
                 type="button"
@@ -1478,10 +1705,17 @@ export function Workouts() {
                     <div className="mt-5 flex flex-wrap justify-center gap-3">
                       <TacticalButton
                         variant="primary"
+                        leftIcon={<Sparkles className="size-4" />}
+                        onClick={() => setIsGeneratorOpen(true)}
+                      >
+                        {l('Gerar Protocolo com IA Local', 'Generate with Tactical Engine')}
+                      </TacticalButton>
+                      <TacticalButton
+                        variant="secondary"
                         leftIcon={<Plus className="size-4" />}
                         onClick={() => setIsNewRoutineModalOpen(true)}
                       >
-                        {l('Criar Rotina', 'Create Routine')}
+                        {l('Criar Manualmente', 'Create Manually')}
                       </TacticalButton>
                       <TacticalButton
                         variant="secondary"
@@ -1489,7 +1723,7 @@ export function Workouts() {
                         leftIcon={<Layers className="size-4" />}
                         onClick={() => setActiveTab('presets')}
                       >
-                        {l('Ver Protocolos', 'View Protocols')}
+                        {l('Ver Modelos', 'View Presets')}
                       </TacticalButton>
                     </div>
                   </HudCard>
@@ -1502,6 +1736,39 @@ export function Workouts() {
         {/* TAB 2: PROTOCOLOS (PRESETS) */}
         {activeTab === 'presets' && (
           <div className="space-y-5">
+            {/* Hero Banner: GERADOR DETERMINÍSTICO DE TREINOS HUD v2 */}
+            <HudCard variant="cyan" corners radialGlow className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5 max-w-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-300">
+                      <Sparkles className="size-3" />
+                      {l('SISTEMA TÁTICO DETERMINÍSTICO', 'DETERMINISTIC TACTICAL SYSTEM')}
+                    </span>
+                  </div>
+                  <h2 className="font-orbitron text-lg sm:text-2xl font-black uppercase tracking-tight text-white">
+                    {l('GERADOR DE TREINO PERSONALIZADO', 'PERSONALIZED TRAINING GENERATOR')}
+                  </h2>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {l(
+                      'Construa uma periodização completa personalizada para seu objetivo, nível, frequência semanal (2x a 6x), equipamentos disponíveis e restrições articulares.',
+                      'Build a complete periodized training program tailored to your goals, experience, frequency (2x to 6x), equipment, and physical restrictions.'
+                    )}
+                  </p>
+                </div>
+
+                <TacticalButton
+                  variant="primary"
+                  displayFont
+                  className="shrink-0 self-start sm:self-auto"
+                  leftIcon={<Sparkles className="size-4" />}
+                  onClick={() => setIsGeneratorOpen(true)}
+                >
+                  {l('CRIAR PROTOCOLO INTELIGENTE', 'CREATE SMART PROTOCOL')}
+                </TacticalButton>
+              </div>
+            </HudCard>
+
             <div className="flex flex-wrap gap-1.5">
               {(
                 ['Todos', '3x na semana', '4x na semana', '5x na semana', '6x na semana', 'Treino em Casa'] as const
@@ -1747,6 +2014,9 @@ export function Workouts() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredExercises.map((ex) => {
                   const lastLog = logs.find((item) => item.exercise_id === ex.id);
+                  const arsenalData = EXERCISE_ARSENAL.find(
+                    (a) => a.name.toLowerCase().trim() === ex.name.toLowerCase().trim(),
+                  );
                   return (
                     <HudCard key={ex.id} variant="default" className="flex flex-col justify-between p-4">
                       <div>
@@ -1773,6 +2043,26 @@ export function Workouts() {
                             </span>
                           )}
                         </div>
+
+                        {arsenalData && (
+                          <div className="mt-2 space-y-1 rounded-lg border border-white/5 bg-black/30 p-2">
+                            <p className="text-[10px] text-slate-400 italic line-clamp-2">
+                              💡 {isEnglish ? arsenalData.tipsEn : arsenalData.tipsPt}
+                            </p>
+                            {arsenalData.avoidIfRestriction && arsenalData.avoidIfRestriction.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {arsenalData.avoidIfRestriction.map((res: string) => (
+                                  <span
+                                    key={res}
+                                    className="rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.2 font-mono text-[8px] font-bold uppercase text-amber-300"
+                                  >
+                                    ⚠ {res}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-3.5 grid grid-cols-2 gap-2 border-t border-white/[0.06] pt-3">
@@ -2510,7 +2800,7 @@ export function Workouts() {
         )}
 
         {/* 6. ACTIVE WORKOUT SESSION HUD (isRoutineSessionOpen) */}
-        {isRoutineSessionOpen && (
+        {isRoutineSessionOpen && sessionRoutineId && (
           <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
@@ -2524,317 +2814,42 @@ export function Workouts() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 24 }}
-              className="relative flex h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-cyan-400/35 bg-[#0B0D16] shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-3xl"
+              className="relative flex h-[92vh] w-full max-w-3xl flex-col overflow-y-auto rounded-t-3xl border border-cyan-400/35 bg-[#0B0D16] p-4 sm:p-6 shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-3xl"
             >
-              {/* Top Progress Line */}
-              <div className="p-5 pb-4 border-b border-white/10">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.22em] text-cyan-400">
-                      {l('SESSÃO DE TREINO ATIVA', 'ACTIVE WORKOUT SESSION')}
-                    </span>
-                    <h2 className="mt-0.5 truncate font-orbitron text-lg font-black uppercase text-white sm:text-xl">
-                      {routines.find((r) => r.id === sessionRoutineId)?.name ||
-                        l('Protocolo em Execução', 'Active Protocol')}
-                    </h2>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsRoutineSessionOpen(false)}
-                    className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white"
-                    aria-label={l('Minimizar sessão de treino', 'Minimize workout session')}
-                  >
-                    <X className="size-5" />
-                  </button>
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+                <div>
+                  <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.22em] text-cyan-400">
+                    {l('MODO FOCO & EXECUÇÃO TÁTICA', 'FOCUS MODE & TACTICAL EXECUTION')}
+                  </span>
+                  <h2 className="mt-0.5 truncate font-orbitron text-lg font-black uppercase text-white sm:text-xl">
+                    {routines.find((r) => r.id === sessionRoutineId)?.name ||
+                      l('Protocolo em Execução', 'Active Protocol')}
+                  </h2>
                 </div>
-
-                {/* Global Session Progress */}
-                <div className="mt-3 space-y-1.5">
-                  <NeonProgressBar value={activeSessionProgress} max={100} variant="cyan" size="md" />
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                    <span className="text-slate-400">
-                      {completedSessionExs.length}/{sessionExercises.length}{' '}
-                      {l('exercícios concluídos', 'exercises completed')}
-                    </span>
-                    <span className="font-mono text-cyan-300">{activeSessionProgress}%</span>
-                  </div>
-                </div>
-
-                {/* Integrated Rest Timer HUD */}
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-[#07080E] p-3">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={cn(
-                        'flex size-9 items-center justify-center rounded-xl border',
-                        isResting
-                          ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-300'
-                          : 'border-white/10 bg-white/5 text-slate-400',
-                      )}
-                    >
-                      <Timer className="size-4" />
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                        {l('Descanso', 'Rest Timer')}
-                      </p>
-                      <p className="font-mono text-base font-black text-white">
-                        {isResting ? formatTimer(restTimer) : l('Pronto', 'Ready')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRestTimer(60);
-                        setIsResting(true);
-                      }}
-                      className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3 font-mono text-xs font-bold text-slate-200 hover:border-cyan-400/35"
-                    >
-                      60s
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRestTimer(90);
-                        setIsResting(true);
-                      }}
-                      className="min-h-[40px] rounded-xl border border-white/10 bg-white/5 px-3 font-mono text-xs font-bold text-slate-200 hover:border-cyan-400/35"
-                    >
-                      90s
-                    </button>
-                    {isResting && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsResting(false);
-                          setRestTimer(0);
-                        }}
-                        className="min-h-[40px] rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 text-xs font-bold uppercase text-rose-300"
-                      >
-                        {l('Zerar', 'Reset')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Session Exercises List */}
-              <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
-                {sessionExercises.map((ex, idx) => {
-                  const isCompleted = completedSessionExs.includes(ex.id);
-                  const previousLog = logs.find((item) => item.exercise_id === ex.exercise_id);
-
-                  return (
-                    <HudCard
-                      key={ex.id}
-                      variant={isCompleted ? 'success' : 'cyan'}
-                      className="p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-mono text-[10px] font-bold text-cyan-400">
-                              #{idx + 1}
-                            </span>
-                            <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-bold uppercase text-slate-300">
-                              {tx(ex.exercise?.muscle_group)}
-                            </span>
-                            {previousLog && (
-                              <span className="rounded-md border border-purple-400/25 bg-purple-500/10 px-2 py-0.5 font-mono text-[9px] font-bold text-purple-300">
-                                {l('Anterior:', 'Prev:')} {previousLog.weight_kg}kg × {previousLog.reps}r
-                              </span>
-                            )}
-                          </div>
-                          <h4
-                            className={cn(
-                              'mt-1 font-orbitron text-sm font-black uppercase text-white sm:text-base',
-                              isCompleted && 'text-emerald-200 line-through opacity-80',
-                            )}
-                          >
-                            {tx(ex.exercise?.name)}
-                          </h4>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleCompleteSessionExercise(ex)}
-                          disabled={isCompleted}
-                          className={cn(
-                            'min-h-[44px] shrink-0 rounded-xl border px-4 font-orbitron text-[10px] font-black uppercase tracking-wider transition-all',
-                            isCompleted
-                              ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-300'
-                              : 'border-cyan-400/50 bg-cyan-500/20 text-cyan-100 hover:bg-cyan-500/30',
-                          )}
-                        >
-                          {isCompleted ? l('Concluído ✓', 'Completed ✓') : l('Concluir Série', 'Complete Set')}
-                        </button>
-                      </div>
-
-                      {!isCompleted && (
-                        <div className="mt-3.5 grid grid-cols-3 gap-2 border-t border-white/10 pt-3">
-                          <div className="rounded-xl border border-white/10 bg-[#07080E] p-2">
-                            <span className="block text-[9px] font-bold uppercase text-slate-400">
-                              {l('Séries', 'Sets')}
-                            </span>
-                            <div className="mt-1 flex items-center justify-between">
-                              <button
-                                type="button"
-                                onClick={() => handleSessionFieldChange(ex.id, 'sets', Math.max(1, ex.sets - 1))}
-                                className="flex size-8 items-center justify-center rounded-lg bg-white/5 font-mono text-sm font-bold text-white"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                value={ex.sets}
-                                onChange={(e) =>
-                                  handleSessionFieldChange(ex.id, 'sets', Math.max(1, parseInt(e.target.value) || 1))
-                                }
-                                className="w-10 bg-transparent text-center font-mono text-sm font-black text-white focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleSessionFieldChange(ex.id, 'sets', ex.sets + 1)}
-                                className="flex size-8 items-center justify-center rounded-lg bg-cyan-500/15 font-mono text-sm font-bold text-cyan-200"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="rounded-xl border border-white/10 bg-[#07080E] p-2">
-                            <span className="block text-[9px] font-bold uppercase text-slate-400">Reps</span>
-                            <div className="mt-1 flex items-center justify-between">
-                              <button
-                                type="button"
-                                onClick={() => handleSessionFieldChange(ex.id, 'reps', Math.max(1, ex.reps - 1))}
-                                className="flex size-8 items-center justify-center rounded-lg bg-white/5 font-mono text-sm font-bold text-white"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                value={ex.reps}
-                                onChange={(e) =>
-                                  handleSessionFieldChange(ex.id, 'reps', Math.max(1, parseInt(e.target.value) || 1))
-                                }
-                                className="w-10 bg-transparent text-center font-mono text-sm font-black text-white focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleSessionFieldChange(ex.id, 'reps', ex.reps + 1)}
-                                className="flex size-8 items-center justify-center rounded-lg bg-cyan-500/15 font-mono text-sm font-bold text-cyan-200"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="rounded-xl border border-cyan-400/25 bg-[#07080E] p-2">
-                            <span className="block text-[9px] font-bold uppercase text-cyan-400">KG</span>
-                            <div className="mt-1 flex items-center justify-between">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleSessionFieldChange(
-                                    ex.id,
-                                    'weight_kg',
-                                    Math.max(0, Number((ex.weight_kg - 2.5).toFixed(1))),
-                                  )
-                                }
-                                className="flex size-8 items-center justify-center rounded-lg bg-white/5 font-mono text-sm font-bold text-white"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                step="0.5"
-                                value={ex.weight_kg}
-                                onChange={(e) =>
-                                  handleSessionFieldChange(
-                                    ex.id,
-                                    'weight_kg',
-                                    Math.max(0, parseFloat(e.target.value) || 0),
-                                  )
-                                }
-                                className="w-12 bg-transparent text-center font-mono text-sm font-black text-cyan-300 focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleSessionFieldChange(
-                                    ex.id,
-                                    'weight_kg',
-                                    Number((ex.weight_kg + 2.5).toFixed(1)),
-                                  )
-                                }
-                                className="flex size-8 items-center justify-center rounded-lg bg-cyan-500/15 font-mono text-sm font-bold text-cyan-200"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </HudCard>
-                  );
-                })}
-
-                {/* Add Extra Exercise During Active Session */}
-                <div className="rounded-2xl border border-dashed border-white/15 bg-[#07080E]/80 p-4">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    + {l('Adicionar Exercício Extra na Sessão', 'Add Extra Exercise to Session')}
-                  </label>
-                  <div className="relative mt-2">
-                    <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
-                    <input
-                      type="text"
-                      placeholder={l('Buscar exercício extra...', 'Search extra exercise...')}
-                      value={routineExSearch}
-                      onChange={(e) => setRoutineExSearch(e.target.value)}
-                      className="min-h-[42px] w-full rounded-xl border border-white/10 bg-black/40 py-2 pl-10 pr-4 text-xs font-bold text-white placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
-                    />
-                  </div>
-                  {routineExSearch && (
-                    <div className="mt-2 max-h-36 divide-y divide-white/5 overflow-y-auto rounded-xl border border-white/10 bg-black/60">
-                      {exercises
-                        .filter((e) => e.name.toLowerCase().includes(routineExSearch.toLowerCase()))
-                        .map((ex) => (
-                          <button
-                            key={ex.id}
-                            type="button"
-                            onClick={() => handleAddExerciseToSession(ex)}
-                            className="flex min-h-[40px] w-full items-center justify-between px-3.5 py-2 text-left hover:bg-cyan-500/10"
-                          >
-                            <span className="text-xs font-bold uppercase text-white">{tx(ex.name)}</span>
-                            <span className="text-[10px] font-bold uppercase text-cyan-400">
-                              + {l('Adicionar', 'Add')}
-                            </span>
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Active Session Footer CTA */}
-              <div className="border-t border-white/10 bg-[#090B12] p-4 sm:p-5">
-                <TacticalButton
-                  variant="primary"
-                  fullWidth
-                  displayFont
-                  leftIcon={<CheckCircle2 className="size-5" />}
-                  onClick={handleFinishRoutine}
+                <button
+                  type="button"
+                  onClick={() => setIsRoutineSessionOpen(false)}
+                  className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white"
+                  aria-label={l('Minimizar sessão de treino', 'Minimize workout session')}
                 >
-                  {l('Finalizar Treino e Resgatar XP', 'Finish Workout & Claim XP')}
-                </TacticalButton>
+                  <X className="size-5" />
+                </button>
               </div>
+
+              <ActiveWorkoutSession
+                routineName={
+                  routines.find((r) => r.id === sessionRoutineId)?.name ||
+                  l('Protocolo em Execução', 'Active Protocol')
+                }
+                routineId={sessionRoutineId}
+                initialExercises={
+                  sessionExercises.length > 0
+                    ? sessionExercises
+                    : routines.find((r) => r.id === sessionRoutineId)?.exercises || []
+                }
+                onFinishWorkout={handleFinishWorkoutSession}
+                onCloseSession={() => setIsRoutineSessionOpen(false)}
+              />
             </motion.div>
           </div>
         )}
@@ -2986,6 +3001,13 @@ export function Workouts() {
             </motion.div>
           </div>
         )}
+
+        {/* 9. DETERMINISTIC TRAINING GENERATOR MODAL */}
+        <TrainingGeneratorModal
+          isOpen={isGeneratorOpen}
+          onClose={() => setIsGeneratorOpen(false)}
+          onSaveProtocol={handleSaveGeneratedProtocol}
+        />
       </AnimatePresence>
     </div>
   );

@@ -20,6 +20,32 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-06 — Etapa 04.3: Training Center 2.0 — Gerador de Treinos Personalizados, Progressão Física e Gamificação (`src/lib/trainingGenerator.ts`, `src/data/exerciseArsenal.ts`, `src/components/workouts/TrainingGeneratorModal.tsx`, `src/components/workouts/ActiveWorkoutSession.tsx`, `src/components/workouts/WorkoutProgress.tsx`, `src/pages/Workouts.tsx`, `execution/test_training_center_v2.mjs`)
+- **Workflows `ascend-develop` & `ascend-design` Concluídos:** Transformação completa do módulo de Treinos `/workouts` em um Centro de Treinamento Tático de alta precisão, dotado de motor gerador determinístico local (zero IA generativa / zero APIs externas), arsenal de exercícios expandido com dicas biomecânicas, sessão ativa ergonômica com cronômetro imune a suspensão de tela, acompanhamento de recordes pessoais (1RM estimada por fórmula Epley) e evolução de força.
+- **Motor Gerador Determinístico Local (`src/lib/trainingGenerator.ts`):**
+  - **Filtro Biomecânico de Restrições:** Tratamento estrito de restrições (`lombar`, `joelho`, `ombro`, `punho`, `cervical`), excluindo movimentos contraindicados tanto da seleção inicial quanto da piscina de substituição emergencial (`safeFallbackPool`).
+  - **Divisões de Treino Adaptativas:** Suporte determinístico a frequências de 2x a 6x por semana (`Full Body 2x`, `Full Body 3x`, `Push / Pull / Legs 3x`, `Upper / Lower 4x`, `ABCD 4x`, `ABCDE 5x`, `PPL 2x 6x`).
+  - **Prescrição Personalizada:** Volume, faixas de repetições e intervalos de descanso calibrados por objetivo (`hypertrophy`, `strength`, `conditioning`, `weight_loss`, `health`) e nível de experiência (`beginner`, `intermediate`, `advanced`).
+  - **Aviso Clínico Integrado:** Protocolos gerados incluem disclaimer de conformidade com recomendações do ACSM e NSCA.
+- **Arsenal de Exercícios (`src/data/exerciseArsenal.ts`):**
+  - Catálogo com 28 exercícios estruturados por grupamento muscular (`Peito`, `Costas`, `Pernas`, `Ombros`, `Bíceps`, `Tríceps`, `Core`, `Cardio`), equipamentos (`Barra`, `Halteres`, `Máquina`, `Polia / Cabo`, `Peso Corporal`), nível de complexidade, gasto calórico estimado e dicas posturais bilíngues (PT-BR / EN-US).
+- **Questionário e Prévia Tática (`src/components/workouts/TrainingGeneratorModal.tsx`):**
+  - Formulário em 5 etapas no HUD v2 com pré-carregamento dos dados de onboarding do hunter (`trainingFocus`, `experienceLevel`).
+  - Tela de prévia "SEU PROTOCOLO DE TREINO" com resumo de sessões, exercícios, dias recomendados e ações explícitas: *Gerar Novamente*, *Ajustar*, *Salvar Protocolo* e *Iniciar Treino Agora*.
+- **Sessão Ativa com Execução Tática (`src/components/workouts/ActiveWorkoutSession.tsx`):**
+  - **Cronômetro de Descanso Tático Persistente:** Cálculo baseado em `targetTimestamp` armazenado no `localStorage` (`ascend_workout_rest_target`), garantindo precisão absoluta mesmo quando a aba do navegador for suspensa, o celular for bloqueado ou a página for recarregada.
+  - **Controle de Séries por Exercício:** Steppers ergonômicos (min 44px) para peso e repetições, marcação de séries concluídas, cálculo instantâneo do volume acumulado (kg), tempo de sessão e modal de substituição de exercício com alternativas do Arsenal.
+- **Evolução Física e Recordes Pessoais (`src/components/workouts/WorkoutProgress.tsx`):**
+  - Cálculo automático de PRs: Carga Máxima (`max_weight`), Maior Volume em Série (`max_set_volume`) e 1RM Estimada (`estimated_1rm`) via fórmula de Epley: $\text{1RM} = \text{peso} \times (1 + \text{reps} / 30)$.
+  - Nova seção interativa "Evolução de Cargas & Força" com seletor de exercícios e histórico cronológico em cards táticos responsivos.
+- **Integração na Central de Treinos (`src/pages/Workouts.tsx`):**
+  - **Aba Protocolos:** Hero banner do HUD v2 com atalho direto "Criar Protocolo Inteligente" e integração no botão contextual do cabeçalho.
+  - **Aba Hoje:** Sessão ativa integrada ao modal com botão de minimização, persistência de séries concluídas no `workout_logs`, premiação idempotente de XP (+30 XP para musculação / +25 XP para cardio), ataque ao Boss Raid ativo e avanço nos atributos (FOR, RES, VIT, DIS).
+  - **Aba Arsenal:** Cards enriquecidos com dicas biomecânicas da TACO/Arsenal e tags de alerta para restrições articulares.
+- **Suíte de Testes Automatizada (`execution/test_training_center_v2.mjs`):**
+  - 11 testes unitários cobrindo todas as divisões semanais (2x a 6x), validação de restrições físicas, adaptação domiciliar, determinismo, integridade do Arsenal, fórmula de Epley e contrato do cronômetro tático. 100% aprovados.
+  - 22/22 suítes de teste do repositório aprovadas em `execution/run_all_tests.mjs`.
+
 ### 2026-11-06 — Etapa 03.13: Parser Determinístico de Refeições por Texto & Catálogo TACO (`src/lib/nutritionAi.ts`, `src/lib/taco.ts`, `src/pages/Nutrition.tsx`, `execution/test_deterministic_nutrition_parser.mjs`)
 - **Workflows `ascend-develop` & `ascend-design` Concluídos:** Aprimoramento completo do registro de refeições por texto em linguagem natural através de processamento **100% determinístico local**, integrando a Tabela TACO (NEPA/UNICAMP) e catálogo alimentar existente — com zero IA generativa, zero LLMs remotas e zero alucinação nutricional.
 - **Catálogo & Busca de Candidatos TACO (`src/lib/taco.ts`):**
