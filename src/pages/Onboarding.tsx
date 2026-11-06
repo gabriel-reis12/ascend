@@ -9,13 +9,20 @@ import {
   Shield, Sword, Book, Zap, ChevronRight, ChevronLeft, Lightbulb, Crown,
   User, Calendar, Ruler, Weight, Target, Brain, Dumbbell, Star,
   CheckCircle2, ArrowRight, Sparkles, Activity, ScanLine, Trophy,
-  Maximize2, X, AlertTriangle, ArrowLeft, LogOut
+  Maximize2, X, AlertTriangle, ArrowLeft, LogOut, Flame, Apple,
+  Clock, Check, Layers
 } from 'lucide-react';
 import { usePreferences } from '@/contexts/preferences';
 import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
 import { HudCard } from '@/components/ui/hud-card';
 import { TacticalButton } from '@/components/ui/tactical-button';
 import { NeonProgressBar } from '@/components/ui/neon-progress';
+import {
+  applyHunterInitialSetup,
+  getCalibratedInitialStats,
+  getRecommendedPinnedActions,
+  getInitialHabitPresets,
+} from '@/lib/onboardingSetup';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type OnboardingStep =
@@ -40,6 +47,11 @@ interface FormData {
   nutritionGoal: string;
   mainGoal: string;
   experienceLevel: string;
+  workoutFrequency: number;
+  workoutEnvironment: 'gym' | 'home' | 'hybrid';
+  physicalRestrictions: Array<'lombar' | 'joelho' | 'ombro' | 'punho' | 'cervical'>;
+  primaryDifficulty: string;
+  dailyAvailability: '30' | '60' | '90';
 }
 
 // ─── Dados do Questionário (narrativa do Arquiteto) ───────────────────────────
@@ -171,7 +183,7 @@ const CLASSES = [
     accent: 'text-blue-400',
     glow: 'shadow-[0_0_30px_rgba(59,130,246,0.3)]',
     image: '/optimized/Classes/Warrior/Rank E.jpg',
-    stats: 'FOR ▲▲▲  RES ▲▲  VIT ▲',
+    stats: 'FOR 13 · RES 12 · VIT 11',
   },
   {
     id: 'Scholar' as HunterClass,
@@ -183,7 +195,7 @@ const CLASSES = [
     accent: 'text-purple-400',
     glow: 'shadow-[0_0_30px_rgba(124,58,237,0.3)]',
     image: '/optimized/Classes/Scholar/Rank E.jpg',
-    stats: 'INT ▲▲▲  SAB ▲▲  DIS ▲',
+    stats: 'INT 13 · SAB 12 · DIS 11',
   },
   {
     id: 'Creator' as HunterClass,
@@ -195,7 +207,7 @@ const CLASSES = [
     accent: 'text-amber-400',
     glow: 'shadow-[0_0_30px_rgba(251,191,36,0.3)]',
     image: '/optimized/Classes/Creator/Rank E.jpg',
-    stats: 'INT ▲▲  DIS ▲▲  SAB ▲',
+    stats: 'INT 12 · DIS 12 · SAB 11',
   },
   {
     id: 'Monk' as HunterClass,
@@ -207,7 +219,7 @@ const CLASSES = [
     accent: 'text-cyan-400',
     glow: 'shadow-[0_0_30px_rgba(6,182,212,0.3)]',
     image: '/optimized/Classes/Monk/Rank E.jpg',
-    stats: 'VIT ▲▲▲  EQU ▲▲  RES ▲',
+    stats: 'VIT 13 · EQU 12 · RES 11',
   },
   {
     id: 'Leader' as HunterClass,
@@ -219,7 +231,7 @@ const CLASSES = [
     accent: 'text-rose-400',
     glow: 'shadow-[0_0_30px_rgba(244,63,94,0.3)]',
     image: '/optimized/Classes/Leader/Rank E.jpg',
-    stats: 'DIS ▲▲▲  SAB ▲▲  EQU ▲',
+    stats: 'DIS 13 · SAB 12 · EQU 11',
   },
 ];
 
@@ -334,41 +346,41 @@ const RANK_DESCRIPTIONS_EN: Record<HunterClass, Record<string, string>> = {
 
 const AWAKENING_MESSAGES = [
   'Inicializando protocolo de avaliação...',
-  'Lendo assinatura de mana...',
-  'Analisando bio-sinais do caçador...',
-  'Sincronizando com a Fenda...',
-  'Padrão identificado na linha S...',
-  'Classe determinada pelo Arquiteto.',
+  'Lendo assinatura biológica e mana...',
+  'Configurando metas fisiológicas e metabólicas...',
+  'Sintetizando rotinas de treinamento e hábitos...',
+  'Padrão de linhagem identificado na Fenda...',
+  'Setup Inicial pronto. Classe determinada pelo Arquiteto.',
 ];
 
 const AWAKENING_MESSAGES_EN = [
   'Initializing assessment protocol...',
-  'Reading mana signature...',
-  'Analyzing Hunter bio-signals...',
-  'Synchronizing with the Gate...',
-  'S-line pattern identified...',
-  'Class determined by the Architect.',
+  'Reading biological and mana signature...',
+  'Configuring physiological & metabolic targets...',
+  'Synthesizing workout routines and daily habits...',
+  'Lineage pattern identified in the Gate...',
+  'Initial setup ready. Class determined by the Architect.',
 ];
 
 const RITUAL_STEPS: Array<{ id: Exclude<OnboardingStep, 'loading'>; label: string; phase: string }> = [
   { id: 'basic-info', label: 'Calibração de Identidade', phase: 'Fase I' },
-  { id: 'physical-profile', label: 'Análise Corporal', phase: 'Fase II' },
-  { id: 'main-goal', label: 'Missão Central', phase: 'Fase III' },
-  { id: 'experience-level', label: 'Calibração de Rank', phase: 'Fase IV' },
+  { id: 'physical-profile', label: 'Análise Corporal & Ambiente', phase: 'Fase II' },
+  { id: 'main-goal', label: 'Missão Central & Foco', phase: 'Fase III' },
+  { id: 'experience-level', label: 'Calibração de Rank & Tempo', phase: 'Fase IV' },
   { id: 'architect-intro', label: 'Contato do Arquiteto', phase: 'Fase V' },
   { id: 'class-quiz', label: 'Avaliação do Sistema', phase: 'Fase VI' },
-  { id: 'awakening', label: 'Síntese de Mana', phase: 'Fase VII' },
+  { id: 'awakening', label: 'Síntese de Mana & Setup', phase: 'Fase VII' },
   { id: 'class-selection', label: 'Despertar da Classe', phase: 'Fase VIII' },
 ];
 
 const RITUAL_STEPS_EN: typeof RITUAL_STEPS = [
   { id: 'basic-info', label: 'Identity Calibration', phase: 'Phase I' },
-  { id: 'physical-profile', label: 'Body Analysis', phase: 'Phase II' },
-  { id: 'main-goal', label: 'Core Mission', phase: 'Phase III' },
-  { id: 'experience-level', label: 'Rank Calibration', phase: 'Phase IV' },
+  { id: 'physical-profile', label: 'Body Analysis & Setup', phase: 'Phase II' },
+  { id: 'main-goal', label: 'Core Mission & Focus', phase: 'Phase III' },
+  { id: 'experience-level', label: 'Rank Calibration & Time', phase: 'Phase IV' },
   { id: 'architect-intro', label: 'Architect Contact', phase: 'Phase V' },
   { id: 'class-quiz', label: 'System Assessment', phase: 'Phase VI' },
-  { id: 'awakening', label: 'Mana Synthesis', phase: 'Phase VII' },
+  { id: 'awakening', label: 'Mana Synthesis & Setup', phase: 'Phase VII' },
   { id: 'class-selection', label: 'Class Awakening', phase: 'Phase VIII' },
 ];
 
@@ -388,28 +400,29 @@ const getRitualProgress = (step: OnboardingStep, currentQuestionIndex: number) =
 // ─── Componente OptionCard ────────────────────────────────────────────────────
 function OptionCard({
   label,
+  sublabel,
   isSelected,
   onClick,
   icon,
   delay = 0,
 }: {
   label: string;
+  sublabel?: string;
   isSelected: boolean;
   onClick: () => void;
   icon?: React.ReactNode;
   delay?: number;
 }) {
-  const { language } = usePreferences();
   return (
     <motion.button
       type="button"
       role="button"
       aria-pressed={isSelected}
-      initial={{ opacity: 0, x: -12 }}
+      initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.99 }}
-      transition={{ delay, duration: 0.25 }}
+      transition={{ delay, duration: 0.2 }}
       onClick={onClick}
       className={`
         w-full group relative flex min-h-[52px] items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border-l-4 cursor-pointer select-none overflow-hidden text-left
@@ -420,9 +433,16 @@ function OptionCard({
       `}
     >
       {icon && <span className="flex-shrink-0">{icon}</span>}
-      <p className={`text-xs sm:text-sm font-medium leading-snug flex-1 ${isSelected ? 'text-purple-100 font-semibold' : 'text-gray-300'}`}>
-        {label}
-      </p>
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs sm:text-sm font-medium leading-snug ${isSelected ? 'text-purple-100 font-semibold' : 'text-gray-300'}`}>
+          {label}
+        </p>
+        {sublabel && (
+          <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1 font-mono">
+            {sublabel}
+          </p>
+        )}
+      </div>
       <div className="flex-shrink-0">
         <CheckCircle2 className={`w-4 h-4 transition-colors ${isSelected ? 'text-purple-400' : 'text-gray-600'}`} />
       </div>
@@ -489,13 +509,18 @@ export function Onboarding() {
     height: '',
     weightCurrent: '',
     weightTarget: '',
-    trainingFocus: '',
+    trainingFocus: 'Musculação',
     nutritionGoal: 'maintain',
-    mainGoal: '',
-    experienceLevel: '',
+    mainGoal: 'general_health',
+    experienceLevel: 'beginner',
+    workoutFrequency: 3,
+    workoutEnvironment: 'gym',
+    physicalRestrictions: [],
+    primaryDifficulty: 'inconsistency',
+    dailyAvailability: '60',
   });
 
-  // 1. Redirecionamento Imediato de Perfil Completo (Sem Esperas Artificiais)
+  // 1. Redirecionamento Imediato de Perfil Completo
   useEffect(() => {
     if (hunterClass) {
       navigate('/', { replace: true });
@@ -519,10 +544,15 @@ export function Onboarding() {
         height: prev.height || (hunterStore.height ? String(hunterStore.height) : ''),
         weightCurrent: prev.weightCurrent || (hunterStore.weightCurrent ? String(hunterStore.weightCurrent) : ''),
         weightTarget: prev.weightTarget || (hunterStore.weightTarget ? String(hunterStore.weightTarget) : ''),
-        trainingFocus: prev.trainingFocus || hunterStore.trainingFocus || '',
+        trainingFocus: prev.trainingFocus || hunterStore.trainingFocus || 'Musculação',
         nutritionGoal: prev.nutritionGoal || hunterStore.nutritionGoal || 'maintain',
-        mainGoal: prev.mainGoal || hunterStore.mainGoal || '',
-        experienceLevel: prev.experienceLevel || hunterStore.experienceLevel || '',
+        mainGoal: prev.mainGoal || hunterStore.mainGoal || 'general_health',
+        experienceLevel: prev.experienceLevel || hunterStore.experienceLevel || 'beginner',
+        workoutFrequency: prev.workoutFrequency || 3,
+        workoutEnvironment: prev.workoutEnvironment || 'gym',
+        physicalRestrictions: prev.physicalRestrictions || [],
+        primaryDifficulty: prev.primaryDifficulty || 'inconsistency',
+        dailyAvailability: prev.dailyAvailability || '60',
       }));
     }
   }, [profileLoaded, user, hunterStore]);
@@ -547,7 +577,6 @@ export function Onboarding() {
     if (hunterClass) return;
 
     if (profileLoaded && step === 'loading') {
-      // Determina a etapa ideal de retomada
       if (hunterStore.experienceLevel) {
         setStep('architect-intro');
       } else if (hunterStore.mainGoal) {
@@ -759,11 +788,34 @@ export function Onboarding() {
     setIsSubmitting(true);
     setValidationError(null);
     try {
+      // 1. Executa o Setup Inicial Inteligente em todos os módulos
+      await applyHunterInitialSetup({
+        userId: user.id,
+        fullName: form.fullName,
+        birthday: form.birthday,
+        gender: form.gender ? (form.gender as 'male' | 'female') : undefined,
+        height: form.height ? parseFloat(form.height) : undefined,
+        weightCurrent: form.weightCurrent ? parseFloat(form.weightCurrent) : undefined,
+        weightTarget: form.weightTarget ? parseFloat(form.weightTarget) : undefined,
+        mainGoal: form.mainGoal || 'general_health',
+        nutritionGoal: (form.nutritionGoal as 'lose' | 'maintain' | 'gain') || 'maintain',
+        trainingFocus: form.trainingFocus || 'Musculação',
+        experienceLevel: (form.experienceLevel as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
+        hunterClass: selectedClass,
+        workoutFrequency: (form.workoutFrequency || 3) as 2 | 3 | 4 | 5 | 6,
+        workoutEnvironment: form.workoutEnvironment || 'gym',
+        physicalRestrictions: form.physicalRestrictions || [],
+        primaryDifficulty: form.primaryDifficulty,
+        dailyAvailability: form.dailyAvailability || '60',
+      });
+
+      // 2. Registra classe e finaliza rascunho
       await setHunterClass(selectedClass, user.id);
       localStorage.setItem('ascend_just_finished_onboarding', 'true');
       try {
         localStorage.removeItem(`ascend_onboarding_quiz_${user.id}`);
       } catch {}
+
       navigate('/');
     } catch (err: any) {
       console.error('[Onboarding] Erro ao confirmar classe:', err);
@@ -772,10 +824,20 @@ export function Onboarding() {
     }
   };
 
+  const toggleRestriction = (res: 'lombar' | 'joelho' | 'ombro' | 'punho' | 'cervical') => {
+    setForm(prev => {
+      const exists = prev.physicalRestrictions.includes(res);
+      const updated = exists
+        ? prev.physicalRestrictions.filter(r => r !== res)
+        : [...prev.physicalRestrictions, res];
+      return { ...prev, physicalRestrictions: updated };
+    });
+  };
+
   const currentAnswer = answers[questions[currentQuestionIndex]?.id];
   const ritualProgress = getRitualProgress(step, currentQuestionIndex);
   const currentRitual = ritualSteps.find(item => item.id === step) || ritualSteps[0];
-  const revealedClassData = classes.find(c => c.id === revealedClass);
+  const revealedClassData = classes.find(c => c.id === (selectedClass || revealedClass));
 
   return (
     <div className="relative min-h-screen bg-[#07080C] text-white flex flex-col items-center justify-start pt-16 sm:pt-20 pb-16 px-4 sm:px-6 overflow-y-auto">
@@ -965,18 +1027,18 @@ export function Onboarding() {
           </motion.div>
         )}
 
-        {/* ── FASE 2: PERFIL FÍSICO ── */}
+        {/* ── FASE 2: PERFIL FÍSICO & AMBIENTE ── */}
         {step === 'physical-profile' && (
           <motion.div key="physical" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-lg w-full">
             <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-5">
-              <StepHeader step={2} total={8} label={l('Análise Corporal', 'Body Analysis')} progress={ritualProgress} />
+              <StepHeader step={2} total={8} label={l('Análise Corporal & Ambiente', 'Body Analysis & Setup')} progress={ritualProgress} />
 
               <div className="text-center space-y-1">
                 <h1 className="text-xl sm:text-2xl font-orbitron font-bold leading-tight">
                   {l('Varredura Biomecânica', 'Biomechanical Baseline')}
                 </h1>
                 <p className="text-xs text-gray-400">
-                  {l('Métricas físicas ajustam o volume inicial e o cálculo calórico.', 'Physical metrics adjust starting load and calorie calculations.')}
+                  {l('Métricas físicas ajustam o volume inicial, cálculo calórico e segurança articular.', 'Physical metrics adjust starting load, calorie goals, and joint safety.')}
                 </p>
               </div>
 
@@ -995,7 +1057,7 @@ export function Onboarding() {
                         type="number"
                         inputMode="decimal"
                         placeholder={field.placeholder}
-                        value={form[field.key as keyof FormData]}
+                        value={form[field.key as keyof FormData] as string}
                         onChange={e => setField(field.key as keyof FormData, e.target.value)}
                         className="w-full min-h-[46px] bg-black/50 border border-white/10 rounded-xl px-2 py-2 text-xs sm:text-sm text-center font-orbitron font-bold text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none"
                       />
@@ -1003,58 +1065,103 @@ export function Onboarding() {
                   ))}
                 </div>
 
-                {/* Objetivo Nutricional */}
+                {/* Ambiente de Treino */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
-                    {l('Objetivo Nutricional', 'Nutrition Goal')}
+                    {l('Ambiente de Treinamento', 'Training Environment')}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { value: 'lose', label: l('Déficit / Perder', 'Lose weight') },
-                      { value: 'maintain', label: l('Manter peso', 'Maintain weight') },
-                      { value: 'gain', label: l('Superávit / Ganhar', 'Gain weight') },
-                    ].map(goal => (
+                      { value: 'gym', label: l('Academia', 'Gym'), icon: '🏋️' },
+                      { value: 'home', label: l('Em Casa', 'Home'), icon: '🏠' },
+                      { value: 'hybrid', label: l('Híbrido', 'Hybrid'), icon: '⚡' },
+                    ].map(env => (
                       <button
-                        key={goal.value}
+                        key={env.value}
                         type="button"
-                        onClick={() => registerDecision('nutritionGoal', goal.value, goal.label)}
-                        className={`min-h-[44px] px-2 py-2 rounded-xl border text-[11px] font-bold transition-all ${
-                          form.nutritionGoal === goal.value
-                            ? 'border-purple-500 bg-purple-500/20 text-purple-200'
+                        onClick={() => registerDecision('workoutEnvironment', env.value as any, env.label)}
+                        className={`min-h-[44px] px-2 py-2 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                          form.workoutEnvironment === env.value
+                            ? 'border-purple-500 bg-purple-500/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
                             : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
                         }`}
                       >
-                        {goal.label}
+                        <span>{env.icon}</span>
+                        <span>{env.label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Foco de Treino */}
+                {/* Restrições Articulares */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                      {l('Restrições Físicas / Articulares', 'Physical / Joint Restrictions')}
+                    </label>
+                    <span className="text-[9px] text-gray-400 font-mono">
+                      {form.physicalRestrictions.length === 0 ? l('Nenhuma', 'None') : `${form.physicalRestrictions.length} ${l('ativas', 'active')}`}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'lombar', label: l('Lombar', 'Lower Back') },
+                      { id: 'joelho', label: l('Joelho', 'Knee') },
+                      { id: 'ombro', label: l('Ombro', 'Shoulder') },
+                      { id: 'punho', label: l('Punho', 'Wrist') },
+                      { id: 'cervical', label: l('Cervical', 'Neck') },
+                    ].map(res => {
+                      const isSelected = form.physicalRestrictions.includes(res.id as any);
+                      return (
+                        <button
+                          key={res.id}
+                          type="button"
+                          onClick={() => toggleRestriction(res.id as any)}
+                          className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all ${
+                            isSelected
+                              ? 'border-amber-400 bg-amber-500/20 text-amber-200'
+                              : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
+                          }`}
+                        >
+                          {isSelected ? '⚠ ' : ''}{res.label}
+                        </button>
+                      );
+                    })}
+                    {form.physicalRestrictions.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setField('physicalRestrictions', [])}
+                        className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-[10px] font-mono text-gray-400 hover:text-white"
+                      >
+                        {l('Limpar', 'Clear')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Objetivo Nutricional */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
-                    {l('Foco de Treinamento', 'Training Focus')}
+                    {l('Diretriz Nutricional Inicial', 'Initial Nutrition Goal')}
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
-                      ['Musculação', 'Weightlifting'],
-                      ['Funcional', 'Functional'],
-                      ['Cardio / Endurance', 'Cardio / Endurance'],
-                      ['Calistenia', 'Calisthenics'],
-                      ['Esportes de Combate', 'Combat Sports'],
-                      ['Flexibilidade / Yoga', 'Flexibility / Yoga'],
-                    ].map(([focus, focusLabel]) => (
+                      { value: 'lose', label: l('Déficit / Perder', 'Lose weight'), sub: '-15% kcal' },
+                      { value: 'maintain', label: l('Manter peso', 'Maintain weight'), sub: 'Equilíbrio' },
+                      { value: 'gain', label: l('Superávit / Ganhar', 'Gain weight'), sub: '+10% kcal' },
+                    ].map(goal => (
                       <button
-                        key={focus}
+                        key={goal.value}
                         type="button"
-                        onClick={() => registerDecision('trainingFocus', focus, focus)}
-                        className={`min-h-[42px] px-3 py-2 rounded-xl border text-xs font-semibold transition-all text-left truncate ${
-                          form.trainingFocus === focus
-                            ? 'border-purple-500 bg-purple-500/20 text-purple-200'
+                        onClick={() => registerDecision('nutritionGoal', goal.value, goal.label)}
+                        className={`min-h-[50px] px-2 py-1.5 rounded-xl border text-[11px] font-bold transition-all text-center flex flex-col justify-center ${
+                          form.nutritionGoal === goal.value
+                            ? 'border-purple-500 bg-purple-500/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
                             : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
                         }`}
                       >
-                        {isEnglish ? focusLabel : focus}
+                        <span>{goal.label}</span>
+                        <span className="text-[9px] font-mono opacity-70">{goal.sub}</span>
                       </button>
                     ))}
                   </div>
@@ -1087,41 +1194,73 @@ export function Onboarding() {
           </motion.div>
         )}
 
-        {/* ── FASE 3: OBJETIVO PRINCIPAL ── */}
+        {/* ── FASE 3: OBJETIVO PRINCIPAL & DIFICULDADE ── */}
         {step === 'main-goal' && (
           <motion.div key="main-goal" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-lg w-full">
             <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-5">
-              <StepHeader step={3} total={8} label={l('Missão Central', 'Core Mission')} progress={ritualProgress} />
+              <StepHeader step={3} total={8} label={l('Missão Central & Foco', 'Core Mission & Focus')} progress={ritualProgress} />
 
               <div className="text-center space-y-1">
                 <h1 className="text-xl sm:text-2xl font-orbitron font-bold leading-tight">
                   {l('Qual é sua', 'What is your')} <span className="text-purple-400">{l('Missão Central', 'Core Mission')}</span>?
                 </h1>
                 <p className="text-xs text-gray-400">
-                  {l('Esta diretriz guiará suas primeiras quests na fenda.', 'This directive guides your first quests in the Rift.')}
+                  {l('Esta diretriz guiará suas quests diárias, hábitos recomendados e foco do app.', 'This directive guides your daily quests, recommended habits, and app focus.')}
                 </p>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 max-h-[42vh] overflow-y-auto pr-1">
                 {[
-                  { value: 'general', label: l('Evolução Geral', 'Overall Growth'), sub: l('Crescer em todas as áreas da vida com equilíbrio.', 'Grow across all life domains in balance.'), icon: <Star className="w-4 h-4 text-amber-400" /> },
-                  { value: 'health', label: l('Performance & Saúde', 'Performance & Health'), sub: l('Foco em condicionamento, energia e saúde física.', 'Focus on fitness, energy, and physical vitality.'), icon: <Dumbbell className="w-4 h-4 text-blue-400" /> },
-                  { value: 'finance', label: l('Independência Financeira', 'Financial Independence'), sub: l('Consistência em aportes e purificação de dívidas.', 'Contribution consistency and debt clearance.'), icon: <Target className="w-4 h-4 text-emerald-400" /> },
-                  { value: 'career', label: l('Carreira & Habilidades', 'Career & Skills'), sub: l('Dominar conhecimentos profundos e alta disciplina.', 'Master deep skills and high focus.'), icon: <Brain className="w-4 h-4 text-purple-400" /> },
+                  { value: 'weight_loss', label: l('Perder Peso & Definição', 'Weight Loss & Definition'), sub: l('Déficit calórico, gasto energético e queima de gordura.', 'Caloric deficit, fat burn, and physical conditioning.'), icon: <Flame className="w-4 h-4 text-rose-400" /> },
+                  { value: 'hypertrophy', label: l('Ganhar Massa Muscular', 'Build Muscle & Hypertrophy'), sub: l('Sobrecarga progressiva de carga, proteína e síntese.', 'Progressive overload, high protein, and muscle growth.'), icon: <Dumbbell className="w-4 h-4 text-blue-400" /> },
+                  { value: 'conditioning', label: l('Condicionamento & Performance', 'Conditioning & Stamina'), sub: l('Resistência cardiovascular, agilidade e vitalidade.', 'Cardiovascular stamina, mobility, and agility.'), icon: <Activity className="w-4 h-4 text-cyan-400" /> },
+                  { value: 'discipline', label: l('Aumentar Disciplina & Rotina', 'Build Routine & Discipline'), sub: l('Constância diária, quebra de procrastinação e foco.', 'Consistency, anti-procrastination, and daily habits.'), icon: <Shield className="w-4 h-4 text-purple-400" /> },
+                  { value: 'nutrition', label: l('Melhorar Alimentação', 'Improve Nutrition & Health'), sub: l('Qualidade alimentar, diário regular e metas nutricionais.', 'Clean eating, TACO food logs, and balanced macros.'), icon: <Apple className="w-4 h-4 text-emerald-400" /> },
+                  { value: 'focus_studies', label: l('Foco, Estudos & Carreira', 'Deep Focus & Studies'), sub: l('Blocos de concentração profunda e leitura diária.', 'Deep work blocks, technical reading, and learning.'), icon: <Brain className="w-4 h-4 text-amber-400" /> },
+                  { value: 'general_health', label: l('Equilíbrio Geral & Bem-Estar', 'Overall Balance & Health'), sub: l('Crescer em harmonia entre corpo, mente e descanso.', 'Grow in balance across body, mind, and recovery.'), icon: <Star className="w-4 h-4 text-amber-300" /> },
                 ].map((opt, idx) => (
                   <OptionCard
                     key={opt.value}
-                    label={`${opt.label} — ${opt.sub}`}
+                    label={opt.label}
+                    sublabel={opt.sub}
                     isSelected={form.mainGoal === opt.value}
                     onClick={() => registerDecision(
                       'mainGoal',
                       opt.value,
-                      isEnglish ? `Core mission locked: ${opt.label}` : `Missão central travada: ${opt.label}`,
+                      isEnglish ? `Mission locked: ${opt.label}` : `Missão travada: ${opt.label}`,
                     )}
                     icon={opt.icon}
-                    delay={idx * 0.05}
+                    delay={idx * 0.03}
                   />
                 ))}
+              </div>
+
+              {/* Principal Dificuldade */}
+              <div className="space-y-1.5 pt-2 border-t border-white/10">
+                <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                  {l('Principal Dificuldade a Vencer', 'Main Challenge to Overcome')}
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'inconsistency', label: l('Falta de Constância', 'Lack of Consistency') },
+                    { id: 'poor_diet', label: l('Dieta Desorganizada', 'Chaotic Nutrition') },
+                    { id: 'procrastination', label: l('Procrastinação', 'Procrastination') },
+                    { id: 'low_energy', label: l('Pouca Energia', 'Low Energy') },
+                  ].map(diff => (
+                    <button
+                      key={diff.id}
+                      type="button"
+                      onClick={() => registerDecision('primaryDifficulty', diff.id, diff.label)}
+                      className={`min-h-[40px] px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-all text-left truncate ${
+                        form.primaryDifficulty === diff.id
+                          ? 'border-purple-400 bg-purple-500/20 text-purple-200'
+                          : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
+                      }`}
+                    >
+                      {diff.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Botões com Voltar */}
@@ -1151,39 +1290,99 @@ export function Onboarding() {
           </motion.div>
         )}
 
-        {/* ── FASE 4: NÍVEL DE EXPERIÊNCIA ── */}
+        {/* ── FASE 4: NÍVEL DE EXPERIÊNCIA & FREQUÊNCIA ── */}
         {step === 'experience-level' && (
           <motion.div key="experience" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -15 }} transition={{ duration: 0.3 }} className="max-w-lg w-full">
             <HudCard variant="purple" corners radialGlow className="p-5 sm:p-7 space-y-5">
-              <StepHeader step={4} total={8} label={l('Calibração de Rank', 'Rank Calibration')} progress={ritualProgress} />
+              <StepHeader step={4} total={8} label={l('Calibração de Rank & Tempo', 'Rank Calibration & Time')} progress={ritualProgress} />
 
               <div className="text-center space-y-1">
                 <h1 className="text-xl sm:text-2xl font-orbitron font-bold leading-tight">
-                  {l('Informe seu', 'Enter your initial')} <span className="text-purple-400">Rank</span> {l('inicial', 'rank')}
+                  {l('Frequência e', 'Frequency &')} <span className="text-purple-400">Rank</span> {l('Inicial', 'Calibration')}
                 </h1>
                 <p className="text-xs text-gray-400">
-                  {l('Calibramos o desafio para você manter a consistência sem estafa.', 'We calibrate difficulty so you maintain daily streak without burnout.')}
+                  {l('Calibramos o compromisso semanal para você manter consistência sem estafa.', 'We calibrate weekly commitments so you maintain daily streak without burnout.')}
                 </p>
               </div>
 
-              <div className="space-y-2.5">
-                {[
-                  { value: 'beginner', rank: 'E', label: l('Iniciante', 'Beginner'), sub: l('Construindo a base diária. Cada passo conta.', 'Building baseline habits. Every step counts.') },
-                  { value: 'intermediate', rank: 'C', label: l('Intermediário', 'Intermediate'), sub: l('Já possuo rotinas ativas. Quero acelerar o nível.', 'Already active. Want to accelerate growth.') },
-                  { value: 'advanced', rank: 'S', label: l('Avançado', 'Advanced'), sub: l('Alta disciplina e performance. Busco o limite máximo.', 'High performance discipline. Seeking max potential.') },
-                ].map((opt, idx) => (
-                  <OptionCard
-                    key={opt.value}
-                    label={`[Rank ${opt.rank}] ${opt.label} — ${opt.sub}`}
-                    isSelected={form.experienceLevel === opt.value}
-                    onClick={() => registerDecision(
-                      'experienceLevel',
-                      opt.value,
-                      isEnglish ? `Rank ${opt.rank} accepted by the System` : `Rank ${opt.rank} aceito pelo Sistema`,
-                    )}
-                    delay={idx * 0.05}
-                  />
-                ))}
+              <div className="space-y-4">
+                {/* Frequência Semanal */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    {l('Frequência Semanal Desejada', 'Desired Weekly Frequency')}
+                  </label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[2, 3, 4, 5, 6].map(freq => (
+                      <button
+                        key={freq}
+                        type="button"
+                        onClick={() => registerDecision('workoutFrequency', freq, `${freq}x`)}
+                        className={`min-h-[46px] rounded-xl border text-center font-orbitron font-bold transition-all ${
+                          form.workoutFrequency === freq
+                            ? 'border-purple-400 bg-purple-500/25 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                            : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        <span className="text-sm block">{freq}x</span>
+                        <span className="text-[8px] uppercase tracking-tighter opacity-70 block">{l('dias', 'days')}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Disponibilidade de Tempo por Dia */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    {l('Disponibilidade de Tempo por Sessão', 'Time Availability per Session')}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: '30', label: '15-30 min', sub: l('Sessão rápida', 'Quick session') },
+                      { value: '60', label: '45-60 min', sub: l('Padrão de ouro', 'Gold standard') },
+                      { value: '90', label: '60+ min', sub: l('Avançado/longo', 'Deep immersion') },
+                    ].map(dur => (
+                      <button
+                        key={dur.value}
+                        type="button"
+                        onClick={() => registerDecision('dailyAvailability', dur.value as any, dur.label)}
+                        className={`min-h-[48px] rounded-xl border text-center p-1.5 transition-all ${
+                          form.dailyAvailability === dur.value
+                            ? 'border-purple-400 bg-purple-500/25 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                            : 'border-white/10 bg-black/40 text-gray-400 hover:border-white/20'
+                        }`}
+                      >
+                        <span className="font-orbitron text-xs font-bold block">{dur.label}</span>
+                        <span className="text-[9px] font-mono text-gray-400 block">{dur.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rank de Experiência */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-orbitron text-purple-300 uppercase tracking-widest font-bold">
+                    {l('Nível de Experiência Atual', 'Current Experience Level')}
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'beginner', rank: 'E', label: l('Iniciante', 'Beginner'), sub: l('Construindo a base diária. Cada passo conta.', 'Building baseline habits. Every step counts.') },
+                      { value: 'intermediate', rank: 'C', label: l('Intermediário', 'Intermediate'), sub: l('Já possuo rotinas ativas. Quero acelerar o nível.', 'Already active. Want to accelerate growth.') },
+                      { value: 'advanced', rank: 'S', label: l('Avançado', 'Advanced'), sub: l('Alta disciplina e performance. Busco o limite máximo.', 'High performance discipline. Seeking max potential.') },
+                    ].map(opt => (
+                      <OptionCard
+                        key={opt.value}
+                        label={`[Rank ${opt.rank}] ${opt.label}`}
+                        sublabel={opt.sub}
+                        isSelected={form.experienceLevel === opt.value}
+                        onClick={() => registerDecision(
+                          'experienceLevel',
+                          opt.value,
+                          isEnglish ? `Rank ${opt.rank} accepted` : `Rank ${opt.rank} aceito`,
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Botões com Voltar */}
@@ -1318,7 +1517,7 @@ export function Onboarding() {
           </motion.div>
         )}
 
-        {/* ── FASE 7: SÍNTESE DE MANA (AWAKENING) ── */}
+        {/* ── FASE 7: SÍNTESE DE MANA & SETUP AUTOMÁTICO ── */}
         {step === 'awakening' && (
           <motion.div key="awakening" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-md w-full text-center space-y-6 my-auto">
             <HudCard variant="purple" corners radialGlow className="p-8 space-y-6">
@@ -1335,7 +1534,7 @@ export function Onboarding() {
 
               <div className="space-y-2">
                 <p className="text-[10px] font-orbitron text-purple-400 tracking-[0.3em] uppercase">Avaliação de Mana em Curso</p>
-                <h2 className="text-xl font-orbitron font-bold text-white">{l('Analisando Caçador...', 'Analyzing Hunter...')}</h2>
+                <h2 className="text-xl font-orbitron font-bold text-white">{l('Sincronizando Setup do Caçador...', 'Synchronizing Hunter Setup...')}</h2>
                 <div className="h-6 flex items-center justify-center">
                   <p className="text-xs text-purple-300 font-mono">
                     &gt; {awakeningMessages[awakeningMsgIdx]}
@@ -1348,7 +1547,7 @@ export function Onboarding() {
           </motion.div>
         )}
 
-        {/* ── FASE 8: SELEÇÃO & DESPERTAR DE CLASSE ── */}
+        {/* ── FASE 8: SELEÇÃO, PREVIEW DO SETUP & DESPERTAR DE CLASSE ── */}
         {step === 'class-selection' && (
           <motion.div key="classes" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="max-w-5xl w-full space-y-6">
             
@@ -1358,10 +1557,10 @@ export function Onboarding() {
                 {l('Resultado da Avaliação · Solo Leveling', 'Assessment Result · Solo Leveling')}
               </span>
               <h1 className="text-2xl sm:text-3xl font-orbitron font-black text-white">
-                {l('Classe Despertada:', 'Awakened Class:')} <span className="text-purple-400">{revealedClass}</span>
+                {l('Classe Despertada:', 'Awakened Class:')} <span className="text-purple-400">{selectedClass || revealedClass}</span>
               </h1>
               <p className="text-xs sm:text-sm text-gray-400 max-w-lg mx-auto">
-                {l('O Sistema identificou sua essência. Confirme o despertar ou selecione sua vocação preferida.', 'The System recognized your essence. Confirm or select your preferred vocation.')}
+                {l('O Sistema identificou sua essência e preparou o seu setup inicial personalizado.', 'The System recognized your essence and tailored your personalized initial setup.')}
               </p>
             </div>
 
@@ -1404,13 +1603,80 @@ export function Onboarding() {
 
                   <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">{revealedClassData.description}</p>
                   
+                  {/* Atributos Calibrados */}
                   <div className="rounded-xl border border-white/10 bg-black/40 px-3.5 py-2 inline-block">
-                    <span className="text-[9px] font-orbitron text-gray-400 uppercase tracking-widest mr-2">{l('Atributos:', 'Stats:')}</span>
-                    <span className="font-mono text-xs font-bold text-purple-200">{revealedClassData.stats}</span>
+                    <span className="text-[9px] font-orbitron text-gray-400 uppercase tracking-widest mr-2">{l('Atributos Iniciais:', 'Starting Stats:')}</span>
+                    <span className="font-mono text-xs font-bold text-purple-200">
+                      {revealedClassData.stats}
+                    </span>
                   </div>
                 </div>
               </HudCard>
             )}
+
+            {/* RESUMO TÁTICO: O QUE O SISTEMA CONFIGUROU */}
+            <HudCard variant="cyan" corners className="p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="size-4 text-cyan-400" />
+                <h3 className="font-orbitron text-xs sm:text-sm font-black uppercase tracking-wider text-white">
+                  {l('SETUP INICIAL CONFIGURADO PELO SISTEMA', 'INITIAL SETUP CONFIGURED BY THE SYSTEM')}
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+                  <div className="flex items-center gap-1.5 text-cyan-400 text-[10px] font-bold uppercase font-orbitron">
+                    <Dumbbell className="size-3" />
+                    <span>{l('Treino Tático', 'Workout Split')}</span>
+                  </div>
+                  <p className="font-orbitron text-xs font-black text-white mt-1">
+                    {form.workoutFrequency}x {l('por semana', 'per week')}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                    {form.workoutEnvironment === 'gym' ? l('Academia', 'Gym') : form.workoutEnvironment === 'home' ? l('Em Casa', 'Home') : l('Híbrido', 'Hybrid')}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+                  <div className="flex items-center gap-1.5 text-purple-400 text-[10px] font-bold uppercase font-orbitron">
+                    <Apple className="size-3" />
+                    <span>{l('Nutrição', 'Nutrition')}</span>
+                  </div>
+                  <p className="font-orbitron text-xs font-black text-white mt-1">
+                    {form.nutritionGoal === 'lose' ? l('Déficit Calórico', 'Calorie Deficit') : form.nutritionGoal === 'gain' ? l('Superávit Massa', 'Calorie Surplus') : l('Manutenção', 'Maintenance')}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                    4 {l('refeições prontas', 'meals configured')}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+                  <div className="flex items-center gap-1.5 text-amber-400 text-[10px] font-bold uppercase font-orbitron">
+                    <Shield className="size-3" />
+                    <span>{l('Hábitos Iniciais', 'Core Habits')}</span>
+                  </div>
+                  <p className="font-orbitron text-xs font-black text-white mt-1">
+                    3 {l('missões ativas', 'active quests')}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                    {l('Foco:', 'Focus:')} {form.mainGoal.replace('_', ' ')}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+                  <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold uppercase font-orbitron">
+                    <Zap className="size-3" />
+                    <span>{l('Atalhos da Home', 'Quick Actions')}</span>
+                  </div>
+                  <p className="font-orbitron text-xs font-black text-white mt-1">
+                    4 {l('atalhos fixados', 'pinned actions')}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                    {l('Acesso instantâneo', 'Instant access')}
+                  </p>
+                </div>
+              </div>
+            </HudCard>
 
             {/* Grid com Todas as 5 Classes */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -1484,7 +1750,7 @@ export function Onboarding() {
                 className="min-h-[48px] px-8 text-xs font-black w-full sm:w-auto"
               >
                 <Sparkles size={16} />
-                <span>{isSubmitting ? l('DESPERTANDO...', 'AWAKENING...') : l('DESPERTAR PODER', 'AWAKEN POWER')}</span>
+                <span>{isSubmitting ? l('DESPERTANDO...', 'AWAKENING...') : l('DESPERTAR PODER & INICIAR', 'AWAKEN POWER & START')}</span>
               </TacticalButton>
             </div>
           </motion.div>

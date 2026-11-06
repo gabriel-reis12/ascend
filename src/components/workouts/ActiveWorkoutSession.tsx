@@ -399,8 +399,8 @@ export function ActiveWorkoutSession({
           isTimerRunning
             ? 'border-cyan-400/60 bg-[#0E1B26] shadow-[0_0_20px_rgba(6,182,212,0.25)]'
             : timerFinishedNotice
-            ? 'border-amber-400/80 bg-[#261E0E] shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-pulse'
-            : 'border-white/10 bg-[#12131D]'
+              ? 'border-amber-400/80 bg-[#261E0E] shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-pulse'
+              : 'border-white/10 bg-[#12131D]'
         )}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -411,8 +411,8 @@ export function ActiveWorkoutSession({
                 isTimerRunning
                   ? 'border-cyan-400 bg-cyan-500/20 text-cyan-400'
                   : timerFinishedNotice
-                  ? 'border-amber-400 bg-amber-500/20 text-amber-300'
-                  : 'border-white/10 bg-white/5 text-slate-400'
+                    ? 'border-amber-400 bg-amber-500/20 text-amber-300'
+                    : 'border-white/10 bg-white/5 text-slate-400'
               )}
             >
               <Timer className="size-6" />

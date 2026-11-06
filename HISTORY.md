@@ -20,6 +20,58 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-06 — Etapa 04.0: Refinamento Premium de Login, Registro e Recuperação (`src/components/ui/hunter-login.tsx`, `src/components/auth/ForgotPasswordModal.tsx`, `src/pages/auth/ForgotPasswordPage.tsx`, `src/pages/auth/LoginPage.tsx`, `src/pages/auth/RegisterPage.tsx`, `src/App.tsx`, `execution/test_premium_auth_and_recovery.mjs`)
+- **Workflow `ascend-design` Concluído com Revisão do ASCEND Agent Team v1:** Refinamento premium completo da experiência de autenticação do ASCEND (Login, Cadastro e Recuperação de Senha), elevando a hierarquia visual, usabilidade mobile, microcopy e integração com o Design System HUD v2.
+- **Login e Experiência de Acesso:**
+  - Microcopy refinada com tom épico do universo ASCEND ("BEM-VINDO AO SISTEMA" / "Acesse sua frequência de caçador e continue sua jornada de evolução diária").
+  - Inputs com tipografia sans-serif de alta legibilidade para digitação de e-mails e senhas, com focus glow e botão de alternância de visibilidade com touch target de 44px.
+  - Alerta de erro estruturado em card HUD v2 com ícone de atenção e formatação amigável para falhas comuns (credenciais inválidas, e-mail não ativado, limite de taxa e falhas de conexão com a Fenda).
+  - CTA principal tático com altura mínima de 52px (`min-h-[52px]`), gradiente ciano-violeta, ícone `Swords` e spinner tático de carregamento (`Sincronizando com o Sistema...`).
+- **Registro e Boas-Vindas ao Caçador:**
+  - Título evocativo "PRIMEIRO DESPERTAR" com orientação contextual sobre a continuidade no onboarding ("Após registrar seu codinome, você será direcionado ao Despertar com o Arquiteto para configurar sua classe e parâmetros corporais").
+  - Indicadores dinâmicos em tempo real para requisitos de senha (mínimo de 6 caracteres) e validação instantânea de confirmação de senha com feedback de correspondência.
+- **Recuperação de Chave de Acesso (Senha):**
+  - Criação do componente modal [`src/components/auth/ForgotPasswordModal.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/components/auth/ForgotPasswordModal.tsx), aberto diretamente a partir do botão "Recuperar chave de acesso" no formulário de login com preenchimento automático do e-mail digitado.
+  - Criação da rota dedicada `/forgot-password` e página [`src/pages/auth/ForgotPasswordPage.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/pages/auth/ForgotPasswordPage.tsx) para suporte a acessos diretos via link externo.
+  - Conexão nativa com `resetPasswordForEmail` do Supabase via `AuthContext`, com tratamento de rate limit e estado de sucesso em card esmeralda com instruções claras de verificação de caixa de entrada e spam.
+- **Painel de Apoio Visual HUD v2 (Desktop/Tablet):**
+  - Arte `/optimized/Login Screen.jpg` preservada com atmosfera sci-fi e iluminação radial calibrada.
+  - Badge superior "GATE CALIBRADO" com pulso luminoso.
+  - Substituição de caixas improvisadas pelas primitivas oficiais `HudCard` (`variant="cyan"` e `variant="purple"` com cantoneiras `corners` e `radialGlow`):
+    - Card de Prévia de Status com métricas de jogo (Classe, Rank C, Boss da Fenda, Protocolo de Treino).
+    - Card de Mensagem do Sistema com mensagem imersiva de ascensão pessoal.
+- **Ergonomia Mobile:**
+  - Preservação da prioridade absoluta do formulário em dispositivos móveis, com largura máxima de 480px, padding seguro e ocultação de elementos decorativos para desobstrução do teclado virtual (`hidden sm:grid`).
+  - Áreas de toque em conformidade com o Mobile UX guideline (`min-h-[52px]` para CTAs e 44px para botões secundários e toggles).
+- **Garantias e Qualidade:**
+  - Zero IA generativa, zero LLMs remotas, zero integrações Stripe/paywalls.
+  - Nova suíte automatizada `execution/test_premium_auth_and_recovery.mjs` com 9 testes unitários aprovados (100% de sucesso).
+  - 24/24 suítes de teste do repositório aprovadas em `execution/run_all_tests.mjs`.
+  - Auditoria de internacionalização (PT-BR / EN-US) validada com sucesso (`npm run audit:i18n`).
+  - Build de produção (`tsc -b && vite build`) concluído com 0 erros em 2.07s.
+
+
+### 2026-11-06 — Etapa 03.9: Refinamento do Onboarding e Questionário Inteligente (Setup Inicial do Caçador) (`src/pages/Onboarding.tsx`, `src/lib/onboardingSetup.ts`, `src/lib/onboardingRules.ts`, `execution/test_onboarding_intelligent_setup.mjs`)
+- **Workflow `ascend-design` Concluído com Revisão do ASCEND Agent Team v1:** Transformação completa do questionário e despertar do caçador em uma central de configuração inicial inteligente ("Setup Inicial do Caçador"), onde cada resposta fornecida pelo usuário possui impacto determinístico imediato em todas as áreas do aplicativo (Nutrição, Treinos, Missões, Atributos e Home).
+- **Módulos e Impactos Práticos no Setup:**
+  - **Nutrição:** Cálculo instantâneo da Taxa Metabólica Basal (BMR) e calorias diárias pela fórmula de Mifflin-St Jeor (-15% déficit calórico para perda de peso, +10% superávit para hipertrofia ou manutenção fisiológica). Inicialização automática de 4 refeições padrão estruturadas em `meal_plans` (*Café da Manhã Tático*, *Almoço de Alta Performance*, *Lanche / Pré-Treino*, *Jantar Regenerativo*) prontas para conclusão em 1 toque, XP e dano em Boss Raids.
+  - **Treinamento Físico:** Coleta ergonômica de frequência semanal (2x a 6x), ambiente (*Academia*, *Casa*, *Híbrido*), restrições articulares interativas (*lombar*, *joelho*, *ombro*, *punho*, *cervical*) e tempo diário disponível (30m, 60m, 90m). Geração instantânea e persistente do primeiro protocolo de treino sob medida em `workout_routines` e `routine_exercises` utilizando o motor `generateTrainingProtocol`.
+  - **Hábitos e Missões Diárias:** Semeio automático de 3 hábitos essenciais em `daily_habits` personalizados para o objetivo principal (*weight_loss*, *hypertrophy*, *discipline*, *conditioning*, *nutrition*, *focus_studies*, *general_health*), com recompensas de XP normalizadas e bônus de atributos.
+  - **Atalhos Rápidos da Home:** Curadoria dos 4 atalhos fixados prioritários em `useQuickActionsStore` conforme a missão do caçador, agilizando o acesso imediato após a entrada no app.
+  - **Calibração de Atributos por Vocação:** Atribuição dos atributos base 10 com bônus vocacionais temáticos (+3 Primário, +2 Secundário, +1 Terciário) gravados no perfil para cada classe (*Warrior*, *Scholar*, *Creator*, *Monk*, *Leader*).
+- **Refinamento Visual ASCEND HUD v2 & Ergonomia Mobile:**
+  - Cards temáticos com cantos chanfrados (`HudCard`), progresso de fases estilizado (`NeonProgressBar`), chips clicáveis com feedback tátil de seleção (mínimo 44px/52px de touch target).
+  - Novo card tático na Fase VIII (*O Despertar*): "SETUP INICIAL CONFIGURADO PELO SISTEMA", apresentando em tempo real os 4 pilares configurados (Treino Tático, Nutrição, Hábitos Iniciais e Atalhos da Home) antes da confirmação final do caçador.
+  - Preservação da navegação bidirecional ("Voltar") em todos os 8 passos do ritual, sem perda de dados inseridos nem flash de loading artificial.
+- **Proteção e Qualidade:**
+  - Verificação de idempotência para evitar duplicação de dados caso o onboarding seja reexecutado.
+  - Zero IA generativa, zero LLMs remotas, zero integrações Stripe/paywalls.
+  - Nova suíte de testes `execution/test_onboarding_intelligent_setup.mjs` com 8 testes unitários (100% de sucesso).
+  - Bateria completa de testes do sistema aprovada com 23/23 suítes verdes em `execution/run_all_tests.mjs`.
+  - Auditoria de internacionalização PT-BR / EN-US validada com sucesso (`npm run audit:i18n`).
+  - Build de produção (`tsc -b && vite build`) concluído com 0 erros.
+
+
 ### 2026-11-06 — Etapa 04.3: Training Center 2.0 — Gerador de Treinos Personalizados, Progressão Física e Gamificação (`src/lib/trainingGenerator.ts`, `src/data/exerciseArsenal.ts`, `src/components/workouts/TrainingGeneratorModal.tsx`, `src/components/workouts/ActiveWorkoutSession.tsx`, `src/components/workouts/WorkoutProgress.tsx`, `src/pages/Workouts.tsx`, `execution/test_training_center_v2.mjs`)
 - **Workflows `ascend-develop` & `ascend-design` Concluídos:** Transformação completa do módulo de Treinos `/workouts` em um Centro de Treinamento Tático de alta precisão, dotado de motor gerador determinístico local (zero IA generativa / zero APIs externas), arsenal de exercícios expandido com dicas biomecânicas, sessão ativa ergonômica com cronômetro imune a suspensão de tela, acompanhamento de recordes pessoais (1RM estimada por fórmula Epley) e evolução de força.
 - **Motor Gerador Determinístico Local (`src/lib/trainingGenerator.ts`):**

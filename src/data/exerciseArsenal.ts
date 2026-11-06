@@ -568,3 +568,4 @@ export const EXERCISE_ARSENAL: ExerciseDefinition[] = [
     avoidIfRestriction: ['joelho'],
   },
 ];
+

@@ -9,6 +9,7 @@ import { Workouts } from './pages/Workouts';
 import { Nutrition } from './pages/Nutrition';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
 import { QuickMenu } from './pages/QuickMenu';
@@ -112,6 +113,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           {import.meta.env.DEV && <Route path="/dev/hud" element={<HudPreview />} />}
           <Route 
             path="/onboarding" 

@@ -11,7 +11,7 @@ export function LoginPage() {
   const profileLoaded = useHunterStore((s) => s.profileLoaded);
   const { language } = usePreferences();
   const isEnglish = language === 'en-US';
-  const l = (pt: string, en: string) => isEnglish ? en : pt;
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -46,6 +46,12 @@ export function LoginPage() {
       return l(
         'Muitas tentativas em curto período. Aguarde alguns instantes antes de tentar novamente.',
         'Too many attempts in a short period. Please wait a moment before trying again.'
+      );
+    }
+    if (errLower.includes('fetch') || errLower.includes('network') || errLower.includes('failed to fetch')) {
+      return l(
+        'Falha de comunicação com a Fenda. Verifique sua conexão de rede.',
+        'Network communication failure with the Gate. Please check your connection.'
       );
     }
     return rawError;
