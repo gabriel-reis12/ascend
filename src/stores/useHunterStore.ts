@@ -83,6 +83,7 @@ export interface HunterState {
   subscriptionStatus: string | null;
   trialEndsAt: string | null;
 
+  profileUserId: string | null;
   profileLoaded: boolean;
   profileLoading: boolean;
   profileError: string | null;
@@ -141,6 +142,7 @@ const INITIAL_STATE = {
   stripeSubscriptionId: null,
   subscriptionStatus: null,
   trialEndsAt: null,
+  profileUserId: null as string | null,
   profileLoaded: false,
   profileLoading: false,
   profileError: null,
@@ -369,197 +371,217 @@ export const useHunterStore = create<HunterState>()(
       },
 
       setHunterClass: async (hClass, userId) => {
-        set({ hunterClass: hClass });
+        set((state) => ({
+          hunterClass: hClass,
+          profileUserId: userId ?? state.profileUserId,
+          profileLoaded: true,
+          profileLoading: false,
+          profileError: null,
+        }));
         if (userId) {
-          await supabase
+          const { error } = await supabase
             .from('profiles')
             .update({ class: hClass })
             .eq('id', userId);
+          if (error) {
+            throw new Error(error.message || 'Falha ao registrar classe do Caçador');
+          }
         }
       },
 
       loadProfile: async (userId) => {
+        const previousUserId = get().profileUserId;
+        if (previousUserId && previousUserId !== userId) {
+          set({ ...INITIAL_STATE, profileUserId: userId });
+        }
         set({ profileLoading: true, profileError: null });
 
-        let { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (error) {
-          console.error('[useHunterStore] Erro ao carregar profile:', error);
-          set({ profileLoading: false, profileError: error.message || 'Erro ao sincronizar dados com o Sistema' });
-          return;
-        }
-
-        if (!data) {
-          const { data: createdProfile, error: createProfileError } = await supabase
+        try {
+          let { data, error } = await supabase
             .from('profiles')
-            .upsert({
-              id: userId,
-              level: 1,
-              xp: 0,
-              xp_to_next_level: INITIAL_XP_REQUIREMENT,
-              rank: 'E',
-              strength: 10,
-              intelligence: 10,
-              endurance: 10,
-              vitality: 10,
-              discipline: 10,
-              wisdom: 10,
-              balance: 10,
-              streak_current: 0,
-              streak_best: 0,
-              xp_gained_today: 0,
-              streak_milestones_claimed: [],
-              title: 'Iniciante',
-            }, { onConflict: 'id' })
             .select('*')
-            .single();
+            .eq('id', userId)
+            .maybeSingle();
 
-          if (createProfileError) {
-            console.error('[useHunterStore] Erro ao criar profile ausente:', createProfileError);
-            set({ profileLoading: false, profileError: createProfileError.message || 'Erro ao inicializar perfil' });
+          if (error) {
+            console.error('[useHunterStore] Erro ao carregar profile:', error);
+            set({ profileLoading: false, profileError: error.message || 'Erro ao sincronizar dados com o Sistema' });
             return;
           }
 
-          data = createdProfile;
-        }
+          if (!data) {
+            const { data: createdProfile, error: createProfileError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: userId,
+                level: 1,
+                xp: 0,
+                xp_to_next_level: INITIAL_XP_REQUIREMENT,
+                rank: 'E',
+                strength: 10,
+                intelligence: 10,
+                endurance: 10,
+                vitality: 10,
+                discipline: 10,
+                wisdom: 10,
+                balance: 10,
+                streak_current: 0,
+                streak_best: 0,
+                xp_gained_today: 0,
+                streak_milestones_claimed: [],
+                title: 'Iniciante',
+              }, { onConflict: 'id' })
+              .select('*')
+              .single();
 
-        if (data && !error) {
-          const normalizedProgress = normalizeStoredProgress(data.level || 1, data.xp || 0);
-          const level = normalizedProgress.level;
+            if (createProfileError) {
+              console.error('[useHunterStore] Erro ao criar profile ausente:', createProfileError);
+              set({ profileLoading: false, profileError: createProfileError.message || 'Erro ao inicializar perfil' });
+              return;
+            }
 
-          // Lógica robusta e resiliente de cálculo e atualização de Streak diária
-          let newStreakCurrent = data.streak_current || 0;
-          let newStreakBest = data.streak_best || 0;
-          let shouldUpdateProfileInDb = false;
+            data = createdProfile;
+          }
 
-          const now = new Date();
-          const todayStr = now.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD local
+          if (data && !error) {
+            const normalizedProgress = normalizeStoredProgress(data.level || 1, data.xp || 0);
+            const level = normalizedProgress.level;
 
-          let xpGainedToday = data.xp_gained_today || 0;
+            // Lógica robusta e resiliente de cálculo e atualização de Streak diária
+            let newStreakCurrent = data.streak_current || 0;
+            let newStreakBest = data.streak_best || 0;
+            let shouldUpdateProfileInDb = false;
 
-          let bonusDiscipline = 0;
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD local
 
-          if (data.last_check_in) {
-            const lastCheckInDate = new Date(data.last_check_in);
-            const lastCheckInStr = lastCheckInDate.toLocaleDateString('en-CA');
+            let xpGainedToday = data.xp_gained_today || 0;
 
-            if (lastCheckInStr !== todayStr) {
-              const yesterday = new Date(now);
-              yesterday.setDate(yesterday.getDate() - 1);
-              const yesterdayStr = yesterday.toLocaleDateString('en-CA');
+            let bonusDiscipline = 0;
 
-              // Zerar o XP diário no início de um novo dia
-              xpGainedToday = 0;
+            if (data.last_check_in) {
+              const lastCheckInDate = new Date(data.last_check_in);
+              const lastCheckInStr = lastCheckInDate.toLocaleDateString('en-CA');
 
-              if (lastCheckInStr === yesterdayStr) {
-                // Caçador consistente: streak mantido e incrementado
-                newStreakCurrent += 1;
-                if (newStreakCurrent > newStreakBest) {
-                  newStreakBest = newStreakCurrent;
+              if (lastCheckInStr !== todayStr) {
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toLocaleDateString('en-CA');
+
+                // Zerar o XP diário no início de um novo dia
+                xpGainedToday = 0;
+
+                if (lastCheckInStr === yesterdayStr) {
+                  // Caçador consistente: streak mantido e incrementado
+                  newStreakCurrent += 1;
+                  if (newStreakCurrent > newStreakBest) {
+                    newStreakBest = newStreakCurrent;
+                  }
+                  bonusDiscipline = 1;
+                } else {
+                  // Caçador falhou no ciclo anterior: streak resetada
+                  newStreakCurrent = 1;
                 }
-                bonusDiscipline = 1;
-              } else {
-                // Caçador falhou no ciclo anterior: streak resetada
-                newStreakCurrent = 1;
+                shouldUpdateProfileInDb = true;
               }
+            } else {
+              // Primeiro check-in da história do caçador
+              newStreakCurrent = 1;
+              if (newStreakCurrent > newStreakBest) {
+                newStreakBest = newStreakCurrent;
+              }
+              xpGainedToday = 0;
               shouldUpdateProfileInDb = true;
             }
-          } else {
-            // Primeiro check-in da história do caçador
-            newStreakCurrent = 1;
-            if (newStreakCurrent > newStreakBest) {
-              newStreakBest = newStreakCurrent;
-            }
-            xpGainedToday = 0;
-            shouldUpdateProfileInDb = true;
-          }
 
-          const currentDiscipline = Number(data.discipline) || 10;
-          const updatedDiscipline = currentDiscipline + bonusDiscipline;
+            const currentDiscipline = Number(data.discipline) || 10;
+            const updatedDiscipline = currentDiscipline + bonusDiscipline;
 
-          const recalibratedXpRequired = normalizedProgress.xpRequired;
-          const recalibratedRank = normalizedProgress.rank;
+            const recalibratedXpRequired = normalizedProgress.xpRequired;
+            const recalibratedRank = normalizedProgress.rank;
 
-          set({
-            level,
-            xp: normalizedProgress.xp,
-            xpRequired: recalibratedXpRequired,
-            rank: recalibratedRank,
-            hunterClass: data.class as HunterClass,
-            username: data.username || '',
-            fullName: data.full_name || '',
-            birthday: data.birthday || '',
-            gender: (data.gender as HunterGender) || null,
-            height: data.height || null,
-            weightCurrent: data.weight_current || null,
-            weightTarget: data.weight_target || null,
-            trainingFocus: data.training_focus || null,
-            mainGoal: data.main_goal || null,
-            nutritionGoal: data.nutrition_goal || 'maintain',
-            experienceLevel: data.experience_level || null,
-            stats: {
-              strength: Number(data.strength) || 10,
-              intelligence: Number(data.intelligence) || 10,
-              endurance: Number(data.endurance) || 10,
-              vitality: Number(data.vitality) || 10,
-              discipline: updatedDiscipline,
-              wisdom: Number(data.wisdom) || 10,
-              balance: Number(data.balance) || 10,
-            },
-            streak: {
-              current: newStreakCurrent,
-              best: newStreakBest,
-            },
-            xpGainedToday: Math.min(DAILY_COMMON_XP_EFFECTIVE_MAX, xpGainedToday),
-            streakMilestonesClaimed: data.streak_milestones_claimed || [],
-            activeTitle: data.title || 'Iniciante',
-            isPremium: data.is_premium || false,
-            stripeCustomerId: data.stripe_customer_id || null,
-            stripeSubscriptionId: data.stripe_subscription_id || null,
-            subscriptionStatus: data.subscription_status || null,
-            trialEndsAt: data.trial_ends_at || null,
-            profileLoaded: true,
-            profileLoading: false,
-            profileError: null,
-          });
-
-          void (async () => {
-          if (
-            shouldUpdateProfileInDb
-            || data.xp_to_next_level !== recalibratedXpRequired
-            || data.rank !== recalibratedRank
-          ) {
-            await supabase
-              .from('profiles')
-              .update({
-                streak_current: newStreakCurrent,
-                streak_best: newStreakBest,
-                last_check_in: now.toISOString(),
-                xp_gained_today: Math.min(DAILY_COMMON_XP_EFFECTIVE_MAX, xpGainedToday),
-                level,
-                xp: normalizedProgress.xp,
+            set({
+              level,
+              xp: normalizedProgress.xp,
+              xpRequired: recalibratedXpRequired,
+              rank: recalibratedRank,
+              hunterClass: (data.class as HunterClass) || null,
+              username: data.username || '',
+              fullName: data.full_name || '',
+              birthday: data.birthday || '',
+              gender: (data.gender as HunterGender) || null,
+              height: data.height || null,
+              weightCurrent: data.weight_current || null,
+              weightTarget: data.weight_target || null,
+              trainingFocus: data.training_focus || null,
+              mainGoal: data.main_goal || null,
+              nutritionGoal: data.nutrition_goal || 'maintain',
+              experienceLevel: data.experience_level || null,
+              stats: {
+                strength: Number(data.strength) || 10,
+                intelligence: Number(data.intelligence) || 10,
+                endurance: Number(data.endurance) || 10,
+                vitality: Number(data.vitality) || 10,
                 discipline: updatedDiscipline,
-                xp_to_next_level: recalibratedXpRequired,
-                rank: recalibratedRank,
-              })
-              .eq('id', userId);
+                wisdom: Number(data.wisdom) || 10,
+                balance: Number(data.balance) || 10,
+              },
+              streak: {
+                current: newStreakCurrent,
+                best: newStreakBest,
+              },
+              xpGainedToday: Math.min(DAILY_COMMON_XP_EFFECTIVE_MAX, xpGainedToday),
+              streakMilestonesClaimed: data.streak_milestones_claimed || [],
+              activeTitle: data.title || 'Iniciante',
+              isPremium: data.is_premium || false,
+              stripeCustomerId: data.stripe_customer_id || null,
+              stripeSubscriptionId: data.stripe_subscription_id || null,
+              subscriptionStatus: data.subscription_status || null,
+              trialEndsAt: data.trial_ends_at || null,
+              profileUserId: userId,
+              profileLoaded: true,
+              profileLoading: false,
+              profileError: null,
+            });
+
+            void (async () => {
+              if (
+                shouldUpdateProfileInDb
+                || data.xp_to_next_level !== recalibratedXpRequired
+                || data.rank !== recalibratedRank
+              ) {
+                await supabase
+                  .from('profiles')
+                  .update({
+                    streak_current: newStreakCurrent,
+                    streak_best: newStreakBest,
+                    last_check_in: now.toISOString(),
+                    xp_gained_today: Math.min(DAILY_COMMON_XP_EFFECTIVE_MAX, xpGainedToday),
+                    level,
+                    xp: normalizedProgress.xp,
+                    discipline: updatedDiscipline,
+                    xp_to_next_level: recalibratedXpRequired,
+                    rank: recalibratedRank,
+                  })
+                  .eq('id', userId);
+              }
+
+              // Verificar streaks e conquistas após carregar
+              await get().checkStreakMilestones(userId);
+              await get().checkAchievements(userId);
+            })().catch((err) => {
+              console.warn('[useHunterStore] Sincronizacao secundaria ignorada:', err);
+            });
+
+            // Carregar batalha de boss ativa em segundo plano para o caçador
+            void import('./useBossStore').then(({ useBossStore }) => {
+              void useBossStore.getState().loadActiveBattle(userId);
+            });
           }
-
-          // Verificar streaks e conquistas após carregar
-          await get().checkStreakMilestones(userId);
-          await get().checkAchievements(userId);
-          })().catch((err) => {
-            console.warn('[useHunterStore] Sincronizacao secundaria ignorada:', err);
-          });
-
-          // Carregar batalha de boss ativa em segundo plano para o caçador
-          void import('./useBossStore').then(({ useBossStore }) => {
-            void useBossStore.getState().loadActiveBattle(userId);
-          });
+        } catch (err) {
+          console.error('[useHunterStore] Exceção ao carregar profile:', err);
+          const message = err instanceof Error ? err.message : 'Erro de conexão ao sincronizar dados com o Sistema';
+          set({ profileLoading: false, profileError: message });
         }
       },
 
@@ -710,8 +732,29 @@ export const useHunterStore = create<HunterState>()(
     {
       name: 'hunter-storage',
       version: 4,
+      partialize: (state) => {
+        const {
+          profileLoaded: _profileLoaded,
+          profileLoading: _profileLoading,
+          profileError: _profileError,
+          pendingLevelUp: _pendingLevelUp,
+          ...persistedFields
+        } = state;
+        return persistedFields;
+      },
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState as Partial<HunterState>) || {};
+        return {
+          ...currentState,
+          ...persisted,
+          profileLoaded: false,
+          profileLoading: false,
+          profileError: null,
+          pendingLevelUp: null,
+        };
+      },
       migrate: (persistedState) => {
-        const persisted = persistedState as Partial<HunterState>;
+        const persisted = (persistedState as Partial<HunterState>) || {};
         const normalizedProgress = normalizeStoredProgress(
           Number(persisted.level) || 1,
           Number(persisted.xp) || 0,
@@ -728,7 +771,7 @@ export const useHunterStore = create<HunterState>()(
             : 0,
           bonusXpWeekKey: getIsoWeekKey(),
           xpAwardLedger: persisted.xpAwardLedger || {},
-        };
+        } as Omit<HunterState, 'profileLoaded' | 'profileLoading' | 'profileError' | 'pendingLevelUp'>;
       },
     }
   )

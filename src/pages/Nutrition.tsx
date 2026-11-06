@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, 
-  Search, 
-  Apple, 
-  History, 
+import {
+  Plus,
+  Search,
+  Apple,
+  History,
   X,
   Flame,
   Zap,
@@ -13,16 +13,21 @@ import {
   Table as TableIcon,
   UtensilsCrossed,
   BookOpen,
-  Sparkles,
-  Brain,
-  Cpu,
   ChevronDown,
+  ChevronRight,
   Trash2,
   Clock,
   CheckCircle2,
   Target,
   Gauge,
-  AlertTriangle
+  AlertTriangle,
+  Coffee,
+  Sun,
+  Moon,
+  Cookie,
+  Calculator,
+  Edit3,
+  Scale,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -37,6 +42,11 @@ import type { MealPlan } from '@/hooks/useMealPlans';
 import { usePreferences } from '@/contexts/preferences';
 import { translateUiText } from '@/lib/uiEnglish';
 import { analyzeNutritionText, type NutritionAiIngredient } from '@/lib/nutritionAi';
+import { HudCard } from '@/components/ui/hud-card';
+import { TacticalButton } from '@/components/ui/tactical-button';
+import { NeonProgressBar, NeonProgressRing } from '@/components/ui/neon-progress';
+import { RankBadge } from '@/components/ui/rank-badge';
+import { cn } from '@/lib/utils';
 
 interface FoodLog {
   id: string;
@@ -69,137 +79,74 @@ interface NutritionScore {
 }
 
 function quantityToGrams(food: Food, quantity: number) {
-  return food.serving_size && food.serving_unit
-    ? quantity * food.serving_size
-    : quantity;
+  return food.serving_size && food.serving_unit ? quantity * food.serving_size : quantity;
 }
 
 function gramsToQuantity(food: Food, grams: number) {
-  return food.serving_size && food.serving_unit
-    ? grams / food.serving_size
-    : grams;
+  return food.serving_size && food.serving_unit ? grams / food.serving_size : grams;
 }
 
 type NutritionStatus = 'low' | 'ideal' | 'exceeded';
 
+const DEFAULT_MEAL_SLOTS: Array<{
+  id: string;
+  pt: string;
+  en: string;
+  icon: LucideIcon;
+}> = [
+  { id: 'Café da Manhã', pt: 'Café da Manhã', en: 'Breakfast', icon: Coffee },
+  { id: 'Almoço', pt: 'Almoço', en: 'Lunch', icon: Sun },
+  { id: 'Jantar', pt: 'Jantar', en: 'Dinner', icon: Moon },
+  { id: 'Lanche', pt: 'Lanche', en: 'Snack', icon: Cookie },
+];
+
 const NUTRITION_PROMPTS = [
   {
     label: { 'pt-BR': 'Prato completo', 'en-US': 'Full plate' },
-    text: { 'pt-BR': '150g de frango, 150g de arroz, 100g de feijão e salada', 'en-US': '150g grilled chicken, 150g rice, 100g beans and salad' },
+    text: {
+      'pt-BR': '150g de frango, 150g de arroz, 100g de feijão e salada',
+      'en-US': '150g grilled chicken, 150g rice, 100g beans and salad',
+    },
   },
   {
     label: { 'pt-BR': 'Lanche rápido', 'en-US': 'Quick snack' },
-    text: { 'pt-BR': 'Iogurte natural, banana, aveia e mel', 'en-US': 'Plain yogurt, banana, oats and honey' },
-  },
-  {
-    label: { 'pt-BR': 'Fast food', 'en-US': 'Fast food' },
-    text: { 'pt-BR': 'Big Mac e batata frita média', 'en-US': 'Big Mac and medium fries' },
+    text: {
+      'pt-BR': 'Iogurte natural, banana, aveia e mel',
+      'en-US': 'Plain yogurt, banana, oats and honey',
+    },
   },
   {
     label: { 'pt-BR': 'Café proteico', 'en-US': 'Protein breakfast' },
-    text: { 'pt-BR': 'Omelete com 3 ovos, queijo e pão integral', 'en-US': 'Omelet with 3 eggs, cheese and whole wheat bread' },
+    text: {
+      'pt-BR': 'Omelete com 3 ovos, queijo e pão integral',
+      'en-US': 'Omelet with 3 eggs, cheese and whole wheat bread',
+    },
   },
 ];
-
-function NutritionMetricCard({
-  label,
-  unit,
-  consumed,
-  target,
-  icon: Icon,
-  accent,
-  bar,
-  status,
-  language,
-}: {
-  label: string;
-  unit: string;
-  consumed: number;
-  target: number | null;
-  icon: LucideIcon;
-  accent: string;
-  bar: string;
-  status: NutritionStatus;
-  language: string;
-}) {
-  const isEnglish = language === 'en-US';
-  const l = (pt: string, en: string) => isEnglish ? en : pt;
-  const progress = target ? Math.min(100, Math.round((consumed / target) * 100)) : 0;
-  const remaining = target ? Math.max(0, target - consumed) : null;
-  const statusStyle = {
-    low: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
-    ideal: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
-    exceeded: 'border-blue-500/20 bg-blue-500/10 text-blue-300',
-  }[status];
-  const statusLabel = {
-    low: l('Baixo', 'Low'),
-    ideal: l('Ideal', 'Ideal'),
-    exceeded: l('Excedido', 'Exceeded'),
-  }[status];
-
-  return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="relative overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-4 shadow-lg transition-colors hover:border-white/10 sm:p-5"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold text-gray-400">{label}</p>
-          <p className="mt-2 text-2xl font-black text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            {consumed.toFixed(unit === 'kcal' ? 0 : 1)}
-            <span className={`ml-1 text-sm ${accent}`}>{unit}</span>
-          </p>
-        </div>
-        <div className={`flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5 ${accent}`}>
-          <Icon className="size-4" />
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold">
-          <span className="text-gray-600">{target ? `${l('Meta', 'Goal')} ${Math.round(target)} ${unit}` : l('Meta indisponível', 'Goal unavailable')}</span>
-          <span className={`rounded-md border px-1.5 py-0.5 ${statusStyle}`}>{statusLabel}</span>
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-black/50">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
-            className={`h-full rounded-full ${bar}`}
-          />
-        </div>
-        <p className="mt-2 text-xs font-medium text-gray-500">
-          {remaining === null
-            ? l('Complete seu perfil para calibrar.', 'Complete your profile to calibrate.')
-            : remaining > 0
-              ? `${remaining.toFixed(unit === 'kcal' ? 0 : 1)} ${unit} ${l('restantes', 'remaining')}`
-              : `${l('Referência alcançada em', 'Reference reached at')} ${progress}%`}
-        </p>
-      </div>
-    </motion.div>
-  );
-}
 
 export function Nutrition() {
   const { user } = useAuth();
   const hunterProfile = useHunterStore();
   const { language, t } = usePreferences();
   const isEnglish = language === 'en-US';
-  const l = (pt: string, en: string) => isEnglish ? en : pt;
-  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
+  const tx = (value?: string | null) => (isEnglish && value ? translateUiText(value) : value);
 
   const [activeTab, setActiveTab] = useState<'diario' | 'cardapios'>('diario');
-  const [subTab, setSubTab] = useState<'codex' | 'library'>('codex');
+  const [subTab, setSubTab] = useState<'library' | 'codex'>('library');
   const [foods, setFoods] = useState<Food[]>([]);
   const [logs, setLogs] = useState<FoodLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalFoodSearch, setModalFoodSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewFoodModalOpen, setIsNewFoodModalOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
-  
+  const [expandedMealCategory, setExpandedMealCategory] = useState<string | null>(null);
+
   // Log Form State
   const [quantity, setQuantity] = useState(100);
   const [mealType, setMealType] = useState('Almoço');
@@ -214,7 +161,7 @@ export function Nutrition() {
   const [newFoodServingSize, setNewFoodServingSize] = useState<number | undefined>();
   const [newFoodServingUnit, setNewFoodServingUnit] = useState<string>('');
 
-  // IA State
+  // TACO Text Calculator State (Deterministic Local Parser)
   const [iaTextInput, setIaTextInput] = useState('');
   const [iaMealType, setIaMealType] = useState('Almoço');
   const [iaLoading, setIaLoading] = useState(false);
@@ -231,9 +178,9 @@ export function Nutrition() {
     ingredients: NutritionAiIngredient[];
   } | null>(null);
   const [expandedIaIngs, setExpandedIaIngs] = useState<Set<number>>(new Set());
-  
+
   const toggleIaIngExpanded = (index: number) => {
-    setExpandedIaIngs(prev => {
+    setExpandedIaIngs((prev) => {
       const next = new Set(prev);
       if (next.has(index)) {
         next.delete(index);
@@ -256,6 +203,13 @@ export function Nutrition() {
     fetchData();
   }, [user]);
 
+  const triggerFeedback = (message: string) => {
+    setSaveFeedback(message);
+    setTimeout(() => {
+      setSaveFeedback((prev) => (prev === message ? null : prev));
+    }, 2800);
+  };
+
   async function fetchData() {
     if (!user) {
       setLoading(false);
@@ -271,7 +225,7 @@ export function Nutrition() {
       setLoading(false);
       console.warn('[Nutrition] Safety timeout disparado.');
     }, 5000);
-    
+
     try {
       const { startIso, endIso } = localDayBounds();
       const [
@@ -279,10 +233,7 @@ export function Nutrition() {
         { data: logData, error: logError },
         { data: scoreData, error: scoreError },
       ] = await Promise.all([
-        supabase
-          .from('foods')
-          .select('*')
-          .order('name'),
+        supabase.from('foods').select('*').order('name'),
         supabase
           .from('food_logs')
           .select(`
@@ -300,15 +251,17 @@ export function Nutrition() {
           .order('date', { ascending: false })
           .limit(30),
       ]);
-      
+
       if (foodError) throw foodError;
       setFoods(foodData || []);
- 
+
       if (logError) throw logError;
       setLogs(((logData || []) as FoodLog[]).map(normalizeFoodLog));
       if (scoreError) throw scoreError;
 
-      const scoresByDate = new Map((scoreData as NutritionScore[] || []).map(score => [score.date, score.success]));
+      const scoresByDate = new Map(
+        ((scoreData as NutritionScore[]) || []).map((score) => [score.date, score.success]),
+      );
       const cursor = new Date();
       cursor.setDate(cursor.getDate() - 1);
       let streak = 0;
@@ -330,7 +283,8 @@ export function Nutrition() {
     if (!user || !selectedFood) return;
 
     try {
-      const finalGrams = quantityToGrams(selectedFood, quantity);
+      const safeQty = Math.max(0.1, Number(quantity) || 0);
+      const finalGrams = quantityToGrams(selectedFood, safeQty);
 
       const payload = {
         user_id: user.id,
@@ -343,11 +297,18 @@ export function Nutrition() {
         : await supabase.from('food_logs').insert(payload);
 
       if (error) throw error;
-      
+
+      const loggedFoodName = selectedFood.name;
       setIsModalOpen(false);
       setSelectedFood(null);
       setEditingLogId(null);
       setQuantity(100);
+      setModalFoodSearch('');
+      triggerFeedback(
+        editingLogId
+          ? l(`Registro de ${loggedFoodName} atualizado.`, `${loggedFoodName} log updated.`)
+          : l(`${loggedFoodName} adicionado em ${mealType}.`, `${loggedFoodName} added to ${tx(mealType)}.`),
+      );
       fetchData();
     } catch (err) {
       console.error('Error logging food:', err);
@@ -356,10 +317,12 @@ export function Nutrition() {
 
   function handleEditLog(log: FoodLog) {
     if (log.source === 'meal_plan') {
-      setDataError(l(
-        'Refeições do Cardápio do Caçador devem ser ajustadas no próprio cardápio. Desmarque a missão antes de alterar os itens.',
-        'Meals from the Hunter\'s Meal Plan must be adjusted in the plan itself. Uncheck the quest before changing items.'
-      ));
+      setDataError(
+        l(
+          'Refeições do Cardápio do Caçador devem ser ajustadas no próprio cardápio. Desmarque a missão antes de alterar os itens.',
+          "Meals from the Hunter's Meal Plan must be adjusted in the plan itself. Uncheck the quest before changing items.",
+        ),
+      );
       return;
     }
 
@@ -376,7 +339,7 @@ export function Nutrition() {
 
   async function handleDeleteLog(logId: string) {
     if (!user) return;
-    const targetLog = logs.find(log => log.id === logId);
+    const targetLog = logs.find((log) => log.id === logId);
     if (targetLog?.source === 'meal_plan' && targetLog.meal_completion_id) {
       const { data: deleted, error: completionError } = await supabase
         .from('meal_completions')
@@ -390,10 +353,13 @@ export function Nutrition() {
         return;
       }
 
-      setLogs(current => current.filter(log => log.meal_completion_id !== targetLog.meal_completion_id));
+      setLogs((current) =>
+        current.filter((log) => log.meal_completion_id !== targetLog.meal_completion_id),
+      );
       if ((deleted ?? []).length > 0) {
         await useBossStore.getState().attackActiveBoss(user.id, -15, 'nutrition');
       }
+      triggerFeedback(l('Refeição do cardápio removida do dia.', 'Meal plan removed from today.'));
       return;
     }
 
@@ -402,7 +368,8 @@ export function Nutrition() {
       setDataError(error.message);
       return;
     }
-    setLogs(current => current.filter(log => log.id !== logId));
+    setLogs((current) => current.filter((log) => log.id !== logId));
+    triggerFeedback(l('Alimento removido do diário.', 'Food removed from diary.'));
 
     if (targetLog?.source === 'ai' && targetLog.food_id) {
       const { count } = await supabase
@@ -412,11 +379,7 @@ export function Nutrition() {
         .eq('food_id', targetLog.food_id);
 
       if ((count ?? 0) === 0) {
-        await supabase
-          .from('foods')
-          .delete()
-          .eq('id', targetLog.food_id)
-          .eq('created_by', user.id);
+        await supabase.from('foods').delete().eq('id', targetLog.food_id).eq('created_by', user.id);
       }
     }
   }
@@ -452,13 +415,13 @@ export function Nutrition() {
       }
 
       const syncedItemIds = new Set(
-        (syncedItems ?? []).map(log => log.meal_plan_item_id).filter(Boolean)
+        (syncedItems ?? []).map((log) => log.meal_plan_item_id).filter(Boolean),
       );
-      const missingItems = plan.items.filter(item => !syncedItemIds.has(item.id));
+      const missingItems = plan.items.filter((item) => !syncedItemIds.has(item.id));
 
       if (missingItems.length > 0) {
         const { error: repairError } = await supabase.from('food_logs').insert(
-          missingItems.map(item => ({
+          missingItems.map((item) => ({
             user_id: user.id,
             food_id: item.food_id,
             quantity_grams: item.quantity_grams,
@@ -467,7 +430,7 @@ export function Nutrition() {
             meal_plan_id: plan.id,
             meal_plan_item_id: item.id,
             meal_completion_id: existingCompletion.id,
-          }))
+          })),
         );
 
         if (repairError && repairError.code !== '23505') {
@@ -497,7 +460,7 @@ export function Nutrition() {
     }
 
     const { error: logError } = await supabase.from('food_logs').insert(
-      plan.items.map(item => ({
+      plan.items.map((item) => ({
         user_id: user.id,
         food_id: item.food_id,
         quantity_grams: item.quantity_grams,
@@ -506,7 +469,7 @@ export function Nutrition() {
         meal_plan_id: plan.id,
         meal_plan_item_id: item.id,
         meal_completion_id: completion.id,
-      }))
+      })),
     );
 
     if (logError) {
@@ -524,21 +487,25 @@ export function Nutrition() {
     if (!user || !newFoodName) return;
 
     try {
-      const { error } = await supabase.from('foods').insert({
-        name: newFoodName,
-        calories_per_100g: newFoodCals,
-        protein_per_100g: newFoodProtein,
-        carbs_per_100g: newFoodCarbs,
-        fat_per_100g: newFoodFat,
-        category: newFoodCategory,
-        is_custom: true,
-        created_by: user.id,
-        serving_size: newFoodServingSize || null,
-        serving_unit: newFoodServingUnit || null,
-      });
+      const { data: created, error } = await supabase
+        .from('foods')
+        .insert({
+          name: newFoodName,
+          calories_per_100g: newFoodCals,
+          protein_per_100g: newFoodProtein,
+          carbs_per_100g: newFoodCarbs,
+          fat_per_100g: newFoodFat,
+          category: newFoodCategory,
+          is_custom: true,
+          created_by: user.id,
+          serving_size: newFoodServingSize || null,
+          serving_unit: newFoodServingUnit || null,
+        })
+        .select('*')
+        .single();
 
       if (error) throw error;
-      
+
       setIsNewFoodModalOpen(false);
       setNewFoodName('');
       setNewFoodCals(0);
@@ -547,7 +514,12 @@ export function Nutrition() {
       setNewFoodFat(0);
       setNewFoodServingSize(undefined);
       setNewFoodServingUnit('');
-      fetchData();
+      await fetchData();
+      if (created) {
+        setSelectedFood(created as Food);
+        setQuantity(created.serving_unit && created.serving_size ? 1 : 100);
+        setIsModalOpen(true);
+      }
     } catch (err) {
       console.error('Error creating food:', err);
     }
@@ -556,7 +528,12 @@ export function Nutrition() {
   async function handleAnalyzeMealIa() {
     if (!user) return;
     if (!iaTextInput.trim()) {
-      setIaError(l('Descreva a refeição para que o Códex possa calibrar.', 'Describe the meal so the Codex can calibrate it.'));
+      setIaError(
+        l(
+          'Descreva os alimentos e quantidades para calcular via Tabela TACO.',
+          'Describe the foods and quantities to calculate via the TACO table.',
+        ),
+      );
       return;
     }
 
@@ -569,10 +546,18 @@ export function Nutrition() {
 
     try {
       setIaPreview(analyzeNutritionText(iaTextInput, foods, language));
-
     } catch (err: unknown) {
-      console.error('[Códex IA] Erro ao processar:', err);
-      setIaError(err instanceof Error ? (isEnglish ? translateUiText(err.message) : err.message) : l('Houve uma anomalia na calibração neural. Tente novamente.', 'There was an anomaly in neural calibration. Try again.'));
+      console.error('[Calculadora TACO] Erro ao processar:', err);
+      setIaError(
+        err instanceof Error
+          ? isEnglish
+            ? translateUiText(err.message)
+            : err.message
+          : l(
+              'Não foi possível calcular os alimentos informados. Verifique a descrição.',
+              'Could not calculate the foods provided. Check your description.',
+            ),
+      );
     } finally {
       setIaLoading(false);
     }
@@ -611,42 +596,53 @@ export function Nutrition() {
       });
 
       if (logError) {
-        await supabase
-          .from('foods')
-          .delete()
-          .eq('id', food.id)
-          .eq('created_by', user.id);
+        await supabase.from('foods').delete().eq('id', food.id).eq('created_by', user.id);
         throw logError;
       }
 
-      setIaRegistrationSuccess(l(`${iaPreview.mealName} foi registrado no diário.`, `${iaPreview.mealName} was saved to the diary.`));
+      setIaRegistrationSuccess(
+        l(`${iaPreview.mealName} foi registrado no diário.`, `${iaPreview.mealName} was saved to the diary.`),
+      );
+      triggerFeedback(
+        l(`${iaPreview.mealName} registrado em ${iaMealType}.`, `${iaPreview.mealName} logged to ${tx(iaMealType)}.`),
+      );
       setIaPreview(null);
       setIaEditing(false);
       setIaTextInput('');
       await fetchData();
     } catch (err: unknown) {
-      console.error('[Códex IA] Erro ao registrar:', err);
-      setIaError(err instanceof Error ? (isEnglish ? translateUiText(err.message) : err.message) : l('Não foi possível registrar a refeição. Tente novamente.', 'The meal could not be logged. Try again.'));
+      console.error('[Calculadora TACO] Erro ao registrar:', err);
+      setIaError(
+        err instanceof Error
+          ? isEnglish
+            ? translateUiText(err.message)
+            : err.message
+          : l('Não foi possível registrar a refeição. Tente novamente.', 'The meal could not be logged. Try again.'),
+      );
     } finally {
       setIaRegistering(false);
     }
   }
 
-  const filteredFoods = foods.filter(f => 
-    f.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredFoods = foods.filter((f) => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const modalFilteredFoods = foods
+    .filter((f) => f.name.toLowerCase().includes(modalFoodSearch.toLowerCase()))
+    .slice(0, 20);
 
-  const dailyMacros = logs.reduce((acc, log) => {
-    const food = foodFromLog(log);
-    if (!food) return acc;
-    const ratio = log.quantity_grams / 100;
-    return {
-      kcal: acc.kcal + (Number(food.calories_per_100g) || 0) * ratio,
-      protein: acc.protein + (Number(food.protein_per_100g) || 0) * ratio,
-      carbs: acc.carbs + (Number(food.carbs_per_100g) || 0) * ratio,
-      fat: acc.fat + (Number(food.fat_per_100g) || 0) * ratio,
-    };
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  const dailyMacros = logs.reduce(
+    (acc, log) => {
+      const food = foodFromLog(log);
+      if (!food) return acc;
+      const ratio = log.quantity_grams / 100;
+      return {
+        kcal: acc.kcal + (Number(food.calories_per_100g) || 0) * ratio,
+        protein: acc.protein + (Number(food.protein_per_100g) || 0) * ratio,
+        carbs: acc.carbs + (Number(food.carbs_per_100g) || 0) * ratio,
+        fat: acc.fat + (Number(food.fat_per_100g) || 0) * ratio,
+      };
+    },
+    { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+  );
 
   const nutritionTargets = calculateNutritionTargets({
     birthday: hunterProfile.birthday,
@@ -669,19 +665,14 @@ export function Nutrition() {
       }
     : { protein: null, carbs: null, fat: null };
 
-  function getReferenceStatus(consumed: number, target: number | null): NutritionStatus {
-    if (!target || consumed < target * 0.75) return 'low';
-    if (consumed <= target * 1.1) return 'ideal';
-    return 'exceeded';
-  }
-
-  const calorieStatus: NutritionStatus = !nutritionTargets.minCalories || !nutritionTargets.maxCalories
-    ? 'low'
-    : dailyMacros.kcal < nutritionTargets.minCalories
+  const calorieStatus: NutritionStatus =
+    !nutritionTargets.minCalories || !nutritionTargets.maxCalories
       ? 'low'
-      : dailyMacros.kcal <= nutritionTargets.maxCalories
-        ? 'ideal'
-        : 'exceeded';
+      : dailyMacros.kcal < nutritionTargets.minCalories
+        ? 'low'
+        : dailyMacros.kcal <= nutritionTargets.maxCalories
+          ? 'ideal'
+          : 'exceeded';
   const isInsideRecommendedRange = calorieStatus === 'ideal';
   const projectedNutritionXp = 35;
   const localizedGoalLabel = l(
@@ -690,859 +681,971 @@ export function Nutrition() {
       ? 'Lose weight'
       : nutritionTargets.goal === 'gain'
         ? 'Gain weight'
-        : 'Maintain weight'
+        : 'Maintain weight',
   );
   const missingProfileFields = nutritionTargets.missingFields.length
-    ? nutritionTargets.missingFields.map(field => tx(field)).join(', ')
+    ? nutritionTargets.missingFields.map((field) => tx(field)).join(', ')
     : l('dados físicos', 'physical data');
 
+  // Build Meal Slots for Today's Meals (4 core slots + any extra custom meal types logged today)
+  const extraMealTypes = Array.from(
+    new Set(
+      logs
+        .map((log) => log.meal_type)
+        .filter((mt) => !DEFAULT_MEAL_SLOTS.some((slot) => slot.id === mt)),
+    ),
+  );
+
+  const allMealSlots = [
+    ...DEFAULT_MEAL_SLOTS,
+    ...extraMealTypes.map((mt) => ({
+      id: mt,
+      pt: mt,
+      en: tx(mt) || mt,
+      icon: UtensilsCrossed,
+    })),
+  ];
+
+  const openAddFoodForMeal = (targetMealType?: string, preselectedFood?: Food | null) => {
+    if (targetMealType) {
+      setMealType(targetMealType);
+    }
+    setEditingLogId(null);
+    if (preselectedFood) {
+      setSelectedFood(preselectedFood);
+      setQuantity(preselectedFood.serving_unit && preselectedFood.serving_size ? 1 : 100);
+    } else {
+      setSelectedFood(null);
+      setQuantity(100);
+      setModalFoodSearch('');
+    }
+    setIsModalOpen(true);
+  };
+
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
+    <div className="mx-auto max-w-4xl space-y-5 pb-24">
+      {/* HUD v2 Top Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <div className="h-1 w-4 bg-purple-500" />
-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-purple-500">{t('nutrition.eyebrow')}</span>
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
+            <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">
+              {t('nutrition.eyebrow')}
+            </span>
           </div>
-          <h1 className="text-3xl font-black uppercase tracking-tight text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+          <h1 className="mt-0.5 truncate font-orbitron text-xl font-black uppercase tracking-tight text-white sm:text-2xl">
             {t('nutrition.title')}
           </h1>
         </div>
-        
-        {activeTab === 'diario' && subTab === 'library' && (
-          <button 
+
+        <div className="flex shrink-0 items-center gap-2.5">
+          <RankBadge
+            rank={hunterProfile.rank as 'E' | 'D' | 'C' | 'B' | 'A' | 'S'}
+            size="sm"
+            showLabel={false}
+          />
+          <TacticalButton
+            variant="secondary"
+            accent="cyan"
+            leftIcon={<Plus className="size-3.5" />}
             onClick={() => setIsNewFoodModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]"
           >
-            <Plus className="size-4" strokeWidth={3} />
             {l('Novo Alimento', 'New Food')}
-          </button>
-        )}
+          </TacticalButton>
+        </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-1 border-b border-[#1E1E26] pb-px">
+      {/* Main Navigation Tabs (Diário / Cardápios) */}
+      <div className="grid grid-cols-2 gap-1.5 rounded-2xl border border-white/10 bg-[#0D0F18]/90 p-1.5 backdrop-blur-md">
         {[
-          { id: 'diario', label: t('nutrition.diary'), icon: BookOpen },
-          { id: 'cardapios', label: t('nutrition.mealPlans'), icon: UtensilsCrossed },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as typeof activeTab)}
-            className={`relative flex items-center gap-2 px-5 py-3.5 text-sm font-bold transition-all ${
-              activeTab === tab.id ? 'text-orange-400' : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <tab.icon size={13} />
-            {tab.label}
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="nutrition-tab"
-                className="absolute bottom-0 left-0 h-0.5 w-full bg-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.6)]"
-              />
-            )}
-          </button>
-        ))}
+          { id: 'diario' as const, label: t('nutrition.diary'), icon: BookOpen },
+          { id: 'cardapios' as const, label: t('nutrition.mealPlans'), icon: UtensilsCrossed },
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex min-h-[48px] items-center justify-center gap-2 rounded-xl border px-3 py-2 font-orbitron text-xs font-black uppercase tracking-wider transition-all',
+                isActive
+                  ? 'border-cyan-400/45 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(0,240,255,0.14)]'
+                  : 'border-transparent bg-transparent text-slate-400 hover:bg-white/[0.04] hover:text-slate-200',
+              )}
+            >
+              <tab.icon className={cn('size-4', isActive ? 'text-cyan-300' : 'text-slate-400')} />
+              <span className="truncate">{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Cardápios Tab */}
+      {/* Save Feedback Toast Banner */}
+      <AnimatePresence>
+        {saveFeedback && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+          >
+            <HudCard variant="success" className="p-3.5">
+              <div className="flex items-center gap-2.5 text-xs font-bold text-emerald-200">
+                <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+                <span>{saveFeedback}</span>
+              </div>
+            </HudCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* TAB 2: CARDÁPIOS (MEAL PLANS) */}
       {activeTab === 'cardapios' && (
-        <NutritionMealPlans
-          foods={foods}
-          onUsePlan={handleUseMealPlan}
-          feedback={mealPlanFeedback}
-        />
+        <NutritionMealPlans foods={foods} onUsePlan={handleUseMealPlan} feedback={mealPlanFeedback} />
       )}
 
-      {/* Diário de Consumo Tab */}
+      {/* TAB 1: DIÁRIO NUTRICIONAL */}
       {activeTab === 'diario' && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {dataError && (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
-              <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
-              {dataError}
-            </div>
+            <HudCard variant="crimson" className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-semibold text-rose-200">
+                  <span className="font-orbitron font-black uppercase tracking-wider text-rose-400">
+                    {l('Aviso: ', 'Notice: ')}
+                  </span>
+                  {dataError}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setDataError(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </HudCard>
           )}
-          {calorieStatus === 'exceeded' && nutritionTargets.maxCalories && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              role="alert"
-              aria-live="assertive"
-              className="relative overflow-hidden rounded-2xl border-2 border-red-500 bg-red-500/15 p-5 shadow-[0_0_28px_rgba(239,68,68,0.22)]"
-            >
-              <div className="absolute inset-y-0 left-0 w-1.5 bg-red-500" />
-              <div className="flex items-start gap-4">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-red-500/40 bg-red-500/20 text-red-400">
-                  <AlertTriangle className="size-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.16em] text-red-400 font-orbitron">
-                    {t('nutrition.exceeded')}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold leading-relaxed text-red-100">
-                    {language === 'en-US' ? (
+
+          {/* 2. PAINEL NUTRICIONAL PRINCIPAL (Ref: ascend-nutrition.jpg) */}
+          <HudCard variant="cyan" corners radialGlow className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Target className="size-4 text-cyan-400" />
+                <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">
+                  {l('BALANÇO CALÓRICO DIÁRIO', 'DAILY CALORIE BALANCE')}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-amber-300">
+                  +{projectedNutritionXp} XP · +2 VIT
+                </span>
+                {nutritionStreak > 0 && (
+                  <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
+                    {nutritionStreak}d streak
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Circular Progress Ring (Centered & Contained) */}
+            <div className="my-5 flex flex-col items-center justify-center">
+              <NeonProgressRing
+                value={calorieProgress}
+                max={100}
+                size={196}
+                strokeWidth={12}
+                variant="cyan-purple"
+                ariaLabel={l('Progresso da meta calórica', 'Calorie goal progress')}
+              >
+                <div className="flex max-w-[144px] flex-col items-center justify-center text-center leading-none">
+                  {nutritionTargets.targetCalories ? (
+                    dailyMacros.kcal <= nutritionTargets.targetCalories ? (
                       <>
-                        {t('nutrition.exceededBody')} You consumed <strong>{Math.round(dailyMacros.kcal)} kcal</strong>,
-                        exceeding the recommended limit of <strong>{nutritionTargets.maxCalories} kcal</strong> by{' '}
-                        <strong>{Math.round(dailyMacros.kcal - nutritionTargets.maxCalories)} kcal</strong>.
+                        <div className="flex items-baseline justify-center gap-1 whitespace-nowrap">
+                          <span className="font-orbitron text-2xl font-black tracking-tight text-white sm:text-3xl">
+                            {Math.round(remainingCalories ?? 0).toLocaleString(language)}
+                          </span>
+                          <span className="text-[11px] font-bold uppercase text-cyan-300">kcal</span>
+                        </div>
+                        <span className="mt-1.5 text-[11px] font-semibold text-slate-400">
+                          {l('kcal restantes', 'kcal remaining')}
+                        </span>
                       </>
                     ) : (
                       <>
-                        {t('nutrition.exceededBody')} Você consumiu <strong>{Math.round(dailyMacros.kcal)} kcal</strong>,
-                        ultrapassando o limite recomendado de <strong>{nutritionTargets.maxCalories} kcal</strong> em{' '}
-                        <strong>{Math.round(dailyMacros.kcal - nutritionTargets.maxCalories)} kcal</strong>.
+                        <div className="flex items-baseline justify-center gap-1 whitespace-nowrap">
+                          <span className="font-orbitron text-2xl font-black tracking-tight text-amber-300 sm:text-3xl">
+                            +{Math.round(dailyMacros.kcal - nutritionTargets.targetCalories).toLocaleString(language)}
+                          </span>
+                          <span className="text-[11px] font-bold uppercase text-amber-300">kcal</span>
+                        </div>
+                        <span className="mt-1.5 text-[11px] font-semibold text-amber-200/80">
+                          {l('acima da meta', 'over target')}
+                        </span>
                       </>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <NutritionMetricCard
-              label={l('Energia diária', 'Daily energy')}
-              unit="kcal"
-              consumed={dailyMacros.kcal}
-              target={nutritionTargets.targetCalories}
-              icon={Flame}
-              accent="text-orange-400"
-              bar="bg-gradient-to-r from-orange-700 via-orange-500 to-amber-300 shadow-[0_0_10px_rgba(249,115,22,0.45)]"
-              status={calorieStatus}
-              language={language}
-            />
-            <NutritionMetricCard
-              label={l('Proteínas', 'Protein')}
-              unit="g"
-              consumed={dailyMacros.protein}
-              target={macroTargets.protein}
-              icon={Zap}
-              accent="text-purple-400"
-              bar="bg-gradient-to-r from-purple-700 via-purple-500 to-fuchsia-300 shadow-[0_0_10px_rgba(168,85,247,0.4)]"
-              status={getReferenceStatus(dailyMacros.protein, macroTargets.protein)}
-              language={language}
-            />
-            <NutritionMetricCard
-              label={l('Carboidratos', 'Carbs')}
-              unit="g"
-              consumed={dailyMacros.carbs}
-              target={macroTargets.carbs}
-              icon={Apple}
-              accent="text-green-400"
-              bar="bg-gradient-to-r from-emerald-700 via-green-500 to-lime-300 shadow-[0_0_10px_rgba(34,197,94,0.35)]"
-              status={getReferenceStatus(dailyMacros.carbs, macroTargets.carbs)}
-              language={language}
-            />
-            <NutritionMetricCard
-              label={l('Gorduras', 'Fats')}
-              unit="g"
-              consumed={dailyMacros.fat}
-              target={macroTargets.fat}
-              icon={Droplets}
-              accent="text-blue-400"
-              bar="bg-gradient-to-r from-blue-700 via-blue-500 to-cyan-300 shadow-[0_0_10px_rgba(59,130,246,0.35)]"
-              status={getReferenceStatus(dailyMacros.fat, macroTargets.fat)}
-              language={language}
-            />
-          </div>
-
-          <div className="relative overflow-hidden rounded-3xl border border-orange-500/25 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(249,115,22,0.08)] sm:p-6">
-            <div className="absolute right-0 top-0 h-full w-72 bg-gradient-to-l from-orange-500/10 to-transparent" />
-            <div className="relative grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-              <div>
-                <div className="flex items-center gap-2 text-orange-400">
-                  <Target className="size-4" />
-                  <span className="text-sm font-bold">{l('Meta diária de recuperação', 'Daily recovery goal')}</span>
-                </div>
-                <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
-                  <h2 className="text-2xl font-black uppercase text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {Math.round(dailyMacros.kcal)}
-                  </h2>
-                  <p className="pb-1 text-xs font-black uppercase tracking-widest text-gray-500">
-                    {l('de', 'of')} {nutritionTargets.targetCalories ?? '--'} kcal
-                  </p>
-                </div>
-                <p className="mt-2 text-xs font-semibold leading-relaxed text-gray-400">
-                  {nutritionTargets.targetCalories
-                    ? remainingCalories && remainingCalories > 0
-                      ? l(
-                        `${Math.round(remainingCalories)} kcal disponíveis para completar o objetivo de ${localizedGoalLabel.toLowerCase()} com consistência.`,
-                        `${Math.round(remainingCalories)} kcal available to complete the ${localizedGoalLabel.toLowerCase()} goal consistently.`
-                      )
-                      : isInsideRecommendedRange
-                        ? l('Faixa recomendada alcançada. O Sistema avaliará o resultado no fechamento do dia.', 'Recommended range reached. The System will evaluate the result at the end of the day.')
-                        : l('A referência diária foi ultrapassada. Siga normalmente e priorize consistência ao longo dos dias.', 'The daily reference was exceeded. Keep going normally and prioritize consistency over the week.')
-                    : l(`Complete no perfil: ${missingProfileFields}.`, `Complete in your profile: ${missingProfileFields}.`)}
-                </p>
-
-                <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-sm font-semibold">
-                    <span className="text-gray-500">{l('Sincronização energética', 'Energy synchronization')}</span>
-                    <span className="text-orange-300">{calorieProgress}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-black/60">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${calorieProgress}%` }}
-                      transition={{ duration: 0.7, ease: 'easeOut' }}
-                      className="h-full rounded-full bg-gradient-to-r from-orange-700 via-orange-500 to-amber-300 shadow-[0_0_14px_rgba(249,115,22,0.5)]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: l('Objetivo', 'Goal'), value: localizedGoalLabel, icon: Gauge, tone: 'text-orange-300' },
-                  { label: l('Restante', 'Remaining'), value: remainingCalories === null ? '--' : `${Math.round(remainingCalories)} kcal`, icon: Flame, tone: 'text-white' },
-                  {
-                    label: l('Faixa recomendada', 'Recommended range'),
-                    value: nutritionTargets.minCalories && nutritionTargets.maxCalories
-                      ? `${nutritionTargets.minCalories}–${nutritionTargets.maxCalories}`
-                      : '--',
-                    icon: Target,
-                    tone: 'text-white',
-                  },
-                  {
-                    label: l('XP previsto', 'Expected XP'),
-                    value: `+${projectedNutritionXp} XP`,
-                    icon: Zap,
-                    tone: isInsideRecommendedRange ? 'text-purple-300' : 'text-gray-400',
-                  },
-                ].map(item => (
-                  <div key={item.label} className="rounded-xl border border-white/5 bg-black/30 p-3">
-                    <item.icon className={`size-3.5 ${item.tone}`} />
-                    <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
-                    <p className={`mt-1 text-sm font-bold ${item.tone}`}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <p className="relative mt-4 border-t border-white/5 pt-3 text-[13px] leading-relaxed text-gray-500">
-              {l(
-                'Referências de macros são estimativas visuais do Sistema. A recompensa real é processada pela avaliação nutricional diária.',
-                'Macro references are visual estimates from the System. The real reward is processed by the daily nutrition assessment.'
-              )}
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-purple-500/15 bg-purple-500/[0.035] p-4">
-              <p className="text-xs font-bold text-purple-400">{l('Suporte físico', 'Physical support')}</p>
-              <p className="mt-2 text-sm font-bold text-white">{l('Proteína em faixa de referência', 'Protein in reference range')}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{l('Acompanha a preparação de FOR e RES sem conceder atributos automaticamente.', 'Monitors STR and END preparation without granting attributes automatically.')}</p>
-            </div>
-            <div className="rounded-2xl border border-orange-500/15 bg-orange-500/[0.035] p-4">
-              <p className="text-xs font-bold text-orange-400">{l('Recompensa diária', 'Daily reward')}</p>
-              <p className="mt-2 text-sm font-bold text-white">+35 XP · +2 VIT</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{l('Concedidos pelo Sistema no fechamento de um dia dentro da faixa recomendada.', 'Granted by the System at the end of a day inside the recommended range.')}</p>
-            </div>
-            <div className="rounded-2xl border border-blue-500/15 bg-blue-500/[0.035] p-4">
-              <p className="text-xs font-bold text-blue-400">{l('Streak nutricional', 'Nutritional streak')}</p>
-              <p className="mt-2 text-sm font-bold text-white">{nutritionStreak} {nutritionStreak === 1 ? l('dia', 'day') : l('dias', 'days')}</p>
-              <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{l('Sequência real de avaliações concluídas dentro da meta energética.', 'Real streak of completed assessments within the energy goal.')}</p>
-            </div>
-          </div>
-
-          {/* Layout de 2 Colunas */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-            
-            {/* Coluna Principal das Sub-Abas */}
-            <div className="space-y-4 lg:col-span-3">
-              
-              {/* Seletor Cyberpunk de Sub-Abas */}
-              <div className="flex gap-2 rounded-xl bg-[#0F0F13] border border-[#1E1E26] p-1.5 w-fit">
-                <button
-                  onClick={() => setSubTab('codex')}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all cursor-pointer ${
-                    subTab === 'codex' 
-                      ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]' 
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <Sparkles size={12} className={subTab === 'codex' ? "animate-pulse" : ""} />
-                  {t('nutrition.codex')}
-                </button>
-                <button
-                  onClick={() => setSubTab('library')}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all cursor-pointer ${
-                    subTab === 'library' 
-                      ? 'bg-purple-600/20 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]' 
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <BookOpen size={12} />
-                  {t('nutrition.library')}
-                </button>
-              </div>
-
-              {/* Conteúdo: Códex da Alimentação (IA) */}
-              {subTab === 'codex' && (
-                <div className="relative space-y-6 overflow-hidden rounded-3xl border border-purple-500/20 bg-[#0F0F13] p-5 shadow-[0_0_28px_rgba(168,85,247,0.07)] sm:p-7">
-                  <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-purple-500/5 blur-3xl" />
-                  
-                  <div className="space-y-1 relative z-10">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 text-purple-400">
-                        <Brain size={16} className="animate-pulse" />
-                        <h2 className="text-xl font-black uppercase sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                          {l('CÓDEX DA ALIMENTAÇÃO', 'FOOD CODEX')}
-                        </h2>
+                    )
+                  ) : (
+                    <>
+                      <div className="flex items-baseline justify-center gap-1 whitespace-nowrap">
+                        <span className="font-orbitron text-2xl font-black tracking-tight text-white sm:text-3xl">
+                          {Math.round(dailyMacros.kcal).toLocaleString(language)}
+                        </span>
+                        <span className="text-[11px] font-bold uppercase text-cyan-300">kcal</span>
                       </div>
-                      <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-bold text-emerald-300">
-                        {l('Códex ativo', 'Codex active')}
+                      <span className="mt-1.5 text-[11px] font-semibold text-slate-400">
+                        {l('kcal consumidas', 'kcal consumed')}
                       </span>
-                    </div>
-                    <p className="max-w-2xl text-sm leading-relaxed text-gray-300">
-                      {l(
-                        'Descreva sua refeição e o Sistema calculará calorias, macros e impacto na sua recuperação usando TACO, catálogo do app e estimativas revisáveis.',
-                        'Describe your meal and the System will calculate calories, macros, and recovery impact using TACO, the app catalog, and editable estimates.'
-                      )}
-                    </p>
-                  </div>
+                    </>
+                  )}
+                  <span className="mt-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 font-mono text-[10px] font-bold text-cyan-300">
+                    {calorieProgress}% {l('da meta', 'of goal')}
+                  </span>
+                </div>
+              </NeonProgressRing>
+            </div>
 
-                  {/* Formulário do Códex */}
-                  <div className="space-y-4 relative z-10">
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-300">{l('Descrição da refeição', 'Meal description')}</label>
-                      <textarea
-                        value={iaTextInput}
-                        onChange={(e) => setIaTextInput(e.target.value)}
-                        placeholder={l(
-                          'Ex: Almocei 150g de filé de frango, 200g de arroz integral, 100g de feijão carioca e salada com uma colher de sopa de azeite...',
-                          'Ex: I had 150g grilled chicken, 200g brown rice, 100g beans and salad with one tablespoon of olive oil...'
-                        )}
-                        rows={5}
-                        className="w-full resize-none rounded-2xl border border-[#252530] bg-[#0A0A0D] p-5 text-base leading-relaxed text-white placeholder:text-gray-600 transition-all focus:border-purple-500/50 focus:shadow-[0_0_18px_rgba(168,85,247,0.12)] focus:outline-none"
-                      />
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {NUTRITION_PROMPTS.map(prompt => (
-                          <button
-                            key={prompt.label['pt-BR']}
-                            type="button"
-                            onClick={() => setIaTextInput(prompt.text[language])}
-                            className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-[13px] font-medium text-gray-400 transition-all hover:border-purple-500/30 hover:bg-purple-500/5 hover:text-purple-200"
-                          >
-                            {prompt.label[language]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+            {/* 3-Column Calorie Summary Strip */}
+            <div className="grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-[#080A11]/90 p-3 text-center">
+              <div className="px-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {l('Consumido', 'Consumed')}
+                </p>
+                <p className="mt-0.5 font-orbitron text-sm font-black text-white sm:text-base">
+                  {Math.round(dailyMacros.kcal)}{' '}
+                  <span className="text-[10px] font-normal text-slate-400">kcal</span>
+                </p>
+              </div>
+              <div className="px-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {l('Meta Diária', 'Daily Goal')}
+                </p>
+                <p className="mt-0.5 font-orbitron text-sm font-black text-cyan-300 sm:text-base">
+                  {nutritionTargets.targetCalories ?? '--'}{' '}
+                  <span className="text-[10px] font-normal text-slate-400">kcal</span>
+                </p>
+              </div>
+              <div className="px-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {l('Objetivo', 'Objective')}
+                </p>
+                <p className="mt-0.5 truncate font-orbitron text-xs font-black uppercase text-purple-300 sm:text-sm">
+                  {localizedGoalLabel}
+                </p>
+              </div>
+            </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-300">{l('Período', 'Period')}</label>
-                        <select
-                          value={iaMealType}
-                          onChange={(e) => setIaMealType(e.target.value)}
-                          className="w-full rounded-xl border border-[#1E1E26] bg-[#0A0A0D] p-4 text-sm text-white focus:border-purple-500 focus:outline-none appearance-none cursor-pointer"
-                        >
-                          <option value="Café da Manhã">{l('Café da Manhã', 'Breakfast')}</option>
-                          <option value="Almoço">{l('Almoço', 'Lunch')}</option>
-                          <option value="Lanche">{l('Lanche', 'Snack')}</option>
-                          <option value="Jantar">{l('Jantar', 'Dinner')}</option>
-                        </select>
-                      </div>
+            {/* Calibration or Exceeded Notice */}
+            {!nutritionTargets.targetCalories && (
+              <p className="mt-3 text-center text-xs text-slate-400">
+                {l(
+                  `Complete no perfil (${missingProfileFields}) para calibrar sua meta calórica diária.`,
+                  `Complete in your profile (${missingProfileFields}) to calibrate your daily calorie target.`,
+                )}
+              </p>
+            )}
 
-                      <div className="flex items-end">
-                        <button
-                          onClick={handleAnalyzeMealIa}
-                          disabled={iaLoading}
-                          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-purple-400/30 bg-gradient-to-r from-purple-700 via-purple-600 to-blue-600 px-4 text-sm font-black uppercase text-white shadow-[0_0_24px_rgba(168,85,247,0.18)] transition-all hover:brightness-110 hover:shadow-[0_0_30px_rgba(168,85,247,0.28)] active:scale-[0.98] disabled:cursor-wait disabled:opacity-60"
-                          style={{ fontFamily: 'Orbitron, sans-serif' }}
-                        >
-                          {iaLoading ? (
-                            <>
-                              <Cpu size={14} className="animate-spin text-purple-400" />
-                              {l('Sistema analisando nutrientes...', 'System analyzing nutrients...')}
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles size={14} className="text-purple-300" />
-                              {l('Analisar refeição', 'Analyze meal')}
-                            </>
+            {calorieStatus === 'exceeded' && nutritionTargets.maxCalories && (
+              <div
+                role="alert"
+                className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-rose-500/35 bg-rose-500/10 p-3 text-xs text-rose-200"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-400" />
+                <p className="leading-relaxed">
+                  {language === 'en-US' ? (
+                    <>
+                      <strong className="font-orbitron uppercase text-rose-300">{t('nutrition.exceeded')}:</strong>{' '}
+                      You consumed <strong>{Math.round(dailyMacros.kcal)} kcal</strong>, exceeding the recommended
+                      limit of <strong>{nutritionTargets.maxCalories} kcal</strong>.
+                    </>
+                  ) : (
+                    <>
+                      <strong className="font-orbitron uppercase text-rose-300">{t('nutrition.exceeded')}:</strong>{' '}
+                      Você consumiu <strong>{Math.round(dailyMacros.kcal)} kcal</strong>, ultrapassando o limite
+                      recomendado de <strong>{nutritionTargets.maxCalories} kcal</strong>.
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+          </HudCard>
+
+          {/* 3. MACRONUTRIENTES (Compact Horizontal Summary Card — Ref: ascend-nutrition.jpg) */}
+          <HudCard variant="default" className="p-3.5 sm:p-4">
+            <div className="grid grid-cols-3 divide-x divide-white/10">
+              {/* Protein */}
+              <div className="pr-2.5 sm:pr-4">
+                <div className="flex items-center gap-1.5">
+                  <Zap className="size-3.5 shrink-0 text-purple-400" />
+                  <span className="truncate font-orbitron text-[10px] font-black uppercase tracking-wider text-slate-200 sm:text-xs">
+                    {l('Proteína', 'Protein')}
+                  </span>
+                </div>
+                <div className="my-2">
+                  <NeonProgressBar
+                    value={dailyMacros.protein}
+                    max={macroTargets.protein || 100}
+                    variant="xp"
+                    size="sm"
+                  />
+                </div>
+                <p className="font-mono text-xs font-bold text-white sm:text-sm">
+                  {Math.round(dailyMacros.protein)}
+                  <span className="text-[11px] font-normal text-slate-400">
+                    {' '}
+                    / {macroTargets.protein ? `${Math.round(macroTargets.protein)}g` : '--g'}
+                  </span>
+                </p>
+              </div>
+
+              {/* Carbs */}
+              <div className="px-2.5 sm:px-4">
+                <div className="flex items-center gap-1.5">
+                  <Apple className="size-3.5 shrink-0 text-cyan-400" />
+                  <span className="truncate font-orbitron text-[10px] font-black uppercase tracking-wider text-slate-200 sm:text-xs">
+                    {l('Carbos', 'Carbs')}
+                  </span>
+                </div>
+                <div className="my-2">
+                  <NeonProgressBar
+                    value={dailyMacros.carbs}
+                    max={macroTargets.carbs || 100}
+                    variant="cyan"
+                    size="sm"
+                  />
+                </div>
+                <p className="font-mono text-xs font-bold text-white sm:text-sm">
+                  {Math.round(dailyMacros.carbs)}
+                  <span className="text-[11px] font-normal text-slate-400">
+                    {' '}
+                    / {macroTargets.carbs ? `${Math.round(macroTargets.carbs)}g` : '--g'}
+                  </span>
+                </p>
+              </div>
+
+              {/* Fats */}
+              <div className="pl-2.5 sm:pl-4">
+                <div className="flex items-center gap-1.5">
+                  <Droplets className="size-3.5 shrink-0 text-amber-400" />
+                  <span className="truncate font-orbitron text-[10px] font-black uppercase tracking-wider text-slate-200 sm:text-xs">
+                    {l('Gorduras', 'Fats')}
+                  </span>
+                </div>
+                <div className="my-2">
+                  <NeonProgressBar
+                    value={dailyMacros.fat}
+                    max={macroTargets.fat || 100}
+                    variant="neutral"
+                    size="sm"
+                  />
+                </div>
+                <p className="font-mono text-xs font-bold text-white sm:text-sm">
+                  {Math.round(dailyMacros.fat)}
+                  <span className="text-[11px] font-normal text-slate-400">
+                    {' '}
+                    / {macroTargets.fat ? `${Math.round(macroTargets.fat)}g` : '--g'}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </HudCard>
+
+          {/* 4. REFEIÇÕES DO DIA (TODAY'S MEALS — Ref: ascend-nutrition.jpg) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="font-orbitron text-xs font-black uppercase tracking-[0.18em] text-slate-200 sm:text-sm">
+                {l('REFEIÇÕES DE HOJE', "TODAY'S MEALS")}
+              </h2>
+              <span className="font-mono text-[11px] font-semibold text-slate-400">
+                {logs.length} {logs.length === 1 ? l('registro hoje', 'item logged') : l('registros hoje', 'items logged')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {allMealSlots.map((slot) => {
+                const SlotIcon = slot.icon;
+                const slotLogs = logs.filter((log) => log.meal_type === slot.id);
+                const slotKcal = slotLogs.reduce((sum, log) => {
+                  const food = foodFromLog(log);
+                  return sum + ((Number(food?.calories_per_100g) || 0) * log.quantity_grams) / 100;
+                }, 0);
+                const hasLogs = slotLogs.length > 0;
+                const isExpanded = expandedMealCategory === slot.id;
+
+                return (
+                  <HudCard
+                    key={slot.id}
+                    variant={hasLogs ? 'cyan' : 'default'}
+                    className="overflow-hidden p-0"
+                  >
+                    <div className="flex items-center justify-between gap-2 p-3.5 sm:p-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          hasLogs
+                            ? setExpandedMealCategory((prev) => (prev === slot.id ? null : slot.id))
+                            : openAddFoodForMeal(slot.id)
+                        }
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      >
+                        <div
+                          className={cn(
+                            'flex size-11 shrink-0 items-center justify-center rounded-xl border transition-colors',
+                            hasLogs
+                              ? 'border-cyan-400/35 bg-cyan-500/15 text-cyan-300'
+                              : 'border-white/10 bg-[#090B12] text-slate-400',
                           )}
+                        >
+                          <SlotIcon className="size-5" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="truncate font-orbitron text-xs font-black uppercase text-white sm:text-sm">
+                              {isEnglish ? slot.en : slot.pt}
+                            </h3>
+                            {hasLogs && (
+                              <span className="inline-block size-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                            )}
+                          </div>
+                          <p className="mt-0.5 font-mono text-xs font-semibold text-slate-300">
+                            {hasLogs ? (
+                              <>
+                                <strong className="text-cyan-300">{Math.round(slotKcal)} kcal</strong> ·{' '}
+                                <span className="text-slate-400">
+                                  {slotLogs.length} {slotLogs.length === 1 ? l('item', 'item') : l('itens', 'items')}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-slate-500">{l('0 kcal · Adicionar', '0 kcal · Add food')}</span>
+                            )}
+                          </p>
+                        </div>
+                      </button>
+
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {hasLogs && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedMealCategory((prev) => (prev === slot.id ? null : slot.id))
+                            }
+                            aria-label={l('Ver alimentos da refeição', 'View meal foods')}
+                            className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 hover:text-white"
+                          >
+                            <ChevronDown
+                              className={cn('size-4 transition-transform', isExpanded && 'rotate-180 text-cyan-300')}
+                            />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openAddFoodForMeal(slot.id)}
+                          aria-label={l(`Adicionar alimento em ${slot.pt}`, `Add food to ${slot.en}`)}
+                          className="flex size-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/15 text-cyan-200 transition-colors hover:bg-cyan-500/25 hover:text-white"
+                        >
+                          <Plus className="size-4" />
                         </button>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Banners de Resposta */}
-                  <AnimatePresence>
-                    {iaError && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="rounded-xl border border-red-500/25 bg-red-500/5 p-4 text-xs text-red-400 flex items-start gap-2 relative z-10"
-                      >
-                        <span className="font-bold">{l('ANOMALIA:', 'ANOMALY:')}</span> {iaError}
-                      </motion.div>
-                    )}
+                    {/* Expandable Meal Items Details */}
+                    <AnimatePresence initial={false}>
+                      {isExpanded && hasLogs && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden border-t border-white/10 bg-[#080A11]"
+                        >
+                          <div className="divide-y divide-white/[0.06] p-3">
+                            {slotLogs.map((log) => {
+                              const food = foodFromLog(log);
+                              const isCustom = !!food?.serving_unit && !!food?.serving_size;
+                              const displayQty =
+                                isCustom && food
+                                  ? Number(gramsToQuantity(food, log.quantity_grams).toFixed(2))
+                                  : log.quantity_grams;
+                              const displayUnit = isCustom ? food?.serving_unit : 'g';
+                              const ratio = log.quantity_grams / 100;
+                              const kcal = (Number(food?.calories_per_100g) || 0) * ratio;
+                              const protein = (Number(food?.protein_per_100g) || 0) * ratio;
+                              const carbs = (Number(food?.carbs_per_100g) || 0) * ratio;
+                              const fat = (Number(food?.fat_per_100g) || 0) * ratio;
 
-                    {iaRegistrationSuccess && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="relative z-10 flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm font-semibold text-emerald-200"
-                      >
-                        <CheckCircle2 className="size-5 shrink-0 text-emerald-400" />
-                        {iaRegistrationSuccess}
-                      </motion.div>
-                    )}
+                              return (
+                                <div key={log.id} className="py-2.5 first:pt-0 last:pb-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-xs font-bold uppercase text-white">
+                                        {tx(food?.name) || l('Alimento', 'Food')}
+                                      </p>
+                                      <p className="mt-0.5 font-mono text-[11px] text-slate-400">
+                                        {displayQty}
+                                        {displayUnit} · <strong className="text-cyan-300">{Math.round(kcal)} kcal</strong>{' '}
+                                        · P:{protein.toFixed(1)}g C:{carbs.toFixed(1)}g G:{fat.toFixed(1)}g
+                                      </p>
+                                    </div>
 
-                    {iaPreview && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="relative z-10 space-y-5 overflow-hidden rounded-2xl border border-purple-500/30 bg-[#0A0A0D] p-5 shadow-[0_0_24px_rgba(168,85,247,0.1)] sm:p-6"
-                      >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <div className="flex items-center gap-2 text-purple-400">
-                              <Zap size={18} />
-                              <span className="text-sm font-black uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                {l('Análise concluída', 'Analysis complete')}
-                              </span>
-                            </div>
-                            {iaEditing ? (
-                              <input
-                                value={iaPreview.mealName}
-                                onChange={event => setIaPreview(current => current ? { ...current, mealName: event.target.value } : current)}
-                                className="mt-3 w-full rounded-lg border border-purple-500/30 bg-black/40 px-3 py-2 text-base font-bold text-white outline-none focus:border-purple-400"
-                                aria-label={l('Nome da refeição', 'Meal name')}
-                              />
-                            ) : (
-                              <p className="mt-2 text-lg font-bold text-white">{iaPreview.mealName}</p>
-                            )}
-                          </div>
-                          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-right">
-                            <p className="text-xs font-medium text-gray-400">{l('Confiança estimada', 'Estimated confidence')}</p>
-                            <p className="mt-1 text-lg font-black text-emerald-300">{iaPreview.confidence}%</p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                          {[
-                            { key: 'calories' as const, label: l('Energia', 'Energy'), unit: 'kcal', tone: 'text-orange-400' },
-                            { key: 'protein' as const, label: l('Proteína', 'Protein'), unit: 'g', tone: 'text-purple-400' },
-                            { key: 'carbs' as const, label: l('Carboidratos', 'Carbs'), unit: 'g', tone: 'text-green-400' },
-                            { key: 'fat' as const, label: l('Gorduras', 'Fat'), unit: 'g', tone: 'text-blue-400' },
-                            { key: 'totalGrams' as const, label: l('Peso estimado', 'Estimated weight'), unit: 'g', tone: 'text-gray-300' },
-                          ].map(metric => (
-                            <div key={metric.key} className="rounded-xl border border-white/5 bg-white/[0.035] p-3">
-                              <p className="text-xs font-medium text-gray-500">{metric.label}</p>
-                              {iaEditing ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={iaPreview[metric.key]}
-                                  onChange={event => setIaPreview(current => current ? {
-                                    ...current,
-                                    [metric.key]: Math.max(0, Number(event.target.value)),
-                                  } : current)}
-                                  className={`mt-2 w-full rounded-md border border-white/10 bg-black/40 px-2 py-1.5 text-base font-bold outline-none focus:border-purple-500/50 ${metric.tone}`}
-                                  aria-label={metric.label}
-                                />
-                              ) : (
-                                <p className={`mt-2 text-lg font-black ${metric.tone}`}>
-                                  {iaPreview[metric.key]} <span className="text-xs font-semibold">{metric.unit}</span>
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="space-y-3">
-                          <p className="text-xs font-black uppercase tracking-widest text-purple-400 font-orbitron">
-                            {l('Ingredientes & Comparação de Fontes (TACO vs Catálogo vs Estimativa)', 'Ingredients & Source Comparison (TACO vs Catalog vs Estimate)')}
-                          </p>
-                          <div className="space-y-2">
-                            {iaPreview.ingredients.map((ing, idx) => (
-                              <div key={idx} className="overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] transition-all hover:border-white/10">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleIaIngExpanded(idx)}
-                                  className="flex w-full items-center justify-between p-3.5 text-left transition-colors hover:bg-white/[0.04]"
-                                >
-                                  <div>
-                                    <span className="font-bold text-white text-sm">{ing.name}</span>
-                                    <span className="ml-2 text-xs font-semibold text-gray-500">({ing.grams}g)</span>
+                                    <div className="flex shrink-0 items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditLog(log)}
+                                        aria-label={l('Editar registro', 'Edit log')}
+                                        className="flex size-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-300 hover:border-cyan-400/40 hover:text-white"
+                                      >
+                                        <Edit3 className="size-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => void handleDeleteLog(log.id)}
+                                        aria-label={l('Remover registro', 'Remove log')}
+                                        className="flex size-8 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                                      >
+                                        <Trash2 className="size-3.5" />
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-3">
-                                    <span className={`rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
-                                      ing.final.source_used === 'taco' 
-                                        ? 'border-purple-500/35 bg-purple-500/10 text-purple-400' 
-                                        : ing.final.source_used === 'catalog'
-                                          ? 'border-orange-500/35 bg-orange-500/10 text-orange-400'
-                                          : 'border-amber-500/35 bg-amber-500/10 text-amber-400'
-                                    }`}>
-                                      {l('Fonte', 'Source')}: {ing.final.source_used === 'taco' ? 'TACO' : ing.final.source_used === 'catalog' ? l('Catálogo', 'Catalog') : l('Estimativa', 'Estimate')}
-                                    </span>
-                                    <ChevronDown className={`size-4 text-gray-500 transition-transform duration-200 ${expandedIaIngs.has(idx) ? 'rotate-180' : ''}`} />
-                                  </div>
-                                </button>
-                                
-                                <AnimatePresence>
-                                  {expandedIaIngs.has(idx) && (
-                                    <motion.div
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      transition={{ duration: 0.2 }}
-                                      className="border-t border-white/5 bg-black/40 px-4 py-3"
-                                    >
-                                      <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-xs text-gray-400">
-                                          <thead>
-                                            <tr className="border-b border-white/5 text-[9px] uppercase font-black tracking-widest text-gray-500">
-                                              <th className="pb-2">{l('Fonte (por 100g)', 'Source (per 100g)')}</th>
-                                              <th className="pb-2 text-right">{l('Energia', 'Energy')}</th>
-                                              <th className="pb-2 text-right">Prot.</th>
-                                              <th className="pb-2 text-right">Carb.</th>
-                                              <th className="pb-2 text-right">{l('Gord.', 'Fat')}</th>
-                                              <th className="pb-2 text-right">Status</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-white/5">
-                                            {/* Linha TACO */}
-                                            <tr className={ing.final.source_used === 'taco' ? 'text-purple-300 font-bold' : ''}>
-                                              <td className="py-2.5 flex items-center gap-1.5">
-                                                <span className={`size-1.5 rounded-full ${ing.taco.found ? 'bg-purple-500' : 'bg-gray-700'}`} />
-                                                {l('Tabela TACO', 'TACO table')}
-                                              </td>
-                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.kcal} kcal` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.protein}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.carbs}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.taco.found ? `${ing.taco.fat}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">
-                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                                  ing.taco.found ? 'bg-purple-500/10 border border-purple-500/20 text-purple-400' : 'bg-white/5 text-gray-600'
-                                                }`}>
-                                                  {ing.taco.found ? l('Disponível', 'Available') : l('N/D', 'N/A')}
-                                                </span>
-                                              </td>
-                                            </tr>
-                                            {/* Linha Catálogo */}
-                                            <tr className={ing.final.source_used === 'catalog' ? 'text-orange-300 font-bold' : ''}>
-                                              <td className="py-2.5 flex items-center gap-1.5">
-                                                <span className={`size-1.5 rounded-full ${ing.catalog.found ? 'bg-orange-500' : 'bg-gray-700'}`} />
-                                                {l('Catálogo do app', 'App catalog')}
-                                              </td>
-                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.kcal} kcal` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.protein}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.carbs}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">{ing.catalog.found ? `${ing.catalog.fat}g` : '--'}</td>
-                                              <td className="py-2.5 text-right">
-                                                <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                                  ing.catalog.found ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-white/5 text-gray-600'
-                                                }`}>
-                                                  {ing.catalog.found ? l('Disponível', 'Available') : l('N/D', 'N/A')}
-                                                </span>
-                                              </td>
-                                            </tr>
-                                            {/* Linha Estimativa */}
-                                            <tr className={ing.final.source_used === 'estimate' ? 'text-amber-300 font-bold' : ''}>
-                                              <td className="py-2.5 flex items-center gap-1.5">
-                                                <span className="size-1.5 rounded-full bg-amber-500" />
-                                                {l('Estimativa', 'Estimate')}
-                                              </td>
-                                              <td className="py-2.5 text-right">{ing.estimate.kcal} kcal</td>
-                                              <td className="py-2.5 text-right">{ing.estimate.protein}g</td>
-                                              <td className="py-2.5 text-right">{ing.estimate.carbs}g</td>
-                                              <td className="py-2.5 text-right">{ing.estimate.fat}g</td>
-                                              <td className="py-2.5 text-right">
-                                                <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                                                  {l('Ativo', 'Active')}
-                                                </span>
-                                              </td>
-                                            </tr>
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            ))}
+                                </div>
+                              );
+                            })}
                           </div>
-                        </div>
-                        <p className="text-[13px] leading-relaxed text-gray-500">
-                          {l(
-                            'Os macronutrientes foram calculados comparando a Tabela TACO, o catálogo local do app (incluindo fast foods e alimentos salvos) e uma estimativa controlada. Revise os dados antes de registrar.',
-                            'Macros were calculated by comparing the TACO table, the app’s local catalog (including fast foods and saved foods), and a controlled estimate. Review the data before saving.'
-                          )}
-                        </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </HudCard>
+                );
+              })}
+            </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <button
-                            type="button"
-                            onClick={() => setIaEditing(current => !current)}
-                            className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-bold text-gray-300 transition-colors hover:border-purple-500/30 hover:text-white"
-                          >
-                            {iaEditing ? l('Concluir edição', 'Finish editing') : l('Editar antes de salvar', 'Edit before saving')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleRegisterIaMeal()}
-                            disabled={iaRegistering || iaPreview.totalGrams <= 0 || !iaPreview.mealName.trim()}
-                            className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 text-sm font-black uppercase text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_22px_rgba(168,85,247,0.25)] disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {iaRegistering ? <Cpu className="size-4 animate-spin" /> : <BookOpen className="size-4" />}
-                            {iaRegistering ? l('Registrando...', 'Saving...') : l('Registrar no diário', 'Save to diary')}
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  </div>
-              )}
+            {/* Primary CTA Button (+ ADD FOOD — Ref: ascend-nutrition.jpg) */}
+            <div className="pt-1">
+              <TacticalButton
+                variant="primary"
+                fullWidth
+                displayFont
+                leftIcon={<Plus className="size-4" />}
+                onClick={() => openAddFoodForMeal()}
+              >
+                {l('+ ADICIONAR ALIMENTO', '+ ADD FOOD')}
+              </TacticalButton>
+            </div>
+          </div>
 
-              {/* Conteúdo: Biblioteca de Suprimentos */}
-              {subTab === 'library' && (
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          {/* 5. BASE DE ALIMENTOS & CALCULADORA TACO */}
+          <div className="space-y-4 pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex gap-1.5 rounded-xl border border-white/10 bg-[#0D0F18] p-1">
+                <button
+                  type="button"
+                  onClick={() => setSubTab('library')}
+                  className={cn(
+                    'flex min-h-[40px] items-center gap-2 rounded-lg px-3.5 py-1.5 font-orbitron text-[10px] font-black uppercase tracking-wider transition-all',
+                    subTab === 'library'
+                      ? 'border border-cyan-400/40 bg-cyan-500/15 text-cyan-200'
+                      : 'text-slate-400 hover:text-white',
+                  )}
+                >
+                  <BookOpen className="size-3.5" />
+                  {t('nutrition.library')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSubTab('codex')}
+                  className={cn(
+                    'flex min-h-[40px] items-center gap-2 rounded-lg px-3.5 py-1.5 font-orbitron text-[10px] font-black uppercase tracking-wider transition-all',
+                    subTab === 'codex'
+                      ? 'border border-purple-400/40 bg-purple-500/15 text-purple-200'
+                      : 'text-slate-400 hover:text-white',
+                  )}
+                >
+                  <Calculator className="size-3.5" />
+                  {l('Calculadora TACO', 'TACO Calculator')}
+                </button>
+              </div>
+            </div>
+
+            {/* SubTab A: Biblioteca de Alimentos (Manual Search & Selection) */}
+            {subTab === 'library' && (
+              <div className="space-y-3.5">
+                <HudCard variant="default" className="p-3.5">
+                  <div className="flex items-center gap-2">
                     <div className="relative flex-1">
-                      <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-500" />
-                      <input 
-                        type="text" 
-                        placeholder="Buscar suprimentos nutricionais..."
-                        className="w-full rounded-xl border border-[#1E1E26] bg-[#0F0F13] py-3 pl-12 pr-4 text-sm text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:outline-none"
+                      <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder={l('Buscar alimento no catálogo...', 'Search food in catalog...')}
+                        className="min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400/50 focus:outline-none"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
-                    
-                    <div className="flex items-center gap-1 rounded-xl border border-[#1E1E26] bg-[#0F0F13] p-1">
-                      <button 
-                        onClick={() => setViewMode('grid')}
-                        className={`p-2 rounded-lg transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-white'}`}
-                      >
-                        <LayoutGrid size={16} />
-                      </button>
-                      <button 
-                        onClick={() => setViewMode('table')}
-                        className={`p-2 rounded-lg transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-white'}`}
-                      >
-                        <TableIcon size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="min-h-[400px]">
-                    {loading ? (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {Array(6).fill(0).map((_, i) => (
-                          <div key={i} className="h-28 animate-pulse rounded-2xl bg-white/5" />
-                        ))}
-                      </div>
-                    ) : viewMode === 'grid' ? (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {filteredFoods.map((food) => (
-                          <button
-                            key={food.id}
-                            onClick={() => {
-                              setSelectedFood(food);
-                              setIsModalOpen(true);
-                            }}
-                            className="flex flex-col gap-3 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 text-left transition-all duration-150 ease-out hover:bg-[#16161D] hover:border-purple-500/50 hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] cursor-pointer"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex size-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
-                                <Apple className="size-5" />
-                              </div>
-                              <span className="text-xs font-bold text-gray-500">{food.calories_per_100g} kcal</span>
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-white uppercase tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{food.name}</h3>
-                              <p className="mt-1 text-[13px] font-semibold text-purple-400">
-                                {food.category} • {food.protein_per_100g}g Prot.
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13]">
-                        <table className="w-full text-left">
-                          <thead>
-                            <tr className="border-b border-[#1E1E26] bg-white/5">
-                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Alimento</th>
-                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Calorias (100g)</th>
-                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Proteína (100g)</th>
-                              <th className="px-6 py-4 text-xs font-semibold text-gray-400">Categoria</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#1E1E26]">
-                            {filteredFoods.map((food) => (
-                              <tr 
-                                key={food.id} 
-                                className="group hover:bg-white/5 transition-colors cursor-pointer"
-                                onClick={() => {
-                                  setSelectedFood(food);
-                                  setIsModalOpen(true);
-                                }}
-                              >
-                                <td className="px-6 py-4">
-                                  <span className="font-bold text-white uppercase text-xs" style={{ fontFamily: 'Orbitron, sans-serif' }}>{food.name}</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="text-xs text-orange-400 font-bold uppercase tracking-widest">{food.calories_per_100g} kcal</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="text-xs text-blue-400 font-bold uppercase tracking-widest">{food.protein_per_100g}g</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="text-xs text-purple-400 font-black uppercase tracking-widest italic">{food.category}</span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Coluna Lateral de Logs (Consumo Diário) */}
-            <div className="space-y-4 lg:col-span-2">
-              <div className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 shadow-lg">
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-lg font-black uppercase text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {l('CONSUMO DIÁRIO', 'DAILY CONSUMPTION')}
-                  </h2>
-                  <History className="size-4 text-purple-500" />
-                </div>
-
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                  {logs.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-purple-500/20 bg-purple-500/[0.03] px-4 py-10 text-center">
-                      <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
-                        <UtensilsCrossed className="size-5" />
-                      </div>
-                      <p className="mt-4 text-sm font-bold text-white">{l('O Sistema ainda não detectou nutrientes hoje.', 'The System has not detected nutrients today.')}</p>
-                      <p className="mt-2 text-[13px] leading-relaxed text-gray-500">{l('Registre uma refeição para iniciar sua recuperação de mana.', 'Log a meal to begin your mana recovery.')}</p>
+                    <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#090B12] p-1">
                       <button
                         type="button"
-                        onClick={() => setSubTab('codex')}
-                        className="mt-5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_18px_rgba(168,85,247,0.25)]"
+                        onClick={() => setViewMode('grid')}
+                        aria-label={l('Grade', 'Grid')}
+                        className={cn(
+                          'flex size-9 items-center justify-center rounded-lg transition-colors',
+                          viewMode === 'grid' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white',
+                        )}
                       >
-                        {l('Registrar refeição', 'Log meal')}
+                        <LayoutGrid className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('table')}
+                        aria-label={l('Lista compacta', 'Compact list')}
+                        className={cn(
+                          'flex size-9 items-center justify-center rounded-lg transition-colors',
+                          viewMode === 'table' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white',
+                        )}
+                      >
+                        <TableIcon className="size-4" />
                       </button>
                     </div>
-                  ) : (
-                    logs.map((log) => {
-                      const food = foodFromLog(log);
-                      const isCustom = !!food?.serving_unit && !!food?.serving_size;
-                      const displayQty = isCustom && food ? Number(gramsToQuantity(food, log.quantity_grams).toFixed(2)) : log.quantity_grams;
-                      const displayUnit = isCustom ? food?.serving_unit : 'G';
-                      const ratio = log.quantity_grams / 100;
-                      const kcal = (Number(food?.calories_per_100g) || 0) * ratio;
-                      const protein = (Number(food?.protein_per_100g) || 0) * ratio;
-                      const carbs = (Number(food?.carbs_per_100g) || 0) * ratio;
-                      const fat = (Number(food?.fat_per_100g) || 0) * ratio;
-                      const isExpanded = expandedLogIds.has(log.id);
+                  </div>
+                </HudCard>
 
-                      return (
-                        <motion.div layout key={log.id} className="relative overflow-hidden rounded-xl border border-[#1E1E26] bg-white/[0.035] transition-all hover:border-purple-500/25 hover:bg-white/[0.055]">
+                {loading ? (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {Array(6)
+                      .fill(0)
+                      .map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-24 animate-pulse rounded-2xl border border-white/10 bg-[#12131C]/80"
+                        />
+                      ))}
+                  </div>
+                ) : viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredFoods.map((food) => (
+                      <HudCard
+                        key={food.id}
+                        variant="default"
+                        className="cursor-pointer p-4 transition-colors hover:border-cyan-400/40"
+                        onClick={() => openAddFoodForMeal(mealType, food)}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/10 text-cyan-300">
+                              <Apple className="size-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="truncate font-orbitron text-xs font-black uppercase text-white sm:text-sm">
+                                {tx(food.name)}
+                              </h3>
+                              <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                                {tx(food.category)} · P:{food.protein_per_100g}g C:{food.carbs_per_100g}g G:
+                                {food.fat_per_100g}g
+                              </p>
+                            </div>
+                          </div>
+                          <span className="shrink-0 rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-2 py-1 font-mono text-xs font-bold text-cyan-200">
+                            {food.calories_per_100g} kcal
+                          </span>
+                        </div>
+                      </HudCard>
+                    ))}
+                    {filteredFoods.length === 0 && (
+                      <HudCard variant="default" className="col-span-full p-8 text-center">
+                        <p className="font-orbitron text-xs font-black uppercase text-white">
+                          {l('Nenhum alimento encontrado', 'No food found')}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {l(
+                            'Cadastre um novo alimento personalizado ou utilize a Calculadora TACO.',
+                            'Register a new custom food or use the TACO Calculator.',
+                          )}
+                        </p>
+                      </HudCard>
+                    )}
+                  </div>
+                ) : (
+                  /* Responsive Compact List (No horizontal scroll on mobile) */
+                  <div className="space-y-2">
+                    {filteredFoods.map((food) => (
+                      <HudCard
+                        key={food.id}
+                        variant="default"
+                        className="cursor-pointer p-3 transition-colors hover:border-cyan-400/40"
+                        onClick={() => openAddFoodForMeal(mealType, food)}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-orbitron text-xs font-black uppercase text-white">
+                              {tx(food.name)}
+                            </p>
+                            <p className="mt-0.5 font-mono text-[10px] font-semibold text-slate-400">
+                              {tx(food.category)} · P:{food.protein_per_100g}g · C:{food.carbs_per_100g}g · G:
+                              {food.fat_per_100g}g
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-cyan-300">
+                              {food.calories_per_100g} kcal
+                            </span>
+                            <ChevronRight className="size-4 text-slate-500" />
+                          </div>
+                        </div>
+                      </HudCard>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SubTab B: Calculadora TACO por Texto (Deterministic Local Parser) */}
+            {subTab === 'codex' && (
+              <HudCard variant="purple" corners className="space-y-4 p-4 sm:p-6">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.2em] text-purple-300">
+                      {l('TABELA TACO & CATÁLOGO LOCAL', 'TACO TABLE & LOCAL CATALOG')}
+                    </span>
+                    <span className="rounded-md border border-emerald-400/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      TACO
+                    </span>
+                  </div>
+                  <h3 className="mt-1 font-orbitron text-base font-black uppercase text-white sm:text-lg">
+                    {l('Calculadora de Refeição por Texto', 'Text Meal Calculator')}
+                  </h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                    {l(
+                      'Digite os alimentos e quantidades (ex: "150g de frango, 150g de arroz, 100g de feijão") para calcular calorias e macronutrientes pela Tabela TACO.',
+                      'Enter foods and quantities (e.g. "150g chicken, 150g rice, 100g beans") to calculate calories and macros via the TACO table.',
+                    )}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <textarea
+                    value={iaTextInput}
+                    onChange={(e) => setIaTextInput(e.target.value)}
+                    placeholder={l(
+                      'Ex: 150g de filé de frango, 200g de arroz integral, 100g de feijão carioca...',
+                      'Ex: 150g grilled chicken, 200g brown rice, 100g beans...',
+                    )}
+                    rows={3}
+                    className="w-full resize-none rounded-2xl border border-white/10 bg-[#090B12] p-3.5 text-sm leading-relaxed text-white placeholder:text-slate-500 focus:border-purple-400 focus:outline-none"
+                  />
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {NUTRITION_PROMPTS.map((prompt) => (
+                      <button
+                        key={prompt.label['pt-BR']}
+                        type="button"
+                        onClick={() => setIaTextInput(prompt.text[language])}
+                        className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-purple-400/40 hover:text-white"
+                      >
+                        {prompt.label[language]}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <select
+                      value={iaMealType}
+                      onChange={(e) => setIaMealType(e.target.value)}
+                      className="min-h-[48px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2.5 text-xs font-bold text-white focus:border-purple-400 focus:outline-none"
+                    >
+                      <option value="Café da Manhã">{l('Café da Manhã', 'Breakfast')}</option>
+                      <option value="Almoço">{l('Almoço', 'Lunch')}</option>
+                      <option value="Lanche">{l('Lanche', 'Snack')}</option>
+                      <option value="Jantar">{l('Jantar', 'Dinner')}</option>
+                    </select>
+
+                    <TacticalButton
+                      variant="primary"
+                      fullWidth
+                      displayFont
+                      disabled={iaLoading}
+                      leftIcon={<Calculator className="size-4" />}
+                      onClick={handleAnalyzeMealIa}
+                    >
+                      {iaLoading ? l('Calculando...', 'Calculating...') : l('Calcular Nutrientes', 'Calculate Nutrients')}
+                    </TacticalButton>
+                  </div>
+                </div>
+
+                {iaError && (
+                  <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+                    {iaError}
+                  </div>
+                )}
+
+                {iaRegistrationSuccess && (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-200">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+                    {iaRegistrationSuccess}
+                  </div>
+                )}
+
+                {iaPreview && (
+                  <div className="space-y-4 rounded-2xl border border-purple-400/30 bg-[#080A11] p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-orbitron text-[10px] font-black uppercase tracking-widest text-purple-300">
+                          {l('Resultado do Cálculo TACO', 'TACO Calculation Result')}
+                        </span>
+                        {iaEditing ? (
+                          <input
+                            value={iaPreview.mealName}
+                            onChange={(event) =>
+                              setIaPreview((current) =>
+                                current ? { ...current, mealName: event.target.value } : current,
+                              )
+                            }
+                            className="mt-1.5 w-full rounded-lg border border-purple-400/40 bg-black/60 px-3 py-2 text-sm font-bold text-white focus:outline-none"
+                            aria-label={l('Nome da refeição', 'Meal name')}
+                          />
+                        ) : (
+                          <h4 className="mt-1 font-orbitron text-sm font-black uppercase text-white">
+                            {iaPreview.mealName}
+                          </h4>
+                        )}
+                      </div>
+                      <span className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-bold text-emerald-300">
+                        {iaPreview.confidence}% TACO
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                      {[
+                        { key: 'calories' as const, label: l('Energia', 'Energy'), unit: 'kcal', tone: 'text-cyan-300' },
+                        { key: 'protein' as const, label: l('Proteína', 'Protein'), unit: 'g', tone: 'text-purple-300' },
+                        { key: 'carbs' as const, label: l('Carbos', 'Carbs'), unit: 'g', tone: 'text-emerald-300' },
+                        { key: 'fat' as const, label: l('Gorduras', 'Fat'), unit: 'g', tone: 'text-amber-300' },
+                        { key: 'totalGrams' as const, label: l('Peso', 'Weight'), unit: 'g', tone: 'text-slate-200' },
+                      ].map((metric) => (
+                        <div key={metric.key} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5">
+                          <p className="text-[10px] font-bold uppercase text-slate-400">{metric.label}</p>
+                          {iaEditing ? (
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              min="0"
+                              value={iaPreview[metric.key]}
+                              onChange={(event) =>
+                                setIaPreview((current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        [metric.key]: Math.max(0, Number(event.target.value)),
+                                      }
+                                    : current,
+                                )
+                              }
+                              className={cn(
+                                'mt-1 w-full rounded border border-white/15 bg-black px-2 py-1 font-mono text-xs font-bold focus:outline-none',
+                                metric.tone,
+                              )}
+                            />
+                          ) : (
+                            <p className={cn('mt-1 font-mono text-sm font-black', metric.tone)}>
+                              {iaPreview[metric.key]} <span className="text-[10px]">{metric.unit}</span>
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Ingredients List (Responsive without horizontal table scroll) */}
+                    <div className="space-y-2">
+                      {iaPreview.ingredients.map((ing, idx) => (
+                        <div
+                          key={idx}
+                          className="overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02]"
+                        >
                           <button
                             type="button"
-                            onClick={() => setExpandedLogIds(current => {
-                              const next = new Set(current);
-                              if (next.has(log.id)) next.delete(log.id);
-                              else next.add(log.id);
-                              return next;
-                            })}
-                            className="w-full p-4 text-left"
-                            aria-expanded={isExpanded}
+                            onClick={() => toggleIaIngExpanded(idx)}
+                            className="flex w-full items-center justify-between gap-2 p-3 text-left"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <span className="rounded-md border border-purple-500/15 bg-purple-500/10 px-2 py-1 text-xs font-semibold text-purple-300">
-                                  {tx(log.meal_type)}
-                                </span>
-                                <p className="mt-2 truncate text-sm font-bold text-white">{tx(food?.name) || l('Alimento indisponível', 'Food unavailable')}</p>
-                              </div>
-                              <ChevronDown className={`mt-1 size-4 shrink-0 text-gray-600 transition-transform ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-white">{ing.name}</span>
+                              <span className="ml-1.5 font-mono text-[11px] text-slate-400">({ing.grams}g)</span>
                             </div>
-                            <div className="mt-3 flex items-center justify-between gap-3">
-                              <p className="text-sm font-bold text-orange-300">
-                                {kcal.toFixed(0)} kcal
-                              </p>
-                              <p className="flex items-center gap-1 text-xs font-medium text-gray-500">
-                                <Clock className="size-3" />
-                                {new Date(log.logged_at).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' })}
-                              </p>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className="rounded border border-purple-400/30 bg-purple-500/10 px-2 py-0.5 text-[9px] font-bold uppercase text-purple-300">
+                                {ing.final.source_used === 'taco'
+                                  ? 'TACO'
+                                  : ing.final.source_used === 'catalog'
+                                    ? l('Catálogo', 'Catalog')
+                                    : l('Estimativa', 'Estimate')}
+                              </span>
+                              <ChevronDown
+                                className={cn(
+                                  'size-4 text-slate-400 transition-transform',
+                                  expandedIaIngs.has(idx) && 'rotate-180',
+                                )}
+                              />
                             </div>
                           </button>
 
-                          <AnimatePresence initial={false}>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="border-t border-white/5 px-4 pb-4 pt-3">
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {[
-                                      ['Proteína', `${protein.toFixed(1)}g`],
-                                      ['Carbos', `${carbs.toFixed(1)}g`],
-                                      ['Gorduras', `${fat.toFixed(1)}g`],
-                                    ].map(([label, value]) => (
-                                      <div key={label} className="rounded-lg bg-black/25 p-2 text-center">
-                                        <p className="text-xs font-medium text-gray-500">{label}</p>
-                                        <p className="mt-1 text-sm font-bold text-gray-300">{value}</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  <div className="mt-3 flex items-center justify-between gap-3 text-xs">
-                                    <span className="text-gray-500">{displayQty}{displayUnit} registrados</span>
-                                    <span className="font-black uppercase text-purple-300">XP diário pendente</span>
-                                  </div>
-                                  <div className="mt-3 grid grid-cols-2 gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditLog(log)}
-                                      className="rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-semibold text-gray-400 transition-colors hover:text-white"
-                                    >
-                                      Editar
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => void handleDeleteLog(log.id)}
-                                      className="flex items-center justify-center gap-1 rounded-lg border border-red-500/15 bg-red-500/5 py-2.5 text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
-                                    >
-                                      <Trash2 className="size-3" />
-                                      Remover
-                                    </button>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
+                          {expandedIaIngs.has(idx) && (
+                            <div className="grid grid-cols-1 gap-2 border-t border-white/5 bg-black/40 p-3 text-xs sm:grid-cols-3">
+                              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+                                <p className="font-bold text-purple-300">TACO (100g)</p>
+                                <p className="mt-0.5 font-mono text-[11px] text-slate-300">
+                                  {ing.taco.found
+                                    ? `${ing.taco.kcal}kcal · P:${ing.taco.protein}g C:${ing.taco.carbs}g G:${ing.taco.fat}g`
+                                    : l('Não encontrado', 'Not found')}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+                                <p className="font-bold text-cyan-300">{l('Catálogo (100g)', 'Catalog (100g)')}</p>
+                                <p className="mt-0.5 font-mono text-[11px] text-slate-300">
+                                  {ing.catalog.found
+                                    ? `${ing.catalog.kcal}kcal · P:${ing.catalog.protein}g C:${ing.catalog.carbs}g G:${ing.catalog.fat}g`
+                                    : l('Não encontrado', 'Not found')}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+                                <p className="font-bold text-amber-300">{l('Estimativa (100g)', 'Estimate (100g)')}</p>
+                                <p className="mt-0.5 font-mono text-[11px] text-slate-300">
+                                  {`${ing.estimate.kcal}kcal · P:${ing.estimate.protein}g C:${ing.estimate.carbs}g G:${ing.estimate.fat}g`}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
 
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <TacticalButton
+                        variant="secondary"
+                        fullWidth
+                        onClick={() => setIaEditing((current) => !current)}
+                      >
+                        {iaEditing ? l('Concluir Edição', 'Done Editing') : l('Ajustar Valores', 'Adjust Values')}
+                      </TacticalButton>
+                      <TacticalButton
+                        variant="primary"
+                        fullWidth
+                        displayFont
+                        disabled={iaRegistering || iaPreview.totalGrams <= 0 || !iaPreview.mealName.trim()}
+                        onClick={() => void handleRegisterIaMeal()}
+                      >
+                        {iaRegistering ? l('Salvando...', 'Saving...') : l('Registrar no Diário', 'Save to Diary')}
+                      </TacticalButton>
+                    </div>
+                  </div>
+                )}
+              </HudCard>
+            )}
           </div>
         </div>
       )}
 
-      {/* Modais - Registro & Novo Alimento */}
+      {/* MODALS: MANUAL FOOD LOGGING & NEW FOOD CREATION */}
       <AnimatePresence>
-        {isModalOpen && selectedFood && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
+        {/* 1. Manual Food Logging Modal / Bottom Sheet */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1550,210 +1653,397 @@ export function Nutrition() {
                 setIsModalOpen(false);
                 setEditingLogId(null);
               }}
-              className="absolute inset-0 bg-black/90 backdrop-blur-md" 
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
             />
-            
+
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-8 shadow-2xl"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl border border-cyan-400/35 bg-[#0D0F18] p-5 shadow-2xl sm:rounded-3xl sm:p-6"
             >
-              <button 
+              <button
+                type="button"
                 onClick={() => {
                   setIsModalOpen(false);
                   setEditingLogId(null);
                 }}
-                className="absolute right-6 top-6 text-gray-500 hover:text-white"
+                className="absolute right-5 top-5 flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white"
+                aria-label={l('Fechar registro alimentar', 'Close food log')}
               >
-                <X className="size-6" />
+                <X className="size-5" />
               </button>
 
-              <div className="mb-8 flex items-center gap-5">
-                <div className="flex size-16 items-center justify-center rounded-2xl bg-purple-600/20 text-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
-                  <Apple className="size-8" strokeWidth={2.5} />
+              <div className="flex items-center gap-3.5 pr-12">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-500/15 text-cyan-300">
+                  <Apple className="size-6" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-black uppercase italic text-white tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {editingLogId ? l('Editar', 'Edit') : l('Registrar', 'Log')} <span className="text-purple-500">{l('Recuperação', 'Recovery')}</span>
+                <div className="min-w-0">
+                  <span className="font-orbitron text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                    {editingLogId
+                      ? l('EDITAR REGISTRO', 'EDIT RECORD')
+                      : l('REGISTRO DE ALIMENTO', 'LOG FOOD')}
+                  </span>
+                  <h2 className="truncate font-orbitron text-base font-black uppercase text-white sm:text-lg">
+                    {selectedFood ? tx(selectedFood.name) : l('Selecionar Alimento', 'Select Food')}
                   </h2>
-                  <p className="text-xs font-black uppercase tracking-widest text-gray-600">{selectedFood.name}</p>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">{l('Tipo de recurso', 'Resource type')}</label>
-                  <select 
-                    value={mealType}
-                    onChange={(e) => setMealType(e.target.value)}
-                    className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none appearance-none"
-                  >
-                    <option value="Café da Manhã">{l('Café da Manhã', 'Breakfast')}</option>
-                    <option value="Almoço">{l('Almoço', 'Lunch')}</option>
-                    <option value="Café da Tarde">{l('Café da Tarde', 'Afternoon Snack')}</option>
-                    <option value="Jantar">{l('Jantar', 'Dinner')}</option>
-                    <option value="Lanche">{l('Lanche', 'Snack')}</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">
-                    {l('Quantidade', 'Quantity')} ({selectedFood.serving_unit || l('Gramas', 'Grams')})
+              <div className="mt-5 flex-1 space-y-4 overflow-y-auto pr-0.5">
+                {/* Meal Type Selector */}
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Refeição do Dia', 'Meal Category')}
                   </label>
-                  <input 
-                    type="number" 
-                    value={quantity}
-                    onChange={(e) => setQuantity(parseFloat(e.target.value))}
-                    className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="rounded-xl bg-purple-500/5 p-4 border border-purple-500/20">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-gray-400">{l('Conversão de energia', 'Energy conversion')}</span>
-                    <span className="text-lg font-black text-purple-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                      {((selectedFood.calories_per_100g * quantityToGrams(selectedFood, quantity)) / 100).toFixed(0)} kcal
-                    </span>
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                    {DEFAULT_MEAL_SLOTS.map((slot) => (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        onClick={() => setMealType(slot.id)}
+                        className={cn(
+                          'min-h-[40px] rounded-xl border px-2.5 py-1.5 text-[10px] font-bold uppercase transition-all',
+                          mealType === slot.id
+                            ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-200'
+                            : 'border-white/10 bg-[#090B12] text-slate-400 hover:text-white',
+                        )}
+                      >
+                        {isEnglish ? slot.en : slot.pt}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <button 
-                  onClick={handleLogFood}
-                  className="w-full rounded-2xl bg-purple-600 py-5 font-black uppercase italic tracking-[0.2em] text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]"
-                  style={{ fontFamily: 'Orbitron, sans-serif' }}
-                >
-                  {editingLogId ? l('Salvar Registro', 'Save Record') : l('Confirmar Recuperação', 'Confirm Recovery')}
-                </button>
+                {/* Step 1: Pick Food if none selected yet */}
+                {!selectedFood ? (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder={l('Buscar alimento por nome...', 'Search food by name...')}
+                        value={modalFoodSearch}
+                        onChange={(e) => setModalFoodSearch(e.target.value)}
+                        autoFocus
+                        className="min-h-[46px] w-full rounded-xl border border-white/10 bg-[#090B12] py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="max-h-64 space-y-1.5 overflow-y-auto">
+                      {modalFilteredFoods.map((food) => (
+                        <button
+                          key={food.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedFood(food);
+                            setQuantity(food.serving_unit && food.serving_size ? 1 : 100);
+                          }}
+                          className="flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border border-white/[0.07] bg-[#090B12] px-3.5 py-2.5 text-left transition-colors hover:border-cyan-400/40"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold uppercase text-white">{tx(food.name)}</p>
+                            <p className="text-[10px] text-slate-400">
+                              P:{food.protein_per_100g}g · C:{food.carbs_per_100g}g · G:{food.fat_per_100g}g
+                            </p>
+                          </div>
+                          <span className="shrink-0 font-mono text-xs font-bold text-cyan-300">
+                            {food.calories_per_100g} kcal
+                          </span>
+                        </button>
+                      ))}
+                      {modalFilteredFoods.length === 0 && (
+                        <div className="py-6 text-center">
+                          <p className="text-xs text-slate-400">
+                            {l('Alimento não encontrado no catálogo.', 'Food not found in catalog.')}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsModalOpen(false);
+                              setNewFoodName(modalFoodSearch);
+                              setIsNewFoodModalOpen(true);
+                            }}
+                            className="mt-2 text-xs font-bold uppercase text-cyan-400 hover:underline"
+                          >
+                            + {l('Cadastrar Novo Alimento', 'Create New Food')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Step 2: Quantity & Live Nutritional Preview */
+                  <div className="space-y-4">
+                    {!editingLogId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFood(null)}
+                        className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 hover:underline"
+                      >
+                        ← {l('Trocar alimento', 'Change food')}
+                      </button>
+                    )}
+
+                    <div className="rounded-2xl border border-cyan-400/25 bg-[#090B12] p-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                          {l('Quantidade', 'Quantity')} (
+                          {selectedFood.serving_unit ? tx(selectedFood.serving_unit) : l('Gramas', 'Grams')})
+                        </label>
+                        {!selectedFood.serving_unit && (
+                          <div className="flex gap-1">
+                            {[50, 100, 150, 200].map((presetG) => (
+                              <button
+                                key={presetG}
+                                type="button"
+                                onClick={() => setQuantity(presetG)}
+                                className={cn(
+                                  'rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold',
+                                  quantity === presetG
+                                    ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
+                                    : 'border-white/10 bg-white/5 text-slate-400',
+                                )}
+                              >
+                                {presetG}g
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQuantity((prev) =>
+                              Math.max(
+                                selectedFood.serving_unit ? 0.5 : 10,
+                                Number((prev - (selectedFood.serving_unit ? 0.5 : 25)).toFixed(1)),
+                              ),
+                            )
+                          }
+                          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 font-mono text-base font-bold text-white"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={0.1}
+                          step={selectedFood.serving_unit ? '0.5' : '10'}
+                          value={quantity}
+                          onChange={(e) => setQuantity(Math.max(0, parseFloat(e.target.value) || 0))}
+                          className="w-full rounded-xl border border-white/10 bg-black/50 p-2.5 text-center font-orbitron text-xl font-black text-white focus:border-cyan-400 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQuantity((prev) =>
+                              Number((prev + (selectedFood.serving_unit ? 0.5 : 25)).toFixed(1)),
+                            )
+                          }
+                          className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/15 font-mono text-base font-bold text-cyan-200"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Live Calculated Macros Preview */}
+                    {(() => {
+                      const grams = quantityToGrams(selectedFood, Math.max(0, quantity || 0));
+                      const ratio = grams / 100;
+                      const cals = Math.round((selectedFood.calories_per_100g || 0) * ratio);
+                      const prot = ((selectedFood.protein_per_100g || 0) * ratio).toFixed(1);
+                      const carb = ((selectedFood.carbs_per_100g || 0) * ratio).toFixed(1);
+                      const fatVal = ((selectedFood.fat_per_100g || 0) * ratio).toFixed(1);
+
+                      return (
+                        <div className="grid grid-cols-4 divide-x divide-white/10 rounded-2xl border border-white/10 bg-[#090B12] p-3 text-center">
+                          <div>
+                            <p className="text-[9px] font-bold uppercase text-slate-400">Kcal</p>
+                            <p className="mt-0.5 font-orbitron text-sm font-black text-cyan-300">{cals}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold uppercase text-slate-400">Prot</p>
+                            <p className="mt-0.5 font-mono text-xs font-bold text-purple-300">{prot}g</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold uppercase text-slate-400">Carb</p>
+                            <p className="mt-0.5 font-mono text-xs font-bold text-emerald-300">{carb}g</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold uppercase text-slate-400">
+                              {l('Gord', 'Fat')}
+                            </p>
+                            <p className="mt-0.5 font-mono text-xs font-bold text-amber-300">{fatVal}g</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    <TacticalButton
+                      variant="primary"
+                      fullWidth
+                      displayFont
+                      leftIcon={<CheckCircle2 className="size-4" />}
+                      onClick={handleLogFood}
+                    >
+                      {editingLogId ? l('Salvar Alterações', 'Save Changes') : l('Confirmar Registro', 'Confirm Log')}
+                    </TacticalButton>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
+        {/* 2. Create New Custom Food Modal */}
         {isNewFoodModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsNewFoodModalOpen(false)}
-              className="absolute inset-0 bg-black/90 backdrop-blur-md" 
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
             />
-            
+
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-8 shadow-2xl"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-cyan-400/35 bg-[#0D0F18] p-6 shadow-2xl sm:rounded-3xl"
             >
-              <button 
+              <button
+                type="button"
                 onClick={() => setIsNewFoodModalOpen(false)}
-                className="absolute right-6 top-6 text-gray-500 hover:text-white"
+                className="absolute right-5 top-5 flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white"
               >
-                <X className="size-6" />
+                <X className="size-5" />
               </button>
 
-              <div className="mb-8 flex items-center gap-5">
-                <div className="flex size-16 items-center justify-center rounded-2xl bg-purple-600/20 text-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
-                  <Plus className="size-8" strokeWidth={2.5} />
+              <div className="mb-5 flex items-center gap-3.5 pr-10">
+                <div className="flex size-12 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-500/15 text-cyan-300">
+                  <Plus className="size-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black uppercase italic text-white tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {l('Novo', 'New')} <span className="text-purple-500">{l('Recurso', 'Resource')}</span>
+                  <span className="font-orbitron text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                    {l('Catálogo Personalizado', 'Custom Catalog')}
+                  </span>
+                  <h2 className="font-orbitron text-lg font-black uppercase text-white">
+                    {l('Novo Alimento', 'New Food')}
                   </h2>
-                  <p className="text-xs font-black uppercase tracking-widest text-gray-600">{l('Expanda a base de dados do sistema', 'Expand the system database')}</p>
                 </div>
               </div>
 
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">{l('Nome do item', 'Item name')}</label>
-                  <input 
-                    type="text" 
+              <div className="space-y-3.5">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Nome do Alimento', 'Food Name')}
+                  </label>
+                  <input
+                    type="text"
                     value={newFoodName}
                     onChange={(e) => setNewFoodName(e.target.value)}
-                    placeholder={l('Ex: Arroz Integral', 'e.g., Brown Rice')}
-                    className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
+                    placeholder={l('Ex: Pão Integral Artesanal', 'e.g., Artisan Whole Wheat Bread')}
+                    className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2.5 text-sm font-bold text-white placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">{l('Kcal por porção/100g', 'Kcal per serving/100g')}</label>
-                    <input 
-                      type="number" 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {l('Kcal (por 100g)', 'Kcal (per 100g)')}
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
                       value={newFoodCals}
-                      onChange={(e) => setNewFoodCals(parseFloat(e.target.value))}
-                      className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
+                      onChange={(e) => setNewFoodCals(parseFloat(e.target.value) || 0)}
+                      className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2 text-sm font-mono font-bold text-white focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">{l('Proteína (g)', 'Protein (g)')}</label>
-                    <input 
-                      type="number" 
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {l('Proteína (g)', 'Protein (g)')}
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
                       value={newFoodProtein}
-                      onChange={(e) => setNewFoodProtein(parseFloat(e.target.value))}
-                      className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
+                      onChange={(e) => setNewFoodProtein(parseFloat(e.target.value) || 0)}
+                      className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2 text-sm font-mono font-bold text-white focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">{l('Carboidratos (g)', 'Carbs (g)')}</label>
-                    <input 
-                      type="number" 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {l('Carboidratos (g)', 'Carbs (g)')}
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
                       value={newFoodCarbs}
-                      onChange={(e) => setNewFoodCarbs(parseFloat(e.target.value))}
-                      className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
+                      onChange={(e) => setNewFoodCarbs(parseFloat(e.target.value) || 0)}
+                      className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2 text-sm font-mono font-bold text-white focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">{l('Gorduras (g)', 'Fat (g)')}</label>
-                    <input 
-                      type="number" 
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {l('Gorduras (g)', 'Fat (g)')}
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
                       value={newFoodFat}
-                      onChange={(e) => setNewFoodFat(parseFloat(e.target.value))}
-                      className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
+                      onChange={(e) => setNewFoodFat(parseFloat(e.target.value) || 0)}
+                      className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2 text-sm font-mono font-bold text-white focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">
-                      {l('Porção', 'Serving')} ({l('ex: 2', 'e.g., 2')})
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {l('Peso da Porção (g)', 'Serving Grams (g)')}
                     </label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
+                      inputMode="decimal"
                       value={newFoodServingSize || ''}
-                      onChange={(e) => setNewFoodServingSize(e.target.value ? parseFloat(e.target.value) : undefined)}
-                      placeholder={l('Opcional', 'Optional')}
-                      className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
+                      onChange={(e) =>
+                        setNewFoodServingSize(e.target.value ? parseFloat(e.target.value) : undefined)
+                      }
+                      placeholder={l('Opcional (ex: 50)', 'Optional (e.g. 50)')}
+                      className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2 text-xs font-mono text-white placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-300">
-                      {l('Unidade', 'Unit')} ({l('ex: fatias', 'e.g., slices')})
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {l('Unidade Caseira', 'Serving Unit')}
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={newFoodServingUnit}
                       onChange={(e) => setNewFoodServingUnit(e.target.value)}
-                      placeholder={l('Opcional', 'Optional')}
-                      className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none"
+                      placeholder={l('Ex: fatias, un', 'e.g. slices, unit')}
+                      className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2 text-xs text-white placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-300">{l('Categoria', 'Category')}</label>
-                  <select 
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Categoria', 'Category')}
+                  </label>
+                  <select
                     value={newFoodCategory}
                     onChange={(e) => setNewFoodCategory(e.target.value)}
-                    className="w-full rounded-xl border border-[#1E1E26] bg-black p-4 text-white focus:border-purple-500 focus:outline-none appearance-none"
+                    className="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-[#090B12] px-3.5 py-2 text-xs font-bold text-white focus:border-cyan-400 focus:outline-none"
                   >
                     <option value="Proteína">{l('Proteína', 'Protein')}</option>
                     <option value="Carboidrato">{l('Carboidrato', 'Carbohydrate')}</option>
@@ -1762,13 +2052,17 @@ export function Nutrition() {
                   </select>
                 </div>
 
-                <button 
-                  onClick={handleCreateFood}
-                  className="w-full rounded-2xl bg-purple-600 py-5 font-black uppercase italic tracking-[0.2em] text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]"
-                  style={{ fontFamily: 'Orbitron, sans-serif' }}
-                >
-                  {l('Registrar Recurso', 'Register Resource')}
-                </button>
+                <div className="pt-2">
+                  <TacticalButton
+                    variant="primary"
+                    fullWidth
+                    displayFont
+                    disabled={!newFoodName.trim()}
+                    onClick={handleCreateFood}
+                  >
+                    {l('Salvar Alimento', 'Save Food')}
+                  </TacticalButton>
+                </div>
               </div>
             </motion.div>
           </div>

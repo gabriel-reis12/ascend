@@ -1,14 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, 
-  RefreshCw, 
-  Trash2, 
-  Power, 
-  CheckCircle2, 
-  Clock, 
-  Sword, 
-  Zap, 
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+  Plus,
+  RefreshCw,
+  Trash2,
+  Power,
+  Clock,
+  Sword,
+  Zap,
   ScrollText,
   ShieldCheck,
   UtensilsCrossed,
@@ -25,7 +24,11 @@ import {
   Play,
   Edit3,
   CalendarDays,
-  AlertTriangle
+  AlertTriangle,
+  Flame,
+  CheckCircle2,
+  ArrowUpRight,
+  Filter,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +41,10 @@ import type { SingleTaskMeta, Task, CreateTaskInput } from '@/hooks/useTasks';
 import { NewHabitModal } from '@/components/rpg/NewHabitModal';
 import { NewQuestModal } from '@/components/rpg/NewQuestModal';
 import { NeonCheckbox } from '@/components/ui/animated-check-box';
+import { HudCard } from '@/components/ui/hud-card';
+import { TacticalButton } from '@/components/ui/tactical-button';
+import { NeonProgressBar, NeonProgressRing } from '@/components/ui/neon-progress';
+import { RankBadge } from '@/components/ui/rank-badge';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { DAILY_COMMON_XP_EFFECTIVE_MAX } from '@/lib/progression';
 import { useNavigate } from 'react-router-dom';
@@ -126,7 +133,7 @@ function readSingleQuestMeta(taskId: string): SingleTaskMeta | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(`single_quest_meta_${taskId}`);
-    return raw ? JSON.parse(raw) as SingleTaskMeta : null;
+    return raw ? (JSON.parse(raw) as SingleTaskMeta) : null;
   } catch {
     return null;
   }
@@ -145,12 +152,20 @@ function formatSingleQuestDate(dateStr?: string) {
 
 function buildSingleQuestDetails(meta: SingleTaskMeta | null) {
   if (!meta) return null;
-  const schedule = [formatSingleQuestDate(meta.due_date), meta.due_time].filter(Boolean).join(' as ');
+  const schedule = [formatSingleQuestDate(meta.due_date), meta.due_time].filter(Boolean).join(' às ');
   const parts = [schedule, meta.note].filter(Boolean);
-  return parts.length ? parts.join(' - ') : null;
+  return parts.length ? parts.join(' • ') : null;
 }
 
-function TimeBadgeInput({ time, onChange }: { time: string | null; onChange: (t: string | null) => void }) {
+function TimeBadgeInput({
+  time,
+  onChange,
+  ariaLabel,
+}: {
+  time: string | null;
+  onChange: (t: string | null) => void;
+  ariaLabel?: string;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -163,6 +178,7 @@ function TimeBadgeInput({ time, onChange }: { time: string | null; onChange: (t:
     <input
       ref={inputRef}
       type="time"
+      aria-label={ariaLabel}
       defaultValue={time || ''}
       onBlur={(e) => {
         const val = e.target.value || null;
@@ -171,11 +187,10 @@ function TimeBadgeInput({ time, onChange }: { time: string | null; onChange: (t:
         }
       }}
       onClick={(e) => e.stopPropagation()}
-      className={`rounded px-2 py-1 text-xs font-black uppercase tracking-widest outline-none transition-colors cursor-pointer shrink-0 ${
-        time 
-          ? 'bg-gray-800/80 text-gray-300 hover:bg-gray-700/80' 
-          : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300 w-[70px]'
-      }`}
+      className={`min-h-[30px] rounded-lg border px-2 py-0.5 font-orbitron text-[10px] font-bold uppercase tracking-wider outline-none transition-colors cursor-pointer shrink-0 ${time
+          ? 'border-white/12 bg-black/50 text-slate-200 hover:border-[#00F0FF]/40'
+          : 'border-white/5 bg-white/[0.03] text-slate-500 hover:border-white/15 hover:text-slate-300 w-[68px]'
+        }`}
       style={{ colorScheme: 'inherit' }}
     />
   );
@@ -193,9 +208,12 @@ function MissionCard({
   done,
   startTime,
   endTime,
+  partialProgressPct,
   onToggle,
   onUpdateTime,
   onDelete,
+  onOpenModule,
+  isEnglish,
 }: {
   id: string;
   type: 'habit' | 'workout' | 'meal' | 'task' | 'finance';
@@ -208,177 +226,244 @@ function MissionCard({
   done: boolean;
   startTime: string | null;
   endTime: string | null;
-  onToggle: (id: string, type: 'habit'|'workout'|'meal'|'task'|'finance') => void;
-  onUpdateTime: (id: string, type: 'habit'|'workout'|'meal'|'task'|'finance', field: 'start'|'end', t: string | null) => void;
+  partialProgressPct?: number | null;
+  onToggle: (id: string, type: 'habit' | 'workout' | 'meal' | 'task' | 'finance') => void;
+  onUpdateTime: (id: string, type: 'habit' | 'workout' | 'meal' | 'task' | 'finance', field: 'start' | 'end', t: string | null) => void;
   onDelete?: (id: string) => void;
+  onOpenModule?: () => void;
+  isEnglish: boolean;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
+
   const isBonus = type === 'task' && (title.startsWith('[BÔNUS] ') || title.startsWith('[BÔNUS IA] '));
   const displayTitle = isBonus ? title.replace(/^\[BÔNUS( IA)?\]\s*/, '') : title;
   const bonusLore = isBonus ? localStorage.getItem(`bonus_quest_lore_${id}`) : null;
   const singleQuestMeta = type === 'task' && !isBonus ? readSingleQuestMeta(id) : null;
   const singleQuestDetails = buildSingleQuestDetails(singleQuestMeta);
-  const nowTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const missionStatus = done
-    ? 'completed'
-    : endTime && nowTime > endTime.slice(0, 5)
-      ? 'late'
-      : startTime && nowTime >= startTime.slice(0, 5) && (!endTime || nowTime <= endTime.slice(0, 5))
-        ? 'active'
-        : 'pending';
-  const statusStyle = {
-    pending: 'border-gray-500/20 bg-gray-500/10 text-gray-400',
-    active: 'border-cyan-500/25 bg-cyan-500/10 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.1)]',
-    completed: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300',
-    late: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
-  }[missionStatus];
-  const statusLabel = { pending: 'Pendente', active: 'Ativa', completed: 'Concluída', late: 'Atrasada' }[missionStatus];
 
-  const theme = {
-    habit: { border: 'border-blue-500/30', bgDone: 'bg-blue-500/5', bgHover: 'hover:border-blue-500/50', lineDone: 'bg-blue-500', lineHover: 'group-hover:bg-blue-500/50', icon: Clock, textDone: 'text-blue-500', tag: 'bg-blue-500/20 text-blue-400', tagText: 'COMPLETO' },
-    workout: { border: 'border-purple-500/30', bgDone: 'bg-purple-500/5', bgHover: 'hover:border-purple-500/50', lineDone: 'bg-purple-500', lineHover: 'group-hover:bg-purple-500/50', icon: Dumbbell, textDone: 'text-purple-500', tag: 'bg-purple-500/20 text-purple-400', tagText: 'TREINO CONCLUÍDO' },
-    meal: { border: 'border-orange-500/30', bgDone: 'bg-orange-500/5', bgHover: 'hover:border-orange-500/50', lineDone: 'bg-orange-500', lineHover: 'group-hover:bg-orange-500/50', icon: UtensilsCrossed, textDone: 'text-orange-500', tag: 'bg-orange-500/20 text-orange-400', tagText: 'REFEIÇÃO FEITA' },
-    task: isBonus
-      ? { border: 'border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]', bgDone: 'bg-cyan-500/5', bgHover: 'hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]', lineDone: 'bg-gradient-to-b from-cyan-500 to-purple-500', lineHover: 'group-hover:bg-cyan-400/50', icon: Zap, textDone: 'text-cyan-400', tag: 'bg-cyan-500/20 text-cyan-400', tagText: 'ANOMALIA CONCLUÍDA' }
-      : { border: 'border-emerald-500/30', bgDone: 'bg-emerald-500/5', bgHover: 'hover:border-emerald-500/50', lineDone: 'bg-emerald-500', lineHover: 'group-hover:bg-emerald-500/50', icon: ScrollText, textDone: 'text-emerald-500', tag: 'bg-emerald-500/20 text-emerald-400', tagText: 'MISSÃO CONCLUÍDA' },
-    finance: { border: 'border-amber-500/30', bgDone: 'bg-amber-500/5', bgHover: 'hover:border-amber-500/50', lineDone: 'bg-amber-500', lineHover: 'group-hover:bg-amber-500/50', icon: Coins, textDone: 'text-amber-500', tag: 'bg-amber-500/20 text-amber-400', tagText: 'FLUXO REGISTRADO' },
+  const nowTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const hasPartialProgress = typeof partialProgressPct === 'number' && partialProgressPct > 0 && partialProgressPct < 100 && !done;
+  const isWithinTimeWindow =
+    !done &&
+    Boolean(startTime && nowTime >= startTime.slice(0, 5) && (!endTime || nowTime <= endTime.slice(0, 5)));
+  const isLate = !done && Boolean(endTime && nowTime > endTime.slice(0, 5));
+
+  const missionStatus: 'completed' | 'active' | 'late' | 'pending' = done
+    ? 'completed'
+    : hasPartialProgress || isWithinTimeWindow
+      ? 'active'
+      : isLate
+        ? 'late'
+        : 'pending';
+
+  const statusConfig = {
+    completed: {
+      label: l('CONCLUÍDA', 'COMPLETED'),
+      headerText: 'text-emerald-400',
+      cardSurface: 'border-emerald-500/25 bg-[#0B0E14]/90',
+      leftBar: 'bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]',
+    },
+    active: {
+      label: l('EM ANDAMENTO', 'IN PROGRESS'),
+      headerText: 'text-[#00F0FF]',
+      cardSurface: 'border-[#00F0FF]/35 bg-[var(--hud-surface)] shadow-[0_0_20px_rgba(0,240,255,0.08)]',
+      leftBar: 'bg-gradient-to-b from-[#00F0FF] to-[#A855F7] shadow-[0_0_12px_rgba(0,240,255,0.5)]',
+    },
+    late: {
+      label: l('ATRASADA', 'OVERDUE'),
+      headerText: 'text-amber-400',
+      cardSurface: 'border-amber-500/30 bg-[var(--hud-surface)]',
+      leftBar: 'bg-amber-400',
+    },
+    pending: {
+      label: l('PENDENTE', 'PENDING'),
+      headerText: 'text-slate-400',
+      cardSurface: 'border-[var(--hud-border)] bg-[var(--hud-surface)] hover:border-[#00F0FF]/30',
+      leftBar: 'bg-slate-700 group-hover:bg-[#00F0FF]/60',
+    },
+  }[missionStatus];
+
+  const Icon: LucideIcon = {
+    habit: Clock,
+    workout: Dumbbell,
+    meal: UtensilsCrossed,
+    task: isBonus ? Zap : ScrollText,
+    finance: Coins,
   }[type];
 
-  const Icon = theme.icon;
+  const typeBadgeLabel = {
+    habit: l('Recorrente', 'Recurring'),
+    workout: l('Treino', 'Workout'),
+    meal: l('Nutrição', 'Nutrition'),
+    task: l('Missão Única', 'One-Time'),
+    finance: l('Finanças', 'Finance'),
+  }[type];
 
   return (
     <motion.div
       id={`mission-${type}-${id}`}
-      initial={{ opacity: 0, y: 8 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
-      whileHover={done ? undefined : { y: -2 }}
-      className={`group relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 transition-all duration-150 sm:p-4 ${
-        done
-          ? 'border-[#1E1E26] bg-white/[0.025] opacity-75'
-          : `border-[#1E1E26] bg-[#0F0F13] ${theme.bgHover} hover:bg-[#16161D]`
-      }`}
+      transition={{ duration: 0.16, ease: 'easeOut' }}
+      className={`group relative overflow-hidden rounded-2xl border p-3.5 sm:p-4 transition-all duration-200 ${statusConfig.cardSurface}`}
     >
-      {/* Decorative Line */}
-      <div className={`absolute left-0 top-0 h-full w-1 transition-colors ${
-        done ? theme.lineDone : `bg-gray-800 ${theme.lineHover}`
-      }`} />
+      {/* Filete Luminoso Lateral */}
+      <div className={`pointer-events-none absolute left-0 top-0 h-full w-1 transition-colors ${statusConfig.leftBar}`} />
 
-      <div className="flex shrink-0 items-center justify-center">
-        <NeonCheckbox
-          checked={done}
-          onChange={() => onToggle(id, type)}
-        />
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <TimeBadgeInput 
-            time={startTime ? startTime.slice(0, 5) : null} 
-            onChange={(t) => onUpdateTime(id, type, 'start', t)}
-          />
-          <span className="text-gray-600 text-xs">-</span>
-          <TimeBadgeInput 
-            time={endTime ? endTime.slice(0, 5) : null} 
-            onChange={(t) => onUpdateTime(id, type, 'end', t)}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {isBonus && (
-              <span className="rounded bg-gradient-to-r from-cyan-500 to-purple-500 px-2 py-1 text-xs font-bold text-white shadow-[0_0_8px_rgba(6,182,212,0.35)]">
-                Bônus IA
-              </span>
-            )}
-            <p
-              className={`truncate text-sm font-bold transition-colors sm:text-base ${
-                done ? 'text-gray-500' : 'text-white'
-              }`}
-              style={{ fontFamily: 'Orbitron, sans-serif' }}
-            >
-              {displayTitle}
-            </p>
-            {isOptional && (
-              <span className="rounded border border-dashed border-gray-500/50 bg-gray-500/10 px-2 py-1 text-xs font-semibold text-gray-400">
-                Flexível
-              </span>
-            )}
-            {singleQuestMeta && (
-              <span className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-300">
-                Unica
-              </span>
-            )}
-            <motion.span
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className={`rounded-md border px-2 py-1 text-xs font-semibold ${statusStyle}`}
-            >
-              {statusLabel}
-            </motion.span>
-            {(type === 'workout' || type === 'meal' || type === 'finance') && (
-              <span className="rounded-md border border-blue-500/15 bg-blue-500/5 px-2 py-1 text-xs font-semibold text-blue-300">
-                Automática
-              </span>
-            )}
-            {type === 'habit' && (
-              <span className="rounded-md border border-purple-500/15 bg-purple-500/5 px-2 py-1 text-xs font-semibold text-purple-300">
-                Recorrente
-              </span>
-            )}
-          </div>
-          {bonusLore && (
-            <p className={`text-xs italic leading-relaxed font-semibold transition-colors max-w-xl ${done ? 'text-gray-600 line-through' : 'text-cyan-400/80'}`}>
-              "{bonusLore}"
-            </p>
-          )}
-          {singleQuestDetails && (
-            <p className={`text-xs leading-relaxed font-semibold transition-colors max-w-xl ${done ? 'text-gray-600 line-through' : 'text-cyan-200/85'}`}>
-              {singleQuestDetails}
-            </p>
-          )}
-        </div>
-
-        <div className="mt-2.5 flex flex-wrap items-center gap-3">
+      {/* Micro-Cabeçalho Tático (Status à esquerda | Recompensa Dourada à direita) */}
+      <div className="mb-2.5 flex items-center justify-between gap-2 border-b border-white/[0.06] pb-2 pl-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className={`font-orbitron text-[10px] font-extrabold uppercase tracking-[0.18em] ${statusConfig.headerText}`}>
+            {statusConfig.label}
+          </span>
+          <span className="text-white/15">•</span>
           <span
-            className="flex items-center gap-1 text-xs font-semibold"
+            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold"
             style={{ color: categoryColor }}
           >
-            <ScrollText size={12} />
-            {category}
+            <Icon className="h-3 w-3 shrink-0" />
+            <span className="truncate max-w-[120px] sm:max-w-none">{category}</span>
           </span>
-          
-          {xpReward > 0 && (
-          <span className={`flex items-center gap-1 text-xs font-bold text-yellow-500 ${done ? '' : 'drop-shadow-[0_0_6px_rgba(234,179,8,0.25)]'}`}>
-            <Zap size={12} fill="currentColor" />
-            +{xpReward} XP
+          <span className="hidden sm:inline-block rounded-md border border-white/8 bg-white/[0.02] px-2 py-0.5 text-[10px] font-medium text-slate-400">
+            {typeBadgeLabel}
           </span>
+          {isOptional && (
+            <span className="rounded-md border border-dashed border-slate-500/40 bg-slate-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              {l('Flexível', 'Flexible')}
+            </span>
           )}
+        </div>
 
+        <div className="flex shrink-0 items-center gap-2">
           {statLabel && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-blue-400">
-              <Sword size={12} />
+            <span className="hidden xs:inline-flex items-center gap-1 rounded-md border border-[#00F0FF]/20 bg-[#00F0FF]/8 px-2 py-0.5 font-orbitron text-[10px] font-bold text-[#00F0FF]">
+              <Sword className="h-2.5 w-2.5" />
               {statLabel}
+            </span>
+          )}
+          {xpReward > 0 && (
+            <span
+              className={`inline-flex items-center gap-1 font-orbitron text-[11px] font-extrabold tabular-nums ${done ? 'text-amber-400/70' : 'text-[#F59E0B] drop-shadow-[0_0_8px_rgba(245,158,11,0.28)]'
+                }`}
+            >
+              <span className="hidden sm:inline text-[10px] font-semibold text-slate-400 mr-0.5">
+                {l('Recompensa:', 'Reward:')}
+              </span>
+              +{xpReward} XP
             </span>
           )}
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        {type === 'task' && onDelete && (
-          <button
-            onClick={() => onDelete(id)}
-            className="opacity-0 group-hover:opacity-100 flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-red-500/10 hover:text-red-400 transition-all mr-1"
-            title="Deletar missão permanente"
+      {/* Corpo Principal do Card */}
+      <div className="flex items-center gap-3 pl-1">
+        {/* Área de Toque >= 44x44px para o Checkbox */}
+        <div
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.02] transition-colors hover:bg-white/[0.05]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <NeonCheckbox
+            checked={done}
+            aria-label={displayTitle}
+            onChange={() => onToggle(id, type)}
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p
+            className={`text-sm sm:text-base font-bold leading-snug transition-colors ${done ? 'text-slate-400 line-through decoration-slate-600' : 'text-white'
+              }`}
           >
-            <Trash2 size={14} />
-          </button>
-        )}
-        {done ? (
-          <CheckCircle2 size={20} className={theme.textDone} />
-        ) : (
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-gray-600 transition-colors group-hover:bg-white/10 group-hover:text-white`}>
-            <Icon size={16} />
+            {displayTitle}
+          </p>
+
+          {bonusLore && (
+            <p className={`mt-1 text-xs italic leading-relaxed ${done ? 'text-slate-600 line-through' : 'text-cyan-300/80'}`}>
+              "{bonusLore}"
+            </p>
+          )}
+          {singleQuestDetails && (
+            <p className={`mt-1 text-xs leading-relaxed ${done ? 'text-slate-500' : 'text-cyan-200/85'}`}>
+              {singleQuestDetails}
+            </p>
+          )}
+
+          {/* Barra de Progresso Parcial Real (quando aplicável) */}
+          {hasPartialProgress && partialProgressPct !== undefined && partialProgressPct !== null && (
+            <div className="mt-2 flex items-center gap-2.5">
+              <NeonProgressBar
+                value={partialProgressPct}
+                max={100}
+                variant="xp"
+                size="sm"
+                className="flex-1"
+                ariaLabel={`${displayTitle} progress`}
+              />
+              <span className="font-orbitron text-[10px] font-bold text-[#00F0FF] tabular-nums">
+                {Math.round(partialProgressPct)}%
+              </span>
+            </div>
+          )}
+
+          {/* Linha Compacta de Horário e Atributo Mobile */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {type !== 'task' && type !== 'finance' ? (
+              <div className="inline-flex items-center gap-1.5">
+                <Clock className="h-3 w-3 text-slate-500" />
+                <TimeBadgeInput
+                  time={startTime ? startTime.slice(0, 5) : null}
+                  ariaLabel={l('Horário inicial', 'Start time')}
+                  onChange={(t) => onUpdateTime(id, type, 'start', t)}
+                />
+                <span className="text-[10px] text-slate-600">–</span>
+                <TimeBadgeInput
+                  time={endTime ? endTime.slice(0, 5) : null}
+                  ariaLabel={l('Horário final', 'End time')}
+                  onChange={(t) => onUpdateTime(id, type, 'end', t)}
+                />
+              </div>
+            ) : startTime ? (
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/8 bg-black/40 px-2 py-0.5 font-orbitron text-[10px] font-bold text-slate-300">
+                <Clock className="h-3 w-3 text-[#00F0FF]" />
+                {startTime.slice(0, 5)}
+              </span>
+            ) : null}
+
+            {statLabel && (
+              <span className="inline-flex xs:hidden items-center gap-1 rounded-md border border-[#00F0FF]/20 bg-[#00F0FF]/8 px-2 py-0.5 font-orbitron text-[10px] font-bold text-[#00F0FF]">
+                <Sword className="h-2.5 w-2.5" />
+                {statLabel}
+              </span>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Controles Secundários à Direita (44x44px touch target) */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {type === 'task' && onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(id)}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-slate-500 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+              title={l('Deletar missão permanente', 'Delete quest permanently')}
+              aria-label={l('Deletar missão permanente', 'Delete quest permanently')}
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+          {onOpenModule && (
+            <button
+              type="button"
+              onClick={onOpenModule}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 hover:text-[#00F0FF]"
+              title={l('Abrir módulo', 'Open module')}
+              aria-label={l('Abrir módulo', 'Open module')}
+            >
+              <ArrowUpRight size={16} />
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -390,156 +475,187 @@ function ManageQuestRow({
   onToggleActive,
   onUpdateScheduledDays,
   onEdit,
+  isEnglish,
 }: {
   habit: Habit;
   onDelete: (id: string) => void;
   onToggleActive: (id: string) => void;
   onUpdateScheduledDays: (id: string, days: number[]) => void;
   onEdit: (habit: Habit) => void;
+  isEnglish: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
-      className={`flex flex-col gap-4 rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 transition-all duration-150 hover:border-blue-500/25 ${
-        habit.active ? 'opacity-100' : 'opacity-40'
-      }`}
+    <HudCard
+      variant={habit.active ? 'default' : 'default'}
+      className={`transition-all duration-150 ${habit.active ? 'opacity-100' : 'opacity-55'}`}
     >
-      <div className="flex items-center gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-base font-bold text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              {habit.title}
-            </p>
-            {habit.is_optional && (
-              <span className="rounded border border-dashed border-gray-500/50 bg-gray-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tighter text-gray-400">
-                FLEXÍVEL
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate font-orbitron text-sm sm:text-base font-bold text-white">
+                {habit.title}
+              </p>
+              {habit.is_optional && (
+                <span className="rounded border border-dashed border-slate-500/50 bg-slate-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                  {l('FLEXÍVEL', 'FLEXIBLE')}
+                </span>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span
+                className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5"
+                style={{ color: habit.category_color }}
+              >
+                {habit.category}
               </span>
+              <span className="font-orbitron text-xs font-bold text-[#F59E0B]">
+                +{habit.xp_reward} XP
+              </span>
+              <span
+                className={`rounded-md border px-2 py-0.5 text-[10px] font-orbitron font-bold uppercase ${habit.active
+                    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                    : 'border-slate-500/25 bg-slate-500/10 text-slate-400'
+                  }`}
+              >
+                {habit.active ? l('Ativa', 'Active') : l('Inativa', 'Inactive')}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onEdit(habit)}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition-colors hover:border-[#00F0FF]/40 hover:text-[#00F0FF]"
+              title={l('Editar quest', 'Edit quest')}
+              aria-label={l('Editar quest', 'Edit quest')}
+            >
+              <Edit3 size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleActive(habit.id)}
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${habit.active
+                  ? 'border-[#00F0FF]/35 bg-[#00F0FF]/12 text-[#00F0FF] hover:bg-[#00F0FF]/20'
+                  : 'border-white/10 bg-white/[0.03] text-slate-500 hover:text-white'
+                }`}
+              title={habit.active ? l('Pausar hábito', 'Pause habit') : l('Ativar hábito', 'Activate habit')}
+              aria-label={habit.active ? l('Pausar hábito', 'Pause habit') : l('Ativar hábito', 'Activate habit')}
+            >
+              <Power size={16} />
+            </button>
+
+            {confirmDelete ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onDelete(habit.id)}
+                  className="min-h-[44px] rounded-xl border border-red-500/40 bg-red-500/20 px-3 font-orbitron text-[10px] font-black uppercase text-red-300 hover:bg-red-500/30"
+                >
+                  {l('DELETAR', 'DELETE')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="min-h-[44px] rounded-xl border border-white/10 bg-white/5 px-3 font-orbitron text-[10px] font-black uppercase text-slate-400 hover:bg-white/10"
+                >
+                  {l('NÃO', 'NO')}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-transparent text-slate-500 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400"
+                title={l('Remover hábito', 'Remove habit')}
+                aria-label={l('Remover hábito', 'Remove habit')}
+              >
+                <Trash2 size={16} />
+              </button>
             )}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span style={{ color: habit.category_color }}>{habit.category}</span>
-            <span className="text-yellow-500">+{habit.xp_reward} XP</span>
-            <span className={`rounded-md border px-2 py-1 ${habit.active ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-gray-500/20 bg-gray-500/10 text-gray-400'}`}>
-              {habit.active ? 'Ativa' : 'Inativa'}
-            </span>
-            <span className="rounded-md border border-blue-500/15 bg-blue-500/5 px-2 py-1 text-blue-300">Recorrente</span>
+        </div>
+
+        {/* Seletor Compacto de Recorrência de Dias (44px touch targets) */}
+        <div className="border-t border-white/8 pt-3 flex flex-col gap-2">
+          <span className="flex items-center gap-2 font-orbitron text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+            <CalendarDays className="size-3.5 text-[#00F0FF]" />
+            {l('Recorrência semanal', 'Weekly recurrence')}
+          </span>
+          <div className="grid grid-cols-7 gap-1.5">
+            {(isEnglish
+              ? [
+                { label: 'S', value: 0 },
+                { label: 'M', value: 1 },
+                { label: 'T', value: 2 },
+                { label: 'W', value: 3 },
+                { label: 'T', value: 4 },
+                { label: 'F', value: 5 },
+                { label: 'S', value: 6 },
+              ]
+              : [
+                { label: 'D', value: 0 },
+                { label: 'S', value: 1 },
+                { label: 'T', value: 2 },
+                { label: 'Q', value: 3 },
+                { label: 'Q', value: 4 },
+                { label: 'S', value: 5 },
+                { label: 'S', value: 6 },
+              ]
+            ).map((day) => {
+              const isSelected = habit.scheduled_days?.includes(day.value) ?? true;
+              return (
+                <button
+                  key={day.value}
+                  type="button"
+                  onClick={() => {
+                    const currentDays = habit.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6];
+                    const newDays = currentDays.includes(day.value)
+                      ? currentDays.filter((d) => d !== day.value)
+                      : [...currentDays, day.value].sort();
+                    onUpdateScheduledDays(habit.id, newDays);
+                  }}
+                  className={`flex min-h-[44px] w-full items-center justify-center rounded-xl border font-orbitron text-xs font-black transition-all duration-200 active:scale-95 ${isSelected
+                      ? 'border-transparent text-white'
+                      : 'border-white/10 bg-black/40 text-slate-500 hover:border-white/25 hover:text-white'
+                    }`}
+                  style={{
+                    backgroundColor: isSelected ? habit.category_color : undefined,
+                    boxShadow: isSelected ? `0 0 12px ${habit.category_color}35` : undefined,
+                  }}
+                >
+                  {day.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onEdit(habit)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/5 bg-white/5 text-gray-400 transition-colors hover:border-blue-500/30 hover:text-blue-300"
-            title="Editar quest"
-          >
-            <Edit3 size={14} />
-          </button>
-          <button
-            onClick={() => onToggleActive(habit.id)}
-            className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
-              habit.active 
-                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' 
-                : 'bg-white/5 text-gray-500 hover:bg-white/10'
-            }`}
-          >
-            <Power size={14} />
-          </button>
-
-          {confirmDelete ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onDelete(habit.id)}
-                className="rounded-lg bg-red-500/20 px-3 py-1 text-[10px] font-black text-red-400 hover:bg-red-500/30"
-              >
-                DELETAR
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="rounded-lg bg-white/5 px-3 py-1 text-[10px] font-black text-gray-400 hover:bg-white/10"
-              >
-                NÃO
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 hover:bg-red-500/10 hover:text-red-400"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
       </div>
-
-      {/* Seletor Compacto de Recorrência de Dias */}
-      <div className="border-t border-[#1E1E26]/60 pt-3 flex flex-col gap-2">
-        <span className="flex items-center gap-2 text-sm font-semibold text-gray-400">
-          <CalendarDays className="size-4 text-blue-400" />
-          Recorrência semanal
-        </span>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-          {[
-            { label: 'D', value: 0 },
-            { label: 'S', value: 1 },
-            { label: 'T', value: 2 },
-            { label: 'Q', value: 3 },
-            { label: 'Q', value: 4 },
-            { label: 'S', value: 5 },
-            { label: 'S', value: 6 },
-          ].map((day) => {
-            const isSelected = habit.scheduled_days?.includes(day.value) ?? true;
-            return (
-              <button
-                key={day.value}
-                type="button"
-                onClick={() => {
-                  const currentDays = habit.scheduled_days ?? [0, 1, 2, 3, 4, 5, 6];
-                  const newDays = currentDays.includes(day.value)
-                    ? currentDays.filter((d) => d !== day.value)
-                    : [...currentDays, day.value].sort();
-                  onUpdateScheduledDays(habit.id, newDays);
-                }}
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-xs font-black transition-all duration-200 ${
-                  isSelected
-                    ? 'border-transparent text-white'
-                    : 'border-[#38384A]/40 bg-black/40 text-gray-600 hover:border-gray-700'
-                }`}
-                style={{
-                  backgroundColor: isSelected ? habit.category_color : undefined,
-                  boxShadow: isSelected ? `0 0 12px ${habit.category_color}35, inset 0 0 8px ${habit.category_color}20` : undefined,
-                }}
-              >
-                {day.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </motion.div>
+    </HudCard>
   );
 }
 
 export function Quests() {
   const { language, t } = usePreferences();
   const isEnglish = language === 'en-US';
-  const l = (pt: string, en: string) => isEnglish ? en : pt;
-  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
-  const { 
-    activeHabits, 
-    habits, 
-    completedToday, 
-    completedCount, 
-    totalActive, 
-    loading, 
+  const l = (pt: string, en: string) => (isEnglish ? en : pt);
+  const tx = (value?: string | null) => (isEnglish && value ? translateUiText(value) : value);
+  const {
+    activeHabits,
+    habits,
+    completedToday,
+    completedCount,
+    totalActive,
+    loading,
     error: habitsError,
-    toggleCompletion, 
-    createHabit, 
+    toggleCompletion,
+    createHabit,
     updateHabit,
-    deleteHabit, 
+    deleteHabit,
     toggleActive,
     workoutMissions,
     mealMissions,
@@ -569,10 +685,11 @@ export function Quests() {
   };
 
   const navigate = useNavigate();
-  const hunterClass = useHunterStore(s => s.hunterClass);
   const hunterProfile = useHunterStore();
-  
+
   const [tab, setTab] = useState<'daily' | 'manage' | 'codex'>('daily');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'habit' | 'task' | 'workout' | 'meal' | 'finance'>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [questModalOpen, setQuestModalOpen] = useState(false);
   const [presetHabitData, setPresetHabitData] = useState<Partial<CreateHabitInput> | null>(null);
@@ -585,16 +702,13 @@ export function Quests() {
   const { user } = useAuth();
   const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = useState(false);
 
-  // Estados locais para a Fenda de Anomalia IA
-
-
   useEffect(() => {
     async function checkFinanceToday() {
       if (!user?.id) return;
       try {
         const { startIso } = localDayBounds();
         const todayYYYYMMDD = startIso.split('T')[0];
-        
+
         const noTxKey = `ascend_finance_no_tx_${user.id}_${todayYYYYMMDD}`;
         if (localStorage.getItem(noTxKey) === 'true') {
           setHasLoggedFinanceToday(true);
@@ -617,8 +731,7 @@ export function Quests() {
   }, [user?.id]);
 
   const todayStr = new Date().toLocaleDateString('en-CA');
-  
-  // Utilitário resiliente a fuso horário para verificar se uma data UTC pertence ao dia local de hoje
+
   const isToday = (dateStr: string | null | undefined) => {
     if (!dateStr) return false;
     try {
@@ -628,11 +741,17 @@ export function Quests() {
     }
   };
 
-  const activeTasks = tasks.filter(t => !t.completed || isToday(t.completed_at));
+  const activeTasks = tasks.filter((t) => !t.completed || isToday(t.completed_at));
 
   const totalMissions = totalActive + workoutMissions.length + mealMissions.length + activeTasks.length + 1;
-  const totalCompleted = completedCount + workoutMissions.filter(m => m.isCompleted).length + mealMissions.filter(m => m.isCompleted).length + activeTasks.filter(t => t.completed).length + (hasLoggedFinanceToday ? 1 : 0);
+  const totalCompleted =
+    completedCount +
+    workoutMissions.filter((m) => m.isCompleted).length +
+    mealMissions.filter((m) => m.isCompleted).length +
+    activeTasks.filter((t) => t.completed).length +
+    (hasLoggedFinanceToday ? 1 : 0);
   const progressPct = totalMissions > 0 ? (totalCompleted / totalMissions) * 100 : 0;
+
   const nutritionTargets = calculateNutritionTargets({
     birthday: hunterProfile.birthday,
     gender: hunterProfile.gender,
@@ -650,6 +769,9 @@ export function Quests() {
   const calorieExcess = nutritionTargets.maxCalories
     ? Math.max(0, caloriesLoggedToday - nutritionTargets.maxCalories)
     : 0;
+  const calorieProgressPct = nutritionTargets.targetCalories
+    ? Math.min(100, Math.round((caloriesLoggedToday / nutritionTargets.targetCalories) * 100))
+    : null;
 
   type FinanceMissionData = {
     id: string;
@@ -667,10 +789,25 @@ export function Quests() {
     | { type: 'finance'; data: FinanceMissionData; time: string | null; endTime: string | null };
 
   const allMissions: UnifiedMission[] = [
-    ...workoutMissions.map(m => ({ type: 'workout' as const, data: m, time: m.scheduled_time, endTime: m.scheduled_end_time })),
-    ...mealMissions.map(m => ({ type: 'meal' as const, data: m, time: m.scheduled_time, endTime: m.scheduled_end_time })),
-    ...activeHabits.map(h => ({ type: 'habit' as const, data: h, time: h.scheduled_time ? h.scheduled_time.slice(0, 5) : null, endTime: h.scheduled_end_time ? h.scheduled_end_time.slice(0, 5) : null })),
-    ...activeTasks.map(t => {
+    ...workoutMissions.map((m) => ({
+      type: 'workout' as const,
+      data: m,
+      time: m.scheduled_time,
+      endTime: m.scheduled_end_time,
+    })),
+    ...mealMissions.map((m) => ({
+      type: 'meal' as const,
+      data: m,
+      time: m.scheduled_time,
+      endTime: m.scheduled_end_time,
+    })),
+    ...activeHabits.map((h) => ({
+      type: 'habit' as const,
+      data: h,
+      time: h.scheduled_time ? h.scheduled_time.slice(0, 5) : null,
+      endTime: h.scheduled_end_time ? h.scheduled_end_time.slice(0, 5) : null,
+    })),
+    ...activeTasks.map((t) => {
       const meta = readSingleQuestMeta(t.id);
       return { type: 'task' as const, data: t, time: meta?.due_time ?? null, endTime: null };
     }),
@@ -682,11 +819,11 @@ export function Quests() {
         category: 'FINANÇAS',
         category_color: '#f59e0b',
         xp_reward: 10,
-        completed: hasLoggedFinanceToday
+        completed: hasLoggedFinanceToday,
       },
       time: null,
-      endTime: null
-    }
+      endTime: null,
+    },
   ];
 
   allMissions.sort((a, b) => {
@@ -701,9 +838,22 @@ export function Quests() {
     if (mission.type === 'workout' || mission.type === 'meal') return mission.data.isCompleted;
     return mission.data.completed;
   };
-  const nextMission = allMissions.find(mission => !missionIsDone(mission)) || null;
+
+  const filteredMissions = allMissions.filter((mission) => {
+    const isDone = missionIsDone(mission);
+    if (statusFilter === 'pending' && isDone) return false;
+    if (statusFilter === 'completed' && !isDone) return false;
+    if (typeFilter !== 'all' && mission.type !== typeFilter) return false;
+    return true;
+  });
+
+  const pendingCount = Math.max(0, totalMissions - totalCompleted);
+
+  const nextMission = allMissions.find((mission) => !missionIsDone(mission)) || null;
   const nextMissionTitle = nextMission
-    ? (nextMission.type === 'task' ? nextMission.data.title.replace(/^\[BÔNUS( IA)?\]\s*/, '') : nextMission.data.title)
+    ? nextMission.type === 'task'
+      ? nextMission.data.title.replace(/^\[BÔNUS( IA)?\]\s*/, '')
+      : nextMission.data.title
     : null;
   const nextMissionCategory = nextMission
     ? nextMission.type === 'workout'
@@ -714,20 +864,17 @@ export function Quests() {
     : null;
   const nextMissionXp = nextMission?.data.xp_reward || 0;
   const statAbbreviations: Record<string, string> = {
-        strength: 'FOR',
-        intelligence: 'INT',
-        endurance: 'RES',
-        vitality: 'VIT',
-        discipline: 'DIS',
-        wisdom: 'SAB',
-        balance: 'EQU',
-      };
-  const nextMissionStatTarget = nextMission && 'stat_target' in nextMission.data
-    ? nextMission.data.stat_target
-    : null;
-  const nextMissionStat = nextMissionStatTarget
-    ? statAbbreviations[nextMissionStatTarget]
-    : null;
+    strength: 'FOR',
+    intelligence: 'INT',
+    endurance: 'RES',
+    vitality: 'VIT',
+    discipline: 'DIS',
+    wisdom: 'SAB',
+    balance: 'EQU',
+  };
+  const nextMissionStatTarget =
+    nextMission && 'stat_target' in nextMission.data ? nextMission.data.stat_target : null;
+  const nextMissionStat = nextMissionStatTarget ? statAbbreviations[nextMissionStatTarget] : null;
 
   function handleStartNextMission() {
     if (!nextMission) return;
@@ -743,8 +890,16 @@ export function Quests() {
       navigate('/fortuna');
       return;
     }
-    document.getElementById(`mission-${nextMission.type}-${nextMission.data.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document
+      .getElementById(`mission-${nextMission.type}-${nextMission.data.id}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+
+  // Detecta se há sessão ativa de treino salva localmente para exibir progresso parcial real
+  const hasActiveWorkoutSession =
+    typeof window !== 'undefined' && user?.id
+      ? Boolean(localStorage.getItem(`ascend_active_workout_${user.id}`))
+      : false;
 
   return (
     <>
@@ -777,8 +932,8 @@ export function Quests() {
               stat_reward: input.stat_reward,
               single_meta: {
                 kind: 'single',
-                due_time: input.scheduled_time || undefined
-              }
+                due_time: input.scheduled_time || undefined,
+              },
             };
             const res = await createTask(taskInput);
             if (res && res.error) {
@@ -792,179 +947,263 @@ export function Quests() {
         isEditing={!!editingHabitId}
       />
 
-      <div className="mx-auto max-w-6xl space-y-7">
+      <div className="mx-auto max-w-5xl space-y-5 pb-24">
         {(habitsError || tasksError) && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-xs font-semibold text-rose-200">
-            <span className="font-black uppercase tracking-widest text-rose-400">Falha na sincronizacao: </span>
-            {habitsError || tasksError}
-          </div>
+          <HudCard variant="crimson" className="p-3.5">
+            <p className="text-xs font-semibold text-rose-200">
+              <span className="font-orbitron font-black uppercase tracking-widest text-rose-400">
+                {l('Falha na sincronização: ', 'Synchronization failure: ')}
+              </span>
+              {habitsError || tasksError}
+            </p>
+          </HudCard>
         )}
-        {/* System Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500">
-                Quest Management System
+
+        {/* ── CABEÇALHO HUD v2 (DAILY QUESTS + RANK & XP BAR) ── */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
+                <span className="font-orbitron text-[10px] font-bold uppercase tracking-[0.26em] text-[#00F0FF]">
+                  {l('Protocolo de Missões', 'Quest Management System')}
+                </span>
+              </div>
+              <h1 className="mt-1 font-orbitron text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+                {t('pages.quests')}
+              </h1>
+            </div>
+
+            {/* Mini-HUD de Rank & XP (Mobile visível no topo direito como na referência) */}
+            <div className="flex sm:hidden items-center gap-2.5 rounded-2xl border border-white/10 bg-[var(--hud-surface)] px-3 py-2">
+              <RankBadge rank={hunterProfile.rank} size="sm" showLabel={false} />
+              <div className="min-w-[88px]">
+                <div className="flex items-center justify-between text-[9px] font-orbitron font-bold uppercase tracking-wider text-slate-400">
+                  <span>RANK</span>
+                  <span className="text-[#00F0FF]">LV.{hunterProfile.level}</span>
+                </div>
+                <NeonProgressBar
+                  value={hunterProfile.xp}
+                  max={hunterProfile.xpRequired}
+                  variant="xp"
+                  size="sm"
+                  className="my-1"
+                  ariaLabel="Hunter XP"
+                />
+                <p className="font-orbitron text-[9px] font-bold text-slate-300 tabular-nums">
+                  {hunterProfile.xp.toLocaleString()} / {hunterProfile.xpRequired.toLocaleString()} XP
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Mini-HUD + Botões de Criação */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="hidden sm:flex items-center gap-3 rounded-2xl border border-white/10 bg-[var(--hud-surface)] px-3.5 py-2">
+              <RankBadge rank={hunterProfile.rank} size="sm" showLabel={false} />
+              <div className="w-36">
+                <div className="flex items-center justify-between text-[10px] font-orbitron font-bold uppercase tracking-wider text-slate-400">
+                  <span>RANK</span>
+                  <span className="text-[#00F0FF]">LV. {hunterProfile.level}</span>
+                </div>
+                <NeonProgressBar
+                  value={hunterProfile.xp}
+                  max={hunterProfile.xpRequired}
+                  variant="xp"
+                  size="sm"
+                  className="my-1"
+                  ariaLabel="Hunter XP"
+                />
+                <p className="font-orbitron text-[10px] font-bold text-slate-300 tabular-nums">
+                  {hunterProfile.xp.toLocaleString()} / {hunterProfile.xpRequired.toLocaleString()} XP
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <TacticalButton
+                variant="primary"
+                displayFont
+                onClick={() => setQuestModalOpen(true)}
+                leftIcon={<CalendarDays className="h-4 w-4" />}
+                className="px-3.5 text-xs"
+              >
+                {l('Missão Única', 'One-Time Quest')}
+              </TacticalButton>
+              <TacticalButton
+                variant="secondary"
+                accent="purple"
+                displayFont
+                onClick={() => {
+                  setEditingHabitId(null);
+                  setPresetHabitData(null);
+                  setModalOpen(true);
+                }}
+                leftIcon={<RefreshCw className="h-4 w-4 text-[#A855F7]" />}
+                className="px-3.5 text-xs"
+              >
+                {l('Quest Recorrente', 'Recurring Quest')}
+              </TacticalButton>
+            </div>
+          </div>
+        </header>
+
+        {/* ── PAINEL DE PROGRESSO DIÁRIO (HUDCard + NeonProgressRing) ── */}
+        <HudCard variant="cyan" corners className="p-4 sm:p-6">
+          <div className="mb-3 flex items-center justify-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-[#00F0FF]" />
+            <h2 className="font-orbitron text-xs sm:text-sm font-extrabold uppercase tracking-[0.22em] text-[#00F0FF]">
+              {l('Progresso de Hoje', "Today's Progress")}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-3 items-center gap-2 sm:gap-6">
+            {/* Coluna Esquerda: Daily Streak */}
+            <div className="flex flex-col items-start text-left">
+              <span className="font-orbitron text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                {l('Sequência Diária:', 'Daily Streak:')}
+              </span>
+              <div className="mt-1 flex items-center gap-1.5">
+                <Flame className="h-4 w-4 shrink-0 text-amber-400" />
+                <span className="font-orbitron text-base sm:text-2xl font-black text-white tabular-nums">
+                  {hunterProfile.streak.current} {l('DIAS', 'DAYS')}
+                </span>
+              </div>
+              <span className="mt-1 text-[10px] font-medium text-slate-400">
+                {l('Recorde', 'Best')}: {hunterProfile.streak.best}d
               </span>
             </div>
-            <h1
-              className="text-4xl font-black italic uppercase tracking-tighter text-white"
-              style={{ fontFamily: 'Orbitron, sans-serif' }}
-            >
-              {t('pages.quests')}
-            </h1>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              onClick={() => setQuestModalOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-5 py-3 text-xs font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out hover:bg-cyan-500 hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] cursor-pointer"
-            >
-              <CalendarDays size={17} strokeWidth={3} />
-              Missao Unica
-            </button>
-            <button
-              onClick={() => setModalOpen(true)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-black uppercase italic tracking-widest text-white transition-all duration-150 ease-out hover:bg-blue-500 hover:scale-102 active:scale-98 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] cursor-pointer"
-            >
-              <RefreshCw size={17} strokeWidth={3} />
-              Quest Recorrente
-            </button>
-          </div>
-        </div>
 
-        {/* Global Progress */}
-        <div className="relative overflow-hidden rounded-3xl border border-blue-500/20 bg-[#0F0F13] p-5 shadow-[0_0_26px_rgba(59,130,246,0.07)] sm:p-6">
-          {/* Background Decoration */}
-          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-500/5 blur-3xl" />
-          
-          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-2">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-gray-300">
-                <ShieldCheck size={14} className="text-blue-500" />
-                {l('Status de Hoje', 'Today Status')}
-              </h3>
-              <p className="text-2xl font-black tracking-tight text-white sm:text-3xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {isEnglish
-                  ? `${totalCompleted} of ${totalMissions} ${totalMissions === 1 ? 'quest' : 'quests'} completed`
-                  : `${totalCompleted} de ${totalMissions} missões concluídas`}
-              </p>
-              <p className="text-sm text-gray-400">
-                {progressPct === 100
-                  ? l('Sistema sincronizado. Todas as quests do ciclo foram concluídas.', 'System synchronized. Every quest in this cycle is complete.')
-                  : isEnglish
-                    ? `${Math.round(progressPct)}% of daily quests complete. The System awaits your next action.`
-                    : `${Math.round(progressPct)}% da missão diária. O Sistema aguarda sua próxima ação.`}
-              </p>
+            {/* Coluna Central: NeonProgressRing perfeitamente centralizado */}
+            <div className="flex items-center justify-center">
+              <NeonProgressRing
+                value={progressPct}
+                max={100}
+                size={122}
+                strokeWidth={8}
+                variant="cyan-purple"
+                ariaLabel={l('Progresso diário de missões', 'Daily quests progress')}
+              >
+                <span className="font-orbitron text-lg sm:text-xl font-black leading-none tracking-tight text-white whitespace-nowrap tabular-nums">
+                  {totalCompleted} / {totalMissions}
+                </span>
+                <span className="mt-1.5 font-orbitron text-[11px] font-bold leading-none text-[#00F0FF] whitespace-nowrap tabular-nums">
+                  ({Math.round(progressPct)}%)
+                </span>
+              </NeonProgressRing>
             </div>
-            
-            <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 px-5 py-4 sm:text-right">
-              <p className="text-sm font-semibold text-gray-400">{l('XP acumulado hoje', 'XP earned today')}</p>
-              <p className="mt-1 text-2xl font-black text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.22)]" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                +{hunterProfile.xpGainedToday} / {DAILY_COMMON_XP_EFFECTIVE_MAX} XP
-              </p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                  {l('XP bônus não consome o limite diário', 'Bonus XP does not consume the daily limit')}
-              </p>
+
+            {/* Coluna Direita: XP Acumulado Hoje */}
+            <div className="flex flex-col items-end text-right">
+              <span className="font-orbitron text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                {l('XP Hoje:', 'Status:')}
+              </span>
+              <span className="mt-1 font-orbitron text-base sm:text-2xl font-black text-[#F59E0B] drop-shadow-[0_0_8px_rgba(245,158,11,0.25)] tabular-nums">
+                +{hunterProfile.xpGainedToday} XP
+              </span>
+              <span className="mt-1 text-[10px] font-medium text-slate-400 tabular-nums">
+                {l('Limite', 'Cap')}: {DAILY_COMMON_XP_EFFECTIVE_MAX} XP
+              </span>
             </div>
           </div>
 
-          <div className="mt-6 h-3 w-full overflow-hidden rounded-full bg-black/50 p-0.5">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.8, ease: 'circOut' }}
-              className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-400 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-            />
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-3xl border border-purple-500/25 bg-[#0F0F13] p-5 shadow-[0_0_24px_rgba(168,85,247,0.07)] sm:p-6">
-          <div className="absolute right-0 top-0 h-full w-72 bg-gradient-to-l from-purple-500/10 to-transparent" />
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-purple-500/25 bg-purple-500/10 text-purple-300">
-                <Play className="size-5" fill="currentColor" />
+          {/* Faixa Tática Integrada: Próxima Missão em Foco */}
+          <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#A855F7]/35 bg-[#A855F7]/12 text-[#A855F7]">
+                {nextMission ? <Play className="h-4 w-4" fill="currentColor" /> : <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
               </div>
-              <div>
-                <p className="text-sm font-bold text-purple-300">Próxima missão</p>
-                <h2 className="mt-1 text-xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  {nextMissionTitle || 'Ciclo diário concluído'}
-                </h2>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                  {nextMission ? (
-                    <>
-                      <span className="rounded-lg border border-white/5 bg-white/5 px-3 py-1.5 text-gray-300">
-                        {nextMission.time || 'Sem horário'}
-                      </span>
-                      <span className="rounded-lg border border-white/5 bg-white/5 px-3 py-1.5 text-gray-300">{nextMissionCategory}</span>
-                      {nextMissionXp > 0 && <span className="rounded-lg border border-yellow-500/15 bg-yellow-500/5 px-3 py-1.5 font-bold text-yellow-400">+{nextMissionXp} XP</span>}
-                      {nextMissionStat && <span className="rounded-lg border border-blue-500/15 bg-blue-500/5 px-3 py-1.5 font-bold text-blue-300">{nextMissionStat}</span>}
-                    </>
-                  ) : (
-                    <span className="text-gray-400">O Sistema preparará novas quests no próximo ciclo.</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-orbitron text-[10px] font-bold uppercase tracking-[0.16em] text-[#A855F7]">
+                    {l('Próxima missão', 'Next quest')}
+                  </span>
+                  {nextMission && (
+                    <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-orbitron text-[9px] font-bold text-slate-300">
+                      {nextMission.time || l('Sem horário', 'Anytime')}
+                    </span>
+                  )}
+                  {nextMissionXp > 0 && (
+                    <span className="font-orbitron text-[10px] font-bold text-[#F59E0B]">
+                      +{nextMissionXp} XP
+                    </span>
+                  )}
+                  {nextMissionStat && (
+                    <span className="font-orbitron text-[10px] font-bold text-[#00F0FF]">
+                      +{nextMissionStat}
+                    </span>
                   )}
                 </div>
+                <p className="truncate font-orbitron text-xs sm:text-sm font-bold text-white mt-0.5">
+                  {nextMissionTitle || l('Ciclo diário concluído', 'Daily cycle complete')}
+                </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleStartNextMission}
-              disabled={!nextMission}
-              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 text-sm font-black text-white transition-all hover:bg-purple-500 hover:shadow-[0_0_22px_rgba(168,85,247,0.28)] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Play className="size-4" fill="currentColor" />
-              Iniciar missão
-            </button>
-          </div>
-        </div>
 
-        {/* Navigation Tabs */}
-        <div className="grid grid-cols-1 gap-2 rounded-2xl border border-[#1E1E26] bg-[#0B0B0F] p-2 sm:grid-cols-3">
+            {nextMission && (
+              <button
+                type="button"
+                onClick={handleStartNextMission}
+                className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl border border-[#A855F7]/40 bg-[#A855F7]/15 px-4 font-orbitron text-xs font-bold uppercase tracking-wider text-purple-200 transition-all hover:bg-[#A855F7]/25 active:scale-[0.985]"
+              >
+                <Play className="h-3.5 w-3.5" fill="currentColor" />
+                {l('Iniciar missão', 'Start quest')}
+              </button>
+            )}
+          </div>
+        </HudCard>
+
+        {/* ── NAVEGAÇÃO DE ABAS DO QUADRO DE QUESTS ── */}
+        <div
+          role="tablist"
+          aria-label={l('Seções de Missões', 'Quest Sections')}
+          className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--hud-border)] bg-[#0A0C12] p-1.5"
+        >
           {[
-            { id: 'daily', label: 'Missões Diárias', icon: Sword },
-            { id: 'manage', label: 'Quests Recorrentes', icon: RefreshCw },
-            { id: 'codex', label: 'Códex do Caçador', icon: ScrollText },
-          ].map((t) => {
-            const TabIcon = t.icon;
-            const isActive = tab === t.id;
+            { id: 'daily', label: l('Missões Diárias', 'Daily Quests'), count: totalMissions, icon: Sword },
+            { id: 'manage', label: l('Quests Recorrentes', 'Recurring Quests'), count: habits.length, icon: RefreshCw },
+            { id: 'codex', label: l('Códex do Caçador', 'Hunter Codex'), count: null, icon: ScrollText },
+          ].map((item) => {
+            const TabIcon = item.icon;
+            const isActive = tab === item.id;
             return (
               <button
-                key={t.id}
+                key={item.id}
+                role="tab"
+                aria-selected={isActive}
                 type="button"
-                onClick={() => setTab(t.id as typeof tab)}
-                className={`group relative flex min-h-16 items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-all duration-200 active:scale-[0.99] ${
-                  isActive
-                    ? 'border-blue-500/40 bg-blue-500/10 text-blue-200 shadow-[0_0_22px_rgba(59,130,246,0.12)]'
-                    : 'border-transparent bg-white/[0.025] text-gray-500 hover:border-white/10 hover:bg-white/[0.045] hover:text-gray-200'
-                }`}
+                onClick={() => setTab(item.id as typeof tab)}
+                className={`group relative flex min-h-[48px] items-center justify-center gap-2 overflow-hidden rounded-xl border px-2.5 py-2 text-center transition-all duration-200 active:scale-[0.99] ${isActive
+                    ? 'border-[#00F0FF]/45 bg-[#00F0FF]/12 text-white shadow-[0_0_18px_rgba(0,240,255,0.12)]'
+                    : 'border-transparent bg-white/[0.02] text-slate-400 hover:border-white/10 hover:text-slate-200'
+                  }`}
               >
-                <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl border transition-all ${
-                  isActive
-                    ? 'border-blue-400/25 bg-blue-500/15 text-blue-300 shadow-[0_0_14px_rgba(59,130,246,0.16)]'
-                    : 'border-white/5 bg-black/20 text-gray-600 group-hover:border-white/10 group-hover:text-gray-400'
-                }`}>
-                  <TabIcon className="size-5" strokeWidth={2.2} />
+                <TabIcon className={`h-4 w-4 shrink-0 ${isActive ? 'text-[#00F0FF]' : 'text-slate-500'}`} />
+                <span className="truncate font-orbitron text-[10px] sm:text-xs font-extrabold uppercase tracking-wider">
+                  {item.label}
                 </span>
-                <span className="text-sm font-black" style={{ fontFamily: 'Orbitron, sans-serif' }}>{t.label}</span>
-                {isActive && (
-                  <motion.span
-                    layoutId="quest-tab-active"
-                    className="absolute inset-x-4 bottom-0 h-px rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.75)]"
-                  />
+                {item.count !== null && (
+                  <span
+                    className={`hidden md:inline-flex items-center justify-center rounded-full px-1.5 py-0.5 font-orbitron text-[9px] font-bold ${isActive ? 'bg-[#00F0FF]/20 text-[#00F0FF]' : 'bg-white/5 text-slate-400'
+                      }`}
+                  >
+                    {item.count}
+                  </span>
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* Content Area */}
-        <div className="min-h-[400px]">
+        {/* ── ÁREA DE CONTEÚDO ── */}
+        <div className="min-h-[360px]">
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-20 animate-pulse rounded-xl bg-[#0F0F13] border border-[#1E1E26]/50" />
+                <div
+                  key={i}
+                  className="h-24 animate-pulse rounded-2xl border border-white/10 bg-[var(--hud-surface)]"
+                />
               ))}
             </div>
           ) : (
@@ -972,118 +1211,190 @@ export function Quests() {
               {tab === 'daily' ? (
                 <motion.div
                   key="daily-list"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  exit={{ opacity: 0, y: -8 }}
                   className="space-y-4"
                 >
+                  {/* Barra Compacta de Filtros Rápidos (Status & Categorias) */}
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                    {/* Filtro de Status */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                      <Filter className="mr-1 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      {[
+                        { id: 'all', label: l('Todas', 'All'), count: totalMissions },
+                        { id: 'pending', label: l('Pendentes', 'Pending'), count: pendingCount },
+                        { id: 'completed', label: l('Concluídas', 'Completed'), count: totalCompleted },
+                      ].map((f) => {
+                        const active = statusFilter === f.id;
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setStatusFilter(f.id as typeof statusFilter)}
+                            className={`inline-flex min-h-[38px] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider transition-all ${active
+                                ? 'border-[#00F0FF]/45 bg-[#00F0FF]/12 text-[#00F0FF]'
+                                : 'border-white/8 bg-[var(--hud-surface)] text-slate-400 hover:border-white/20 hover:text-white'
+                              }`}
+                          >
+                            <span>{f.label}</span>
+                            <span className="rounded-md bg-black/40 px-1.5 py-0.5 text-[9px] tabular-nums">
+                              {f.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Filtro por Tipo de Atividade */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                      {[
+                        { id: 'all', label: l('Todos Tipos', 'All Types') },
+                        { id: 'habit', label: l('Hábitos', 'Habits') },
+                        { id: 'task', label: l('Únicas', 'One-Time') },
+                        { id: 'workout', label: l('Treino', 'Workouts') },
+                        { id: 'meal', label: l('Nutrição', 'Meals') },
+                        { id: 'finance', label: l('Finanças', 'Finance') },
+                      ].map((tf) => {
+                        const active = typeFilter === tf.id;
+                        return (
+                          <button
+                            key={tf.id}
+                            type="button"
+                            onClick={() => setTypeFilter(tf.id as typeof typeFilter)}
+                            className={`min-h-[36px] shrink-0 rounded-xl border px-2.5 py-1 text-xs font-semibold transition-all ${active
+                                ? 'border-[#A855F7]/50 bg-[#A855F7]/15 text-purple-200'
+                                : 'border-white/8 bg-white/[0.02] text-slate-400 hover:border-white/15 hover:text-slate-200'
+                              }`}
+                          >
+                            {tf.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Banner Compacto de Meta Calórica do Dia */}
                   {(mealMissions.length > 0 || nutritionTargets.targetCalories) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`relative overflow-hidden rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${
-                        caloriesExceeded
-                          ? 'border-2 border-red-500 bg-red-500/15 shadow-[0_0_24px_rgba(239,68,68,0.2)]'
-                          : 'border-orange-500/30 bg-orange-500/5 shadow-[0_0_20px_rgba(249,115,22,0.08)]'
-                      }`}
+                    <HudCard
+                      variant={caloriesExceeded ? 'crimson' : 'gold'}
+                      className="p-3.5 sm:p-4"
                     >
-                      <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-2xl" />
-                      <div className="relative flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
-                          {caloriesExceeded ? <AlertTriangle size={20} className="text-red-400" /> : <UtensilsCrossed size={20} className="animate-pulse" />}
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-400">
+                            {caloriesExceeded ? (
+                              <AlertTriangle size={18} className="text-red-400" />
+                            ) : (
+                              <UtensilsCrossed size={18} />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-orbitron text-xs font-black uppercase tracking-[0.14em] text-white">
+                              {l('Meta Calórica do Dia', 'Daily Calorie Target')}
+                            </h4>
+                            <p className="mt-0.5 text-xs text-slate-400">
+                              {caloriesExceeded
+                                ? `ATENÇÃO: limite excedido em ${Math.round(calorieExcess)} kcal. Consumido: ${Math.round(caloriesLoggedToday)} kcal.`
+                                : nutritionTargets.targetCalories
+                                  ? `Objetivo: ${nutritionTargets.goalLabel}. Alvo de ${nutritionTargets.targetCalories} kcal com tolerancia diaria.`
+                                  : `Faltam no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados fisicos'}.`}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-black uppercase text-white tracking-[0.15em] font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            Meta Calorica do Dia
-                          </h4>
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                            {caloriesExceeded
-                              ? `ATENÇÃO: limite excedido em ${Math.round(calorieExcess)} kcal. Consumido: ${Math.round(caloriesLoggedToday)} kcal.`
-                              : nutritionTargets.targetCalories
-                              ? `Objetivo: ${nutritionTargets.goalLabel}. Alvo de ${nutritionTargets.targetCalories} kcal com tolerancia diaria.`
-                              : `Faltam no perfil: ${nutritionTargets.missingFields.join(', ') || 'dados fisicos'}.`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="relative flex items-center gap-3 bg-black/40 border border-[#1E1E26] rounded-xl px-4 py-2 shrink-0 justify-between sm:w-auto w-full">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Calorias:</span>
-                        <span className="text-xs font-black text-orange-500 font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                          {nutritionTargets.targetCalories
-                            ? `${Math.round(caloriesLoggedToday)} / ${nutritionTargets.targetCalories}`
-                            : `${Math.round(caloriesLoggedToday)} / --`}
-                        </span>
-                        {caloriesExceeded ? (
-                          <span className="rounded-lg border border-red-500/50 bg-red-500/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-red-300">
-                            EXCEDIDO
+
+                        <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-3.5 py-2 sm:justify-end">
+                          <span className="font-orbitron text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            {l('Calorias:', 'Calories:')}
                           </span>
-                        ) : nutritionTargets.targetCalories && Math.abs(caloriesLoggedToday - nutritionTargets.targetCalories) <= (nutritionTargets.toleranceCalories ?? 0) ? (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-green-400 border border-green-500/30 bg-green-500/10 px-2 py-0.5 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.15)]">NO ALVO</span>
-                        ) : (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 bg-white/5 px-2 py-0.5 rounded-lg">PENDENTE</span>
-                        )}
+                          <span className="font-orbitron text-xs font-black text-amber-400 tabular-nums">
+                            {nutritionTargets.targetCalories
+                              ? `${Math.round(caloriesLoggedToday)} / ${nutritionTargets.targetCalories}`
+                              : `${Math.round(caloriesLoggedToday)} / --`}
+                          </span>
+                          {caloriesExceeded ? (
+                            <span className="rounded-md border border-red-500/50 bg-red-500/20 px-2 py-0.5 font-orbitron text-[9px] font-black uppercase text-red-300">
+                              EXCEDIDO
+                            </span>
+                          ) : nutritionTargets.targetCalories &&
+                            Math.abs(caloriesLoggedToday - nutritionTargets.targetCalories) <=
+                            (nutritionTargets.toleranceCalories ?? 0) ? (
+                            <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-orbitron text-[9px] font-black uppercase text-emerald-400">
+                              NO ALVO
+                            </span>
+                          ) : (
+                            <span className="rounded-md bg-white/5 px-2 py-0.5 font-orbitron text-[9px] font-bold uppercase text-slate-400">
+                              PENDENTE
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </motion.div>
+                    </HudCard>
                   )}
-                  {/* BANNER DO PROTOCOLO DE NUTRIÇÃO CONSOLIDADA */}
+
                   {legacyMealBannerVisible && mealMissions.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="relative overflow-hidden rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-[0_0_20px_rgba(249,115,22,0.08)]"
-                    >
-                      {/* Efeito Glow Laranja Cyberpunk */}
-                      <div className="absolute -right-16 -top-16 h-36 w-36 rounded-full bg-orange-500/10 blur-2xl" />
-                      
-                      <div className="relative flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
-                          <UtensilsCrossed size={20} className="animate-pulse" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-black uppercase text-white tracking-[0.15em] font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            Protocolo de Nutrição Consolidada
-                          </h4>
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                            Conclua todas as refeições do dia para receber <span className="text-yellow-500 font-black">+50 XP</span> e <span className="text-orange-400 font-black">+2 Vitalidade</span>.
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="relative flex items-center gap-3 bg-black/40 border border-[#1E1E26] rounded-xl px-4 py-2 shrink-0 justify-between sm:w-auto w-full">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Refeições:</span>
-                        <span className="text-xs font-black text-orange-500 font-orbitron" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                          {mealMissions.filter(m => m.isCompleted).length} <span className="text-gray-600">/</span> {mealMissions.length}
+                    <HudCard variant="gold" className="p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-orbitron text-xs font-bold uppercase text-white">
+                          Protocolo de Nutrição Consolidada
                         </span>
-                        {mealMissions.filter(m => m.isCompleted).length === mealMissions.length ? (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-green-400 border border-green-500/30 bg-green-500/10 px-2 py-0.5 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.15)]">ATIVADO</span>
-                        ) : (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 bg-white/5 px-2 py-0.5 rounded-lg">PENDENTE</span>
-                        )}
+                        <span className="font-orbitron text-xs font-black text-amber-400">
+                          {mealMissions.filter((m) => m.isCompleted).length} / {mealMissions.length}
+                        </span>
                       </div>
-                    </motion.div>
+                    </HudCard>
                   )}
 
                   {/* LISTAGEM DE MISSÕES DIÁRIAS */}
-                  {allMissions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <div className="mb-4 rounded-full bg-blue-500/5 p-8">
-                        <ScrollText size={64} className="text-gray-800" />
+                  {filteredMissions.length === 0 ? (
+                    <HudCard variant="default" className="py-12 text-center">
+                      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-500">
+                        <ScrollText size={28} />
                       </div>
-                      <h3 className="text-lg font-bold text-white uppercase italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        Nenhuma Quest Ativa
+                      <h3 className="font-orbitron text-base font-black uppercase text-white">
+                        {allMissions.length === 0
+                          ? l('Nenhuma Quest Ativa', 'No Active Quests')
+                          : l('Nenhuma missão neste filtro', 'No quests match this filter')}
                       </h3>
-                      <p className="mt-2 max-w-xs text-sm text-gray-500 uppercase tracking-widest">
-                        O sistema não detectou missões. Defina seus objetivos para começar.
+                      <p className="mx-auto mt-1.5 max-w-xs text-xs text-slate-400">
+                        {allMissions.length === 0
+                          ? l(
+                            'O sistema não detectou missões. Defina seus objetivos para começar.',
+                            'The System detected no quests. Define your objectives to begin.'
+                          )
+                          : l(
+                            'Altere o filtro acima ou registre uma nova missão para hoje.',
+                            'Change the filter above or create a new quest for today.'
+                          )}
                       </p>
-                      <button
-                        onClick={() => setModalOpen(true)}
-                        className="mt-6 text-[11px] font-black uppercase tracking-widest text-blue-500 hover:underline"
-                      >
-                        + INICIAR SEQUÊNCIA DE MISSÕES
-                      </button>
-                    </div>
+                      <div className="mt-5 flex justify-center gap-2.5">
+                        {allMissions.length > 0 && (statusFilter !== 'all' || typeFilter !== 'all') ? (
+                          <TacticalButton
+                            variant="secondary"
+                            accent="cyan"
+                            displayFont
+                            onClick={() => {
+                              setStatusFilter('all');
+                              setTypeFilter('all');
+                            }}
+                          >
+                            {l('Limpar Filtros', 'Clear Filters')}
+                          </TacticalButton>
+                        ) : (
+                          <TacticalButton
+                            variant="primary"
+                            displayFont
+                            onClick={() => setModalOpen(true)}
+                            leftIcon={<Plus size={16} />}
+                          >
+                            {l('Iniciar Sequência de Missões', 'Start Quest Sequence')}
+                          </TacticalButton>
+                        )}
+                      </div>
+                    </HudCard>
                   ) : (
-                    <>
-                      {allMissions.map((mission) => {
+                    <div className="space-y-3">
+                      {filteredMissions.map((mission) => {
                         if (mission.type === 'workout') {
                           const m = mission.data;
                           return (
@@ -1092,15 +1403,22 @@ export function Quests() {
                               id={m.routine_id}
                               type="workout"
                               title={m.title}
-                              category="TREINO"
-                              categoryColor="#A855F7" // purple-500
+                              category={l('TREINO', 'WORKOUT')}
+                              categoryColor="#A855F7"
                               xpReward={m.xp_reward || 50}
-                              statLabel={m.stat_target ? `+${m.stat_reward} ${m.stat_target === 'strength' ? 'FORÇA' : 'RESISTÊNCIA'}` : undefined}
+                              statLabel={
+                                m.stat_target
+                                  ? `+${m.stat_reward} ${m.stat_target === 'strength' ? 'FORÇA' : 'RESISTÊNCIA'}`
+                                  : undefined
+                              }
                               done={m.isCompleted}
                               startTime={mission.time}
                               endTime={mission.endTime}
+                              partialProgressPct={!m.isCompleted && hasActiveWorkoutSession ? 50 : null}
                               onToggle={() => navigate('/workouts')}
+                              onOpenModule={() => navigate('/workouts')}
                               onUpdateTime={handleUpdateTime}
+                              isEnglish={isEnglish}
                             />
                           );
                         } else if (mission.type === 'finance') {
@@ -1124,7 +1442,7 @@ export function Quests() {
                                 const todayYYYYMMDD = startIso.split('T')[0];
                                 const noTxKey = `ascend_finance_no_tx_${user.id}_${todayYYYYMMDD}`;
                                 const isCurrentlyNoTx = localStorage.getItem(noTxKey) === 'true';
-                                
+
                                 if (isCurrentlyNoTx) {
                                   localStorage.removeItem(noTxKey);
                                   setHasLoggedFinanceToday(false);
@@ -1142,10 +1460,14 @@ export function Quests() {
                                     .eq('user_id', user.id)
                                     .eq('date', todayYYYYMMDD);
                                   if (data && data.length > 0) {
-                                    alert(isEnglish ? 'You already have transactions registered today!' : 'Você já possui transações registradas hoje!');
+                                    alert(
+                                      isEnglish
+                                        ? 'You already have transactions registered today!'
+                                        : 'Você já possui transações registradas hoje!'
+                                    );
                                     return;
                                   }
-                                  
+
                                   localStorage.setItem(noTxKey, 'true');
                                   setHasLoggedFinanceToday(true);
                                   const xpKey = `ascend_finance_no_tx_xp_${user.id}_${todayYYYYMMDD}`;
@@ -1157,7 +1479,9 @@ export function Quests() {
                                   }
                                 }
                               }}
+                              onOpenModule={() => navigate('/fortuna')}
                               onUpdateTime={handleUpdateTime}
+                              isEnglish={isEnglish}
                             />
                           );
                         } else if (mission.type === 'meal') {
@@ -1169,14 +1493,17 @@ export function Quests() {
                               type="meal"
                               title={m.title}
                               category={m.totalKcal > 0 ? `${m.totalKcal} KCAL` : 'ALIMENTAÇÃO'}
-                              categoryColor="#F97316" // orange-500
-                              xpReward={0}
+                              categoryColor="#F97316"
+                              xpReward={m.xp_reward || 0}
                               statLabel={undefined}
                               done={m.isCompleted}
                               startTime={mission.time}
                               endTime={mission.endTime}
+                              partialProgressPct={!m.isCompleted ? calorieProgressPct : null}
                               onToggle={(id) => toggleMealMission(id)}
+                              onOpenModule={() => navigate('/nutrition')}
                               onUpdateTime={handleUpdateTime}
+                              isEnglish={isEnglish}
                             />
                           );
                         } else if (mission.type === 'task') {
@@ -1186,9 +1513,13 @@ export function Quests() {
                             endurance: 'RESISTÊNCIA',
                             intelligence: 'INTELIGÊNCIA',
                             discipline: 'DISCIPLINA',
-                            vitality: 'VITALIDADE'
+                            vitality: 'VITALIDADE',
+                            wisdom: 'SABEDORIA',
+                            balance: 'EQUILÍBRIO',
                           };
-                          const label = t.stat_target ? `+${t.stat_reward} ${statLabels[t.stat_target] || t.stat_target.toUpperCase()}` : undefined;
+                          const label = t.stat_target
+                            ? `+${t.stat_reward} ${statLabels[t.stat_target] || t.stat_target.toUpperCase()}`
+                            : undefined;
 
                           return (
                             <MissionCard
@@ -1212,6 +1543,7 @@ export function Quests() {
                               }}
                               onUpdateTime={handleUpdateTime}
                               onDelete={deleteTask}
+                              isEnglish={isEnglish}
                             />
                           );
                         } else {
@@ -1225,34 +1557,46 @@ export function Quests() {
                               category={h.category}
                               categoryColor={h.category_color}
                               xpReward={h.xp_reward}
-                              statLabel={h.stat_target ? `+${h.stat_reward} ${h.stat_target}` : undefined}
+                              statLabel={h.stat_target ? `+${h.stat_reward} ${statAbbreviations[h.stat_target] || h.stat_target}` : undefined}
                               isOptional={h.is_optional}
                               done={completedToday.has(h.id)}
                               startTime={mission.time}
                               endTime={mission.endTime}
                               onToggle={(id) => toggleCompletion(id)}
                               onUpdateTime={handleUpdateTime}
+                              isEnglish={isEnglish}
                             />
                           );
                         }
                       })}
-                    </>
+                    </div>
                   )}
                 </motion.div>
               ) : tab === 'manage' ? (
                 <motion.div
                   key="manage-list"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  exit={{ opacity: 0, y: -8 }}
                   className="space-y-3"
                 >
                   {habits.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                      <p className="text-sm text-gray-500 uppercase tracking-widest italic">
-                        Banco de dados vazio.
+                    <HudCard variant="default" className="py-14 text-center">
+                      <p className="font-orbitron text-xs font-bold uppercase tracking-widest text-slate-400">
+                        {l('Banco de dados vazio.', 'No recurring habits configured.')}
                       </p>
-                    </div>
+                      <div className="mt-4 flex justify-center">
+                        <TacticalButton
+                          variant="secondary"
+                          accent="purple"
+                          displayFont
+                          onClick={() => setModalOpen(true)}
+                          leftIcon={<Plus size={16} />}
+                        >
+                          {l('Criar Primeiro Hábito', 'Create First Habit')}
+                        </TacticalButton>
+                      </div>
+                    </HudCard>
                   ) : (
                     habits.map((h) => (
                       <ManageQuestRow
@@ -1261,6 +1605,7 @@ export function Quests() {
                         onDelete={deleteHabit}
                         onToggleActive={toggleActive}
                         onUpdateScheduledDays={updateScheduledDays}
+                        isEnglish={isEnglish}
                         onEdit={(habit) => {
                           setEditingHabitId(habit.id);
                           setPresetHabitData({
@@ -1284,27 +1629,24 @@ export function Quests() {
               ) : (
                 <motion.div
                   key="codex-tab"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
+                  exit={{ opacity: 0, y: -8 }}
+                  className="space-y-5"
                 >
-                  <div className="relative w-full overflow-hidden rounded-3xl border border-blue-500/25 bg-[#101016] p-6 shadow-[0_0_26px_rgba(59,130,246,0.07)] sm:p-8">
-                    <div className="absolute right-0 top-0 h-full w-80 bg-gradient-to-l from-blue-500/10 to-transparent" />
-                    <div className="absolute inset-x-12 bottom-0 h-px bg-gradient-to-r from-transparent via-blue-400/35 to-transparent" />
-                    
-                    <div className="relative flex flex-col gap-5 md:flex-row md:items-start">
-                      <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-blue-500/25 bg-blue-500/10 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.16)]">
-                        <ScrollText className="size-8" strokeWidth={1.8} />
+                  <HudCard variant="cyan" corners className="p-5 sm:p-6">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                      <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-[#00F0FF]/30 bg-[#00F0FF]/10 text-[#00F0FF] shadow-[0_0_20px_rgba(0,240,255,0.16)]">
+                        <ScrollText className="size-7" strokeWidth={1.8} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h2 className="text-xl font-black uppercase text-white sm:text-2xl" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                        <h2 className="font-orbitron text-lg font-black uppercase text-white sm:text-xl">
                           {l('Diretrizes do Códex', 'Codex Guidelines')}
                         </h2>
-                        <p className="mt-1 text-sm font-semibold text-blue-300">
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-[#00F0FF]">
                           {l('Protocolo de calibração dos atributos do Caçador', 'Hunter attribute calibration protocol')}
                         </p>
-                        <p className="mt-4 text-sm leading-7 text-gray-300 sm:text-[15px]">
+                        <p className="mt-3 text-sm leading-relaxed text-slate-300">
                           {l(
                             'O Códex define como cada hábito, missão e atividade diária impacta sua evolução. Cada ação concluída recalibra seus atributos, fortalece seus domínios e registra progresso no Sistema. Mantenha a disciplina ativa para desbloquear novos títulos, recompensas e níveis de Caçador.',
                             'The Codex defines how each habit, quest, and daily activity impacts your evolution. Every completed action recalibrates your attributes, strengthens your domains, and records progress in the System. Keep discipline active to unlock new Hunter titles, rewards, and levels.'
@@ -1312,30 +1654,41 @@ export function Quests() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </HudCard>
 
                   <div className="space-y-3">
-                    {CODEX_CATEGORIES.map(group => {
+                    {CODEX_CATEGORIES.map((group) => {
                       const GroupIcon = group.icon;
                       const isOpen = openCodexCategory === group.category;
                       return (
-                        <div key={group.category} className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] transition-colors hover:border-blue-500/20">
+                        <HudCard key={group.category} variant="default" noPadding className="overflow-hidden">
                           <button
                             type="button"
                             onClick={() => setOpenCodexCategory(isOpen ? '' : group.category)}
-                            className="flex w-full items-center gap-4 p-5 text-left"
+                            className="flex w-full items-center gap-4 p-4 sm:p-5 text-left transition-colors hover:bg-white/[0.02]"
                             aria-expanded={isOpen}
                           >
-                            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/5 bg-white/5" style={{ color: group.color }}>
+                            <span
+                              className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+                              style={{ color: group.color }}
+                            >
                               <GroupIcon className="size-5" />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block text-base font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>{tx(group.category)}</span>
-                              <span className="mt-1 block text-sm text-gray-500">
-                                {group.entries.length} {group.entries.length === 1 ? l('diretriz disponível', 'directive available') : l('diretrizes disponíveis', 'directives available')}
+                              <span className="block font-orbitron text-sm sm:text-base font-black text-white">
+                                {tx(group.category)}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-slate-400">
+                                {group.entries.length}{' '}
+                                {group.entries.length === 1
+                                  ? l('diretriz disponível', 'directive available')
+                                  : l('diretrizes disponíveis', 'directives available')}
                               </span>
                             </span>
-                            <ChevronDown className={`size-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180 text-blue-400' : ''}`} />
+                            <ChevronDown
+                              className={`size-5 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-[#00F0FF]' : ''
+                                }`}
+                            />
                           </button>
 
                           <AnimatePresence initial={false}>
@@ -1346,24 +1699,40 @@ export function Quests() {
                                 exit={{ height: 0, opacity: 0 }}
                                 className="overflow-hidden"
                               >
-                                <div className="grid gap-3 border-t border-[#1E1E26] p-4 lg:grid-cols-2">
-                                  {group.entries.map(entry => {
+                                <div className="grid gap-3 border-t border-white/10 p-4 lg:grid-cols-2">
+                                  {group.entries.map((entry) => {
                                     const EntryIcon = entry.icon;
                                     return (
-                                      <div key={entry.activity} className="rounded-xl border border-white/5 bg-black/20 p-4 transition-colors hover:border-white/10 hover:bg-white/[0.035]">
+                                      <div
+                                        key={entry.activity}
+                                        className="rounded-xl border border-white/8 bg-black/30 p-4 transition-colors hover:border-white/15"
+                                      >
                                         <div className="flex items-start gap-3">
-                                          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5" style={{ color: entry.iconColor }}>
+                                          <span
+                                            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/5"
+                                            style={{ color: entry.iconColor }}
+                                          >
                                             <EntryIcon className="size-4" />
                                           </span>
                                           <div className="min-w-0">
                                             <h3 className="text-sm font-bold text-white">{tx(entry.activity)}</h3>
-                                            <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{tx(entry.lore)}</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                                              {tx(entry.lore)}
+                                            </p>
                                           </div>
                                         </div>
-                                        <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-                                          <span className={`rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5 ${entry.statColor}`}>{tx(entry.stat)}</span>
-                                          <span className="rounded-lg border border-blue-500/15 bg-blue-500/5 px-2.5 py-1.5 text-blue-300">{entry.statBonus}</span>
-                                          <span className="rounded-lg border border-yellow-500/15 bg-yellow-500/5 px-2.5 py-1.5 text-yellow-400">{entry.xp}</span>
+                                        <div className="mt-3.5 flex flex-wrap gap-2 text-xs font-semibold">
+                                          <span
+                                            className={`rounded-lg border border-white/8 bg-white/5 px-2.5 py-1 ${entry.statColor}`}
+                                          >
+                                            {tx(entry.stat)}
+                                          </span>
+                                          <span className="rounded-lg border border-[#00F0FF]/20 bg-[#00F0FF]/8 px-2.5 py-1 font-orbitron text-[11px] text-[#00F0FF]">
+                                            {entry.statBonus}
+                                          </span>
+                                          <span className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 font-orbitron text-[11px] text-[#F59E0B]">
+                                            {entry.xp}
+                                          </span>
                                         </div>
                                         <button
                                           type="button"
@@ -1376,10 +1745,12 @@ export function Quests() {
                                               setModalOpen(true);
                                             }
                                           }}
-                                          className="mt-4 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 text-sm font-bold text-blue-300 transition-all hover:border-blue-500/40 hover:bg-blue-500/10 hover:text-white"
+                                          className="mt-4 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#00F0FF]/30 bg-[#00F0FF]/10 px-4 font-orbitron text-xs font-bold uppercase tracking-wider text-[#00F0FF] transition-all hover:bg-[#00F0FF]/20 active:scale-[0.985]"
                                         >
                                           {entry.route ? <Sword className="size-4" /> : <Plus className="size-4" />}
-                                          {entry.route ? l('Abrir módulo', 'Open module') : l('Criar quest', 'Create quest')}
+                                          {entry.route
+                                            ? l('Abrir módulo', 'Open module')
+                                            : l('Criar quest', 'Create quest')}
                                         </button>
                                       </div>
                                     );
@@ -1388,512 +1759,28 @@ export function Quests() {
                               </motion.div>
                             )}
                           </AnimatePresence>
-                        </div>
+                        </HudCard>
                       );
                     })}
                   </div>
 
-                  {legacyCodexVisible && (
-                  <div className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13]">
-                    {/* ── Visualização em Tabela para Desktop (Oculta no mobile) ── */}
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="border-b border-[#1E1E26] bg-white/5">
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Atividade / Hábito</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Atributo RPG</th>
-                            <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-gray-400">Recompensa</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400 hidden lg:table-cell">Efeito Lore</th>
-                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-gray-400 w-[160px]">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#1E1E26]">
-                          {[
-                            {
-                              activity: 'Refeições Saudáveis',
-                              icon: UtensilsCrossed,
-                              iconColor: '#F97316',
-                              stat: 'Vitalidade (VIT)',
-                              statColor: 'text-orange-400',
-                              xp: '+15 XP',
-                              lore: 'Acelera a regeneração celular e a imunidade biológica.',
-                              statBonus: '+1 VIT',
-                              isModule: true,
-                              route: '/nutrition'
-                            },
-                            {
-                              activity: 'Treino de Força',
-                              icon: Dumbbell,
-                              iconColor: '#A855F7',
-                              stat: 'Força (FOR)',
-                              statColor: 'text-red-400',
-                              xp: '+30 XP',
-                              lore: 'Eleva o dano físico bruto e a densidade miofibrilar.',
-                              statBonus: '+2 FOR',
-                              isModule: true,
-                              route: '/workouts'
-                            },
-                            {
-                              activity: 'Cardio',
-                              icon: Heart,
-                              iconColor: '#EF4444',
-                              stat: 'Resistência (RES)',
-                              statColor: 'text-green-400',
-                              xp: '+25 XP',
-                              lore: 'Otimiza o fluxo de oxigênio e a capacidade cardiovascular.',
-                              statBonus: '+2 RES',
-                              isModule: true,
-                              route: '/workouts'
-                            },
-                            {
-                              activity: 'Trabalhar (Foco Diário)',
-                              icon: Briefcase,
-                              iconColor: '#06B6D4',
-                              stat: 'Disciplina (DIS)',
-                              statColor: 'text-purple-400',
-                              xp: '+25 XP',
-                              lore: 'Fortalece a constância profissional e a entrega sob pressão.',
-                              statBonus: '+1 DIS',
-                              isModule: false,
-                              preset: {
-                                title: 'Trabalhar (Foco Máximo)',
-                                category: 'Trabalho',
-                                category_color: '#06B6D4',
-                                xp_reward: 25,
-                                stat_target: 'discipline' as const,
-                                stat_reward: 1
-                              }
-                            },
-                            {
-                              activity: 'Trabalho Extra / Freelance',
-                              icon: Briefcase,
-                              iconColor: '#FBBF24',
-                              stat: 'Disciplina (DIS)',
-                              statColor: 'text-purple-400',
-                              xp: '+40 XP',
-                              lore: 'Esforço adicional que eleva sua autonomia financeira e resiliência.',
-                              statBonus: '+2 DIS',
-                              isModule: false,
-                              preset: {
-                                title: 'Trabalho Extra / Freelance',
-                                category: 'Trabalho',
-                                category_color: '#FBBF24',
-                                xp_reward: 40,
-                                stat_target: 'discipline' as const,
-                                stat_reward: 2
-                              }
-                            },
-                            {
-                              activity: 'Aprender Idiomas',
-                              icon: Languages,
-                              iconColor: '#3B82F6',
-                              stat: 'Inteligência (INT)',
-                              statColor: 'text-cyan-400',
-                              xp: '+25 XP',
-                              lore: 'Quebra barreiras linguísticas e expande a plasticidade cerebral.',
-                              statBonus: '+2 INT',
-                              isModule: false,
-                              preset: {
-                                title: 'Estudar Novo Idioma',
-                                category: 'Estudo',
-                                category_color: '#3B82F6',
-                                xp_reward: 25,
-                                stat_target: 'intelligence' as const,
-                                stat_reward: 2
-                              }
-                            },
-                            {
-                              activity: 'Leitura',
-                              icon: BookOpen,
-                              iconColor: '#3B82F6',
-                              stat: 'Inteligência (INT)',
-                              statColor: 'text-cyan-400',
-                              xp: '+25 XP',
-                              lore: 'Amplia a capacidade cognitiva e a velocidade de foco.',
-                              statBonus: '+2 INT',
-                              isModule: false,
-                              preset: {
-                                title: 'Ler 30 minutos',
-                                category: 'Estudo',
-                                category_color: '#3B82F6',
-                                xp_reward: 25,
-                                stat_target: 'intelligence' as const,
-                                stat_reward: 2
-                              }
-                            },
-                            {
-                              activity: 'Programação & Tech',
-                              icon: Code,
-                              iconColor: '#10B981',
-                              stat: 'Inteligência (INT)',
-                              statColor: 'text-cyan-400',
-                              xp: '+30 XP',
-                              lore: 'Fortalece o raciocínio sistêmico e solução de problemas.',
-                              statBonus: '+2 INT',
-                              isModule: false,
-                              preset: {
-                                title: 'Programação & Tech',
-                                category: 'Estudo',
-                                category_color: '#10B981',
-                                xp_reward: 30,
-                                stat_target: 'intelligence' as const,
-                                stat_reward: 2
-                              }
-                            },
-                            {
-                              activity: 'Tocar Instrumentos',
-                              icon: Music,
-                              iconColor: '#EC4899',
-                              stat: 'Vitalidade (VIT)',
-                              statColor: 'text-orange-400',
-                              xp: '+20 XP',
-                              lore: 'Expressão artística e reequilíbrio da harmonia mental do caçador.',
-                              statBonus: '+2 VIT',
-                              isModule: false,
-                              preset: {
-                                title: 'Tocar Instrumento / Música',
-                                category: 'Hobbies',
-                                category_color: '#EC4899',
-                                xp_reward: 20,
-                                stat_target: 'vitality' as const,
-                                stat_reward: 2
-                              }
-                            },
-                            {
-                              activity: 'Deveres Gerais (Tasks)',
-                              icon: Award,
-                              iconColor: '#F59E0B',
-                              stat: 'Disciplina (DIS)',
-                              statColor: 'text-purple-400',
-                              xp: '+15 a +30 XP',
-                              lore: 'Reforça a constância diária e a fortitude mental.',
-                              statBonus: '+1 DIS',
-                              isModule: false,
-                              preset: {
-                                title: 'Deveres Gerais',
-                                category: 'Rotina',
-                                category_color: '#F59E0B',
-                                xp_reward: 15,
-                                stat_target: 'discipline' as const,
-                                stat_reward: 1
-                              }
-                            }
-                          ].map((row, idx) => {
-                            const RowIcon = row.icon;
-                            return (
-                              <tr key={idx} className="group hover:bg-white/5 transition-colors">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 transition-colors group-hover:bg-white/10" style={{ color: row.iconColor }}>
-                                      <RowIcon size={16} />
-                                    </div>
-                                    <span className="font-bold text-white uppercase text-xs tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                      {row.activity}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <div className="flex flex-col">
-                                    <span className={`text-xs font-bold uppercase tracking-wider ${row.statColor}`}>
-                                      {row.stat}
-                                    </span>
-                                    <span className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">
-                                      {row.statBonus}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  <span className="inline-flex items-center gap-1 rounded bg-yellow-500/10 px-2 py-1 text-xs font-bold text-yellow-500 uppercase tracking-widest border border-yellow-500/20">
-                                    <Zap size={10} fill="currentColor" />
-                                    {row.xp}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 hidden lg:table-cell">
-                                  <span className="text-xs text-gray-400 font-medium">
-                                    {row.lore}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  {row.isModule ? (
-                                    <button
-                                      onClick={() => navigate(row.route!)}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-blue-400 transition-all duration-150 ease-out hover:border-blue-500/60 hover:text-white hover:scale-105 active:scale-95 cursor-pointer"
-                                    >
-                                      <span>Ir para Módulo</span>
-                                      <Sword size={12} />
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => {
-                                        setPresetHabitData(row.preset!);
-                                        setModalOpen(true);
-                                      }}
-                                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400 transition-all duration-150 ease-out hover:border-emerald-500/60 hover:text-white hover:scale-105 active:scale-95 cursor-pointer"
-                                    >
-                                      <span>Despertar Quest</span>
-                                      <Plus size={12} strokeWidth={3} />
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* ── Visualização em Cards para Mobile (Exclusiva no celular) ── */}
-                    <div className="block md:hidden p-4 space-y-4">
-                      {[
-                        {
-                          activity: 'Refeições Saudáveis',
-                          icon: UtensilsCrossed,
-                          iconColor: '#F97316',
-                          stat: 'Vitalidade (VIT)',
-                          statColor: 'text-orange-400',
-                          xp: '+15 XP',
-                          lore: 'Acelera a regeneração celular e a imunidade biológica.',
-                          statBonus: '+1 VIT',
-                          isModule: true,
-                          route: '/nutrition'
-                        },
-                        {
-                          activity: 'Treino de Força',
-                          icon: Dumbbell,
-                          iconColor: '#A855F7',
-                          stat: 'Força (FOR)',
-                          statColor: 'text-red-400',
-                          xp: '+30 XP',
-                          lore: 'Eleva o dano físico bruto e a densidade miofibrilar.',
-                          statBonus: '+2 FOR',
-                          isModule: true,
-                          route: '/workouts'
-                        },
-                        {
-                          activity: 'Cardio',
-                          icon: Heart,
-                          iconColor: '#EF4444',
-                          stat: 'Resistência (RES)',
-                          statColor: 'text-green-400',
-                          xp: '+25 XP',
-                          lore: 'Otimiza o fluxo de oxigênio e a capacidade cardiovascular.',
-                          statBonus: '+2 RES',
-                          isModule: true,
-                          route: '/workouts'
-                        },
-                        {
-                          activity: 'Trabalhar (Foco Diário)',
-                          icon: Briefcase,
-                          iconColor: '#06B6D4',
-                          stat: 'Disciplina (DIS)',
-                          statColor: 'text-purple-400',
-                          xp: '+25 XP',
-                          lore: 'Fortalece a constância profissional e a entrega sob pressão.',
-                          statBonus: '+1 DIS',
-                          isModule: false,
-                          preset: {
-                            title: 'Trabalhar (Foco Máximo)',
-                            category: 'Trabalho',
-                            category_color: '#06B6D4',
-                            xp_reward: 25,
-                            stat_target: 'discipline' as const,
-                            stat_reward: 1
-                          }
-                        },
-                        {
-                          activity: 'Trabalho Extra / Freelance',
-                          icon: Briefcase,
-                          iconColor: '#FBBF24',
-                          stat: 'Disciplina (DIS)',
-                          statColor: 'text-purple-400',
-                          xp: '+40 XP',
-                          lore: 'Esforço adicional que eleva sua autonomia financeira e resiliência.',
-                          statBonus: '+2 DIS',
-                          isModule: false,
-                          preset: {
-                            title: 'Trabalho Extra / Freelance',
-                            category: 'Trabalho',
-                            category_color: '#FBBF24',
-                            xp_reward: 40,
-                            stat_target: 'discipline' as const,
-                            stat_reward: 2
-                          }
-                        },
-                        {
-                          activity: 'Aprender Idiomas',
-                          icon: Languages,
-                          iconColor: '#3B82F6',
-                          stat: 'Inteligência (INT)',
-                          statColor: 'text-cyan-400',
-                          xp: '+25 XP',
-                          lore: 'Quebra barreiras linguísticas e expande a plasticidade cerebral.',
-                          statBonus: '+2 INT',
-                          isModule: false,
-                          preset: {
-                            title: 'Estudar Novo Idioma',
-                            category: 'Estudo',
-                            category_color: '#3B82F6',
-                            xp_reward: 25,
-                            stat_target: 'intelligence' as const,
-                            stat_reward: 2
-                          }
-                        },
-                        {
-                          activity: 'Leitura',
-                          icon: BookOpen,
-                          iconColor: '#3B82F6',
-                          stat: 'Inteligência (INT)',
-                          statColor: 'text-cyan-400',
-                          xp: '+25 XP',
-                          lore: 'Amplia a capacidade cognitiva e a velocidade de foco.',
-                          statBonus: '+2 INT',
-                          isModule: false,
-                          preset: {
-                            title: 'Ler 30 minutos',
-                            category: 'Estudo',
-                            category_color: '#3B82F6',
-                            xp_reward: 25,
-                            stat_target: 'intelligence' as const,
-                            stat_reward: 2
-                          }
-                        },
-                        {
-                          activity: 'Programação & Tech',
-                          icon: Code,
-                          iconColor: '#10B981',
-                          stat: 'Inteligência (INT)',
-                          statColor: 'text-cyan-400',
-                          xp: '+30 XP',
-                          lore: 'Fortalece o raciocínio sistêmico e solução de problemas.',
-                          statBonus: '+2 INT',
-                          isModule: false,
-                          preset: {
-                            title: 'Programação & Tech',
-                            category: 'Estudo',
-                            category_color: '#10B981',
-                            xp_reward: 30,
-                            stat_target: 'intelligence' as const,
-                            stat_reward: 2
-                          }
-                        },
-                        {
-                          activity: 'Tocar Instrumentos',
-                          icon: Music,
-                          iconColor: '#EC4899',
-                          stat: 'Vitalidade (VIT)',
-                          statColor: 'text-orange-400',
-                          xp: '+20 XP',
-                          lore: 'Expressão artística e reequilíbrio da harmonia mental do caçador.',
-                          statBonus: '+2 VIT',
-                          isModule: false,
-                          preset: {
-                            title: 'Tocar Instrumento / Música',
-                            category: 'Hobbies',
-                            category_color: '#EC4899',
-                            xp_reward: 20,
-                            stat_target: 'vitality' as const,
-                            stat_reward: 2
-                          }
-                        },
-                        {
-                          activity: 'Deveres Gerais (Tasks)',
-                          icon: Award,
-                          iconColor: '#F59E0B',
-                          stat: 'Disciplina (DIS)',
-                          statColor: 'text-purple-400',
-                          xp: '+15 a +30 XP',
-                          lore: 'Reforça a constância diária e a fortitude mental.',
-                          statBonus: '+1 DIS',
-                          isModule: false,
-                          preset: {
-                            title: 'Deveres Gerais',
-                            category: 'Rotina',
-                            category_color: '#F59E0B',
-                            xp_reward: 15,
-                            stat_target: 'discipline' as const,
-                            stat_reward: 1
-                          }
-                        }
-                      ].map((row, idx) => {
-                        const RowIcon = row.icon;
-                        return (
-                          <div 
-                            key={idx} 
-                            className="group relative flex flex-col gap-3 rounded-xl border border-[#1E1E26]/60 bg-[#0B0B0F]/45 p-4 transition-all hover:border-blue-500/20"
-                          >
-                            {/* Cabeçalho do Card */}
-                            <div className="flex items-center gap-3">
-                              <div 
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 transition-colors" 
-                                style={{ color: row.iconColor }}
-                              >
-                                <RowIcon size={16} />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <span className="font-bold text-white uppercase text-xs tracking-wider font-orbitron block truncate" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                  {row.activity}
-                                </span>
-                                <span className="text-[10px] text-gray-500 font-semibold block mt-0.5 leading-normal">
-                                  {row.lore}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Informações Centrais (Atributo e Recompensa) */}
-                            <div className="grid grid-cols-2 gap-3 border-t border-b border-[#1E1E26]/40 py-2.5 my-1">
-                              <div>
-                                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block">Atributo RPG</span>
-                                <span className={`text-[11px] font-black uppercase tracking-wider block mt-0.5 ${row.statColor}`}>
-                                  {row.stat}
-                                </span>
-                                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider block">
-                                  {row.statBonus}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest block">Recompensa</span>
-                                <span className="inline-flex items-center gap-1 rounded bg-yellow-500/10 px-2 py-0.5 text-[10px] font-bold text-yellow-500 uppercase tracking-widest border border-yellow-500/20 mt-1">
-                                  <Zap size={10} fill="currentColor" />
-                                  {row.xp}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Botão de Ação */}
-                            <div className="w-full mt-1">
-                              {row.isModule ? (
-                                <motion.button
-                                  whileTap={{ scale: 0.97 }}
-                                  onClick={() => navigate(row.route!)}
-                                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/5 py-2.5 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:bg-blue-500/10 cursor-pointer"
-                                >
-                                  <span>Ir para Módulo</span>
-                                  <Sword size={12} />
-                                </motion.button>
-                              ) : (
-                                <motion.button
-                                  whileTap={{ scale: 0.97 }}
-                                  onClick={() => {
-                                    setPresetHabitData(row.preset!);
-                                    setModalOpen(true);
-                                  }}
-                                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 py-2.5 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
-                                >
-                                  <span>Despertar Quest</span>
-                                  <Plus size={12} strokeWidth={3} />
-                                </motion.button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  )}
+                  {legacyCodexVisible && <div className="hidden" />}
                 </motion.div>
               )}
             </AnimatePresence>
           )}
+        </div>
+
+        {/* Botão Tático Flutuante na Zona do Polegar Mobile (+ NEW QUEST, inspirado na referência) */}
+        <div className="fixed right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 md:hidden">
+          <button
+            type="button"
+            onClick={() => setQuestModalOpen(true)}
+            className="inline-flex min-h-[48px] items-center gap-2 rounded-2xl border border-[#00F0FF]/60 bg-[#0A0F18]/95 px-4 py-2.5 font-orbitron text-xs font-extrabold uppercase tracking-wider text-[#00F0FF] shadow-[0_0_24px_rgba(0,240,255,0.32)] backdrop-blur-md transition-transform active:scale-95"
+          >
+            <Plus className="h-4 w-4 stroke-[2.75]" />
+            <span>{l('Nova Quest', 'New Quest')}</span>
+          </button>
         </div>
       </div>
     </>

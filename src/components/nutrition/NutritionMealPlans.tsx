@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Search, Trash2, UtensilsCrossed, Zap, Apple, ChevronDown, Flame, Droplets, Scale, Clock, Gauge, CheckCircle2 } from 'lucide-react';
+import {
+  Plus,
+  X,
+  Search,
+  Trash2,
+  UtensilsCrossed,
+  Zap,
+  Apple,
+  ChevronDown,
+  Flame,
+  Droplets,
+  Scale,
+  Clock,
+  Gauge,
+  CheckCircle2,
+} from 'lucide-react';
 import { useMealPlans, calcMealMacros, type MealPlan } from '@/hooks/useMealPlans';
 import type { Food } from '@/types/nutrition';
 import { usePreferences } from '@/contexts/preferences';
 import { translateUiText } from '@/lib/uiEnglish';
+import { HudCard } from '@/components/ui/hud-card';
+import { TacticalButton } from '@/components/ui/tactical-button';
+import { cn } from '@/lib/utils';
 
 interface NutritionMealPlansProps {
   foods: Food[];
@@ -15,11 +33,12 @@ interface NutritionMealPlansProps {
 function getPlanMetadata(plan: MealPlan, macros: ReturnType<typeof calcMealMacros>) {
   const itemCount = plan.items?.length ?? 0;
   const name = plan.name.toLowerCase();
-  const objective = macros.protein >= 30
-    ? 'Suporte à força e recuperação'
-    : macros.carbs >= 45
-      ? 'Energia e reposição'
-      : 'Equilíbrio e consistência';
+  const objective =
+    macros.protein >= 30
+      ? 'Suporte à força e recuperação'
+      : macros.carbs >= 45
+        ? 'Energia e reposição'
+        : 'Equilíbrio e consistência';
   const difficulty = itemCount <= 3 ? 'Fácil' : itemCount <= 5 ? 'Moderada' : 'Estruturada';
   const prepTime = itemCount === 0 ? '--' : `${Math.min(45, 10 + itemCount * 5)} min`;
   const tags = [
@@ -35,44 +54,57 @@ function getPlanMetadata(plan: MealPlan, macros: ReturnType<typeof calcMealMacro
 function MacroBadge({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="flex flex-col items-center">
-      <span className={`text-sm font-black ${color}`} style={{ fontFamily: 'Orbitron, sans-serif' }}>{value}</span>
-      <span className="text-xs font-medium text-gray-500">{label}</span>
+      <span className={cn('font-orbitron text-xs font-black sm:text-sm', color)}>{value}</span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</span>
     </div>
   );
 }
 
-function FoodSearchResult({ food, onAdd }: { food: Food; onAdd: (foodId: string, quantityGrams: number) => void }) {
+function FoodSearchResult({
+  food,
+  onAdd,
+}: {
+  food: Food;
+  onAdd: (foodId: string, quantityGrams: number) => void;
+}) {
   const { language } = usePreferences();
-  const tx = (value?: string | null) => language === 'en-US' && value ? translateUiText(value) : value;
+  const tx = (value?: string | null) => (language === 'en-US' && value ? translateUiText(value) : value);
   const isCustomUnit = !!food.serving_unit && !!food.serving_size;
   const [qty, setQty] = useState(isCustomUnit ? 1 : 100);
 
   const handleAdd = () => {
-    const finalGrams = isCustomUnit ? qty * food.serving_size! : qty;
+    const safeQty = Math.max(1, qty || 1);
+    const finalGrams = isCustomUnit ? safeQty * food.serving_size! : safeQty;
     onAdd(food.id, finalGrams);
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-white/5 p-2">
-      <div className="flex-1 min-w-0">
-        <span className="text-xs font-bold text-white uppercase truncate block">{tx(food.name)}</span>
-        <span className="text-xs text-gray-500">
-           {isCustomUnit ? `${food.serving_size}g / ${tx(food.serving_unit)}` : `${food.calories_per_100g} kcal/100g`}
+    <div className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-[#090B12] p-2.5">
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-bold uppercase text-white">{tx(food.name)}</span>
+        <span className="text-[10px] font-medium text-slate-400">
+          {isCustomUnit
+            ? `${food.serving_size}g / ${tx(food.serving_unit)}`
+            : `${food.calories_per_100g} kcal/100g · ${food.protein_per_100g}g P`}
         </span>
       </div>
       <input
         type="number"
+        inputMode="decimal"
         value={qty}
-        onChange={e => setQty(Number(e.target.value))}
-        className="w-14 rounded-lg border border-[#1E1E26] bg-black px-2 py-1 text-center text-xs text-white focus:outline-none"
+        onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+        className="h-9 w-16 rounded-lg border border-white/10 bg-black px-2 text-center font-mono text-xs font-bold text-white focus:border-cyan-400 focus:outline-none"
         min={1}
       />
-      <span className="text-xs text-gray-500">{isCustomUnit ? tx(food.serving_unit) : 'g'}</span>
+      <span className="text-[10px] font-bold uppercase text-slate-400">
+        {isCustomUnit ? tx(food.serving_unit) : 'g'}
+      </span>
       <button
+        type="button"
         onClick={handleAdd}
-        className="rounded-lg bg-orange-600 p-1.5 text-white hover:bg-orange-500"
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/35 bg-cyan-500/20 text-cyan-200 transition-colors hover:bg-cyan-500/30"
       >
-        <Plus size={12} />
+        <Plus className="size-4" />
       </button>
     </div>
   );
@@ -98,94 +130,126 @@ function MealPlanCard({
   const { language } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => (isEnglish ? en : pt);
-  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
+  const tx = (value?: string | null) => (isEnglish && value ? translateUiText(value) : value);
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
 
   const macros = calcMealMacros(plan.items ?? []);
   const metadata = getPlanMetadata(plan, macros);
-  const filtered = foods.filter(f => f.name.toLowerCase().includes(search.toLowerCase())).slice(0, 6);
+  const filtered = foods.filter((f) => f.name.toLowerCase().includes(search.toLowerCase())).slice(0, 6);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-2xl border border-[#1E1E26] bg-[#0F0F13] transition-all hover:border-orange-500/25 hover:shadow-[0_0_20px_rgba(249,115,22,0.07)]"
-    >
+    <HudCard variant="default" className="overflow-hidden p-0">
       {/* Card Header */}
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-orange-500/15 bg-orange-500/10 transition-all">
-            <UtensilsCrossed size={18} className="text-orange-400" />
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/10 text-cyan-300">
+            <UtensilsCrossed className="size-5" />
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-black uppercase tracking-tight text-white"
-              style={{ fontFamily: 'Orbitron, sans-serif' }}>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {metadata.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-md border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-300"
+                >
+                  {tx(tag)}
+                </span>
+              ))}
+              <span className="font-mono text-[10px] font-bold text-amber-400">+{plan.xp_reward} XP</span>
+            </div>
+            <p className="mt-1 truncate font-orbitron text-sm font-black uppercase tracking-tight text-white sm:text-base">
               {tx(plan.name)}
             </p>
-            <p className="mt-1 text-[13px] font-medium text-gray-500">{tx(metadata.objective)}</p>
+            <p className="mt-0.5 text-xs text-slate-400">{tx(metadata.objective)}</p>
           </div>
 
           {confirmDel ? (
-            <div className="flex gap-1">
-              <button onClick={() => onDelete(plan.id)} className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-bold text-red-400 hover:bg-red-500/30">{l('Sim', 'Yes')}</button>
-              <button onClick={() => setConfirmDel(false)} className="rounded-lg bg-white/5 px-2 py-1 text-xs font-bold text-gray-500">{l('Não', 'No')}</button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onDelete(plan.id)}
+                className="min-h-[36px] rounded-lg border border-rose-500/40 bg-rose-500/20 px-2.5 py-1 text-xs font-bold text-rose-300"
+              >
+                {l('Sim', 'Yes')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDel(false)}
+                className="min-h-[36px] rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-bold text-slate-400"
+              >
+                {l('Não', 'No')}
+              </button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDel(true)} className="text-gray-700 hover:text-red-400 transition-colors">
-              <Trash2 size={14} />
+            <button
+              type="button"
+              onClick={() => setConfirmDel(true)}
+              aria-label={l('Excluir plano alimentar', 'Delete meal plan')}
+              className="flex size-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-400 transition-colors hover:border-rose-500/35 hover:text-rose-300"
+            >
+              <Trash2 className="size-4" />
             </button>
           )}
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[
-            { label: l('Energia', 'Energy'), value: `${Math.round(macros.kcal)} kcal`, icon: Flame, tone: 'text-orange-400' },
-            { label: l('Proteína', 'Protein'), value: `${macros.protein.toFixed(0)}g`, icon: Zap, tone: 'text-purple-400' },
-            { label: l('Dificuldade', 'Difficulty'), value: tx(metadata.difficulty), icon: Gauge, tone: 'text-blue-400' },
-            { label: l('Preparo', 'Prep'), value: metadata.prepTime, icon: Clock, tone: 'text-emerald-400' },
-          ].map(item => (
-            <div key={item.label} className="rounded-xl border border-white/5 bg-black/25 p-3">
-              <item.icon className={`size-3.5 ${item.tone}`} />
-              <p className="mt-2 text-xs font-medium text-gray-500">{item.label}</p>
-              <p className="mt-1 text-sm font-bold text-gray-300">{item.value}</p>
-            </div>
-          ))}
+        {/* Compact Metrics Row */}
+        <div className="mt-3.5 grid grid-cols-4 gap-2 rounded-xl border border-white/[0.06] bg-[#090B12]/90 p-2.5">
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              {l('Energia', 'Energy')}
+            </p>
+            <p className="mt-0.5 font-mono text-xs font-black text-cyan-300">{Math.round(macros.kcal)} kcal</p>
+          </div>
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              {l('Proteína', 'Protein')}
+            </p>
+            <p className="mt-0.5 font-mono text-xs font-black text-purple-300">{macros.protein.toFixed(0)}g</p>
+          </div>
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              {l('Itens', 'Items')}
+            </p>
+            <p className="mt-0.5 font-mono text-xs font-black text-white">{(plan.items ?? []).length}</p>
+          </div>
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              {l('Preparo', 'Prep')}
+            </p>
+            <p className="mt-0.5 font-mono text-xs font-black text-emerald-300">{metadata.prepTime}</p>
+          </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {metadata.tags.map(tag => (
-            <span key={tag} className="rounded-md border border-orange-500/15 bg-orange-500/5 px-2 py-1 text-xs font-semibold text-orange-300">
-              {tx(tag)}
-            </span>
-          ))}
-        </div>
-
-        <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+        <div className="mt-3.5 flex items-center gap-2">
+          <div className="flex-1">
+            <TacticalButton
+              variant="primary"
+              fullWidth
+              displayFont
+              disabled={isUsing || !plan.items?.length}
+              leftIcon={isUsing ? <Clock className="size-4 animate-spin" /> : <Plus className="size-4" />}
+              onClick={() => void onUsePlan(plan)}
+            >
+              {isUsing ? l('Registrando...', 'Logging...') : l('Registrar no Diário', 'Log to Diary')}
+            </TacticalButton>
+          </div>
           <button
             type="button"
-            onClick={() => void onUsePlan(plan)}
-            disabled={isUsing || !plan.items?.length}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-bold text-white transition-all hover:bg-orange-500 hover:shadow-[0_0_18px_rgba(249,115,22,0.24)] disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => setExpanded((p) => !p)}
+            className="flex size-[52px] shrink-0 items-center justify-center rounded-xl border border-white/12 bg-[#121521] text-slate-300 transition-colors hover:border-cyan-400/40 hover:text-white"
+            aria-label={
+              expanded ? l('Recolher cardápio', 'Collapse meal plan') : l('Expandir cardápio', 'Expand meal plan')
+            }
           >
-            {isUsing ? <Clock className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-            {isUsing ? l('Adicionando...', 'Adding...') : l('Adicionar ao dia', 'Add to day')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setExpanded(p => !p)}
-            className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-500 transition-colors hover:text-white"
-            aria-label={expanded ? l('Recolher cardápio', 'Collapse meal plan') : l('Expandir cardápio', 'Expand meal plan')}
-          >
-            <ChevronDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            <ChevronDown className={cn('size-5 transition-transform', expanded && 'rotate-180 text-cyan-300')} />
           </button>
         </div>
       </div>
 
-      {/* Expanded: itens + macros + busca */}
+      {/* Expanded Details: Items + Macro Totals + Search */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -193,32 +257,48 @@ function MealPlanCard({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-[#1E1E26]"
+            className="overflow-hidden border-t border-white/10 bg-[#080A11]"
           >
-            <div className="p-4 space-y-4">
-              {/* Itens da refeição */}
+            <div className="space-y-4 p-4 sm:p-5">
               {(plan.items ?? []).length === 0 ? (
-                <p className="py-2 text-center text-[13px] font-medium text-gray-500">
-                  {l('Nenhum alimento adicionado ainda.', 'No food added yet.')}
+                <p className="py-2 text-center text-xs text-slate-400">
+                  {l('Nenhum alimento vinculado a esta refeição.', 'No foods linked to this meal yet.')}
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {(plan.items ?? []).map(item => {
+                  {(plan.items ?? []).map((item) => {
                     const ratio = item.quantity_grams / 100;
                     const kcal = (item.food?.calories_per_100g ?? 0) * ratio;
                     const isCustom = !!item.food?.serving_unit && !!item.food?.serving_size;
-                    const displayQty = isCustom ? Number((item.quantity_grams / item.food!.serving_size!).toFixed(2)) : item.quantity_grams;
+                    const displayQty = isCustom
+                      ? Number((item.quantity_grams / item.food!.serving_size!).toFixed(2))
+                      : item.quantity_grams;
                     const displayUnit = isCustom ? item.food!.serving_unit : 'g';
 
                     return (
-                      <div key={item.id} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
-                        <Apple size={12} className="shrink-0 text-orange-400" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold text-white uppercase truncate block">{tx(item.food?.name)}</span>
-                          <span className="text-xs text-gray-500">{displayQty} {tx(displayUnit)} · {Math.round(kcal)} kcal</span>
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Apple className="size-4 shrink-0 text-cyan-400" />
+                          <div className="min-w-0">
+                            <span className="block truncate text-xs font-bold uppercase text-white">
+                              {tx(item.food?.name)}
+                            </span>
+                            <span className="font-mono text-[11px] text-slate-400">
+                              {displayQty} {tx(displayUnit)} ·{' '}
+                              <strong className="text-cyan-300">{Math.round(kcal)} kcal</strong>
+                            </span>
+                          </div>
                         </div>
-                        <button onClick={() => onRemoveItem(item.id, plan.id)} className="text-gray-700 hover:text-red-400">
-                          <X size={12} />
+                        <button
+                          type="button"
+                          onClick={() => onRemoveItem(item.id, plan.id)}
+                          aria-label={l('Remover alimento do plano', 'Remove food from plan')}
+                          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-500/15 hover:text-rose-300"
+                        >
+                          <X className="size-4" />
                         </button>
                       </div>
                     );
@@ -226,33 +306,34 @@ function MealPlanCard({
                 </div>
               )}
 
-              {/* Totais de macros */}
               {(plan.items ?? []).length > 0 && (
-                <div className="flex justify-around rounded-xl bg-orange-500/5 border border-orange-500/10 p-3">
-                  <MacroBadge label="Kcal" value={Math.round(macros.kcal).toString()} color="text-orange-400" />
-                  <MacroBadge label="Prot" value={`${macros.protein.toFixed(0)}g`} color="text-blue-400" />
-                  <MacroBadge label="Carb" value={`${macros.carbs.toFixed(0)}g`} color="text-cyan-400" />
-                  <MacroBadge label="Gord" value={`${macros.fat.toFixed(0)}g`} color="text-yellow-400" />
+                <div className="grid grid-cols-4 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.05] p-3">
+                  <MacroBadge label="Kcal" value={Math.round(macros.kcal).toString()} color="text-cyan-300" />
+                  <MacroBadge label="Prot" value={`${macros.protein.toFixed(0)}g`} color="text-purple-300" />
+                  <MacroBadge label="Carb" value={`${macros.carbs.toFixed(0)}g`} color="text-emerald-300" />
+                  <MacroBadge label="Gord" value={`${macros.fat.toFixed(0)}g`} color="text-amber-300" />
                 </div>
               )}
 
-              {/* Adicionar alimento */}
+              {/* Add Food to Meal Plan */}
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-400">{l('Adicionar alimento', 'Add food')}</p>
+                <label className="text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                  + {l('Adicionar Alimento ao Cardápio', 'Add Food to Meal Plan')}
+                </label>
                 <div className="relative">
-                  <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     placeholder={l('Buscar alimento...', 'Search food...')}
                     value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="w-full rounded-xl border border-[#1E1E26] bg-black py-2 pl-8 pr-3 text-xs text-white placeholder:text-gray-600 focus:border-orange-500/50 focus:outline-none"
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="min-h-[42px] w-full rounded-xl border border-white/10 bg-black/60 py-2 pl-10 pr-3 text-xs text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none"
                   />
                 </div>
 
                 {search && (
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {filtered.map(food => (
+                  <div className="max-h-48 space-y-1.5 overflow-y-auto pt-1">
+                    {filtered.map((food) => (
                       <FoodSearchResult
                         key={food.id}
                         food={food}
@@ -263,7 +344,9 @@ function MealPlanCard({
                       />
                     ))}
                     {filtered.length === 0 && (
-                      <p className="py-2 text-center text-[13px] text-gray-500">{l('Nenhum alimento encontrado.', 'No food found.')}</p>
+                      <p className="py-2 text-center text-xs text-slate-400">
+                        {l('Nenhum alimento encontrado.', 'No food found.')}
+                      </p>
                     )}
                   </div>
                 )}
@@ -272,7 +355,7 @@ function MealPlanCard({
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </HudCard>
   );
 }
 
@@ -280,7 +363,7 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
   const { language } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => (isEnglish ? en : pt);
-  const tx = (value?: string | null) => isEnglish && value ? translateUiText(value) : value;
+  const tx = (value?: string | null) => (isEnglish && value ? translateUiText(value) : value);
   const {
     mealPlans,
     loading,
@@ -305,107 +388,120 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    await createMealPlan(newName.trim(), 30); // XP Padrão fixado em 30
+    await createMealPlan(newName.trim(), 30);
     setNewName('');
     setModalOpen(false);
   }
 
   const activeMealPlans = mealPlans.filter((p) => p.is_active);
-  const totals = activeMealPlans.reduce((acc, p) => {
-    const macros = calcMealMacros(p.items ?? []);
-    return {
-      kcal: acc.kcal + macros.kcal,
-      protein: acc.protein + macros.protein,
-      carbs: acc.carbs + macros.carbs,
-      fat: acc.fat + macros.fat,
-    };
-  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  const totals = activeMealPlans.reduce(
+    (acc, p) => {
+      const macros = calcMealMacros(p.items ?? []);
+      return {
+        kcal: acc.kcal + macros.kcal,
+        protein: acc.protein + macros.protein,
+        carbs: acc.carbs + macros.carbs,
+        fat: acc.fat + macros.fat,
+      };
+    },
+    { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {feedback && (
-        <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm font-semibold text-emerald-200"
-        >
-          <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
-          {tx(feedback)}
-        </motion.div>
-      )}
-      {/* Stats Board */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-4">
-        {[
-          { label: l('Energia (kcal)', 'Energy (kcal)'), value: totals.kcal.toFixed(0), icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-          { label: l('Proteína', 'Protein'), value: totals.protein.toFixed(1) + 'g', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: l('Carbos', 'Carbs'), value: totals.carbs.toFixed(1) + 'g', icon: Droplets, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-          { label: l('Gorduras', 'Fats'), value: totals.fat.toFixed(1) + 'g', icon: Scale, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-        ].map((stat, i) => (
-          <div key={i} className="rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-3 sm:p-5">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className={`flex size-9 sm:size-12 shrink-0 items-center justify-center rounded-xl ${stat.bg} ${stat.color}`}>
-                <stat.icon className="size-5 sm:size-6" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500">{stat.label}</p>
-                <p className="text-sm sm:text-xl font-black text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>{stat.value}</p>
-              </div>
-            </div>
+        <HudCard variant="success" className="p-3.5">
+          <div className="flex items-center gap-2.5 text-xs font-semibold text-emerald-200">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-400" />
+            <span>{tx(feedback)}</span>
           </div>
-        ))}
-      </div>
+        </HudCard>
+      )}
 
-      {/* Stats rápidos */}
-      <div className="flex items-center gap-4 rounded-2xl border border-orange-500/20 bg-orange-500/5 px-5 py-3">
-        <UtensilsCrossed size={18} className="text-orange-400 shrink-0" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-400">{l('Total energético dos cardápios', 'Total energy across meal plans')}</p>
-          <p className="text-xl font-black text-orange-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            {Math.round(totals.kcal)} <span className="text-xs text-gray-600">kcal</span>
-          </p>
+      {/* Summary Header Card for Meal Plans */}
+      <HudCard variant="cyan" corners className="p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400">
+              {l('PLANEJAMENTO NUTRICIONAL', 'MEAL PLAN OVERVIEW')}
+            </span>
+            <h2 className="mt-0.5 font-orbitron text-lg font-black uppercase text-white sm:text-xl">
+              {Math.round(totals.kcal)}{' '}
+              <span className="text-xs font-bold text-cyan-300">kcal {l('planejadas', 'planned')}</span>
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="rounded-xl border border-amber-400/30 bg-amber-500/15 px-3 py-1.5 font-mono text-xs font-bold text-amber-300">
+              +{activeMealPlans.reduce((a, p) => a + p.xp_reward, 0)} XP
+            </span>
+            <TacticalButton
+              variant="secondary"
+              leftIcon={<Plus className="size-4" />}
+              onClick={() => setModalOpen(true)}
+            >
+              {l('Nova Refeição', 'New Meal')}
+            </TacticalButton>
+          </div>
         </div>
-        <div className="flex items-center gap-1 text-sm font-bold text-yellow-500">
-          <Zap size={12} fill="currentColor" />
-          {activeMealPlans.reduce((a, p) => a + p.xp_reward, 0)} XP
+
+        <div className="mt-4 grid grid-cols-3 divide-x divide-white/10 rounded-xl border border-white/[0.07] bg-[#090B12]/90 p-3 text-center">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-purple-300">
+              {l('Proteínas', 'Protein')}
+            </p>
+            <p className="mt-0.5 font-mono text-sm font-black text-white">{totals.protein.toFixed(1)}g</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-300">
+              {l('Carboidratos', 'Carbs')}
+            </p>
+            <p className="mt-0.5 font-mono text-sm font-black text-white">{totals.carbs.toFixed(1)}g</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
+              {l('Gorduras', 'Fats')}
+            </p>
+            <p className="mt-0.5 font-mono text-sm font-black text-white">{totals.fat.toFixed(1)}g</p>
+          </div>
         </div>
-      </div>
+      </HudCard>
 
-      {/* Header + botão */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-gray-500">
-          {mealPlans.length} {l('refeição(ões) definida(s)', 'meal(s) defined')}
-        </p>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
-        >
-          <Plus size={14} strokeWidth={3} /> {l('Nova Refeição', 'New Meal')}
-        </button>
-      </div>
-
-      {/* Lista de cardápios */}
+      {/* Meal Plans List */}
       {loading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map(i => <div key={i} className="h-16 animate-pulse rounded-2xl bg-white/5" />)}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-[#12131C]/80" />
+          ))}
         </div>
       ) : mealPlans.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="mb-4 rounded-full bg-orange-500/5 p-8">
-            <UtensilsCrossed size={48} className="text-gray-700" />
+        <HudCard variant="default" className="p-8 text-center">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-500/10 text-cyan-300">
+            <UtensilsCrossed className="size-6" />
           </div>
-          <h3 className="text-sm font-bold uppercase italic text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+          <h3 className="mt-4 font-orbitron text-sm font-black uppercase tracking-wider text-white">
             {l('Nenhum Cardápio Definido', 'No Meal Plan Defined')}
           </h3>
-          <p className="mt-2 max-w-xs text-[11px] uppercase tracking-widest text-gray-600">
-            {l('Crie suas refeições para que apareçam como missões diárias.', 'Create meals so they appear as daily quests.')}
+          <p className="mx-auto mt-1.5 max-w-xs text-xs leading-relaxed text-slate-400">
+            {l(
+              'Monte refeições fixas para registrar vários alimentos de uma só vez e sincronizar com suas missões diárias.',
+              'Build fixed meals to log multiple foods at once and sync with your daily quests.',
+            )}
           </p>
-          <button onClick={() => setModalOpen(true)} className="mt-5 text-[11px] font-black uppercase tracking-widest text-orange-400 hover:underline">
-            {l('+ Criar Primeira Refeição', '+ Create First Meal')}
-          </button>
-        </div>
+          <div className="mt-5 flex justify-center">
+            <TacticalButton
+              variant="primary"
+              displayFont
+              leftIcon={<Plus className="size-4" />}
+              onClick={() => setModalOpen(true)}
+            >
+              {l('Criar Primeira Refeição', 'Create First Meal')}
+            </TacticalButton>
+          </div>
+        </HudCard>
       ) : (
         <div className="space-y-3">
-          {mealPlans.map(plan => (
+          {mealPlans.map((plan) => (
             <MealPlanCard
               key={plan.id}
               plan={plan}
@@ -420,60 +516,70 @@ export function NutritionMealPlans({ foods, onUsePlan, feedback }: NutritionMeal
         </div>
       )}
 
-      {/* Modal criar refeição */}
+      {/* Create New Meal Plan Modal */}
       <AnimatePresence>
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setModalOpen(false)}
-              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-sm rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-7 shadow-2xl"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              className="relative w-full max-w-md rounded-t-3xl border border-cyan-400/35 bg-[#0D0F18] p-6 shadow-2xl sm:rounded-3xl"
             >
-              <button onClick={() => setModalOpen(false)} className="absolute right-5 top-5 text-gray-500 hover:text-white">
-                <X size={20} />
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="absolute right-5 top-5 flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:text-white"
+              >
+                <X className="size-5" />
               </button>
 
-              <div className="mb-6 flex items-center gap-4">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-400">
-                  <UtensilsCrossed size={22} />
+              <div className="mb-5 flex items-center gap-3.5 pr-10">
+                <div className="flex size-12 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-500/15 text-cyan-300">
+                  <UtensilsCrossed className="size-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black uppercase italic text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {l('Nova', 'New')} <span className="text-orange-400">{l('Refeição', 'Meal')}</span>
+                  <span className="font-orbitron text-[10px] font-black uppercase tracking-widest text-cyan-400">
+                    {l('Planejamento Nutricional', 'Meal Planning')}
+                  </span>
+                  <h2 className="font-orbitron text-lg font-black uppercase text-white">
+                    {l('Nova Refeição', 'New Meal')}
                   </h2>
-                  <p className="text-[13px] text-gray-500">{l('Defina seu cardápio', 'Define your meal plan')}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-gray-300">{l('Nome da refeição', 'Meal name')}</label>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Nome da Refeição', 'Meal Name')}
+                  </label>
                   <input
                     type="text"
-                    placeholder={l('Ex: Café da Manhã, Ref. 1, Pré-Treino...', 'E.g. Breakfast, Meal 1, Pre-workout...')}
+                    placeholder={l('Ex: Café da Manhã, Pós-Treino...', 'E.g. Breakfast, Post-Workout...')}
                     value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleCreate()}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                     autoFocus
-                    className="w-full rounded-xl border border-[#1E1E26] bg-black p-3.5 text-sm text-white placeholder:text-gray-600 focus:border-orange-500/50 focus:outline-none"
+                    className="mt-1.5 min-h-[48px] w-full rounded-xl border border-white/10 bg-[#090B12] px-4 py-3 text-sm font-bold text-white placeholder:text-slate-600 focus:border-cyan-400 focus:outline-none"
                   />
                 </div>
 
-
-                <button
-                  onClick={handleCreate}
+                <TacticalButton
+                  variant="primary"
+                  fullWidth
+                  displayFont
                   disabled={!newName.trim()}
-                  className="w-full rounded-2xl bg-orange-600 py-4 font-black uppercase italic tracking-[0.15em] text-white transition-all hover:bg-orange-500 hover:shadow-[0_0_25px_rgba(249,115,22,0.35)] disabled:opacity-40"
-                  style={{ fontFamily: 'Orbitron, sans-serif' }}
+                  onClick={handleCreate}
                 >
                   {l('Criar Refeição', 'Create Meal')}
-                </button>
+                </TacticalButton>
               </div>
             </motion.div>
           </div>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -24,14 +25,56 @@ import { motion } from 'framer-motion';
 
 function HunterGuard({ children }: { children: React.ReactNode }) {
   const hunterClass = useHunterStore((s) => s.hunterClass);
+  const profileUserId = useHunterStore((s) => s.profileUserId);
   const profileLoaded = useHunterStore((s) => s.profileLoaded);
   const profileLoading = useHunterStore((s) => s.profileLoading);
   const profileError = useHunterStore((s) => s.profileError);
   const loadProfile = useHunterStore((s) => s.loadProfile);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
-  // Se ainda estiver sincronizando o perfil do caçador com o Supabase, exibe tela de transição segura
-  if (!profileLoaded && profileLoading) {
+  useEffect(() => {
+    if (!user?.id) return;
+    const isDifferentUser = Boolean(profileUserId && profileUserId !== user.id);
+    if ((!profileLoaded || isDifferentUser) && !profileLoading && !profileError) {
+      void loadProfile(user.id);
+    }
+  }, [user?.id, profileUserId, profileLoaded, profileLoading, profileError, loadProfile]);
+
+  // Se houve falha de rede/Supabase ao buscar perfil existente, exibe tela de reconexão
+  // e NUNCA redireciona prematuramente para o onboarding
+  if (!profileLoaded && profileError) {
+    return (
+      <div className="min-h-screen bg-[#0B0B0F] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-[#13131A] border border-red-500/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+          <h2 className="text-xl font-orbitron font-bold text-red-400 mb-2">FALHA DE SINCRONIZAÇÃO</h2>
+          <p className="text-sm text-gray-400 mb-6 font-mono">
+            {profileError}
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                if (user) void loadProfile(user.id);
+              }}
+              className="w-full py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 rounded-xl text-red-300 font-orbitron text-xs tracking-widest uppercase transition-all"
+            >
+              Tentar Reconectar ao Sistema
+            </button>
+            <button
+              onClick={() => {
+                void signOut();
+              }}
+              className="w-full py-2.5 bg-transparent hover:bg-white/5 border border-white/10 rounded-xl text-gray-400 font-orbitron text-[10px] tracking-widest uppercase transition-all"
+            >
+              Encerrar Sessão
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Se ainda estiver sincronizando o perfil do caçador com o Supabase (ou aguardando início da carga), exibe tela de transição segura
+  if (!profileLoaded || profileLoading) {
     return (
       <div className="min-h-screen bg-[#0B0B0F] flex flex-col items-center justify-center gap-10">
         <div className="awakening-container">
@@ -47,29 +90,6 @@ function HunterGuard({ children }: { children: React.ReactNode }) {
         >
           Sincronizando Caçador...
         </motion.div>
-      </div>
-    );
-  }
-
-  // Se houve falha de rede/Supabase ao buscar perfil existente, exibe tela de reconexão
-  // e NUNCA redireciona prematuramente para o onboarding
-  if (!profileLoaded && profileError) {
-    return (
-      <div className="min-h-screen bg-[#0B0B0F] flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full bg-[#13131A] border border-red-500/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-          <h2 className="text-xl font-orbitron font-bold text-red-400 mb-2">FALHA DE SINCRONIZAÇÃO</h2>
-          <p className="text-sm text-gray-400 mb-6 font-mono">
-            {profileError}
-          </p>
-          <button
-            onClick={() => {
-              if (user) void loadProfile(user.id);
-            }}
-            className="w-full py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 rounded-xl text-red-300 font-orbitron text-xs tracking-widest uppercase transition-all"
-          >
-            Tentar Reconectar ao Sistema
-          </button>
-        </div>
       </div>
     );
   }

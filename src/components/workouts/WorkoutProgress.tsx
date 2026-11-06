@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  TrendingUp, 
-  Award, 
-  Activity, 
+import {
+  TrendingUp,
+  Award,
+  Activity,
   Calendar,
   Flame,
   Zap,
   Trophy,
   Dumbbell,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
+import { usePreferences } from '@/contexts/preferences';
+import { translateUiText } from '@/lib/uiEnglish';
+import { HudCard } from '@/components/ui/hud-card';
+import { NeonProgressBar } from '@/components/ui/neon-progress';
+import { RankBadge } from '@/components/ui/rank-badge';
 
 interface WorkoutLog {
   id: string;
@@ -38,16 +43,20 @@ interface PersonalRecord {
 
 export function WorkoutProgress() {
   const { user } = useAuth();
+  const { language } = usePreferences();
+  const l = (pt: string, en: string) => (language === 'en-US' ? en : pt);
+  const tx = (text?: string | null) => (language === 'en-US' && text ? translateUiText(text) : text || '');
   const rank = useHunterStore((s) => s.rank);
+
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalVolume, setTotalVolume] = useState(0);
 
-  async function fetchProgress() {
+  const fetchProgress = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('workout_logs')
         .select(`
           *,
@@ -55,27 +64,33 @@ export function WorkoutProgress() {
         `)
         .order('logged_at', { ascending: false });
 
+      if (user?.id) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      
-      const typedLogs = data as WorkoutLog[];
+
+      const typedLogs = (data || []) as WorkoutLog[];
       setLogs(typedLogs);
 
       // Process PRs
       const prMap = new Map<string, PersonalRecord>();
       let volume = 0;
 
-      typedLogs.forEach(log => {
+      typedLogs.forEach((log) => {
         const name = log.exercise?.name || 'Exercício Desconhecido';
         const weight = log.weight_kg || 0;
         const reps = log.reps || 0;
         const sets = log.sets || 0;
-        
+
         // Volume calculation
-        volume += (weight * reps * sets);
+        volume += weight * reps * sets;
 
         // 1RM Calculation: Weight * (1 + 0.0333 * Reps)
         const current1rm = weight * (1 + 0.0333 * reps);
-        
+
         const existing = prMap.get(name);
         if (!existing || current1rm > existing.estimated_1rm) {
           prMap.set(name, {
@@ -83,38 +98,46 @@ export function WorkoutProgress() {
             max_weight: weight,
             max_reps: reps,
             estimated_1rm: current1rm,
-            last_date: log.logged_at
+            last_date: log.logged_at,
           });
         }
       });
 
       setPrs(Array.from(prMap.values()).sort((a, b) => b.estimated_1rm - a.estimated_1rm));
       setTotalVolume(volume);
-
     } catch (err) {
       console.error('Error fetching progress:', err);
     } finally {
       setLoading(false);
     }
-  }
+  }, [user?.id]);
 
   useEffect(() => {
     if (user) {
       fetchProgress();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchProgress]);
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4">
-        {Array(3).fill(0).map((_, i) => (
-          <div key={i} className="h-32 animate-pulse rounded-3xl bg-white/5" />
-        ))}
+      <div className="flex flex-col gap-3">
+        {Array(3)
+          .fill(0)
+          .map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-[#12131C]/80" />
+          ))}
       </div>
     );
   }
 
-  const trainingDates = [...new Set(logs.map(log => new Date(log.logged_at).toLocaleDateString('en-CA')))].sort().reverse();
+  const trainingDates = [
+    ...new Set(logs.map((log) => new Date(log.logged_at).toLocaleDateString('en-CA'))),
+  ]
+    .sort()
+    .reverse();
+
   let trainingStreak = 0;
   if (trainingDates.length > 0) {
     const cursor = new Date();
@@ -137,235 +160,315 @@ export function WorkoutProgress() {
   const maxGroupLogs = muscleGroups[0]?.[1] || 1;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Overview Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 relative overflow-hidden"
-        >
-          <div className="absolute -right-4 -top-4 size-24 bg-blue-600/5 blur-3xl" />
-          <div className="flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500">
-              <Activity size={24} />
+        <HudCard variant="cyan" className="p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/10 text-cyan-400">
+              <Activity className="size-5" />
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Volume Total</p>
-              <h3 className="text-2xl font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {totalVolume.toLocaleString()} <span className="text-xs text-blue-500 uppercase not-italic">KG</span>
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {l('Volume Total', 'Total Volume')}
+              </p>
+              <h3 className="mt-0.5 truncate font-orbitron text-lg font-black text-white sm:text-xl">
+                {totalVolume.toLocaleString(language)}{' '}
+                <span className="text-[10px] font-bold uppercase text-cyan-400">KG</span>
               </h3>
             </div>
           </div>
-        </motion.div>
+        </HudCard>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="rounded-3xl border border-[#1E1E26] bg-[#0F0F13] p-6 relative overflow-hidden"
-        >
-          <div className="absolute -right-4 -top-4 size-24 bg-purple-600/5 blur-3xl" />
-          <div className="flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-500">
-              <Zap size={24} />
+        <HudCard variant="purple" className="p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/25 bg-purple-500/10 text-purple-400">
+              <Zap className="size-5" />
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Treinos Realizados</p>
-              <h3 className="text-2xl font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {trainingDates.length} <span className="text-xs text-purple-500 uppercase not-italic">DIAS</span>
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {l('Treinos Realizados', 'Workouts Completed')}
+              </p>
+              <h3 className="mt-0.5 truncate font-orbitron text-lg font-black text-white sm:text-xl">
+                {trainingDates.length}{' '}
+                <span className="text-[10px] font-bold uppercase text-purple-400">
+                  {l('DIAS', 'DAYS')}
+                </span>
               </h3>
             </div>
           </div>
-        </motion.div>
+        </HudCard>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="rounded-3xl border border-orange-500/20 bg-orange-500/5 p-6 relative overflow-hidden"
-        >
-          <div className="flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-400">
-              <Flame size={24} />
+        <HudCard variant="gold" className="p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10 text-amber-400">
+              <Flame className="size-5" />
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Streak de Treino</p>
-              <h3 className="text-2xl font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                {trainingStreak} <span className="text-xs text-orange-400 uppercase not-italic">DIAS</span>
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {l('Streak de Treino', 'Training Streak')}
+              </p>
+              <h3 className="mt-0.5 truncate font-orbitron text-lg font-black text-white sm:text-xl">
+                {trainingStreak}{' '}
+                <span className="text-[10px] font-bold uppercase text-amber-400">
+                  {l('DIAS', 'DAYS')}
+                </span>
               </h3>
             </div>
           </div>
-        </motion.div>
+        </HudCard>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="rounded-3xl border border-blue-500/20 bg-blue-500/5 p-6 relative overflow-hidden"
-        >
-          <div className="flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)]">
-              <Trophy size={24} />
+        <HudCard variant="default" className="p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/10 text-cyan-300">
+                <Trophy className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {l('Status de Hunter', 'Hunter Status')}
+                </p>
+                <h3 className="mt-0.5 truncate font-orbitron text-base font-black text-white sm:text-lg">
+                  Rank {rank}
+                </h3>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">Status de Hunter</p>
-              <h3 className="text-2xl font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                Rank {rank}
-              </h3>
-            </div>
+            <RankBadge rank={rank as 'E' | 'D' | 'C' | 'B' | 'A' | 'S'} size="sm" showLabel={false} />
           </div>
-        </motion.div>
+        </HudCard>
       </div>
 
+      {/* Empty State */}
       {logs.length === 0 && (
-        <div className="rounded-3xl border border-dashed border-blue-500/20 bg-[#0F0F13] p-10 text-center">
-          <TrendingUp className="mx-auto h-8 w-8 text-blue-500/35" />
-          <h3 className="mt-4 text-sm font-black uppercase tracking-wider text-white" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            O Sistema ainda não registrou evolução física
+        <HudCard variant="default" className="p-8 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/10 text-cyan-400">
+            <TrendingUp className="size-6" />
+          </div>
+          <h3 className="mt-4 font-orbitron text-sm font-black uppercase tracking-wider text-white">
+            {l(
+              'O Sistema ainda não registrou evolução física',
+              'The System has not recorded physical evolution yet',
+            )}
           </h3>
-          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-gray-500">
-            Conclua sua primeira sessão para revelar volume, streak, recordes e grupos musculares mais treinados.
+          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-slate-400">
+            {l(
+              'Conclua sua primeira sessão para revelar volume, streak, recordes e grupos musculares mais treinados.',
+              'Complete your first session to reveal volume, streak, personal records, and top muscle groups.',
+            )}
           </p>
-        </div>
+        </HudCard>
       )}
 
+      {/* Most Trained Muscle Groups */}
       {logs.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 px-2">
-            <BarChart3 className="size-5 text-cyan-400" />
-            <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              Grupos Mais <span className="text-cyan-400">Treinados</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5 px-1">
+            <BarChart3 className="size-4 text-cyan-400" />
+            <h2 className="font-orbitron text-xs font-black uppercase tracking-[0.18em] text-white sm:text-sm">
+              {l('Grupos Mais', 'Most Trained')}{' '}
+              <span className="text-cyan-400">{l('Treinados', 'Muscle Groups')}</span>
             </h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {muscleGroups.slice(0, 6).map(([group, count]) => (
-              <div key={group} className="rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Dumbbell className="h-4 w-4 text-cyan-400" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-white">{group}</span>
+            {muscleGroups.slice(0, 6).map(([group, count]) => {
+              const pct = Math.round((count / maxGroupLogs) * 100);
+              return (
+                <HudCard key={group} variant="default" className="p-4">
+                  <div className="mb-2.5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Dumbbell className="size-4 shrink-0 text-cyan-400" />
+                      <span className="truncate text-xs font-bold uppercase tracking-wider text-white">
+                        {tx(group)}
+                      </span>
+                    </div>
+                    <span className="shrink-0 font-mono text-[11px] font-bold text-cyan-300">
+                      {count} {l('registros', 'logs')}
+                    </span>
                   </div>
-                  <span className="text-[9px] font-black text-gray-500">{count} registros</span>
-                </div>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/50">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${(count / maxGroupLogs) * 100}%` }} className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" />
-                </div>
-              </div>
-            ))}
+                  <NeonProgressBar value={pct} max={100} variant="cyan" size="sm" />
+                </HudCard>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Personal Records */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 px-2">
-          <Award className="size-5 text-blue-500" />
-          <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            Recordes de <span className="text-blue-500">Poder</span> (Estimated 1RM)
+      {/* Personal Records (Estimated 1RM) */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2.5 px-1">
+          <Award className="size-4 text-amber-400" />
+          <h2 className="font-orbitron text-xs font-black uppercase tracking-[0.18em] text-white sm:text-sm">
+            {l('Recordes de', 'Power')}{' '}
+            <span className="text-amber-400">{l('Poder', 'Records')}</span>{' '}
+            <span className="text-[10px] font-bold text-slate-400">(1RM)</span>
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {prs.map((pr, index) => (
             <motion.div
               key={pr.exercise_name}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="group relative flex items-center justify-between rounded-2xl border border-[#1E1E26] bg-[#0F0F13] p-5 transition-all hover:border-blue-500/50 hover:bg-[#16161D]"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
             >
-              <div className="flex items-center gap-4">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                  <Flame size={18} />
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-white uppercase tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {pr.exercise_name}
-                  </h4>
-                  <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">
-                    Último: {new Date(pr.last_date).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
+              <HudCard variant="default" className="p-4 transition-colors hover:border-amber-400/35">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-500/10 text-amber-400">
+                      <Flame className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="truncate font-orbitron text-xs font-black uppercase tracking-tight text-white sm:text-sm">
+                        {tx(pr.exercise_name)}
+                      </h4>
+                      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                        {l('Pico:', 'Best:')} {pr.max_weight}kg × {pr.max_reps}r ·{' '}
+                        {new Date(pr.last_date).toLocaleDateString(language)}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="text-right">
-                <p className="text-[9px] font-black uppercase tracking-widest text-blue-500 mb-1">Estimated Max</p>
-                <div className="flex items-baseline justify-end gap-1">
-                  <span className="text-xl font-black text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    {Math.round(pr.estimated_1rm)}
-                  </span>
-                  <span className="text-[10px] font-bold text-gray-500 uppercase">KG</span>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-400">
+                      1RM {l('Est.', 'Est.')}
+                    </p>
+                    <div className="flex items-baseline justify-end gap-1">
+                      <span className="font-orbitron text-lg font-black text-white">
+                        {Math.round(pr.estimated_1rm)}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase text-slate-400">KG</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </HudCard>
             </motion.div>
           ))}
 
           {prs.length === 0 && logs.length > 0 && (
-            <div className="col-span-full py-12 text-center rounded-3xl border-2 border-dashed border-[#1E1E26]">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-700">Inicie seu treinamento para capturar dados de evolução.</p>
-            </div>
+            <HudCard variant="default" className="col-span-full p-8 text-center">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                {l(
+                  'Inicie seu treinamento para capturar dados de evolução.',
+                  'Start your workout to capture progression data.',
+                )}
+              </p>
+            </HudCard>
           )}
         </div>
       </div>
 
-      {/* History Log */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-3 px-2">
-          <Calendar className="size-5 text-purple-500" />
-          <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-            Arquivo de <span className="text-purple-500">Missões</span> Recentes
-          </h2>
-        </div>
+      {/* History Log — Mobile Compact HUD Cards + Desktop HUD Table (No horizontal scroll on mobile) */}
+      {logs.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5 px-1">
+            <Calendar className="size-4 text-purple-400" />
+            <h2 className="font-orbitron text-xs font-black uppercase tracking-[0.18em] text-white sm:text-sm">
+              {l('Arquivo de', 'Recent')}{' '}
+              <span className="text-purple-400">{l('Missões Recentes', 'Workout Logs')}</span>
+            </h2>
+          </div>
 
-        <div className="overflow-x-auto rounded-3xl border border-[#1E1E26] bg-[#0F0F13]">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-[#1E1E26] bg-white/5">
-                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Data</th>
-                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Exercício</th>
-                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400 text-center">Carga/Reps</th>
-                <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400 text-right">Potencial</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1E1E26]">
-              {logs.slice(0, 10).map((log) => {
-                const pwr = (log.weight_kg || 0) * (1 + 0.0333 * (log.reps || 0));
-                return (
-                  <tr key={log.id} className="group hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase">
-                        {new Date(log.logged_at).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-xs font-black text-white uppercase tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        {log.exercise?.name}
-                      </p>
-                      <p className="text-[9px] font-bold text-purple-500 uppercase tracking-widest italic">{log.exercise?.muscle_group}</p>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] font-black text-white uppercase tracking-widest">
-                        {log.weight_kg}kg <span className="text-gray-500 mx-1">x</span> {log.reps}r
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="h-1.5 w-12 bg-gray-800 rounded-full overflow-hidden">
-                           <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (pwr/200)*100)}%` }} />
-                        </div>
-                        <span className="text-[10px] font-black text-blue-400 italic" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                          {Math.round(pwr)}
+          {/* Mobile Responsive Compact Cards (320px - 767px) */}
+          <div className="space-y-2.5 md:hidden">
+            {logs.slice(0, 10).map((log) => {
+              const pwr = (log.weight_kg || 0) * (1 + 0.0333 * (log.reps || 0));
+              const pwrPct = Math.min(100, Math.round((pwr / 200) * 100));
+              return (
+                <HudCard key={log.id} variant="default" className="p-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md border border-purple-400/25 bg-purple-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-purple-300">
+                          {tx(log.exercise?.muscle_group || 'Geral')}
+                        </span>
+                        <span className="text-[10px] font-medium text-slate-400">
+                          {new Date(log.logged_at).toLocaleDateString(language)}
                         </span>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <p className="mt-1.5 truncate font-orbitron text-xs font-black uppercase text-white">
+                        {tx(log.exercise?.name || 'Exercício')}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="inline-flex items-center rounded-lg border border-cyan-400/25 bg-cyan-500/10 px-2.5 py-1 font-mono text-xs font-bold text-cyan-200">
+                        {log.sets ? `${log.sets}×${log.reps}` : `${log.reps}r`} · {log.weight_kg}kg
+                      </span>
+                      <p className="mt-1 font-mono text-[10px] font-bold text-slate-400">
+                        1RM: <span className="text-cyan-400">{Math.round(pwr)}kg</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2.5">
+                    <NeonProgressBar value={pwrPct} max={100} variant="cyan" size="sm" />
+                  </div>
+                </HudCard>
+              );
+            })}
+          </div>
+
+          {/* Desktop HUD Table (768px+) */}
+          <HudCard variant="default" className="hidden overflow-hidden p-0 md:block">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.03]">
+                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Data', 'Date')}
+                  </th>
+                  <th className="px-5 py-3.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Exercício', 'Exercise')}
+                  </th>
+                  <th className="px-5 py-3.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Séries / Carga', 'Sets / Weight')}
+                  </th>
+                  <th className="px-5 py-3.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {l('Potencial (1RM)', 'Potential (1RM)')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.06]">
+                {logs.slice(0, 10).map((log) => {
+                  const pwr = (log.weight_kg || 0) * (1 + 0.0333 * (log.reps || 0));
+                  const pwrPct = Math.min(100, Math.round((pwr / 200) * 100));
+                  return (
+                    <tr key={log.id} className="transition-colors hover:bg-white/[0.03]">
+                      <td className="px-5 py-3.5">
+                        <span className="font-mono text-xs font-semibold text-slate-400">
+                          {new Date(log.logged_at).toLocaleDateString(language)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <p className="font-orbitron text-xs font-black uppercase tracking-tight text-white">
+                          {tx(log.exercise?.name || 'Exercício')}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400">
+                          {tx(log.exercise?.muscle_group || 'Geral')}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span className="inline-flex rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 font-mono text-xs font-bold text-cyan-200">
+                          {log.sets ? `${log.sets}s × ` : ''}
+                          {log.reps}r · {log.weight_kg}kg
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <div className="w-20">
+                            <NeonProgressBar value={pwrPct} max={100} variant="cyan" size="sm" />
+                          </div>
+                          <span className="w-12 font-orbitron text-xs font-black text-cyan-400">
+                            {Math.round(pwr)}kg
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </HudCard>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -31,6 +31,57 @@ class MemoryStorageAdapter implements IAuthStorage {
 }
 
 /**
+ * Valida se uma string serializada representa um payload JSON de sessão do Supabase Auth
+ * (evitando migrar chaves auxiliares como *-code-verifier ou JSON corrompido).
+ */
+function isValidSerializedSession(raw: string | null): raw is string {
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return false;
+    return Boolean(
+      typeof parsed.access_token === 'string' ||
+      typeof parsed.refresh_token === 'string' ||
+      (parsed.currentSession && typeof parsed.currentSession.access_token === 'string')
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Remove chaves legadas sb-*-auth-token do localStorage e sessionStorage
+ * para impedir que tokens expirados sejam ressuscitados após migração ou logout.
+ */
+function purgeLegacyAuthKeys(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (window.localStorage) {
+      const legacyLocalKeys: string[] = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k && k !== 'ascend-auth-token' && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+          legacyLocalKeys.push(k);
+        }
+      }
+      legacyLocalKeys.forEach((k) => window.localStorage.removeItem(k));
+    }
+    if (window.sessionStorage) {
+      const legacySessionKeys: string[] = [];
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const k = window.sessionStorage.key(i);
+        if (k && (k === 'ascend-auth-token' || (k.startsWith('sb-') && k.endsWith('-auth-token')))) {
+          legacySessionKeys.push(k);
+        }
+      }
+      legacySessionKeys.forEach((k) => window.sessionStorage.removeItem(k));
+    }
+  } catch {
+    // ignorar erro de limpeza
+  }
+}
+
+/**
  * Adaptador Web padrão usando localStorage com resiliência contra erros de cota/permissão.
  */
 class WebLocalStorageAdapter implements IAuthStorage {
@@ -40,7 +91,13 @@ class WebLocalStorageAdapter implements IAuthStorage {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const val = window.localStorage.getItem(key);
-        if (val) return val;
+        if (val) {
+          if (key === 'ascend-auth-token' && !isValidSerializedSession(val)) {
+            window.localStorage.removeItem(key);
+          } else {
+            return val;
+          }
+        }
 
         // Migração transparente de tokens legados caso key seja ascend-auth-token
         if (key === 'ascend-auth-token') {
@@ -49,9 +106,10 @@ class WebLocalStorageAdapter implements IAuthStorage {
             const k = window.localStorage.key(i);
             if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
               const legacyVal = window.localStorage.getItem(k);
-              if (legacyVal) {
+              if (isValidSerializedSession(legacyVal)) {
                 try {
                   window.localStorage.setItem(key, legacyVal);
+                  window.localStorage.removeItem(k);
                 } catch {
                   // ignorar erro de escrita
                 }
@@ -64,11 +122,12 @@ class WebLocalStorageAdapter implements IAuthStorage {
           if (window.sessionStorage) {
             for (let i = 0; i < window.sessionStorage.length; i++) {
               const k = window.sessionStorage.key(i);
-              if (k && (k.startsWith('sb-') || k.includes('auth-token') || k === 'ascend-auth-token')) {
+              if (k && (k === 'ascend-auth-token' || (k.startsWith('sb-') && k.endsWith('-auth-token')))) {
                 const legacyVal = window.sessionStorage.getItem(k);
-                if (legacyVal) {
+                if (isValidSerializedSession(legacyVal)) {
                   try {
                     window.localStorage.setItem(key, legacyVal);
+                    window.sessionStorage.removeItem(k);
                   } catch {
                     // ignorar erro de escrita
                   }
@@ -89,6 +148,9 @@ class WebLocalStorageAdapter implements IAuthStorage {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(key, value);
+        if (key === 'ascend-auth-token') {
+          purgeLegacyAuthKeys();
+        }
         return;
       }
     } catch (err) {
@@ -101,6 +163,9 @@ class WebLocalStorageAdapter implements IAuthStorage {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.removeItem(key);
+        if (key === 'ascend-auth-token') {
+          purgeLegacyAuthKeys();
+        }
         return;
       }
     } catch (err) {

@@ -26,8 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const reset = useHunterStore((s) => s.reset);
   // Ref para rastrear o ID do usuário atual, evitando re-cargas desnecessárias
   const currentUserRef = useRef<string | null>(null);
-  // Ref para evitar chamadas concorrentes ao loadProfile
-  const loadingProfileRef = useRef(false);
+  // Ref com Promise deduplicada para evitar chamadas concorrentes e condições de corrida no loadProfile
+  const activeSyncRef = useRef<{ userId: string; promise: Promise<void> } | null>(null);
 
   const syncProfileAndDailyNutrition = async (currentUser: User) => {
     await loadProfile(currentUser.id);
@@ -40,16 +40,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const ensureProfileSynced = (currentUser: User): Promise<void> => {
+    const storeState = useHunterStore.getState();
+    if (
+      storeState.profileLoaded &&
+      storeState.profileUserId === currentUser.id &&
+      !storeState.profileError
+    ) {
+      return Promise.resolve();
+    }
+
+    if (activeSyncRef.current && activeSyncRef.current.userId === currentUser.id) {
+      return activeSyncRef.current.promise;
+    }
+
+    const promise = syncProfileAndDailyNutrition(currentUser).finally(() => {
+      if (activeSyncRef.current?.promise === promise) {
+        activeSyncRef.current = null;
+      }
+    });
+
+    activeSyncRef.current = { userId: currentUser.id, promise };
+    return promise;
+  };
+
   useEffect(() => {
     let active = true;
+    const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
 
-    // Safety timeout: nunca mais de 6 segundos no loading inicial
+    const scheduleDeferred = (fn: () => void) => {
+      const timerId = setTimeout(() => {
+        pendingTimers.delete(timerId);
+        if (active) fn();
+      }, 0);
+      pendingTimers.add(timerId);
+    };
+
+    // Safety timeout: nunca mais de 8 segundos preso no loading inicial
     const safetyTimeout = setTimeout(() => {
-      if (active && loading) {
-        setLoading(false);
-        console.warn('[AuthContext] Safety timeout disparado. Forçando loading = false.');
+      if (!active) return;
+      const storeState = useHunterStore.getState();
+      if (storeState.profileLoading && !storeState.profileLoaded) {
+        useHunterStore.setState({
+          profileLoading: false,
+          profileError: storeState.profileError || 'Tempo limite excedido ao sincronizar perfil com o Sistema.',
+        });
       }
-    }, 6000);
+      setLoading((prev) => {
+        if (prev) {
+          console.warn('[AuthContext] Safety timeout disparado. Liberando estado de loading.');
+        }
+        return false;
+      });
+    }, 8000);
 
     async function initAuth() {
       try {
@@ -58,6 +101,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.error('[AuthContext] Erro ao obter sessão persistida:', error);
+          currentUserRef.current = null;
+          clearAllAuthSessionTokens();
+          setSession(null);
+          setUser(null);
+          reset();
           setLoading(false);
           return;
         }
@@ -69,15 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (currentSession?.user) {
           const userId = currentSession.user.id;
           currentUserRef.current = userId;
-          // Carrega o perfil apenas se ainda não foi carregado (evita chamadas duplas)
-          if (!loadingProfileRef.current) {
-            loadingProfileRef.current = true;
-            try {
-              await syncProfileAndDailyNutrition(currentSession.user);
-            } finally {
-              loadingProfileRef.current = false;
-            }
-          }
+          await ensureProfileSynced(currentSession.user);
         } else {
           currentUserRef.current = null;
           reset();
@@ -94,7 +134,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    // IMPORTANTE: O callback de onAuthStateChange NUNCA deve ser async ou aguardar queries do Supabase
+    // diretamente, pois o GoTrueClient invoca os listeners dentro de _acquireLock. Chamar supabase.from(...)
+    // síncronamente dentro deste callback causa deadlock circular em supabase.auth.getSession().
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!active) return;
 
       const newUserId = newSession?.user?.id ?? null;
@@ -102,43 +145,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Evento de deslogamento explícito ou expiração total
       if (event === 'SIGNED_OUT') {
         currentUserRef.current = null;
+        activeSyncRef.current = null;
         setSession(null);
         setUser(null);
         reset();
         clearAllAuthSessionTokens();
-        if (active) setLoading(false);
+        setLoading(false);
         return;
       }
 
-      // Ignora eventos que não mudam o usuário (ex: TOKEN_REFRESHED com mesmo ID)
-      if (event === 'TOKEN_REFRESHED' && newUserId === currentUserRef.current) {
+      // Atualização silenciosa de token para o mesmo usuário já carregado
+      if (
+        (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') &&
+        newUserId === currentUserRef.current
+      ) {
         setSession(newSession);
+        if (newSession?.user) {
+          setUser(newSession.user);
+        }
         return;
       }
 
-      if (newUserId !== currentUserRef.current) {
+      const storeState = useHunterStore.getState();
+      const needsProfileSync =
+        Boolean(newUserId) &&
+        (newUserId !== currentUserRef.current || (!storeState.profileLoaded && !storeState.profileLoading));
+
+      if (newUserId !== currentUserRef.current || needsProfileSync) {
         currentUserRef.current = newUserId;
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
-        if (newUserId) {
+        if (newUserId && newSession?.user) {
+          const targetUser = newSession.user;
           setLoading(true);
-          if (!loadingProfileRef.current) {
-            loadingProfileRef.current = true;
-            try {
-              if (newSession?.user) {
-                await syncProfileAndDailyNutrition(newSession.user);
-              }
-            } catch (err) {
-              console.error('[AuthContext] Erro ao carregar perfil:', err);
-            } finally {
-              loadingProfileRef.current = false;
-            }
-          }
-          if (active) setLoading(false);
+          // Desacopla a query PostgREST do lock interno (_acquireLock) do GoTrueClient
+          scheduleDeferred(() => {
+            void ensureProfileSynced(targetUser)
+              .catch((err) => {
+                console.error('[AuthContext] Erro ao sincronizar perfil após mudança de sessão:', err);
+              })
+              .finally(() => {
+                if (active) setLoading(false);
+              });
+          });
         } else {
           reset();
-          if (active) setLoading(false);
+          setLoading(false);
         }
       }
     });
@@ -146,6 +199,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
       clearTimeout(safetyTimeout);
+      pendingTimers.forEach((timerId) => clearTimeout(timerId));
+      pendingTimers.clear();
       subscription.unsubscribe();
     };
   }, [loadProfile, reset]);

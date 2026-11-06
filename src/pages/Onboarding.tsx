@@ -510,7 +510,7 @@ function DecisionFeedback({ message }: { message: string | null }) {
 export function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { hunterClass, setHunterClass, profileLoaded, profileLoading } = useHunterStore();
+  const { hunterClass, setHunterClass, profileLoaded, profileLoading, profileError, loadProfile } = useHunterStore();
   const { language } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => isEnglish ? en : pt;
@@ -546,6 +546,12 @@ export function Onboarding() {
     mainGoal: '',
     experienceLevel: '',
   });
+
+  useEffect(() => {
+    if (user?.id && !profileLoaded && !profileLoading && !profileError) {
+      void loadProfile(user.id);
+    }
+  }, [user?.id, profileLoaded, profileLoading, profileError, loadProfile]);
 
   useEffect(() => {
     // Se ainda estiver carregando o perfil, não inicia o fluxo de perguntas
@@ -713,7 +719,24 @@ export function Onboarding() {
         {/* ── LOADING ── */}
         {step === 'loading' && (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center">
-            <MatrixLoader />
+            {!profileLoaded && profileError ? (
+              <div className="max-w-md w-full bg-[#13131A] border border-red-500/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+                <h2 className="text-lg font-orbitron font-bold text-red-400 mb-2">
+                  {l('FALHA DE SINCRONIZAÇÃO', 'SYNCHRONIZATION FAILURE')}
+                </h2>
+                <p className="text-xs text-gray-400 mb-6 font-mono">{profileError}</p>
+                <button
+                  onClick={() => {
+                    if (user) void loadProfile(user.id);
+                  }}
+                  className="w-full py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 rounded-xl text-red-300 font-orbitron text-xs tracking-widest uppercase transition-all"
+                >
+                  {l('Tentar Reconectar ao Sistema', 'Retry System Connection')}
+                </button>
+              </div>
+            ) : (
+              <MatrixLoader />
+            )}
           </motion.div>
         )}
 
