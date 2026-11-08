@@ -20,6 +20,102 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-06 — ASCEND: THE GATE — Redesign Completo da Experiência de Autenticação (`src/components/ui/hunter-login.tsx`, `src/pages/auth/LoginPage.tsx`, `src/pages/auth/RegisterPage.tsx`, `src/pages/auth/ForgotPasswordPage.tsx`, `execution/test_the_gate_auth.mjs`)
+- **Workflow `ascend-design` Concluído:** Redesign estrutural e estético integral da porta de entrada do aplicativo baseado no conceito **ASCEND — THE GATE** (*Your Evolution Starts Here*), unindo *Cinematic Minimalism*, *Dark Fantasy* e *Premium Mobile UI*.
+- **Eliminação Rigorosa de Poluição Visual e Métricas Falsas:**
+  - Remoção de todos os cards demonstrativos fictícios (Rank C, Nível 12, Streak 18d, Boss da Fenda, Classe inicial falsa e parâmetros metabólicos simulados).
+  - Remoção de partículas flutuantes pesadas e indicadores técnicos decorativos que poluíam e desviavam o foco da autenticação.
+  - Eliminação de aninhamento excessivo de cards (`HudCard` dentro de `HudCard`).
+- **Nova Composição Desktop (Dual Panel):**
+  - **Left (Authentication):** Espaço negativo generoso, identidade ASCEND + THE GATE, headline cristalina (*"Bem-vindo ao ASCEND"* / *"Comece sua Jornada"*), campos confortáveis de 52px com bordas discretas, foco luminoso em cyan (`#00F0FF`), tipografia Inter/sans-serif para legibilidade, compatibilidade nativa com gerenciadores de senha e autofill (`email`, `current-password`, `new-password`), botão primário de 52px com gradiente sofisticado e seletor de idioma.
+  - **Right (The Gate):** Enquadramento cinematográfico e assimétrico da arte original do Caçador diante do portal dimensional, com vinhetas profundas integradas ao fundo `#030408`, iluminação ambiente radial e um único card narrativo discreto com HudCard HUD v2 (*"Sua evolução começa aqui • Atravesse o portal e transforme rotina em poder real"*).
+- **Experiência Mobile-First Autêntica:**
+  - Banner cinematográfico compacto no topo da tela (~180px) com fusão orgânica de gradientes com o fundo escuro, garantindo que o formulário não seja empurrado para fora da primeira dobra visível.
+  - Botão principal e links essenciais posicionados na Thumb Zone inferior com touch targets $\ge$ 44px/52px e suporte ergonômico a teclado virtual aberto.
+- **Harmonização de Cadastro e Recuperação:**
+  - Aplicação da mesma linguagem visual e clean tokens em [`RegisterPage.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/pages/auth/RegisterPage.tsx) e [`ForgotPasswordPage.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/pages/auth/ForgotPasswordPage.tsx).
+- **Preservação Absoluta das Regras de Auth:**
+  - `AuthContext`, persistência no Supabase, tokens, redirecionamentos para `/onboarding` e `/`, e validação de senhas preservados sem regressão.
+- **Verificação de Qualidade e Homologação:**
+  - Nova suite dedicada [`execution/test_the_gate_auth.mjs`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/execution/test_the_gate_auth.mjs): 7/7 testes aprovados.
+  - Bateria completa do repositório: 27/27 suites aprovadas (`node execution/run_all_tests.mjs`).
+  - Auditoria bilíngue: `npm run audit:i18n` com aprovação total.
+  - Compilação de produção: `npm run build` limpa em 2.04s, com redução de 9 kB no bundle CSS final.
+
+### 2026-11-06 — Etapa 04.5: Guided Quests — Missões Interativas e Exercícios Guiados (`src/lib/guidedQuests.ts`, `src/components/quests/GuidedQuestModal.tsx`, `src/components/quests/IllustratedQuestCard.tsx`, `src/pages/Quests.tsx`, `execution/test_guided_quests.mjs`)
+- **Workflow `ascend-develop` & Agentes Especializados:** Execução com revisão dos papéis *Creative Director*, *Mobile Engineer*, *Software Architect*, *Gameplay Guardian* e *QA Engineer*, transformando atividades selecionadas em experiências imersivas de execução guiada estilo RPG e fitness mobile.
+- **Três Categorias de Interação Piloto (`src/lib/guidedQuests.ts`):**
+  - **A. Exercício por Repetições (Reps Mode):**
+    - Suporte nativo a flexões de braço, agachamentos livres, abdominais, barras fixas, panturrilhas e polichinelos.
+    - Contador numérico gigante de alta legibilidade com barra de progresso visual (`NeonProgressBar`).
+    - Botões táteis rápidos com touch targets generosos (`-5`, `-1`, `+1`, `+5`, `+10`) e campo de ajuste manual direto.
+    - Guia técnico de postura e cadência (ex: 2s excêntrica, 1s explosão concêntrica, alinhamento de coluna e respiração coordenada).
+  - **B. Atividade por Tempo (Timer Mode):**
+    - Suporte nativo a meditação/mindfulness, foco máximo/deep work (pomodoro), leitura/estudo, alongamento/mobilidade, caminhada/cardio e respiração consciente (box breathing).
+    - Mostrador digital de contagem regressiva em formato `MM:SS` com anel de progresso circular (`NeonProgressRing`).
+    - Controles táticos: Pausar, Retomar, Ajustar tempo (`+1 min`, `+5 min`, `-1 min`) e Reiniciar.
+    - Resiliência absoluta: cálculo baseado em timestamp epoch (`Date.now()`), imune a bloqueio de tela, aba em segundo plano ou recarregamento da página.
+  - **C. Rotina de Treinamento (Routine Mode):**
+    - Redirecionamento direto para o Training Center 2.0 existente (`/workouts`, `ActiveWorkoutSession.tsx`) com séries, cargas e descanso integrados.
+    - **Zero Duplicação de Players:** O Training Center 2.0 existente é 100% reaproveitado, sem criar um segundo player paralelo de treinos.
+- **Cards Ilustrados Estilo Jogo Mobile (`src/components/quests/IllustratedQuestCard.tsx`):**
+  - Apresentação visual atraente das missões com arte e ilustrações oficiais do ASCEND (`/Cards/Treinos.jpeg`, `/Cards/Estudos-Nutricao.jpeg`, `/Cards/Descanso-Lazer.jpeg`, etc.).
+  - Exibição de meta da atividade (ex: "⚡ 20 repetições", "⏱️ 15 minutos"), recompensa de XP, atributo contemplado e estado (Pendente / Concluída).
+  - Alternador de visualização na barra de filtros: **Lista Tática** (lista compacta com atalho direto de execução) e **Cards Ilustrados** (grid responsivo estilo RPG).
+  - **Preservação do Registro Rápido:** Usuários avançados continuam podendo marcar a conclusão com exatamente 1 toque pelo checkbox sem serem forçados a abrir o modo guiado.
+- **Modo de Execução HUD v2 (`src/components/quests/GuidedQuestModal.tsx`):**
+  - Interface livre de distrações, com feedback háptico sutil (`navigator.vibrate`), cantoneiras e acabamento grafite/neon cyan.
+  - Gaveta expansível com orientações de postura, mentalidade e dicas de execução técnica.
+  - Botão tático flutuante de retomar sessão caso o usuário minimize ou troque de página durante o cronômetro.
+- **Integridade do Sistema de Gamificação (Gameplay Guardian):**
+  - Conclusão integrada com idempotência às stores existentes (`useHabits`, `useTasks`, `useHunterStore`).
+  - Atribuição correta aos 5 atributos oficiais (`strength`, `endurance`, `intelligence`, `discipline`, `vitality`).
+  - Dano aplicado ao Boss da Raid Semanal (`useBossStore`) preservado em 100%.
+  - Zero concessão de recompensas apenas por abrir ou cancelar a sessão.
+  - Zero dependências de IA externa, modelos de linguagem, câmeras de visão computacional ou paywalls.
+- **Validação e Qualidade (QA Engineer):**
+  - Suite de testes unitários dedicada [`execution/test_guided_quests.mjs`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/execution/test_guided_quests.mjs): 9/9 testes aprovados.
+  - Bateria completa do ASCEND: 26/26 suites passando (`node execution/run_all_tests.mjs`).
+  - Auditoria de i18n (`npm run audit:i18n`): 100% dos textos disponíveis em PT-BR e EN-US.
+  - Build de produção validado (`npm run build`): compilação limpa em 2.04s.
+
+### 2026-11-06 — Etapa 04.4: Social System — Amigos, Perfis Públicos e Leaderboards (`src/pages/Social.tsx`, `src/stores/useSocialStore.ts`, `src/lib/socialScore.ts`, `src/components/social/*`, `supabase/migrations/20261106_social_system.sql`, `execution/test_social_system.mjs`)
+- **Workflow `ascend-develop` & `ascend-design` Concluídos:** Criação completa do subsistema **ASCEND Social v1**, integrando ranking competitivo, busca de caçadores, solicitações de amizade e vitrine de honra ao universo de RPG do aplicativo, preservando o foco em evolução pessoal (sem transformar o ASCEND em rede social tradicional).
+- **Perfil Público do Caçador & Privacidade Rigorosa (`src/lib/socialScore.ts`):**
+  - **Identificador Público Único:** Geração determinística de **Hunter Tags** exclusivas no formato `username#XXXX` para conexões diretas sem exposição de UUIDs internos.
+  - **Sanitização de Dados:** Função `sanitizePublicProfile` que expõe exclusivamente informações autorizadas (codinome, Hunter Tag, avatar da classe, rank visual, nível, título equipado, streak e até 3 troféus em destaque).
+  - **Garantia de Sigilo:** E-mail, data de nascimento, peso, medidas corporais, registros de refeições e dados financeiros são estritamente bloqueados e nunca transitam em perfis públicos.
+  - **Controles de Visibilidade:** Toggles granulares para Perfil Público ativo, recebimento de solicitações de amizade e participação no Ranking Global.
+- **Sistema de Amizades & Anti-Abuso (`src/stores/useSocialStore.ts`, `src/components/social/`):**
+  - Ciclo de vida completo: busca por Hunter Tag exata (evitando enumeração indiscriminada de usuários), envio de convite, aceitação, recusa, remoção e bloqueio de jogadores.
+  - Proteção contra solicitações excessivas com limite de até 20 convites pendentes e bloqueio de auto-solicitação.
+  - Modal interativo [`HunterPublicProfileModal.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/components/social/HunterPublicProfileModal.tsx) com card holográfico do caçador e ações contextuais.
+  - Modal de busca táctica [`AddFriendModal.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/components/social/AddFriendModal.tsx) com visualização instantânea antes do envio do convite.
+- **Ranking Competitivo da Temporada (Global & Amigos):**
+  - **Fórmula de Pontuação Balanceada:** Pontuação calculada a partir de atividades validadas do período, com caps diários que impedem que spam de tarefas crie vantagem desleal:
+    - *Treinos Concluídos:* 100 pts por dia com treino verificado (máx. 100 pts/dia).
+    - *Hábitos Essenciais:* 20 pts por hábito concluído (máx. 5 hábitos/dia = 100 pts/dia).
+    - *Boss Raid Semanal:* 50 pts por participação ativa + 150 pts por vitória no ciclo.
+    - *Streak de Consistência:* 10 pts por dia consecutivo ativo no período.
+  - Classificação filtrável entre **Ciclo Semanal** (padrão ISO 8601) e **Temporada Mensal**.
+  - Pódio dos Top 3 com insígnias douradas, prateadas e de bronze, além de barra flutuante com a posição do próprio jogador.
+  - A fórmula de XP do jogador e a curva de níveis original permanecem 100% inalteradas.
+- **Integração com a Trophy Room:**
+  - Seletor de até 3 Troféus e Títulos em destaque da Trophy Room para exibição no card de honra social.
+- **UX Mobile & Navegação HUD v2:**
+  - Rota dedicada [`/social`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/pages/Social.tsx) com navegação fluida em 3 abas (*Ranking*, *Companheiros*, *Meu Perfil*).
+  - Acesso direto via card no portal da Home ([`src/pages/QuickMenu.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/pages/QuickMenu.tsx)) e menus secundários ([`RPGLayout.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/components/layout/RPGLayout.tsx), [`MobileMenu.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/components/layout/MobileMenu.tsx)).
+  - **Conformidade Mobile Estrita:** A Bottom Navigation Bar fixa ([`BottomNav.tsx`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/src/components/layout/BottomNav.tsx)) foi mantida com exatamente suas 5 abas originais, sem inclusão forçada de 6ª aba.
+- **Segurança & Migração de Banco:**
+  - Migração local versionada [`supabase/migrations/20261106_social_system.sql`](file:///d:/Área%20de%20Trabalho/ASCEND/ascend/supabase/migrations/20261106_social_system.sql) contendo tabelas `friendships` e `leaderboard_scores`, colunas sociais em `profiles`, índices de alta performance e políticas de RLS.
+- **Qualidade & Garantias:**
+  - Zero IA generativa, zero Stripe/paywall.
+  - Nova suíte automatizada `execution/test_social_system.mjs` com 9 testes unitários aprovados (100% de sucesso).
+  - 25/25 suítes de teste do repositório aprovadas em `execution/run_all_tests.mjs`.
+  - Auditoria de internacionalização (PT-BR / EN-US) validada com sucesso (`npm run audit:i18n`).
+  - Build de produção (`tsc -b && vite build`) concluído com 0 erros em 2.13s.
+
+
 ### 2026-11-06 — Etapa 04.0: Refinamento Premium de Login, Registro e Recuperação (`src/components/ui/hunter-login.tsx`, `src/components/auth/ForgotPasswordModal.tsx`, `src/pages/auth/ForgotPasswordPage.tsx`, `src/pages/auth/LoginPage.tsx`, `src/pages/auth/RegisterPage.tsx`, `src/App.tsx`, `execution/test_premium_auth_and_recovery.mjs`)
 - **Workflow `ascend-design` Concluído com Revisão do ASCEND Agent Team v1:** Refinamento premium completo da experiência de autenticação do ASCEND (Login, Cadastro e Recuperação de Senha), elevando a hierarquia visual, usabilidade mobile, microcopy e integração com o Design System HUD v2.
 - **Login e Experiência de Acesso:**
@@ -1321,3 +1417,29 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - O teste de conexao do Supabase no layout ficou restrito ao ambiente de desenvolvimento, evitando query extra para usuarios em producao.
   - Adicionada criacao de `Missao Unica` no Quadro de Missoes, com data, hora e nota opcional exibidas no card e ordenacao pelo horario quando informado.
   - Build de producao validado com `npm.cmd run build`; restaram apenas avisos de chunk grande/code splitting do Vite.
+
+### 2026-11-06
+- **Etapa 04.4 — ASCEND Social System v1**:
+  - Implementado sistema de perfis públicos de caçador, rankings de pontuação (`socialScore.ts`) e sistema de amigos.
+  - Criado `src/stores/useSocialStore.ts`, componentes dedicados em `src/components/social/` (`SocialProfileTab`, `LeaderboardTab`, `FriendsListTab`, `AddFriendModal`, `HunterPublicProfileModal`) e página `src/pages/Social.tsx`.
+  - Integrado ao `App.tsx`, menu mobile e Quick Actions com permissões e visibilidade controladas pelo usuário.
+  - Criada migration Supabase em `supabase/migrations/20261106_social_system.sql` com RLS restrito.
+  - Validação completa com `execution/test_social_system.mjs`.
+
+- **Etapa 04.5 — Guided Quests (Missões Interativas e Exercícios Guiados)**:
+  - Criado módulo `src/lib/guidedQuests.ts` com suporte determinístico a exercícios por repetições, temporizador epoch-resilient e rotinas redirecionadas ao Training Center 2.0.
+  - Implementados componentes `src/components/quests/GuidedQuestModal.tsx` e `IllustratedQuestCard.tsx`.
+  - Integrado a `src/pages/Quests.tsx` com alternância fluida entre visão em lista tática e cards ilustrados, banner de sessão ativa e atalho de execução guiada.
+  - Validação com `execution/test_guided_quests.mjs` (9/9 testes aprovados).
+
+- **Redesign THE GATE — Autenticação Cinematográfica**:
+  - Redesenhado completamente `src/components/ui/hunter-login.tsx` sob o conceito *THE GATE* (*Your Evolution Starts Here*).
+  - Eliminados componentes supérfluos, partículas custosas e dados mockados que induziam ao erro.
+  - Atualizada a página de recuperação `src/pages/auth/ForgotPasswordPage.tsx` com a mesma coerência visual e formulários limpos.
+  - Validação com `execution/test_the_gate_auth.mjs`.
+
+- **Etapa 04.6 — Game Design Audit 360° (Análise Completa do Produto)**:
+  - Realizada auditoria estratégica multidisciplinar completa sob o workflow `ascend-review`.
+  - Gerado documento oficial `docs/ASCEND_GAME_DESIGN_AUDIT_360.md` contendo todas as 18 seções normativas: diagnóstico 10D, benchmark factual (*Life Reset*, *Rise New Hero*, *Habitica*, *Duolingo*, *Strava*), avaliação dos 14 módulos, análise do modelo híbrido de quests, economia de XP, retenção, UX/UI mobile, segurança, preparação para stores, roadmap e matriz P0-P3.
+  - Zero código de produção alterado nesta etapa, respeitando a diretriz estrita da missão.
+  - Verificação geral: 27/27 suítes de teste aprovadas, auditoria de i18n sem divergências e build Vite concluído com sucesso.

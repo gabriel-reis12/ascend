@@ -29,6 +29,9 @@ import {
   CheckCircle2,
   ArrowUpRight,
   Filter,
+  LayoutGrid,
+  List,
+  Sparkles,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +43,16 @@ import type { SingleTaskMeta, Task, CreateTaskInput } from '@/hooks/useTasks';
 
 import { NewHabitModal } from '@/components/rpg/NewHabitModal';
 import { NewQuestModal } from '@/components/rpg/NewQuestModal';
+import { GuidedQuestModal } from '@/components/quests/GuidedQuestModal';
+import { IllustratedQuestCard } from '@/components/quests/IllustratedQuestCard';
+import type { GuidedQuestSession } from '@/lib/guidedQuests';
+import {
+  detectGuidedActivity,
+  loadGuidedSession,
+  saveGuidedSession,
+  clearGuidedSession,
+  isGuidedEligible,
+} from '@/lib/guidedQuests';
 import { NeonCheckbox } from '@/components/ui/animated-check-box';
 import { HudCard } from '@/components/ui/hud-card';
 import { TacticalButton } from '@/components/ui/tactical-button';
@@ -213,6 +226,7 @@ function MissionCard({
   onUpdateTime,
   onDelete,
   onOpenModule,
+  onExecuteGuided,
   isEnglish,
 }: {
   id: string;
@@ -231,6 +245,7 @@ function MissionCard({
   onUpdateTime: (id: string, type: 'habit' | 'workout' | 'meal' | 'task' | 'finance', field: 'start' | 'end', t: string | null) => void;
   onDelete?: (id: string) => void;
   onOpenModule?: () => void;
+  onExecuteGuided?: () => void;
   isEnglish: boolean;
 }) {
   const prefersReducedMotion = useReducedMotion();
@@ -441,6 +456,20 @@ function MissionCard({
 
         {/* Controles Secundários à Direita (44x44px touch target) */}
         <div className="flex shrink-0 items-center gap-1.5">
+          {onExecuteGuided && !done && (
+            <button
+              type="button"
+              onClick={onExecuteGuided}
+              className="flex h-11 items-center gap-1.5 rounded-xl border border-[#00F0FF]/35 bg-[#00F0FF]/10 px-3 text-[#00F0FF] transition-all hover:bg-[#00F0FF]/20 active:scale-95"
+              title={l('Executar no Modo Guiado', 'Execute in Guided Mode')}
+              aria-label={l('Executar no Modo Guiado', 'Execute in Guided Mode')}
+            >
+              <Play size={14} fill="currentColor" />
+              <span className="hidden sm:inline font-orbitron text-[10px] font-bold uppercase tracking-wider">
+                {l('Guiado', 'Guided')}
+              </span>
+            </button>
+          )}
           {type === 'task' && onDelete && (
             <button
               type="button"
@@ -690,10 +719,14 @@ export function Quests() {
   const [tab, setTab] = useState<'daily' | 'manage' | 'codex'>('daily');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'habit' | 'task' | 'workout' | 'meal' | 'finance'>('all');
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
   const [modalOpen, setModalOpen] = useState(false);
   const [questModalOpen, setQuestModalOpen] = useState(false);
   const [presetHabitData, setPresetHabitData] = useState<Partial<CreateHabitInput> | null>(null);
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+
+  const [guidedModalOpen, setGuidedModalOpen] = useState(false);
+  const [activeGuidedSession, setActiveGuidedSession] = useState<GuidedQuestSession | null>(null);
 
   const [openCodexCategory, setOpenCodexCategory] = useState('Nutrição');
   const legacyCodexVisible = Boolean(import.meta.env.VITE_SHOW_LEGACY_QUEST_CODEX);
@@ -701,6 +734,15 @@ export function Quests() {
 
   const { user } = useAuth();
   const [hasLoggedFinanceToday, setHasLoggedFinanceToday] = useState(false);
+
+  // Carrega sessão guiada ativa persistida no localStorage
+  useEffect(() => {
+    if (!user?.id) return;
+    const stored = loadGuidedSession(user.id);
+    if (stored) {
+      setActiveGuidedSession(stored);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     async function checkFinanceToday() {
@@ -876,6 +918,72 @@ export function Quests() {
     nextMission && 'stat_target' in nextMission.data ? nextMission.data.stat_target : null;
   const nextMissionStat = nextMissionStatTarget ? statAbbreviations[nextMissionStatTarget] : null;
 
+  const handleOpenGuidedQuest = (mission: UnifiedMission) => {
+    if (!user) return;
+    if (mission.type === 'workout') {
+      navigate('/workouts');
+      return;
+    }
+    if (mission.type === 'meal') {
+      navigate('/nutrition');
+      return;
+    }
+    if (mission.type === 'finance') {
+      navigate('/fortuna');
+      return;
+    }
+
+    const title =
+      mission.type === 'task'
+        ? mission.data.title.replace(/^\[BÔNUS( IA)?\]\s*/, '')
+        : mission.data.title;
+    const category = mission.data.category;
+    const config = detectGuidedActivity(title, category);
+
+    const session: GuidedQuestSession = {
+      questId: mission.data.id,
+      questType: mission.type,
+      mode: config.mode,
+      title,
+      category,
+      categoryColor: 'category_color' in mission.data ? mission.data.category_color : '#00F0FF',
+      targetValue: config.defaultTarget,
+      currentValue: 0,
+      targetTimestamp: null,
+      isPaused: true,
+      remainingWhenPaused: config.defaultTarget,
+      startedAt: Date.now(),
+      xpReward: mission.data.xp_reward,
+      statTarget: 'stat_target' in mission.data ? (mission.data as any).stat_target : null,
+      statReward: 'stat_reward' in mission.data ? (mission.data as any).stat_reward : 1,
+    };
+
+    saveGuidedSession(session, user.id);
+    setActiveGuidedSession(session);
+    setGuidedModalOpen(true);
+  };
+
+  const handleCompleteGuidedQuest = async (
+    questId: string,
+    questType: 'habit' | 'task' | 'workout',
+    _results: { repsDone?: number; timeSeconds?: number }
+  ) => {
+    if (questType === 'habit') {
+      if (!completedToday.has(questId)) {
+        await toggleCompletion(questId);
+      }
+    } else if (questType === 'task') {
+      const task = tasks.find((t) => t.id === questId);
+      if (task && !task.completed) {
+        await completeTask(questId);
+      }
+    }
+    if (user?.id) {
+      clearGuidedSession(user.id);
+    }
+    setActiveGuidedSession(null);
+  };
+
   function handleStartNextMission() {
     if (!nextMission) return;
     if (nextMission.type === 'workout') {
@@ -890,9 +998,7 @@ export function Quests() {
       navigate('/fortuna');
       return;
     }
-    document
-      .getElementById(`mission-${nextMission.type}-${nextMission.data.id}`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    handleOpenGuidedQuest(nextMission);
   }
 
   // Detecta se há sessão ativa de treino salva localmente para exibir progresso parcial real
@@ -945,6 +1051,13 @@ export function Quests() {
         }}
         initialData={presetHabitData}
         isEditing={!!editingHabitId}
+      />
+      <GuidedQuestModal
+        open={guidedModalOpen}
+        onClose={() => setGuidedModalOpen(false)}
+        session={activeGuidedSession}
+        userId={user?.id || ''}
+        onComplete={handleCompleteGuidedQuest}
       />
 
       <div className="mx-auto max-w-5xl space-y-5 pb-24">
@@ -1247,34 +1360,111 @@ export function Quests() {
                       })}
                     </div>
 
-                    {/* Filtro por Tipo de Atividade */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 border-t border-white/[0.05] pt-2 sm:border-t-0 sm:pt-0">
-                      {[
-                        { id: 'all', label: l('Todos Tipos', 'All Types') },
-                        { id: 'habit', label: l('Hábitos', 'Habits') },
-                        { id: 'task', label: l('Únicas', 'One-Time') },
-                        { id: 'workout', label: l('Treino', 'Workouts') },
-                        { id: 'meal', label: l('Nutrição', 'Meals') },
-                        { id: 'finance', label: l('Finanças', 'Finance') },
-                      ].map((tf) => {
-                        const active = typeFilter === tf.id;
-                        return (
-                          <button
-                            key={tf.id}
-                            type="button"
-                            onClick={() => setTypeFilter(tf.id as typeof typeFilter)}
-                            className={`inline-flex min-h-[44px] shrink-0 items-center rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
-                              active
-                                ? 'border-[#A855F7]/50 bg-[#A855F7]/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.14)]'
-                                : 'border-white/8 bg-white/[0.02] text-slate-400 hover:border-white/15 hover:text-slate-200'
-                            }`}
-                          >
-                            {tf.label}
-                          </button>
-                        );
-                      })}
+                    {/* Filtro por Tipo de Atividade e Alternador de Visão */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.05] pt-2 sm:border-t-0 sm:pt-0">
+                      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                        {[
+                          { id: 'all', label: l('Todos Tipos', 'All Types') },
+                          { id: 'habit', label: l('Hábitos', 'Habits') },
+                          { id: 'task', label: l('Únicas', 'One-Time') },
+                          { id: 'workout', label: l('Treino', 'Workouts') },
+                          { id: 'meal', label: l('Nutrição', 'Meals') },
+                          { id: 'finance', label: l('Finanças', 'Finance') },
+                        ].map((tf) => {
+                          const active = typeFilter === tf.id;
+                          return (
+                            <button
+                              key={tf.id}
+                              type="button"
+                              onClick={() => setTypeFilter(tf.id as typeof typeFilter)}
+                              className={`inline-flex min-h-[44px] shrink-0 items-center rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
+                                active
+                                  ? 'border-[#A855F7]/50 bg-[#A855F7]/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.14)]'
+                                  : 'border-white/8 bg-white/[0.02] text-slate-400 hover:border-white/15 hover:text-slate-200'
+                              }`}
+                            >
+                              {tf.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Botões de alternância: Lista vs Cards Ilustrados */}
+                      <div className="flex items-center gap-1 shrink-0 rounded-xl border border-white/8 bg-black/40 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode('list')}
+                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                            viewMode === 'list'
+                              ? 'border border-[#00F0FF]/40 bg-[#00F0FF]/15 text-[#00F0FF]'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                          title={l('Lista Tática', 'Tactical List')}
+                          aria-label={l('Lista Tática', 'Tactical List')}
+                        >
+                          <List size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode('cards')}
+                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                            viewMode === 'cards'
+                              ? 'border border-[#00F0FF]/40 bg-[#00F0FF]/15 text-[#00F0FF]'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                          title={l('Cards Ilustrados', 'Illustrated Cards')}
+                          aria-label={l('Cards Ilustrados', 'Illustrated Cards')}
+                        >
+                          <LayoutGrid size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Banner Tático de Sessão Ativa de Missão Guiada */}
+                  {activeGuidedSession && (
+                    <HudCard variant="cyan" corners className="p-3.5 sm:p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#00F0FF]/40 bg-[#00F0FF]/15 text-[#00F0FF] shadow-[0_0_14px_rgba(0,240,255,0.3)] animate-pulse">
+                            <Play size={16} fill="currentColor" />
+                          </span>
+                          <div className="min-w-0">
+                            <span className="font-orbitron text-[9px] font-black uppercase tracking-[0.2em] text-[#00F0FF]">
+                              {l('Missão Guiada em Andamento', 'Active Guided Quest')}
+                            </span>
+                            <h4 className="truncate font-orbitron text-xs sm:text-sm font-black text-white">
+                              {activeGuidedSession.title}
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <TacticalButton
+                            variant="primary"
+                            accent="cyan"
+                            displayFont
+                            onClick={() => setGuidedModalOpen(true)}
+                            className="min-h-[44px] px-4 text-xs font-bold"
+                          >
+                            {l('Retomar Execução', 'Resume Quest')}
+                          </TacticalButton>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (user?.id) clearGuidedSession(user.id);
+                              setActiveGuidedSession(null);
+                            }}
+                            className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                            title={l('Descartar sessão', 'Discard session')}
+                            aria-label={l('Descartar sessão', 'Discard session')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </HudCard>
+                  )}
 
                   {/* Banner Compacto de Meta Calórica do Dia */}
                   {(mealMissions.length > 0 || nutritionTargets.targetCalories) && (
@@ -1394,6 +1584,76 @@ export function Quests() {
                         )}
                       </div>
                     </HudCard>
+                  ) : viewMode === 'cards' ? (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {filteredMissions.map((mission) => {
+                        const isDone = missionIsDone(mission);
+                        const isWorkout = mission.type === 'workout';
+                        const isMeal = mission.type === 'meal';
+                        const isFinance = mission.type === 'finance';
+                        const isTask = mission.type === 'task';
+
+                        const title =
+                          isTask
+                            ? mission.data.title.replace(/^\[BÔNUS( IA)?\]\s*/, '')
+                            : mission.data.title;
+                        const category =
+                          isWorkout ? l('TREINO', 'WORKOUT') : isMeal ? l('NUTRIÇÃO', 'NUTRITION') : mission.data.category;
+                        const categoryColor =
+                          isWorkout ? '#A855F7' : isMeal ? '#F97316' : (mission.data as any).category_color || '#00F0FF';
+                        const xpReward = mission.data.xp_reward;
+                        const statTarget = 'stat_target' in mission.data ? (mission.data as any).stat_target : null;
+                        const statLabel = statTarget
+                          ? `+${(mission.data as any).stat_reward || 1} ${statAbbreviations[statTarget] || statTarget}`
+                          : undefined;
+
+                        const handleExecute = () => {
+                          if (isWorkout) {
+                            navigate('/workouts');
+                          } else if (isMeal) {
+                            navigate('/nutrition');
+                          } else if (isFinance) {
+                            navigate('/fortuna');
+                          } else {
+                            handleOpenGuidedQuest(mission);
+                          }
+                        };
+
+                        const handleQuickToggle = async () => {
+                          if (isWorkout) {
+                            navigate('/workouts');
+                          } else if (isMeal) {
+                            toggleMealMission((mission.data as MealMission).meal_plan_id);
+                          } else if (isFinance) {
+                            navigate('/fortuna');
+                          } else if (isTask) {
+                            if (mission.data.completed) {
+                              await uncompleteTask(mission.data.id);
+                            } else {
+                              await completeTask(mission.data.id);
+                            }
+                          } else {
+                            await toggleCompletion(mission.data.id);
+                          }
+                        };
+
+                        return (
+                          <IllustratedQuestCard
+                            key={`illustrated-${mission.type}-${mission.data.id}`}
+                            id={mission.data.id}
+                            type={mission.type}
+                            title={title}
+                            category={category}
+                            categoryColor={categoryColor}
+                            xpReward={xpReward}
+                            statLabel={statLabel}
+                            done={isDone}
+                            onExecute={handleExecute}
+                            onQuickToggle={handleQuickToggle}
+                          />
+                        );
+                      })}
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {filteredMissions.map((mission) => {
@@ -1419,6 +1679,7 @@ export function Quests() {
                               partialProgressPct={!m.isCompleted && hasActiveWorkoutSession ? 50 : null}
                               onToggle={() => navigate('/workouts')}
                               onOpenModule={() => navigate('/workouts')}
+                              onExecuteGuided={() => navigate('/workouts')}
                               onUpdateTime={handleUpdateTime}
                               isEnglish={isEnglish}
                             />
@@ -1543,6 +1804,7 @@ export function Quests() {
                                   await completeTask(id);
                                 }
                               }}
+                              onExecuteGuided={() => handleOpenGuidedQuest(mission)}
                               onUpdateTime={handleUpdateTime}
                               onDelete={deleteTask}
                               isEnglish={isEnglish}
@@ -1565,6 +1827,7 @@ export function Quests() {
                               startTime={mission.time}
                               endTime={mission.endTime}
                               onToggle={(id) => toggleCompletion(id)}
+                              onExecuteGuided={() => handleOpenGuidedQuest(mission)}
                               onUpdateTime={handleUpdateTime}
                               isEnglish={isEnglish}
                             />

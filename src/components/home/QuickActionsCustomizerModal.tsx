@@ -18,6 +18,7 @@ import {
   Coins,
   Skull,
   Trophy,
+  Users,
   LayoutDashboard,
 } from 'lucide-react';
 import { HudCard } from '@/components/ui/hud-card';
@@ -47,6 +48,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Coins: <Coins className="h-4 w-4" />,
   Skull: <Skull className="h-4 w-4" />,
   Trophy: <Trophy className="h-4 w-4" />,
+  Users: <Users className="h-4 w-4" />,
   LayoutDashboard: <LayoutDashboard className="h-4 w-4" />,
 };
 

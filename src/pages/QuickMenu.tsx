@@ -20,6 +20,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Trophy,
+  Users,
   Zap,
 } from 'lucide-react';
 import { useHunterStore } from '@/stores/useHunterStore';
@@ -409,6 +410,8 @@ export function QuickMenu() {
         return <Skull className="h-4 w-4 text-[#EF4444]" />;
       case 'Trophy':
         return <Trophy className="h-4 w-4 text-[#F59E0B]" />;
+      case 'Users':
+        return <Users className="h-4 w-4 text-[#00F0FF]" />;
       case 'LayoutDashboard':
       default:
         return <LayoutDashboard className="h-4 w-4 text-[#A855F7]" />;
@@ -662,6 +665,17 @@ export function QuickMenu() {
       iconContainerClass:
         'border-[#A855F7]/30 bg-[#A855F7]/10 shadow-[0_0_14px_rgba(168,85,247,0.12)]',
       metaColorClass: 'text-purple-300',
+    },
+    {
+      path: '/social',
+      title: l('Fenda Social do Caçador', 'Hunter Social Gate'),
+      subtitle: l('Guilda, ranking competitivo e companheiros', 'Guild, competitive leaderboard & companions'),
+      meta: l('Ranking & Companheiros', 'Leaderboard & Companions'),
+      variant: 'cyan',
+      icon: <Users className="h-5 w-5 text-[#00F0FF]" />,
+      iconContainerClass:
+        'border-[#00F0FF]/30 bg-[#00F0FF]/10 shadow-[0_0_14px_rgba(0,240,255,0.12)]',
+      metaColorClass: 'text-cyan-300',
     },
   ];
 

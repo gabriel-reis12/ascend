@@ -14,6 +14,7 @@ import {
   Coins,
   Moon,
   Trophy,
+  Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,7 @@ const navItems = [
   { path: '/fortuna', labelKey: 'nav.fortuna' as const, icon: Coins },
   { path: '/rest', labelKey: 'nav.rest' as const, icon: Moon },
   { path: '/trophies', labelKey: 'nav.trophies' as const, icon: Trophy },
+  { path: '/social', labelKey: 'nav.social' as const, icon: Users },
   { path: '/settings', labelKey: 'nav.settings' as const, icon: Settings },
 ];
 

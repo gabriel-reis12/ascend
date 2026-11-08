@@ -146,8 +146,10 @@ test('ASCEND — Etapa 04.0: Refinamento Premium de Login, Registro e Recuperaç
       'O painel visual deve exibir o indicador tático Gate Calibrado'
     );
     assert.ok(
-      hunterLogin.includes('Prévia de Status') || hunterLogin.includes('Status Preview'),
-      'O painel visual deve exibir o resumo tático do caçador'
+      hunterLogin.includes('THE GATE') ||
+      hunterLogin.includes('Protocolo de Entrada') ||
+      hunterLogin.includes('Prévia de Status'),
+      'O painel visual deve exibir o conceito narrativo do Portal/Gate'
     );
   });
 

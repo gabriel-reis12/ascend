@@ -17,6 +17,7 @@ import { Bosses } from './pages/Bosses';
 import { TrophyRoom } from './pages/TrophyRoom';
 import { Fortuna } from './pages/Fortuna';
 import { Rest } from './pages/Rest';
+import { Social } from './pages/Social';
 import { useHunterStore } from './stores/useHunterStore';
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import { LocalizationBridge } from './components/preferences/LocalizationBridge';
@@ -142,6 +143,7 @@ function App() {
             <Route path="fortuna" element={<Fortuna />} />
             <Route path="bosses" element={<Bosses />} />
             <Route path="trophies" element={<TrophyRoom />} />
+            <Route path="social" element={<Social />} />
             <Route path="rest" element={<Rest />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
