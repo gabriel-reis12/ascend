@@ -33,6 +33,7 @@ import type { LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { NutritionMealPlans } from '@/components/nutrition/NutritionMealPlans';
+import { QuickMealRepeatPanel } from '@/components/nutrition/QuickMealRepeatPanel';
 import type { Food } from '@/types/nutrition';
 import { localDateString, localDayBounds } from '@/lib/date';
 import { useHunterStore } from '@/stores/useHunterStore';
@@ -144,7 +145,13 @@ export function Nutrition() {
   const l = (pt: string, en: string) => (isEnglish ? en : pt);
   const tx = (value?: string | null) => (isEnglish && value ? translateUiText(value) : value);
 
-  const [activeTab, setActiveTab] = useState<'diario' | 'cardapios'>('diario');
+  const [activeTab, setActiveTab] = useState<'diario' | 'cardapios'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'cardapios') return 'cardapios';
+    }
+    return 'diario';
+  });
   const [subTab, setSubTab] = useState<'library' | 'codex'>('library');
   const [foods, setFoods] = useState<Food[]>([]);
   const [logs, setLogs] = useState<FoodLog[]>([]);
@@ -1422,6 +1429,17 @@ export function Nutrition() {
               </TacticalButton>
             </div>
           </div>
+
+          {/* 4.5. REPETIÇÃO RÁPIDA & REFEIÇÕES FAVORITAS (Fase G) */}
+          <QuickMealRepeatPanel
+            userId={user?.id}
+            todayLogs={logs}
+            foods={foods}
+            onRepeated={(msg) => {
+              triggerFeedback(msg);
+              void fetchData();
+            }}
+          />
 
           {/* 5. BASE DE ALIMENTOS & CALCULADORA TACO */}
           <div className="space-y-4 pt-2">

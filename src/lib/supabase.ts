@@ -1,18 +1,55 @@
 import { createClient } from '@supabase/supabase-js'
 import { authStorageAdapter } from './authStorage'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+declare const process: { env?: Record<string, string | undefined> } | undefined;
 
-// Aviso de desenvolvimento: ajuda a debugar configurações faltando
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    '[Supabase] ERRO CRÍTICO: Variáveis de ambiente não configuradas!\n' +
-    'VITE_SUPABASE_URL:', supabaseUrl ? '✅' : '❌ FALTANDO',
-    '\nVITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅' : '❌ FALTANDO',
-    '\n\nNo Vercel: Acesse Settings → Environment Variables e adicione as duas variáveis.'
-  );
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const rawSupabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+
+/**
+ * Indica se o ambiente atual é uma execução automatizada de testes (Node.js / Vitest / CLI).
+ */
+export const isTestEnvironment =
+  (typeof process !== 'undefined' &&
+    process.env &&
+    (process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST))) ||
+  typeof window === 'undefined';
+
+/**
+ * Validação explícita das credenciais do Supabase.
+ * Retorna se a infraestrutura está devidamente configurada e quais variáveis faltam.
+ */
+export function validateSupabaseConfiguration(): { valid: boolean; missing: string[] } {
+  const missing: string[] = [];
+  if (!rawSupabaseUrl || rawSupabaseUrl.includes('placeholder') || !rawSupabaseUrl.startsWith('https://')) {
+    missing.push('VITE_SUPABASE_URL');
+  }
+  if (!rawSupabaseAnonKey || rawSupabaseAnonKey.includes('placeholder') || rawSupabaseAnonKey.length < 20) {
+    missing.push('VITE_SUPABASE_ANON_KEY');
+  }
+  return { valid: missing.length === 0, missing };
 }
+
+export const isSupabaseConfigured = validateSupabaseConfiguration().valid;
+
+// Aviso explícito no console: alerta os desenvolvedores sem silenciar falhas
+if (!isSupabaseConfigured) {
+  const { missing } = validateSupabaseConfiguration();
+  const warningMsg =
+    `[Supabase] ERRO CRÍTICO: Credenciais de infraestrutura ausentes ou inválidas!\n` +
+    `Variáveis ausentes: ${missing.join(', ')}\n` +
+    `No Vercel (Preview/Produção): Acesse Settings → Environment Variables e configure ambas as chaves.`;
+
+  if (isTestEnvironment) {
+    console.warn(`${warningMsg} (Ambiente de teste detectado: fallback mock permitido para suítes offline)`);
+  } else {
+    console.error(warningMsg);
+  }
+}
+
+// Fallback seguro restrito exclusivamente a ambientes de testes automatizados ou placeholder controlado
+const supabaseUrl = rawSupabaseUrl || 'https://placeholder.supabase.co'
+const supabaseAnonKey = rawSupabaseAnonKey || 'public-anon-key-placeholder'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

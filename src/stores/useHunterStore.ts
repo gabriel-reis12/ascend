@@ -71,6 +71,7 @@ export interface HunterState {
     best: number;
   };
   pendingLevelUp: number | null;
+  pendingRankUp: { previousRank: HunterRank; newRank: HunterRank; newLevel: number } | null;
   xpGainedToday: number;
   bonusXpGainedWeek: number;
   bonusXpWeekKey: string;
@@ -99,6 +100,15 @@ export interface HunterState {
   checkStreakMilestones: (userId: string) => Promise<void>;
   checkAchievements: (userId: string) => Promise<void>;
   equipTitle: (title: string, userId: string) => Promise<void>;
+}
+
+const profileLoadedListeners = new Set<(userId: string) => void>();
+
+export function onHunterProfileLoaded(listener: (userId: string) => void) {
+  profileLoadedListeners.add(listener);
+  return () => {
+    profileLoadedListeners.delete(listener);
+  };
 }
 
 const INITIAL_STATS: HunterStats = {
@@ -131,6 +141,7 @@ const INITIAL_STATE = {
   stats: INITIAL_STATS,
   streak: { current: 0, best: 0 },
   pendingLevelUp: null as number | null,
+  pendingRankUp: null as { previousRank: HunterRank; newRank: HunterRank; newLevel: number } | null,
   xpGainedToday: 0,
   bonusXpGainedWeek: 0,
   bonusXpWeekKey: getIsoWeekKey(),
@@ -326,12 +337,20 @@ export const useHunterStore = create<HunterState>()(
             })
           : state.xpAwardLedger;
 
+        const newRank = getRankForLevel(newLevel);
+        const rankedUp = leveledUp && newRank !== state.rank;
+
         set({
           xp: newXp,
           level: newLevel,
           xpRequired: newXpReq,
-          rank: getRankForLevel(newLevel),
+          rank: newRank,
           pendingLevelUp: leveledUp ? newLevel : state.pendingLevelUp,
+          pendingRankUp: rankedUp
+            ? { previousRank: state.rank, newRank, newLevel }
+            : state.pendingLevelUp !== null
+              ? state.pendingRankUp
+              : null,
           xpGainedToday: newGainedToday,
           bonusXpGainedWeek: source === 'bonus' ? bonusXpGainedWeek + addedXp : bonusXpGainedWeek,
           bonusXpWeekKey: currentWeekKey,
@@ -352,7 +371,7 @@ export const useHunterStore = create<HunterState>()(
         };
       },
 
-      clearLevelUp: () => set({ pendingLevelUp: null }),
+      clearLevelUp: () => set({ pendingLevelUp: null, pendingRankUp: null }),
 
       updateStat: async (stat, amount, userId) => {
         set((state) => {
@@ -397,11 +416,12 @@ export const useHunterStore = create<HunterState>()(
         set({ profileLoading: true, profileError: null });
 
         try {
-          let { data, error } = await supabase
+          const { data: initialData, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
             .maybeSingle();
+          let data = initialData;
 
           if (error) {
             console.error('[useHunterStore] Erro ao carregar profile:', error);
@@ -573,9 +593,13 @@ export const useHunterStore = create<HunterState>()(
               console.warn('[useHunterStore] Sincronizacao secundaria ignorada:', err);
             });
 
-            // Carregar batalha de boss ativa em segundo plano para o caçador
-            void import('./useBossStore').then(({ useBossStore }) => {
-              void useBossStore.getState().loadActiveBattle(userId);
+            // Notificar listeners (ex: useBossStore) para carregar batalha ativa sem import dinâmico circular
+            profileLoadedListeners.forEach((listener) => {
+              try {
+                listener(userId);
+              } catch (listenerErr) {
+                console.warn('[useHunterStore] Listener de profile falhou:', listenerErr);
+              }
             });
           }
         } catch (err) {
@@ -738,8 +762,14 @@ export const useHunterStore = create<HunterState>()(
           profileLoading: _profileLoading,
           profileError: _profileError,
           pendingLevelUp: _pendingLevelUp,
+          pendingRankUp: _pendingRankUp,
           ...persistedFields
         } = state;
+        void _profileLoaded;
+        void _profileLoading;
+        void _profileError;
+        void _pendingLevelUp;
+        void _pendingRankUp;
         return persistedFields;
       },
       merge: (persistedState, currentState) => {
@@ -751,6 +781,7 @@ export const useHunterStore = create<HunterState>()(
           profileLoading: false,
           profileError: null,
           pendingLevelUp: null,
+          pendingRankUp: null,
         };
       },
       migrate: (persistedState) => {
@@ -771,7 +802,7 @@ export const useHunterStore = create<HunterState>()(
             : 0,
           bonusXpWeekKey: getIsoWeekKey(),
           xpAwardLedger: persisted.xpAwardLedger || {},
-        } as Omit<HunterState, 'profileLoaded' | 'profileLoading' | 'profileError' | 'pendingLevelUp'>;
+        } as Omit<HunterState, 'profileLoaded' | 'profileLoading' | 'profileError' | 'pendingLevelUp' | 'pendingRankUp'>;
       },
     }
   )

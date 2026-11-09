@@ -5,13 +5,6 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ### Tecnologias Utilizadas
 - **Frontend:** React 19, Vite, TailwindCSS v4.
-# Histórico de Desenvolvimento e Documentação
-
-## 📋 Estado Atual do Projeto
-O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fundações de UI, Autenticação, Dashboard, Gerenciamento de Tarefas/Hábitos e Módulo de Treinos estão concluídas.
-
-### Tecnologias Utilizadas
-- **Frontend:** React 19, Vite, TailwindCSS v4.
 - **Backend:** Supabase (Auth & Database).
 - **Estilização:** CSS Vanilla + Design Tokens personalizados.
 - **Animações:** Framer Motion, Lucide React.
@@ -19,6 +12,50 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 
 ---
 ## 🕒 Histórico de Mudanças Recentes
+
+### 2026-11-09 — Etapa 04.8: Mobile Experience & Player Journey (`docs/ASCEND_MOBILE_EXPERIENCE_048.md`, `src/components/home/DailyActionCenter.tsx`, `src/pages/QuickMenu.tsx`, `src/pages/Workouts.tsx`, `src/components/workouts/ActiveWorkoutSession.tsx`, `src/lib/accountDeletion.ts`, `src/lib/supabase.ts`, `supabase/migrations/20261109_account_deletion_and_security.sql`, `execution/test_mobile_experience_048.mjs`, `execution/audit_mobile_experience_048.mjs`)
+- **Centro de Ação Diária Contextual & Modo Rápido (`src/components/home/DailyActionCenter.tsx` + `src/pages/QuickMenu.tsx`):**
+  - Transformação da Home (`QuickMenu.tsx`) em um centro de ações diárias reais acima da dobra (`#tour-portal-recommended` posicionado em `y = 572px–604px` nos viewports mobile `320×700`, `375×812`, `390×844` e `430×932`), preservando integralmente a estética **ASCEND HUD v2**.
+  - **Banner de Retomada (`Sessão em Andamento`):** Retomada em **1 toque** para treino ativo (`/workouts?resume=1`) ou missão guiada com timer ativo (`GuidedQuestModal` na própria Home).
+  - **Cards Contextuais com Dados Reais:**
+    - **Próxima Missão (`Próxima missão`):** Conclusão direta em **1 toque** (`Concluir`) ou abertura imediata do modo guiado (`Iniciar`) na própria Home.
+    - **Treino Programado (`Seu treino de hoje está pronto.`):** Botão **"Iniciar treino"** que navega para `/workouts?start=today&routine=<id>` e abre o `ActiveWorkoutSession` imediatamente.
+    - **Refeição Habitual (`Registrar refeição`):** Botão **"Repetir refeição"** integrado ao `SafeActionConfirmModal` (2 toques) ou **"Concluir refeição"** (1 toque).
+  - **Modo Rápido (1 Toque):** Registro rápido de Água (`+250ml` / `+500ml` com auto-conclusão do hábito de hidratação ao atingir a meta), Sono (`7h` / `8h` com `+20 XP` e `+2 EQU` em `rest_logs` e idempotência diária), Foco Tático (`15 min` via `GuidedQuestModal`) e pílulas de 1 toque para hábitos pendentes adicionais.
+- **Execução de Treinos e Ergonomia Mobile (`src/pages/Workouts.tsx` + `src/components/workouts/ActiveWorkoutSession.tsx`):**
+  - Suporte aos parâmetros `?start=today&routine=<id>` e `?resume=1` em `Workouts.tsx` e adição do CTA primário **"INICIAR TREINO AGORA"** / **"RETOMAR TREINO GUIADO"** no topo do card da rotina do dia.
+  - Substituição do `alert()` nativo bloqueante ao concluir treino por toast HUD não-bloqueante (`workoutCompleteToast`) + `triggerGameFeel('questComplete')`.
+  - Ampliação dos alvos de toque dos botões `-`/`+` de carga/repetições, check de série, substituição de exercício e presets de descanso em `ActiveWorkoutSession.tsx` para `min-h-[44px] min-w-[40px] sm:min-w-[44px]` (`44×44px` medidos no DOM).
+- **Verificação e Endurecimento de Segurança da 04.7 (`supabase/migrations/20261109_account_deletion_and_security.sql`, `src/lib/accountDeletion.ts`, `src/lib/supabase.ts`):**
+  - Restrição explícita `to authenticated` nas políticas RLS de `public.profiles` e `revoke execute ... from public, anon` na RPC `public.delete_own_account()`.
+  - Limpeza explícita de tabelas-filhas (`meal_plan_items`, `routine_exercises`) e de `friendships.action_user_id` / `storage.objects.owner_id` na RPC e no fallback cliente.
+  - Validação estrita de e-mail + senha em `executeAccountDeletion()` quando `requirePasswordReauth = true`, impedindo bypass caso o parâmetro `email` estivesse vazio.
+  - Fallback resiliente em `src/lib/supabase.ts` evitando crash fatal de carregamento de módulo quando variáveis `.env` não estão injetadas no build local.
+- **Auditoria Funcional em Navegador Real, Responsividade e QA:**
+  - Criação do script `execution/audit_mobile_experience_048.mjs` (Chromium Headless via CDP Pipe) com **21/21 capturas reais** (`320×700`, `375×812`, `390×844`, `430×932`, `768×1024`, `1280×800`, Jornadas A/B/C/D, Rank-Up e módulos) e telemetria real em `.tmp/screenshots/048/audit_report_048.json`.
+  - Criação da suíte `execution/test_mobile_experience_048.mjs` (5/5 subtestes) e aprovação de **29/29 suítes automatizadas** (`node execution/run_all_tests.mjs`), `npm run typecheck`, `npm run build` e `npm run audit:i18n`.
+
+### 2026-11-09 — Etapa 04.7: Product Hardening & Game Feel (`docs/ASCEND_PRODUCT_HARDENING_047.md`, `src/App.tsx`, `vite.config.ts`, `src/lib/accountDeletion.ts`, `src/pages/auth/DeleteAccountPage.tsx`, `supabase/migrations/20261109_account_deletion_and_security.sql`, `src/lib/gameFeel.ts`, `src/components/rpg/EvolutionCelebrationModal.tsx`, `src/components/rpg/BossDamageToast.tsx`, `src/components/nutrition/QuickMealRepeatPanel.tsx`, `execution/test_product_hardening_047.mjs`)
+- **Fase A — Validação Crítica da Auditoria 360º:**
+  - Alinhamento documental e contratual dos **7 atributos reais** (`strength`, `endurance`, `intelligence`, `discipline`, `vitality`, `wisdom`, `balance`) em `docs/ASCEND_GAMEPLAY_RULES.md`, `docs/ASCEND_ARCHITECTURE.md`, `docs/ASCEND_GAME_DESIGN_AUDIT_360.md`, `AGENTS.md`, `docs/ASCEND_AGENT_TEAM.md`, `.agents/skills/ascend-gameplay-guardian/SKILL.md`, `src/components/rpg/StatCard.tsx`, `src/lib/guidedQuests.ts` e nos resets de `src/pages/Settings.tsx`, sem alterar fórmulas de progressão.
+  - Documentação precisa da arquitetura real de persistência (assistida por cache local de leitura e sessão resiliente via `authStorageAdapter`, dependente de conexão para mutações de escrita).
+- **Fase B — Exclusão de Conta e Segurança (Apple App Store 5.1.1v & Google Play Data Safety):**
+  - Implementação do serviço `src/lib/accountDeletion.ts`, modal completo **"Excluir minha conta"** em `src/pages/Settings.tsx` (com revalidação por senha para contas e-mail, revalidação de sessão ativa para contas OAuth e frase de confirmação explícita), portal web público `/delete-account` (`src/pages/auth/DeleteAccountPage.tsx`) e migration SQL `supabase/migrations/20261109_account_deletion_and_security.sql` com a RPC `public.delete_own_account()` (`SECURITY DEFINER`).
+- **Fase C — Performance e Code-Splitting:**
+  - Implementação de `React.lazy` + `<Suspense>` para todas as rotas em `src/App.tsx` (preservando `<PreferencesProvider>`, `<LocalizationBridge />` e sincronização resiliente de perfil no `ProtectedRoute`/`OnboardingRoute`) e separação de chunks vendor (`vendor-react`, `vendor-supabase`, `vendor-motion`, `i18n-dictionary`) em `vite.config.ts`.
+  - Eliminação do import dinâmico circular em `src/stores/useHunterStore.ts` via listener `onHunterProfileLoaded`.
+  - Redução do chunk inicial `index-*.js` de `1.672,70 kB` (`440,26 kB` gzip) para `151,52 kB` (`46,00 kB` gzip) e migração dos cards de `src/lib/guidedQuests.ts` para `/optimized/Cards/*.jpg`.
+- **Fase D — Primeiro Dia do Jogador e Onboarding:**
+  - Correção em `src/lib/onboardingSetup.ts` para semear hábitos iniciais na tabela canônica `habits` (em vez da tabela inexistente `daily_habits`) com idempotência dupla.
+  - Prévia completa e confirmação explícita do programa de treinos gerado (`Treino A/B/C` ou divisão proporcional, respeitando objetivos físicos vs. cognitivos, experiência e restrições) em `src/pages/Onboarding.tsx` e aprimoramento do **Caminho do 1º Dia** em `src/components/home/HunterGuidanceCard.tsx` com link direto para `/nutrition?tab=cardapios`.
+- **Fase E — Quests Mobile Simplificadas:**
+  - Reorganização da hierarquia mobile de `src/pages/Quests.tsx` (Progresso de Hoje -> Missões Pendentes -> Ação de Criar Missão na Thumb Zone -> Concluídas e Histórico de Hoje -> Filtros Avançados Expansíveis `showAdvancedFilters` -> Gerenciar/Códex).
+- **Fase F — Feedback de Evolução e Game Feel:**
+  - Celebrações distintas de **Level-Up** e **Rank-Up** (`src/components/rpg/EvolutionCelebrationModal.tsx`) sem reexibição após recarregar a página (`pendingLevelUp` e `pendingRankUp` excluídos do `localStorage`), toast global de dano confirmado de Boss (`src/components/rpg/BossDamageToast.tsx`, sem duplicidade na rota `/bosses`), e motor Web Audio API sintetizado + vibração háptica (`src/lib/gameFeel.ts`) integrado também ao `GuidedQuestModal.tsx`, com controles em `Settings.tsx` e respeito a `prefers-reduced-motion`.
+- **Fase G — Repetição Rápida de Refeições na Nutrição:**
+  - Criação do painel `src/components/nutrition/QuickMealRepeatPanel.tsx` integrado a `src/pages/Nutrition.tsx` com repetição de refeições de ontem/recentes (últimos 7 dias), combinações favoritas, combinações habituais TACO, modal de ajuste de gramas antes de confirmar e trava contra cliques duplicados (`submittingLockRef`).
+- **Homologação & QA:**
+  - `28/28` suítes automatizadas aprovadas (`node execution/run_all_tests.mjs`), `0` erros no `npm run typecheck`, `npm run build` limpo e `npm run audit:i18n` aprovado.
 
 ### 2026-11-06 — ASCEND: THE GATE — Redesign Completo da Experiência de Autenticação (`src/components/ui/hunter-login.tsx`, `src/pages/auth/LoginPage.tsx`, `src/pages/auth/RegisterPage.tsx`, `src/pages/auth/ForgotPasswordPage.tsx`, `execution/test_the_gate_auth.mjs`)
 - **Workflow `ascend-design` Concluído:** Redesign estrutural e estético integral da porta de entrada do aplicativo baseado no conceito **ASCEND — THE GATE** (*Your Evolution Starts Here*), unindo *Cinematic Minimalism*, *Dark Fantasy* e *Premium Mobile UI*.
@@ -1443,3 +1480,37 @@ Arquivos movidos por não serem mais necessários no fluxo principal do código:
   - Gerado documento oficial `docs/ASCEND_GAME_DESIGN_AUDIT_360.md` contendo todas as 18 seções normativas: diagnóstico 10D, benchmark factual (*Life Reset*, *Rise New Hero*, *Habitica*, *Duolingo*, *Strava*), avaliação dos 14 módulos, análise do modelo híbrido de quests, economia de XP, retenção, UX/UI mobile, segurança, preparação para stores, roadmap e matriz P0-P3.
   - Zero código de produção alterado nesta etapa, respeitando a diretriz estrita da missão.
   - Verificação geral: 27/27 suítes de teste aprovadas, auditoria de i18n sem divergências e build Vite concluído com sucesso.
+
+### 2026-11-09
+- **Etapa 04.7 — Product Hardening & Game Feel**:
+  - Alinhamento rigoroso dos 7 atributos oficiais (`strength`, `endurance`, `intelligence`, `discipline`, `vitality`, `wisdom`, `balance`) em contratos tipados e documentação técnica.
+  - Preparado fluxo mandatório de exclusão de conta em `Settings.tsx` e portal web `/delete-account` (`DeleteAccountPage.tsx`), com revalidação de identidade e migration `supabase/migrations/20261109_account_deletion_and_security.sql`.
+  - Implementado Code-Splitting de rotas via `React.lazy` no `src/App.tsx`, reduzindo o chunk JS inicial de 1,67 MB para 156 kB (-90,6%) e eliminando avisos de bundle.
+  - Configurada semeadura idempotente de 3 treinos iniciais (`Treino A/B/C`) e hábitos no Onboarding sem tela vazia no D1.
+  - Reorganizada hierarquia mobile em `Quests.tsx` com foco em pendentes do dia e filtros expansíveis.
+  - Adicionadas celebrações táteis/visuais de Level-Up e Rank-Up (`EvolutionCelebrationModal.tsx`), confirmação de dano em Bosses (`BossDamageToast.tsx`) e síntese sonora Web Audio/Haptics (`gameFeel.ts`).
+  - Implementado painel de repetição rápida de refeições (`QuickMealRepeatPanel.tsx`) na Nutrição.
+  - Validação completa com `execution/test_product_hardening_047.mjs` (28/28 testes aprovados).
+
+- **Etapa 04.8 — Mobile Experience & Player Journey**:
+  - Auditoria funcional das 4 jornadas móveis em navegador real (`320x700` a `430x932`): Jornada A (Primeiro Acesso), B (Uso Cotidiano), C (Dia sem Treino) e D (Retorno pós-Ausência).
+  - Implementado `DailyActionCenter.tsx` no Portal/Home (`QuickMenu.tsx`), transformando a Home em centro de ação imediata:
+    - Retomada de treino ativo ou sessão guiada com 1 toque no topo.
+    - Próxima missão prioritária com conclusão rápida em 1 toque (sem precisar abrir Quests).
+    - Treino programado do dia com botão direto "Iniciar Treino".
+    - Ações rápidas de 1 toque para Água (+250ml / +500ml), Sono (7h / 8h) e Foco sem trocar de tela.
+  - Aumentados alvos de toque na sessão de treino (`ActiveWorkoutSession.tsx`) para o padrão ergonômico mobile (44x44px).
+  - Endurecida segurança da migration `20261109_account_deletion_and_security.sql` com isolamento `to authenticated` e exclusão explícita de tabelas filhas.
+  - Criada suíte automatizada `execution/test_mobile_experience_048.mjs` e script de auditoria móvel `execution/audit_mobile_experience_048.mjs`.
+  - Gerado relatório consolidado em `docs/ASCEND_MOBILE_EXPERIENCE_048.md` com parecer técnico GO.
+  - Verificação geral: 29/29 suítes de teste aprovadas, typecheck sem erros, build Vite em 1.77s e auditoria i18n sem divergências.
+
+- **Etapa 04.9 — Beta Web & Real-World Validation**:
+  - Corrigido o cliente Supabase para validação explícita de variáveis (`validateSupabaseConfiguration`, `isSupabaseConfigured`, `isTestEnvironment`), impedindo que ambientes publicados sem credenciais aparentem funcionar desconectados.
+  - Adicionado banner de alerta de infraestrutura em `hunter-login.tsx` e bloqueio com instrução clara em `AuthContext.tsx`.
+  - Implementada experiência instalável PWA com `public/manifest.webmanifest`, ícones e meta-tags standalone no `index.html`.
+  - Desenvolvido sistema de observabilidade e registro de bugs do Beta em `src/lib/betaObservability.ts` (sem vazamento de tokens, senhas ou PII) e interface `BetaFeedbackModal.tsx` integrada às Configurações (`Settings.tsx`).
+  - Otimizado `vercel.json` com cache imutável para assets e revalidação estrita para HTMLs e manifest.
+  - Atualizado `.env.example` com documentação clara para homologação e produção.
+  - Criada suíte de testes `execution/test_beta_validation_049.mjs` (30/30 testes aprovados).
+  - Gerado relatório oficial de preparação em `docs/ASCEND_BETA_WEB_049.md` com checklist de publicação e parecer GO.

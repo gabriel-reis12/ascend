@@ -442,7 +442,7 @@ export function ActiveWorkoutSession({
                 type="button"
                 onClick={() => handleSetTimerDuration(sec)}
                 className={cn(
-                  'px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all',
+                  'min-h-[44px] min-w-[48px] px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all active:scale-95',
                   restDuration === sec
                     ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300'
                     : 'border-white/10 bg-white/5 text-slate-400 hover:text-white'
@@ -514,7 +514,7 @@ export function ActiveWorkoutSession({
               <button
                 type="button"
                 onClick={() => setSubstituteIndex(exIdx)}
-                className="flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-cyan-300 transition-colors p-1"
+                className="inline-flex min-h-[44px] items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-bold text-slate-300 hover:border-cyan-400/40 hover:text-cyan-300 transition-colors"
                 title={l('Substituir exercício', 'Substitute exercise')}
               >
                 <Replace className="size-3.5" />
@@ -522,9 +522,9 @@ export function ActiveWorkoutSession({
               </button>
             </div>
 
-            {/* Sets Table */}
+            {/* Sets Table (Ergonomic Mobile-First Controls >= 44px) */}
             <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 text-[10px] font-mono font-bold uppercase text-slate-400 px-2">
+              <div className="hidden sm:grid sm:grid-cols-12 gap-2 text-[10px] font-mono font-bold uppercase text-slate-400 px-2">
                 <span className="col-span-2 text-center">{l('Série', 'Set')}</span>
                 <span className="col-span-4 text-center">{l('Carga (KG)', 'Weight (KG)')}</span>
                 <span className="col-span-4 text-center">{l('Repetições', 'Reps')}</span>
@@ -535,73 +535,82 @@ export function ActiveWorkoutSession({
                 <div
                   key={sIdx}
                   className={cn(
-                    'grid grid-cols-12 gap-2 items-center p-2 rounded-xl border transition-all',
+                    'flex flex-wrap sm:grid sm:grid-cols-12 gap-2 items-center justify-between p-2.5 rounded-xl border transition-all',
                     s.completed
                       ? 'border-emerald-500/40 bg-emerald-500/10'
                       : 'border-white/10 bg-black/40'
                   )}
                 >
                   {/* Set Number */}
-                  <span className="col-span-2 text-center font-orbitron text-xs font-black text-slate-300">
+                  <span className="sm:col-span-2 text-center font-orbitron text-xs font-black text-slate-300 min-w-[32px]">
                     #{s.setNumber}
                   </span>
 
                   {/* Weight Controls */}
-                  <div className="col-span-4 flex items-center justify-center gap-1">
+                  <div className="sm:col-span-4 flex items-center justify-center gap-1">
                     <button
                       type="button"
                       disabled={s.completed}
                       onClick={() => handleUpdateSetWeight(exIdx, sIdx, -2.5)}
-                      className="size-7 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 hover:text-white disabled:opacity-40"
+                      aria-label={l('Reduzir carga da série', 'Decrease set weight')}
+                      className="min-h-[44px] min-w-[40px] sm:min-w-[44px] rounded-xl border border-white/12 bg-white/5 flex items-center justify-center text-slate-200 hover:text-white active:scale-95 disabled:opacity-40"
                     >
-                      <Minus className="size-3" />
+                      <Minus className="size-3.5" />
                     </button>
-                    <span className="font-mono text-xs font-black text-white w-12 text-center">
-                      {s.weight_kg}
+                    <span className="font-mono text-xs font-black text-white min-w-[44px] text-center tabular-nums">
+                      {s.weight_kg}<span className="text-[9px] text-slate-400 sm:hidden">kg</span>
                     </span>
                     <button
                       type="button"
                       disabled={s.completed}
                       onClick={() => handleUpdateSetWeight(exIdx, sIdx, 2.5)}
-                      className="size-7 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 hover:text-white disabled:opacity-40"
+                      aria-label={l('Aumentar carga da série', 'Increase set weight')}
+                      className="min-h-[44px] min-w-[40px] sm:min-w-[44px] rounded-xl border border-cyan-400/25 bg-cyan-500/10 flex items-center justify-center text-cyan-200 hover:text-white active:scale-95 disabled:opacity-40"
                     >
-                      <Plus className="size-3" />
+                      <Plus className="size-3.5" />
                     </button>
                   </div>
 
                   {/* Reps Controls */}
-                  <div className="col-span-4 flex items-center justify-center gap-1">
+                  <div className="sm:col-span-4 flex items-center justify-center gap-1">
                     <button
                       type="button"
                       disabled={s.completed}
                       onClick={() => handleUpdateSetReps(exIdx, sIdx, -1)}
-                      className="size-7 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 hover:text-white disabled:opacity-40"
+                      aria-label={l('Reduzir repetições da série', 'Decrease set reps')}
+                      className="min-h-[44px] min-w-[40px] sm:min-w-[44px] rounded-xl border border-white/12 bg-white/5 flex items-center justify-center text-slate-200 hover:text-white active:scale-95 disabled:opacity-40"
                     >
-                      <Minus className="size-3" />
+                      <Minus className="size-3.5" />
                     </button>
-                    <span className="font-mono text-xs font-black text-white w-8 text-center">
-                      {s.reps}
+                    <span className="font-mono text-xs font-black text-white min-w-[34px] text-center tabular-nums">
+                      {s.reps}<span className="text-[9px] text-slate-400 sm:hidden">r</span>
                     </span>
                     <button
                       type="button"
                       disabled={s.completed}
                       onClick={() => handleUpdateSetReps(exIdx, sIdx, 1)}
-                      className="size-7 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 hover:text-white disabled:opacity-40"
+                      aria-label={l('Aumentar repetições da série', 'Increase set reps')}
+                      className="min-h-[44px] min-w-[40px] sm:min-w-[44px] rounded-xl border border-cyan-400/25 bg-cyan-500/10 flex items-center justify-center text-cyan-200 hover:text-white active:scale-95 disabled:opacity-40"
                     >
-                      <Plus className="size-3" />
+                      <Plus className="size-3.5" />
                     </button>
                   </div>
 
                   {/* Complete Checkbox Button */}
-                  <div className="col-span-2 flex justify-center">
+                  <div className="sm:col-span-2 flex justify-center">
                     <button
                       type="button"
                       onClick={() => handleToggleSet(exIdx, sIdx)}
+                      aria-label={
+                        s.completed
+                          ? l('Desmarcar série concluída', 'Unmark completed set')
+                          : l('Concluir série', 'Complete set')
+                      }
                       className={cn(
-                        'size-8 rounded-xl border flex items-center justify-center transition-all',
+                        'min-h-[44px] min-w-[44px] rounded-xl border flex items-center justify-center transition-all active:scale-95',
                         s.completed
                           ? 'border-emerald-400 bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.4)]'
-                          : 'border-white/20 bg-white/5 text-slate-400 hover:border-cyan-400/50 hover:text-white'
+                          : 'border-white/20 bg-white/5 text-slate-300 hover:border-cyan-400/50 hover:text-white'
                       )}
                     >
                       <Check className="size-4 stroke-[3]" />

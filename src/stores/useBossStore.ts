@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { useHunterStore } from './useHunterStore';
+import { useHunterStore, onHunterProfileLoaded } from './useHunterStore';
 
 export type RaidLifecycleState =
   | 'waiting_start'
@@ -647,43 +647,46 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
     const newHp = Math.min(activeBattle.max_hp, Math.max(0, activeBattle.current_hp - finalDamage));
     const actualDamage = activeBattle.current_hp - newHp;
 
-    // Atualiza estado local de forma otimista
-    const damageEventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    persistCombatEvent(userId, {
-      id: damageEventId,
-      damage: actualDamage,
-      critical: isCritical,
-      occurredAt: new Date().toISOString(),
-      bossName: activeBattle.name,
-    });
+    if (actualDamage === 0) return;
 
-    set({
-      activeBattle: {
-        ...activeBattle,
-        current_hp: newHp,
-        last_attack_at: new Date().toISOString(),
-      },
-      recentDamage: { id: damageEventId, damage: actualDamage, isCritical }
-    });
-
-    // Limpa o indicador de dano recente após 2.5 segundos
-    setTimeout(() => {
-      if (get().recentDamage?.id === damageEventId) {
-        set({ recentDamage: null });
-      }
-    }, 2500);
+    const attackTimestamp = new Date().toISOString();
 
     try {
-      // Atualiza o banco de dados de forma silenciosa em background
+      // Confirma o ataque no banco de dados antes de emitir o feedback de dano (Req 7.3)
       const { error: updateError } = await safeUpdateBossBattle(
         activeBattle.id,
         userId,
         {
           current_hp: newHp,
-          last_attack_at: new Date().toISOString(),
+          last_attack_at: attackTimestamp,
         }
       );
       if (updateError) throw updateError;
+
+      const damageEventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      persistCombatEvent(userId, {
+        id: damageEventId,
+        damage: actualDamage,
+        critical: isCritical,
+        occurredAt: attackTimestamp,
+        bossName: activeBattle.name,
+      });
+
+      set({
+        activeBattle: {
+          ...activeBattle,
+          current_hp: newHp,
+          last_attack_at: attackTimestamp,
+        },
+        recentDamage: { id: damageEventId, damage: actualDamage, isCritical }
+      });
+
+      // Limpa o indicador de dano recente após 2.5 segundos
+      setTimeout(() => {
+        if (get().recentDamage?.id === damageEventId) {
+          set({ recentDamage: null });
+        }
+      }, 2500);
     } catch (err) {
       console.error('[useBossStore] Erro ao persistir ataque ao boss:', err);
       set({ error: 'O ataque não pôde ser persistido. Sincronizando novamente...' });
@@ -902,3 +905,7 @@ export const useBossStore = create<BossStoreState>((set, get) => ({
     await get().loadActiveBattle(userId);
   },
 }));
+
+onHunterProfileLoaded((userId) => {
+  void useBossStore.getState().loadActiveBattle(userId);
+});

@@ -17,6 +17,7 @@ import { usePreferences } from '@/contexts/preferences';
 import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { HudCard } from '@/components/ui/hud-card';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface AppInputProps {
   label?: string;
@@ -240,6 +241,27 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 </p>
               </div>
 
+              {/* Alerta de Infraestrutura Supabase Não Configurada */}
+              {!isSupabaseConfigured && (
+                <div
+                  role="alert"
+                  className="mb-5 flex items-start gap-3 rounded-xl border border-amber-500/50 bg-amber-500/15 p-3.5 text-xs text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                >
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                  <div className="space-y-1">
+                    <p className="font-orbitron font-bold uppercase tracking-wider text-amber-300">
+                      {l('Ambiente Desconectado // Supabase Pendente', 'Disconnected Environment // Supabase Pending')}
+                    </p>
+                    <p className="leading-relaxed font-sans text-[11px] text-amber-200/90">
+                      {l(
+                        'As variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não foram configuradas neste deployment. A autenticação online está inativa até que as chaves sejam adicionadas em Environment Variables.',
+                        'The VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY variables are not configured in this deployment. Online authentication is disabled until keys are set in Environment Variables.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Alerta de Erro */}
               {error && (
                 <div
@@ -445,8 +467,14 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
           </div>
 
           {/* Rodapé Esquerdo Minimalista */}
-          <footer className="relative z-10 pt-4 text-center lg:text-left text-[10px] font-orbitron tracking-widest text-slate-600 uppercase">
-            ASCEND &bull; THE GATE &bull; 2026
+          <footer className="relative z-10 pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center lg:text-left text-[10px] font-orbitron tracking-widest text-slate-600 uppercase">
+            <span>ASCEND &bull; THE GATE &bull; 2026</span>
+            <a
+              href="/delete-account"
+              className="text-[10px] font-sans font-medium tracking-normal normal-case text-slate-500 hover:text-rose-400 transition-colors"
+            >
+              {l('Solicitar exclusão de conta', 'Request account deletion')}
+            </a>
           </footer>
         </div>
 

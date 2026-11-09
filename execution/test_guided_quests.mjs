@@ -155,11 +155,11 @@ test('6. Verificação de elegibilidade de atividades para Modo Guiado', () => {
 });
 
 test('7. Integridade de Gamificação e Atributos Oficiais', () => {
-  const validStats = new Set(['strength', 'endurance', 'intelligence', 'discipline', 'vitality']);
+  const validStats = new Set(['strength', 'endurance', 'intelligence', 'discipline', 'vitality', 'wisdom', 'balance']);
   for (const [key, preset] of Object.entries(GUIDED_ACTIVITY_PRESETS)) {
     assert.ok(
       validStats.has(preset.suggestedStat),
-      `Preset ${key} deve ter um dos 5 atributos oficiais válidos: ${preset.suggestedStat}`
+      `Preset ${key} deve ter um dos 7 atributos oficiais válidos: ${preset.suggestedStat}`
     );
     assert.ok(preset.statBonus >= 1 && preset.statBonus <= 3, `Stat bonus deve ser razoável (1-3)`);
   }

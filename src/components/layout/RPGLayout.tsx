@@ -28,6 +28,8 @@ import { MAX_LEVEL } from '@/lib/progression';
 import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { NeonProgressBar } from '@/components/ui/neon-progress';
+import { EvolutionCelebrationModal } from '@/components/rpg/EvolutionCelebrationModal';
+import { BossDamageToast } from '@/components/rpg/BossDamageToast';
 
 const navItems = [
   { path: '/', labelKey: 'nav.portal' as const, icon: LayoutGrid },
@@ -332,6 +334,10 @@ export function RPGLayout() {
         {/* ── Mobile Fixed Bottom Navigation ─────────────── */}
         <BottomNav />
       </main>
+
+      {/* ── Feedback Global de Evolução (Level-Up / Rank-Up) e Dano em Boss ── */}
+      <EvolutionCelebrationModal />
+      <BossDamageToast />
     </div>
   );
 }

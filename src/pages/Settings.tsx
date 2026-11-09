@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  RefreshCw, 
-  Trash2, 
-  Calendar, 
-  ShieldAlert, 
-  Sword, 
-  Book, 
-  Zap, 
-  Shield, 
-  Check, 
+import {
+  User,
+  Mail,
+  Lock,
+  RefreshCw,
+  Trash2,
+  Calendar,
+  ShieldAlert,
+  Sword,
+  Book,
+  Zap,
+  Shield,
+  Check,
   AlertTriangle,
   Loader2,
   HelpCircle,
@@ -33,17 +33,35 @@ import {
   Sun,
   Sparkles,
   Trophy,
-  ArrowRight
+  ArrowRight,
+  Volume2,
+  VolumeX,
+  Vibrate,
+  ExternalLink,
+  Bug
 } from 'lucide-react';
 import { useHunterStore, type HunterClass, type HunterGender } from '@/stores/useHunterStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { INITIAL_XP_REQUIREMENT } from '@/lib/progression';
+import { BetaFeedbackModal } from '@/components/beta/BetaFeedbackModal';
 import { usePreferences } from '@/contexts/preferences';
 import { HudCard } from '@/components/ui/hud-card';
 import { TacticalButton } from '@/components/ui/tactical-button';
 import { RankBadge } from '@/components/ui/rank-badge';
 import { ALL_POSSIBLE_ACHIEVEMENTS } from '@/lib/achievementsData';
+import {
+  isSoundEnabled,
+  setSoundEnabled,
+  isHapticsEnabled,
+  setHapticsEnabled,
+  triggerGameFeel,
+} from '@/lib/gameFeel';
+import {
+  executeAccountDeletion,
+  isValidDeletionConfirmation,
+  USER_DATA_CATEGORIES_DELETED,
+} from '@/lib/accountDeletion';
 
 const CLASS_IMAGE_FALLBACK = '/optimized/Classes/Warrior/Rank E.jpg';
 
@@ -61,7 +79,7 @@ export function Settings() {
   const { theme, language, setTheme, setLanguage, t } = usePreferences();
   const isEnglish = language === 'en-US';
   const l = (pt: string, en: string) => isEnglish ? en : pt;
-  
+
   // Estado local dos formulários
   const [fullName, setFullName] = useState(hunterStore.fullName || '');
   const [birthday, setBirthday] = useState(hunterStore.birthday || '');
@@ -76,7 +94,7 @@ export function Settings() {
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   // Codex de Conquistas e Títulos
   const [achievements, setAchievements] = useState<{ title: string; description: string; icon: string; unlocked_at: string }[]>([]);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
@@ -107,21 +125,36 @@ export function Settings() {
   useEffect(() => {
     void fetchAchievements();
   }, [user?.id]);
-  
+
   // Loadings
   const [profileLoading, setProfileLoading] = useState(false);
   const [securityLoading, setSecurityLoading] = useState(false);
   const [resetRpgLoading, setResetRpgLoading] = useState(false);
   const [resetAllLoading, setResetAllLoading] = useState(false);
-  
+
   // Notificações / Status
   const [profileMsg, setProfileMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [securityMsg, setSecurityMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  
+
   // Modais de confirmação
   const [showResetRpgModal, setShowResetRpgModal] = useState(false);
   const [showResetAllModal, setShowResetAllModal] = useState(false);
   const [resetConfirmText, setResetConfirmText] = useState('');
+
+  // Preferências de Feedback Sensorial (Som & Vibração)
+  const [soundOn, setSoundOn] = useState<boolean>(() => isSoundEnabled());
+  const [hapticsOn, setHapticsOn] = useState<boolean>(() => isHapticsEnabled());
+
+  // Exclusão de Conta (Apple 5.1.1v & Google Play)
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteAccountConfirmText, setDeleteAccountConfirmText] = useState('');
+  const [deleteAccountAck, setDeleteAccountAck] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
+  // Observabilidade Beta Web (Etapa 04.9)
+  const [betaFeedbackOpen, setBetaFeedbackOpen] = useState(false);
 
   // Estado de telemetria
   const [telemetry, setTelemetry] = useState<{
@@ -163,7 +196,7 @@ export function Settings() {
 
       try {
         setTelemetry(prev => ({ ...prev, loading: true, error: null }));
-        
+
         const fetchRoutinesCount = async () => {
           try {
             const { count, error } = await supabase.from('workout_routines').select('*', { count: 'exact', head: true }).eq('user_id', user.id);
@@ -365,10 +398,10 @@ export function Settings() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
+
     setProfileLoading(true);
     setProfileMsg(null);
-    
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -385,11 +418,11 @@ export function Settings() {
           experience_level: experienceLevel || null,
         })
         .eq('id', user.id);
-        
+
       if (error) throw error;
-      
+
       await hunterStore.loadProfile(user.id);
-      
+
       setProfileMsg({
         text: l(
           'REGISTRO ATUALIZADO: Sua identidade e biometria foram persistidas no Codex.',
@@ -415,7 +448,7 @@ export function Settings() {
   const handleSaveSecurity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
+
     if (password && password !== confirmPassword) {
       setSecurityMsg({
         text: l(
@@ -426,15 +459,15 @@ export function Settings() {
       });
       return;
     }
-    
+
     setSecurityLoading(true);
     setSecurityMsg(null);
-    
+
     try {
       const updates: { email?: string; password?: string } = {};
       if (email && email !== user.email) updates.email = email;
       if (password) updates.password = password;
-      
+
       if (Object.keys(updates).length === 0) {
         setSecurityMsg({
           text: l('Nenhuma credencial nova foi informada.', 'No new credentials were provided.'),
@@ -443,10 +476,10 @@ export function Settings() {
         setSecurityLoading(false);
         return;
       }
-      
+
       const { error } = await supabase.auth.updateUser(updates);
       if (error) throw error;
-      
+
       setSecurityMsg({
         text: l(
           'SEGURANÇA ATUALIZADA: Suas novas credenciais de acesso foram sincronizadas.',
@@ -475,7 +508,7 @@ export function Settings() {
     if (!user) return;
     setResetRpgLoading(true);
     setShowResetRpgModal(false);
-    
+
     try {
       const { error } = await supabase
         .from('profiles')
@@ -488,14 +521,16 @@ export function Settings() {
           intelligence: 10,
           endurance: 10,
           vitality: 10,
-          discipline: 10
+          discipline: 10,
+          wisdom: 10,
+          balance: 10
         })
         .eq('id', user.id);
-        
+
       if (error) throw error;
-      
+
       await hunterStore.loadProfile(user.id);
-      
+
       setProfileMsg({
         text: l(
           'ATRIBUTOS PURIFICADOS: Nível e atributos RPG retornaram ao Nível 1. Seus hábitos e rotinas permanecem intactos.',
@@ -523,7 +558,7 @@ export function Settings() {
     if (!user || resetConfirmText.trim().toLowerCase() !== requiredConfirmation) return;
     setResetAllLoading(true);
     setShowResetAllModal(false);
-    
+
     try {
       await supabase.from('habit_completions').delete().eq('user_id', user.id);
       await supabase.from('routine_completions').delete().eq('user_id', user.id);
@@ -547,6 +582,10 @@ export function Settings() {
       await supabase.from('achievements').delete().eq('user_id', user.id);
       await supabase.from('daily_checklist').delete().eq('user_id', user.id);
       await supabase.from('nutrition_daily_scores').delete().eq('user_id', user.id);
+      await supabase.from('boss_battles').delete().eq('user_id', user.id);
+      await supabase.from('financial_logs').delete().eq('user_id', user.id);
+      await supabase.from('financial_goals').delete().eq('user_id', user.id);
+      await supabase.from('rest_logs').delete().eq('user_id', user.id);
       await supabase.from('exercises').delete().eq('created_by', user.id);
       await supabase.from('foods').delete().eq('created_by', user.id);
 
@@ -563,6 +602,8 @@ export function Settings() {
           endurance: 10,
           vitality: 10,
           discipline: 10,
+          wisdom: 10,
+          balance: 10,
           streak_current: 0,
           streak_best: 0,
           last_check_in: null,
@@ -570,15 +611,15 @@ export function Settings() {
           full_name: ''
         })
         .eq('id', user.id);
-        
+
       if (errorProfile) throw errorProfile;
-      
+
       hunterStore.reset();
-      
+
       setTimeout(() => {
         navigate('/onboarding', { replace: true });
       }, 1000);
-      
+
     } catch (err: any) {
       console.error(err);
       setProfileMsg({
@@ -594,9 +635,82 @@ export function Settings() {
     }
   };
 
+  // 5. Exclusão Definitiva de Conta (Apple App Store 5.1.1v & Google Play)
+  const isOAuthUser = Boolean(
+    user?.app_metadata?.provider && user.app_metadata.provider !== 'email'
+  );
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleteAccountError(null);
+
+    if (!deleteAccountAck) {
+      setDeleteAccountError(
+        l(
+          'Confirme que compreende que a exclusão da conta é irreversível.',
+          'Please confirm that you understand account deletion is irreversible.'
+        )
+      );
+      return;
+    }
+
+    if (!isValidDeletionConfirmation(deleteAccountConfirmText)) {
+      setDeleteAccountError(
+        l(
+          'Digite EXCLUIR MINHA CONTA (ou DELETE MY ACCOUNT) para confirmar.',
+          'Type DELETE MY ACCOUNT (or EXCLUIR MINHA CONTA) to confirm.'
+        )
+      );
+      return;
+    }
+
+    if (!isOAuthUser && (!deleteAccountPassword || deleteAccountPassword.trim().length < 6)) {
+      setDeleteAccountError(
+        l(
+          'Informe sua senha atual para revalidar sua identidade.',
+          'Enter your current password to revalidate your identity.'
+        )
+      );
+      return;
+    }
+
+    setDeleteAccountLoading(true);
+    try {
+      const result = await executeAccountDeletion({
+        userId: user.id,
+        email: user.email,
+        password: deleteAccountPassword,
+        confirmationText: deleteAccountConfirmText,
+        requirePasswordReauth: !isOAuthUser,
+      });
+
+      if (!result.success) {
+        setDeleteAccountError(
+          result.error ||
+          l(
+            'Falha ao excluir a conta. Verifique sua senha e tente novamente.',
+            'Failed to delete account. Check your password and try again.'
+          )
+        );
+        return;
+      }
+
+      hunterStore.reset();
+      setShowDeleteAccountModal(false);
+      navigate('/login', { replace: true });
+    } catch (err: any) {
+      setDeleteAccountError(
+        err?.message ||
+        l('Erro inesperado ao excluir conta.', 'Unexpected error while deleting account.')
+      );
+    } finally {
+      setDeleteAccountLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-28 sm:pb-32 text-silver">
-      
+
       {/* ── CABEÇALHO DA PÁGINA ── */}
       <HudCard variant="cyan" corners radialGlow className="p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -648,22 +762,20 @@ export function Settings() {
                 <button
                   type="button"
                   onClick={() => setTheme('dark')}
-                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${
-                    theme === 'dark'
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${theme === 'dark'
                       ? 'border-purple-500/50 bg-purple-500/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.2)]'
                       : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   <MoonStar className="size-4" /> {t('settings.dark')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setTheme('light')}
-                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${
-                    theme === 'light'
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${theme === 'light'
                       ? 'border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
                       : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   <Sun className="size-4" /> {t('settings.light')}
                 </button>
@@ -679,24 +791,94 @@ export function Settings() {
                 <button
                   type="button"
                   onClick={() => setLanguage('pt-BR')}
-                  className={`min-h-[44px] rounded-lg border text-xs font-bold transition-all ${
-                    language === 'pt-BR'
+                  className={`min-h-[44px] rounded-lg border text-xs font-bold transition-all ${language === 'pt-BR'
                       ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-200 shadow-[0_0_12px_rgba(0,240,255,0.2)]'
                       : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   {t('settings.portuguese')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setLanguage('en-US')}
-                  className={`min-h-[44px] rounded-lg border text-xs font-bold transition-all ${
-                    language === 'en-US'
+                  className={`min-h-[44px] rounded-lg border text-xs font-bold transition-all ${language === 'en-US'
                       ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-200 shadow-[0_0_12px_rgba(0,240,255,0.2)]'
                       : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   {t('settings.english')}
+                </button>
+              </div>
+            </div>
+
+            {/* Efeitos Sonoros (Web Audio Sintético) */}
+            <div className="rounded-xl border border-white/5 bg-black/40 p-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                {l('Efeitos Sonoros (HUD SFX)', 'Sound Effects (HUD SFX)')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSoundOn(true);
+                    setSoundEnabled(true);
+                    triggerGameFeel('questComplete');
+                  }}
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${soundOn
+                      ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+                      : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                >
+                  <Volume2 className="size-4" /> {l('Ativado', 'On')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSoundOn(false);
+                    setSoundEnabled(false);
+                  }}
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${!soundOn
+                      ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
+                      : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                >
+                  <VolumeX className="size-4" /> {l('Silencioso', 'Muted')}
+                </button>
+              </div>
+            </div>
+
+            {/* Vibração Tátil (Haptics) */}
+            <div className="rounded-xl border border-white/5 bg-black/40 p-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                {l('Vibração Tátil (Haptics)', 'Haptic Vibration')}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHapticsOn(true);
+                    setHapticsEnabled(true);
+                    triggerGameFeel('questComplete');
+                  }}
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${hapticsOn
+                      ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-200 shadow-[0_0_12px_rgba(0,240,255,0.2)]'
+                      : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                >
+                  <Vibrate className="size-4" /> {l('Ativada', 'On')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHapticsOn(false);
+                    setHapticsEnabled(false);
+                  }}
+                  className={`flex min-h-[44px] items-center justify-center gap-2 rounded-lg border text-xs font-bold transition-all ${!hapticsOn
+                      ? 'border-rose-500/40 bg-rose-500/15 text-rose-200'
+                      : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                >
+                  <span>{l('Desativada', 'Off')}</span>
                 </button>
               </div>
             </div>
@@ -706,22 +888,22 @@ export function Settings() {
 
       {/* ── GRID PRINCIPAL: FICHA + FORMULÁRIOS ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* COLUNA ESQUERDA: HERO DA CLASSE ATIVA (1/3) */}
         <div className="lg:col-span-1 space-y-6">
           <HudCard variant="cyan" corners className="p-5 sm:p-6 text-center">
             {/* Imagem de classe com moldura tática */}
             <div className="relative w-full h-56 sm:h-72 rounded-2xl overflow-hidden mb-5 border border-white/10 group">
-              <img 
-                src={classConfig.image} 
-                alt={classConfig.title} 
+              <img
+                src={classConfig.image}
+                alt={classConfig.title}
                 loading="lazy"
                 decoding="async"
                 onError={handleClassImageError}
                 className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-              
+
               {/* Selo RPG do Rank */}
               <div className="absolute top-3 right-3">
                 <RankBadge rank={hunterStore.rank || 'E'} size="md" />
@@ -756,7 +938,7 @@ export function Settings() {
               </p>
 
               <div className="h-px w-2/3 mx-auto bg-white/10 my-3" />
-              
+
               <p className="text-[11px] text-gray-400 italic leading-relaxed max-w-xs mx-auto">
                 “{l(
                   'Sua identidade selada reflete seus hábitos, atributos e consistência diária nas fendas.',
@@ -788,11 +970,10 @@ export function Settings() {
 
             <form onSubmit={handleSaveProfile} className="space-y-5">
               {profileMsg && (
-                <div className={`p-3.5 rounded-xl border text-xs font-semibold ${
-                  profileMsg.type === 'success' 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+                <div className={`p-3.5 rounded-xl border text-xs font-semibold ${profileMsg.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                     : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-                }`}>
+                  }`}>
                   {profileMsg.text}
                 </div>
               )}
@@ -998,7 +1179,7 @@ export function Settings() {
                 <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 font-orbitron">
                   {l('Troca Rápida de Título Desbloqueado', 'Quick Switch Unlocked Title')}
                 </span>
-                
+
                 <div className="flex flex-wrap gap-2 pt-1">
                   {(() => {
                     const unlockedList = ['Iniciante'];
@@ -1019,11 +1200,10 @@ export function Settings() {
                           key={titleName}
                           type="button"
                           onClick={() => handleEquipTitle(titleName)}
-                          className={`min-h-[36px] px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all font-orbitron ${
-                            isEquipped
+                          className={`min-h-[36px] px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all font-orbitron ${isEquipped
                               ? 'bg-amber-500/25 border border-amber-500/60 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
                               : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/20 hover:text-white'
-                          }`}
+                            }`}
                         >
                           {displayTitle} {isEquipped && '✓'}
                         </button>
@@ -1053,11 +1233,10 @@ export function Settings() {
 
             <form onSubmit={handleSaveSecurity} className="space-y-4">
               {securityMsg && (
-                <div className={`p-3.5 rounded-xl border text-xs font-semibold ${
-                  securityMsg.type === 'success' 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
+                <div className={`p-3.5 rounded-xl border text-xs font-semibold ${securityMsg.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                     : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-                }`}>
+                  }`}>
                   {securityMsg.text}
                 </div>
               )}
@@ -1151,13 +1330,12 @@ export function Settings() {
                       )}
                     </p>
                   </div>
-                  <div className={`size-3 rounded-full ${
-                    telemetry.loading 
-                      ? 'bg-amber-400 animate-ping' 
-                      : telemetry.error 
-                        ? 'bg-rose-500' 
+                  <div className={`size-3 rounded-full ${telemetry.loading
+                      ? 'bg-amber-400 animate-ping'
+                      : telemetry.error
+                        ? 'bg-rose-500'
                         : 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-                  }`} />
+                    }`} />
                 </div>
 
                 <div className="p-3.5 rounded-xl border border-white/5 bg-black/40 sm:col-span-2 space-y-1">
@@ -1185,7 +1363,16 @@ export function Settings() {
                 ))}
               </div>
 
-              <div className="flex justify-end pt-1">
+              <div className="flex flex-wrap items-center justify-end gap-2.5 pt-1">
+                <TacticalButton
+                  onClick={() => setBetaFeedbackOpen(true)}
+                  variant="secondary"
+                  accent="gold"
+                  className="min-h-[44px] text-xs px-4"
+                >
+                  <Bug size={14} className="text-amber-400" />
+                  <span>{l('Reportar Problema (Beta)', 'Report Issue (Beta)')}</span>
+                </TacticalButton>
                 <TacticalButton
                   onClick={() => window.location.reload()}
                   variant="ghost"
@@ -1266,6 +1453,55 @@ export function Settings() {
                 </TacticalButton>
               </div>
             </div>
+
+            {/* Exclusão Definitiva de Conta (Apple App Store 5.1.1v & Google Play Compliance) */}
+            <div className="p-4 sm:p-5 rounded-xl border border-rose-500/35 bg-rose-950/25 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded border border-rose-500/40 bg-rose-500/15 px-2 py-0.5 font-orbitron text-[9px] font-black uppercase tracking-widest text-rose-300">
+                      {l('PRIVACIDADE & CONTA', 'PRIVACY & ACCOUNT')}
+                    </span>
+                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white font-orbitron">
+                      {l('Excluir minha conta', 'Delete my account')}
+                    </h3>
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-gray-300 leading-relaxed">
+                    {l(
+                      'Exclui permanentemente sua conta ASCEND, credenciais de acesso, perfil público, conexões sociais, histórico de missões, treinos, nutrição, fortuna e conquistas.',
+                      'Permanently deletes your ASCEND account, login credentials, public profile, social connections, quest history, workouts, nutrition, fortune, and achievements.'
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <Link
+                    to="/delete-account"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-300 hover:border-rose-400/50 hover:text-white transition-colors"
+                  >
+                    <ExternalLink size={13} />
+                    <span>{l('Portal Web de Exclusão', 'Web Deletion Portal')}</span>
+                  </Link>
+
+                  <TacticalButton
+                    type="button"
+                    onClick={() => {
+                      setDeleteAccountError(null);
+                      setDeleteAccountPassword('');
+                      setDeleteAccountConfirmText('');
+                      setDeleteAccountAck(false);
+                      setShowDeleteAccountModal(true);
+                    }}
+                    variant="danger"
+                    accent="crimson"
+                    className="min-h-[44px] text-xs font-black px-4"
+                  >
+                    <Trash2 size={14} />
+                    <span>{l('Excluir minha conta', 'Delete my account')}</span>
+                  </TacticalButton>
+                </div>
+              </div>
+            </div>
           </HudCard>
 
         </div>
@@ -1342,7 +1578,7 @@ export function Settings() {
                     'This permanently deletes all workouts, routines, habits, tasks, food history, and achievements. Your class will be unsealed.'
                   )}
                 </p>
-                
+
                 <div className="w-full space-y-1.5 pt-2">
                   <label className="text-[10px] font-black uppercase tracking-wider text-rose-400">
                     {l('Digite', 'Type')}{' '}
@@ -1384,6 +1620,151 @@ export function Settings() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── MODAL 3: EXCLUSÃO DEFINITIVA DE CONTA (APPLE / GOOGLE PLAY) ── */}
+      <AnimatePresence>
+        {showDeleteAccountModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="max-w-lg w-full max-h-[90dvh] overflow-y-auto rounded-2xl border border-rose-500/45 bg-[#0D0F17] p-5 sm:p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-start gap-3.5 border-b border-white/10 pb-4">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/35">
+                  <ShieldAlert size={22} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black font-orbitron uppercase text-white">
+                    {l('Excluir Minha Conta Permanentemente', 'Permanently Delete My Account')}
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {l(
+                      'Esta operação encerra sua identidade no Sistema ASCEND e não pode ser desfeita.',
+                      'This operation terminates your identity in the ASCEND System and cannot be undone.'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-rose-500/25 bg-rose-950/20 p-3.5 space-y-2">
+                <p className="font-orbitron text-[10px] font-bold uppercase tracking-wider text-rose-300">
+                  {l('Dados que serão permanentemente excluídos:', 'Data that will be permanently deleted:')}
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-[11px] text-gray-300">
+                  {USER_DATA_CATEGORIES_DELETED.map((cat) => (
+                    <li key={cat.id}>{isEnglish ? cat.en : cat.pt}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {deleteAccountError && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-rose-500/40 bg-rose-500/15 p-3 text-xs text-rose-200 flex items-start gap-2"
+                >
+                  <AlertTriangle size={15} className="shrink-0 text-rose-400 mt-0.5" />
+                  <span>{deleteAccountError}</span>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {!isOAuthUser ? (
+                  <div>
+                    <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-gray-300">
+                      {l('Sua Senha Atual (Revalidação de Identidade)', 'Your Current Password (Identity Revalidation)')}
+                    </label>
+                    <input
+                      type="password"
+                      value={deleteAccountPassword}
+                      onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full min-h-[44px] rounded-xl border border-white/15 bg-black/60 px-3.5 text-xs text-white focus:border-rose-500 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-3 text-[11px] text-cyan-200">
+                    {l(
+                      'Conta autenticada via provedor externo (OAuth). Sua sessão ativa será revalidada junto à frase de confirmação abaixo.',
+                      'Account authenticated via external provider (OAuth). Your active session will be revalidated alongside the confirmation phrase below.'
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-rose-400">
+                    {l(
+                      'Digite EXCLUIR MINHA CONTA para confirmar',
+                      'Type DELETE MY ACCOUNT to confirm'
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteAccountConfirmText}
+                    onChange={(e) => setDeleteAccountConfirmText(e.target.value)}
+                    placeholder={isEnglish ? 'DELETE MY ACCOUNT' : 'EXCLUIR MINHA CONTA'}
+                    className="w-full min-h-[44px] rounded-xl border border-rose-500/40 bg-black/60 px-3.5 text-center font-orbitron text-xs font-black uppercase tracking-wider text-rose-300 focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                <label className="flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-[11px] text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={deleteAccountAck}
+                    onChange={(e) => setDeleteAccountAck(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-white/25 bg-black text-rose-500"
+                  />
+                  <span>
+                    {l(
+                      'Estou ciente de que minha conta e todos os meus dados privados e públicos serão excluídos em caráter irreversível.',
+                      'I understand that my account and all private and public data will be irreversibly deleted.'
+                    )}
+                  </span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <TacticalButton
+                  type="button"
+                  onClick={() => setShowDeleteAccountModal(false)}
+                  variant="ghost"
+                  className="min-h-[44px] text-xs"
+                >
+                  {l('Cancelar', 'Cancel')}
+                </TacticalButton>
+                <TacticalButton
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={
+                    deleteAccountLoading ||
+                    !deleteAccountAck ||
+                    !isValidDeletionConfirmation(deleteAccountConfirmText) ||
+                    (!isOAuthUser && deleteAccountPassword.trim().length < 6)
+                  }
+                  variant="danger"
+                  accent="crimson"
+                  className="min-h-[44px] text-xs font-black"
+                >
+                  {deleteAccountLoading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
+                  <span>{l('Confirmar Exclusão', 'Confirm Deletion')}</span>
+                </TacticalButton>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Observabilidade e Feedback Beta */}
+      <BetaFeedbackModal
+        open={betaFeedbackOpen}
+        onClose={() => setBetaFeedbackOpen(false)}
+        currentScreen="/settings"
+      />
 
     </div>
   );

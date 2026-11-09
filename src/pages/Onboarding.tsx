@@ -22,7 +22,9 @@ import {
   getCalibratedInitialStats,
   getRecommendedPinnedActions,
   getInitialHabitPresets,
+  mapMainGoalToTrainingGoal,
 } from '@/lib/onboardingSetup';
+import { generateTrainingProtocol } from '@/lib/trainingGenerator';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type OnboardingStep =
@@ -782,6 +784,32 @@ export function Onboarding() {
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmTrainingProgram, setConfirmTrainingProgram] = useState(true);
+
+  // Ajusta sugestão inicial do programa de treinos conforme o objetivo principal declarado (Req 5.2)
+  useEffect(() => {
+    const isNonPhysicalGoal = ['focus_studies', 'discipline'].includes(form.mainGoal);
+    setConfirmTrainingProgram(!isNonPhysicalGoal);
+  }, [form.mainGoal]);
+
+  const previewProtocol = useMemo(() => {
+    const trainingGoal = mapMainGoalToTrainingGoal(form.mainGoal || 'general_health');
+    return generateTrainingProtocol({
+      goal: trainingGoal,
+      experience: (form.experienceLevel as 'beginner' | 'intermediate' | 'advanced') || 'beginner',
+      frequency: (form.workoutFrequency || 3) as 2 | 3 | 4 | 5 | 6,
+      durationMinutes: (Number(form.dailyAvailability) || 60) as 30 | 45 | 60 | 90,
+      environment: form.workoutEnvironment || 'gym',
+      restrictions: form.physicalRestrictions || [],
+    });
+  }, [
+    form.mainGoal,
+    form.experienceLevel,
+    form.workoutFrequency,
+    form.dailyAvailability,
+    form.workoutEnvironment,
+    form.physicalRestrictions,
+  ]);
 
   const handleConfirmClass = async () => {
     if (!user || !selectedClass || isSubmitting) return;
@@ -807,6 +835,7 @@ export function Onboarding() {
         physicalRestrictions: form.physicalRestrictions || [],
         primaryDifficulty: form.primaryDifficulty,
         dailyAvailability: form.dailyAvailability || '60',
+        confirmTrainingProgram,
       });
 
       // 2. Registra classe e finaliza rascunho
@@ -1675,6 +1704,69 @@ export function Onboarding() {
                     {l('Acesso instantâneo', 'Instant access')}
                   </p>
                 </div>
+              </div>
+
+              {/* Prévia e Confirmação Explícita das Fichas Iniciais (Treino A/B/C) */}
+              <div className="mt-3 rounded-xl border border-[#00F0FF]/25 bg-black/50 p-3.5 text-left space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <span className="font-orbitron text-[10px] font-bold uppercase tracking-wider text-[#00F0FF]">
+                      {l('Programa de Treino Sugerido:', 'Suggested Workout Program:')} {previewProtocol.splitType}
+                    </span>
+                    <p className="text-[11px] text-slate-400">
+                      {l(
+                        'Revise e confirme se deseja ativar estas fichas iniciais no Training Center:',
+                        'Review and confirm whether to activate these starter routines in the Training Center:'
+                      )}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setConfirmTrainingProgram((prev) => !prev)}
+                    className={`inline-flex min-h-[38px] items-center gap-2 rounded-lg border px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider transition-all ${
+                      confirmTrainingProgram
+                        ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300'
+                        : 'border-white/15 bg-white/5 text-slate-400'
+                    }`}
+                  >
+                    <Check size={13} className={confirmTrainingProgram ? 'opacity-100' : 'opacity-40'} />
+                    <span>
+                      {confirmTrainingProgram
+                        ? l('Ativar Programa Inicial', 'Activate Starter Program')
+                        : l('Criar Rotinas Depois', 'Create Routines Later')}
+                    </span>
+                  </button>
+                </div>
+
+                {confirmTrainingProgram && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    {previewProtocol.routines.map((routine, idx) => (
+                      <div
+                        key={routine.name}
+                        className="rounded-lg border border-white/10 bg-white/[0.02] p-2.5 space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-orbitron text-[10px] font-black uppercase text-white truncate">
+                            {routine.name}
+                          </span>
+                          <span className="rounded bg-[#00F0FF]/15 px-1.5 py-0.5 font-mono text-[9px] text-[#00F0FF] shrink-0">
+                            {routine.exercises.length} {l('exerc.', 'ex.')}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 leading-snug">
+                          {routine.exercises
+                            .map((ex) => `${ex.name} (${ex.sets}x${ex.reps})`)
+                            .join(' • ')}
+                        </p>
+                        <span className="block text-[9px] font-mono text-slate-500">
+                          {l(`Sessão ${String.fromCharCode(65 + idx)}`, `Session ${String.fromCharCode(65 + idx)}`)} •{' '}
+                          {form.dailyAvailability || '60'} min
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </HudCard>
 

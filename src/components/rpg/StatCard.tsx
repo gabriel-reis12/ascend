@@ -1,12 +1,15 @@
 import { motion } from 'framer-motion';
-import { Sword, Brain, Heart, Shield } from 'lucide-react';
+import { Sword, Brain, Heart, Shield, Zap, Compass, Scale } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const STAT_CONFIG = {
-  strength:     { label: 'Força',        icon: Sword,  color: '#EF4444', glow: 'shadow-red-500/30' },
-  intelligence: { label: 'Inteligência', icon: Brain,  color: '#3B82F6', glow: 'shadow-blue-500/30' },
-  endurance:    { label: 'Resistência',  icon: Heart,  color: '#10B981', glow: 'shadow-emerald-500/30' },
-  vitality:     { label: 'Vitalidade',   icon: Shield, color: '#FBBF24', glow: 'shadow-amber-500/30' },
+  strength:     { label: 'Força',        icon: Sword,   color: '#EF4444', glow: 'shadow-red-500/30' },
+  intelligence: { label: 'Inteligência', icon: Brain,   color: '#3B82F6', glow: 'shadow-blue-500/30' },
+  endurance:    { label: 'Resistência',  icon: Heart,   color: '#10B981', glow: 'shadow-emerald-500/30' },
+  vitality:     { label: 'Vitalidade',   icon: Shield,  color: '#FBBF24', glow: 'shadow-amber-500/30' },
+  discipline:   { label: 'Disciplina',   icon: Zap,     color: '#A855F7', glow: 'shadow-purple-500/30' },
+  wisdom:       { label: 'Sabedoria',    icon: Compass, color: '#06B6D4', glow: 'shadow-cyan-500/30' },
+  balance:      { label: 'Equilíbrio',   icon: Scale,   color: '#14B8A6', glow: 'shadow-teal-500/30' },
 };
 
 interface StatCardProps {

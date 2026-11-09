@@ -15,14 +15,16 @@ Este documento resume as fórmulas e contratos reais de gamificação do código
   - **National:** Nível 95 a 99
   - **Monarch:** Nível 100
 
-## 2. Recompensas e Atributos
+## 2. Recompensas e os 7 Atributos do Caçador
 
-O sistema possui 5 atributos fundamentais do Caçador:
-1. **Strength (Força):** Recompensado principalmente por treinos de musculação e calistenia.
-2. **Endurance (Resistência):** Recompensado por cardios, caminhadas e sustentação física.
-3. **Intelligence (Inteligência):** Recompensado por blocos de estudo e leitura.
-4. **Discipline (Disciplina):** Recompensado por hábitos repetidos, trabalho e consistência.
-5. **Vitality (Vitalidade):** Recompensado por ingestão de água, sono reparador e nutrição.
+O sistema possui **7 atributos fundamentais** do Caçador (`useHunterStore.ts`, `profiles` e `Dashboard.tsx`):
+1. **Strength (Força — `strength`):** Recompensado principalmente por treinos de musculação e calistenia.
+2. **Endurance (Resistência — `endurance`):** Recompensado por cardios, caminhadas e sustentação física.
+3. **Intelligence (Inteligência — `intelligence`):** Recompensado por blocos de estudo e leitura.
+4. **Discipline (Disciplina — `discipline`):** Recompensado por hábitos repetidos, trabalho e consistência.
+5. **Vitality (Vitalidade — `vitality`):** Recompensado por ingestão de água, saúde geral e nutrição.
+6. **Wisdom (Sabedoria — `wisdom`):** Recompensado por responsabilidade financeira (Fortuna), investimentos e reflexão estratégica.
+7. **Balance (Equilíbrio — `balance`):** Recompensado por sono reparador, lazer consciente e meditação/respiração guiada (Descanso / Templo da Mente).
 
 ## 3. Limites Diários de XP (Caps de Segurança)
 

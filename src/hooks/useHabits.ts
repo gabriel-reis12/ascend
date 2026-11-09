@@ -5,6 +5,7 @@ import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
 import { normalizeActivityXp } from '@/lib/progression';
 import { localDateString, localDayBounds } from '@/lib/date';
+import { triggerGameFeel } from '@/lib/gameFeel';
 
 const MEAL_BOSS_DAMAGE = 15;
 
@@ -443,6 +444,7 @@ export function useHabits() {
       });
 
       if (!error) {
+        triggerGameFeel('questComplete');
         updateCompletedState((prev) => new Set([...prev, habitId]));
         const xpResult = await addXp(normalizeActivityXp(habit.xp_reward), user.id, {
           eventId: `habit:${habit.id}:${todayStr()}`,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   X,
@@ -15,8 +15,6 @@ import {
   Shield,
   Heart,
   Sparkles,
-  Plus,
-  Minus,
   ArrowUpRight,
   Info,
   Trophy,
@@ -33,6 +31,7 @@ import {
 } from '@/lib/guidedQuests';
 import { usePreferences } from '@/contexts/preferences';
 import { useNavigate } from 'react-router-dom';
+import { triggerGameFeel } from '@/lib/gameFeel';
 
 interface GuidedQuestModalProps {
   open: boolean;
@@ -75,7 +74,7 @@ export function GuidedQuestModal({
   // Accordion State
   const [tipsOpen, setTipsOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [completedCelebration, setCompletedCelebration] = useState<boolean>(false);
+  const [, setCompletedCelebration] = useState<boolean>(false);
 
   // Sync state when session opens
   useEffect(() => {
@@ -133,14 +132,8 @@ export function GuidedQuestModal({
       if (nextRemaining <= 0) {
         clearInterval(interval);
         setTargetTimestamp(null);
-        // Haptic feedback se suportado
-        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-          try {
-            navigator.vibrate([100, 50, 150]);
-          } catch {
-            // Ignorar erro se não permitido
-          }
-        }
+        // Feedback sonoro e tátil sintetizado (respeita configurações de áudio/vibração e movimento reduzido)
+        triggerGameFeel('questComplete');
       }
     }, 500);
 
@@ -246,13 +239,7 @@ export function GuidedQuestModal({
     setCompletedCelebration(true);
 
     try {
-      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-        try {
-          navigator.vibrate([60, 40, 120]);
-        } catch {
-          // Ignorar se não suportado
-        }
-      }
+      triggerGameFeel('questComplete');
 
       await onComplete(session.questId, session.questType, {
         repsDone: session.mode === 'reps' ? currentReps : undefined,

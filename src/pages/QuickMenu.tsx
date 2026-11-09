@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import {
   Apple,
-  ArrowRight,
   Check,
-  CheckCircle2,
   CheckSquare,
   ChevronRight,
   Coins,
@@ -44,6 +42,7 @@ import {
   type QuickActionDefinition,
 } from '@/lib/quickActionsCatalog';
 import { HunterGuidanceCard } from '@/components/home/HunterGuidanceCard';
+import { DailyActionCenter } from '@/components/home/DailyActionCenter';
 import { QuickActionsCustomizerModal } from '@/components/home/QuickActionsCustomizerModal';
 import {
   SafeActionConfirmModal,
@@ -143,9 +142,11 @@ export function QuickMenu() {
     workoutMissions,
     mealMissions,
     xpEarnedToday,
+    toggleCompletion,
+    toggleMealMission,
   } = useHabits();
 
-  const { tasks } = useTasks();
+  const { tasks, pendingTasks, completeTask } = useTasks();
 
   // Store de Ações Rápidas Personalizáveis
   const {
@@ -297,97 +298,6 @@ export function QuickMenu() {
   ]);
 
   const todayXp = state.xpGainedToday || xpEarnedToday || 0;
-
-  const nextMission = useMemo(() => {
-    const pendingWorkout = workoutMissions.find((mission) => !mission.isCompleted);
-    if (pendingWorkout) {
-      return {
-        eyebrow: l('Missão Física Prioritária', 'Priority Physical Mission'),
-        title: isEnglish ? translateUiText(pendingWorkout.title) : pendingWorkout.title,
-        reward: `+${pendingWorkout.xp_reward} XP · ${
-          pendingWorkout.stat_target === 'strength' ? 'STR' : 'END'
-        } +${pendingWorkout.stat_reward}`,
-        path: '/workouts',
-        cta: l('Treinar', 'Train'),
-        icon: Dumbbell,
-      };
-    }
-
-    const pendingHabit = activeHabits.find((habit) => !completedToday.has(habit.id));
-    if (pendingHabit) {
-      return {
-        eyebrow: l('Próxima Missão Diária', 'Next Daily Mission'),
-        title: isEnglish ? translateUiText(pendingHabit.title) : pendingHabit.title,
-        reward: `+${pendingHabit.xp_reward} XP`,
-        path: '/quests',
-        cta: l('Missões', 'Quests'),
-        icon: CheckSquare,
-      };
-    }
-
-    const pendingMeal = mealMissions.find((meal) => !meal.isCompleted);
-    if (pendingMeal) {
-      return {
-        eyebrow: l('Protocolo Nutricional', 'Nutrition Protocol'),
-        title: isEnglish ? translateUiText(pendingMeal.title) : pendingMeal.title,
-        reward:
-          pendingMeal.xp_reward > 0
-            ? `+${pendingMeal.xp_reward} XP · VIT`
-            : `${pendingMeal.totalKcal} kcal`,
-        path: '/nutrition',
-        cta: l('Nutrição', 'Nutrition'),
-        icon: Apple,
-      };
-    }
-
-    const pendingTask = tasks.find((task) => !task.completed);
-    if (pendingTask) {
-      return {
-        eyebrow: l('Objetivo Tático Pendente', 'Pending Tactical Objective'),
-        title: isEnglish ? translateUiText(pendingTask.title) : pendingTask.title,
-        reward: `+${pendingTask.xp_reward} XP`,
-        path: '/quests',
-        cta: l('Abrir', 'Open'),
-        icon: Sparkles,
-      };
-    }
-
-    if (dailyStats.total > 0 && dailyStats.completed >= dailyStats.total) {
-      return {
-        eyebrow: l('Sincronização Diária Completa', 'Daily Sync Complete'),
-        title: l(
-          'Todas as missões programadas para hoje foram concluídas.',
-          'All scheduled missions for today have been completed.'
-        ),
-        reward: `+${todayXp} XP ${l('acumulados hoje', 'earned today')}`,
-        path: '/quests',
-        cta: l('Ver Quadro', 'View Board'),
-        icon: Trophy,
-      };
-    }
-
-    return {
-      eyebrow: l('Calibração de Rotina', 'Routine Calibration'),
-      title: l(
-        'Configure ou conclua suas missões diárias para iniciar a coleta de XP.',
-        'Configure or complete your daily missions to start earning XP.'
-      ),
-      reward: l('Recompensa imediata de XP e Atributos', 'Immediate XP & Attribute rewards'),
-      path: '/quests',
-      cta: l('Abrir Missões', 'Open Quests'),
-      icon: CheckCircle2,
-    };
-  }, [
-    workoutMissions,
-    activeHabits,
-    completedToday,
-    mealMissions,
-    tasks,
-    dailyStats.total,
-    dailyStats.completed,
-    todayXp,
-    isEnglish,
-  ]);
 
   // Ícones do Catálogo Mapeados
   const getActionIcon = (iconName: string) => {
@@ -679,7 +589,6 @@ export function QuickMenu() {
     },
   ];
 
-  const NextMissionIcon = nextMission.icon;
   const motionProps = prefersReducedMotion
     ? {}
     : {
@@ -689,7 +598,7 @@ export function QuickMenu() {
       };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-8 text-[var(--text-primary)]">
+    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 pb-8 text-[var(--text-primary)]">
       {/* Toast Feedback */}
       <AnimatePresence>
         {toastMessage && (
@@ -713,8 +622,8 @@ export function QuickMenu() {
         className="relative"
       >
         <div className="grid grid-cols-1 gap-0 lg:grid-cols-12 lg:gap-5 lg:items-stretch">
-          {/* 1. HERO DO JOGADOR (Proporção equilibrada no mobile e desktop) */}
-          <div className="relative h-60 sm:h-68 lg:col-span-5 lg:h-auto overflow-hidden rounded-t-2xl lg:rounded-2xl border border-b-0 lg:border-b border-[var(--hud-border-cyan)] bg-[#0A0C12] shadow-[0_0_28px_rgba(0,240,255,0.08)]">
+          {/* 1. HERO DO JOGADOR (Compactado no mobile para liberar a Próxima Ação acima da dobra) */}
+          <div className="relative h-36 sm:h-60 lg:col-span-5 lg:h-auto overflow-hidden rounded-t-2xl lg:rounded-2xl border border-b-0 lg:border-b border-[var(--hud-border-cyan)] bg-[#0A0C12] shadow-[0_0_28px_rgba(0,240,255,0.08)]">
             <img
               src={characterAvatar}
               alt={`${hunterName} — ${hunterClassLabel} Rank ${state.rank || 'E'}`}
@@ -736,36 +645,36 @@ export function QuickMenu() {
             />
 
             {/* Topo do Hero: Link Neural + Classe Despertada */}
-            <div className="absolute inset-x-4 top-3.5 z-10 flex items-center justify-between gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#07080C]/80 px-3 py-1 backdrop-blur-md">
+            <div className="absolute inset-x-3.5 top-2.5 sm:inset-x-4 sm:top-3.5 z-10 flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#07080C]/80 px-2.5 py-0.5 sm:px-3 sm:py-1 backdrop-blur-md">
                 <span className="h-2 w-2 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-100">
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-100">
                   {l('Sistema Ativo', 'System Online')}
                 </span>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#00F0FF]/40 bg-[#07080C]/85 px-3 py-1 backdrop-blur-md">
+              <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#00F0FF]/40 bg-[#07080C]/85 px-2.5 py-0.5 sm:px-3 sm:py-1 backdrop-blur-md">
                 <Shield className="h-3.5 w-3.5 text-[#00F0FF]" aria-hidden="true" />
-                <span className="font-orbitron text-[11px] font-bold uppercase tracking-[0.1em] text-[#00F0FF]">
+                <span className="font-orbitron text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.1em] text-[#00F0FF]">
                   {hunterClassLabel}
                 </span>
               </div>
             </div>
 
             {/* Base do Hero: Identidade do Caçador e Título */}
-            <div className="absolute inset-x-4 bottom-7 lg:bottom-4 z-10 flex items-end justify-between gap-3">
+            <div className="absolute inset-x-3.5 bottom-5 sm:inset-x-4 sm:bottom-7 lg:bottom-4 z-10 flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#F59E0B]">
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em] text-[#F59E0B]">
                   <Crown className="h-3.5 w-3.5 shrink-0 text-[#F59E0B]" aria-hidden="true" />
                   <span className="truncate">{hunterTitle}</span>
                 </div>
-                <h1 className="mt-0.5 truncate font-orbitron text-xl sm:text-2xl font-black uppercase tracking-[0.06em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                <h1 className="mt-0.5 truncate font-orbitron text-lg sm:text-2xl font-black uppercase tracking-[0.06em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
                   {hunterName}
                 </h1>
               </div>
 
               {state.streak.current > 0 && (
-                <div className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-[#07080C]/85 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 backdrop-blur-md font-orbitron">
+                <div className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-[#07080C]/85 px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-bold uppercase tracking-wider text-amber-300 backdrop-blur-md font-orbitron">
                   <Flame className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />
                   <span>{state.streak.current}d</span>
                 </div>
@@ -782,7 +691,7 @@ export function QuickMenu() {
               contentClassName="flex h-full flex-col justify-between gap-3.5"
             >
               {/* Cabeçalho HUNTER STATUS */}
-              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-2.5">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-2">
                 <div className="flex items-center gap-2.5">
                   <span
                     aria-hidden="true"
@@ -796,7 +705,7 @@ export function QuickMenu() {
                 <button
                   type="button"
                   onClick={() => navigate('/status')}
-                  className="inline-flex min-h-[32px] items-center gap-1 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[#00F0FF] transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+                  className="inline-flex min-h-[30px] items-center gap-1 rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-xs font-semibold text-[#00F0FF] transition-colors hover:border-[#00F0FF]/40 hover:bg-[#00F0FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
                 >
                   <span>{l('Ver Status', 'Full Status')}</span>
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -804,14 +713,14 @@ export function QuickMenu() {
               </div>
 
               {/* Bloco Central: Nível, Rank e Barra de XP */}
-              <div className="rounded-xl border border-white/[0.07] bg-[#0B0D14]/80 p-3.5 sm:px-4 sm:py-3.5">
+              <div className="rounded-xl border border-white/[0.07] bg-[#0B0D14]/80 p-2.5 sm:px-4 sm:py-3.5">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex flex-col">
-                    <span className="font-orbitron text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-slate-400">
+                    <span className="font-orbitron text-[10px] sm:text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-slate-400">
                       {l('Nível', 'Level')}
                     </span>
-                    <div className="mt-1.5 flex items-baseline gap-2">
-                      <span className="font-orbitron text-3xl sm:text-[34px] font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.4)] tabular-nums">
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <span className="font-orbitron text-2xl sm:text-[34px] font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.4)] tabular-nums">
                         {state.level}
                       </span>
                       {state.level >= MAX_LEVEL && (
@@ -832,7 +741,7 @@ export function QuickMenu() {
                 </div>
 
                 {/* Barra de XP com valores reais */}
-                <div className="mt-3 border-t border-white/[0.05] pt-3 space-y-2">
+                <div className="mt-2 sm:mt-3 border-t border-white/[0.05] pt-2 sm:pt-3 space-y-1.5 sm:space-y-2">
                   <div className="flex items-center gap-2.5">
                     <span className="shrink-0 font-orbitron text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
                       XP
@@ -872,9 +781,9 @@ export function QuickMenu() {
                 </div>
               </div>
 
-              {/* Bloco Progresso Diário (Anel Neon Centralizado + Indicadores Reais) */}
-              <div className="rounded-xl border border-white/[0.07] bg-[#0B0D14]/60 p-3.5 sm:px-4 sm:py-3.5">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              {/* Bloco Progresso Diário (Anel Neon Compacto no Mobile + Indicadores Reais) */}
+              <div className="rounded-xl border border-white/[0.07] bg-[#0B0D14]/60 p-2.5 sm:px-4 sm:py-3.5">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <span className="font-orbitron text-[11px] sm:text-xs font-bold uppercase tracking-[0.12em] text-slate-100">
                     {l('Progresso Diário', 'Daily Progress')} —{' '}
                     <span className="text-[#00F0FF]">{dailyStats.progress}%</span>
@@ -884,29 +793,29 @@ export function QuickMenu() {
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-row items-center gap-3 sm:justify-between">
                   <div className="flex shrink-0 items-center justify-center">
                     <NeonProgressRing
                       value={dailyStats.progress}
                       secondaryValue={xpPct}
-                      size={116}
-                      strokeWidth={7}
+                      size={78}
+                      strokeWidth={6}
                       variant="cyan-purple"
                       ariaLabel={l('Progresso diário de missões', 'Daily mission progress')}
                     >
-                      <span className="font-orbitron text-lg sm:text-xl font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.35)] tabular-nums">
+                      <span className="font-orbitron text-xs sm:text-base font-black leading-none tracking-tight text-[#00F0FF] drop-shadow-[0_0_8px_rgba(0,240,255,0.35)] tabular-nums">
                         {dailyStats.progress}%
                       </span>
-                      <span className="mt-1.5 text-[10px] font-semibold leading-none whitespace-nowrap text-slate-300 tabular-nums">
+                      <span className="mt-0.5 text-[9px] font-semibold leading-none whitespace-nowrap text-slate-300 tabular-nums">
                         {dailyStats.completed}/{dailyStats.total} {l('feitos', 'done')}
                       </span>
                     </NeonProgressRing>
                   </div>
 
                   {/* Resumo das 3 frentes diárias reais */}
-                  <div className="grid w-full flex-1 grid-cols-3 gap-2 sm:grid-cols-1 sm:gap-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                      <span className="text-xs font-medium text-slate-300">
+                  <div className="grid w-full flex-1 grid-cols-3 gap-1.5 sm:grid-cols-1 sm:gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 sm:px-3 sm:py-2">
+                      <span className="text-[10px] sm:text-xs font-medium text-slate-300">
                         {l('Missões', 'Quests')}
                       </span>
                       <span className="mt-0.5 sm:mt-0 font-orbitron text-xs sm:text-sm font-bold text-[#00F0FF] tabular-nums">
@@ -914,8 +823,8 @@ export function QuickMenu() {
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                      <span className="text-xs font-medium text-slate-300">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 sm:px-3 sm:py-2">
+                      <span className="text-[10px] sm:text-xs font-medium text-slate-300">
                         {l('Treinos', 'Workouts')}
                       </span>
                       <span className="mt-0.5 sm:mt-0 font-orbitron text-xs sm:text-sm font-bold text-[#A855F7] tabular-nums">
@@ -923,8 +832,8 @@ export function QuickMenu() {
                       </span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-                      <span className="text-xs font-medium text-slate-300">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1 sm:px-3 sm:py-2">
+                      <span className="text-[10px] sm:text-xs font-medium text-slate-300">
                         {l('Refeições', 'Meals')}
                       </span>
                       <span className="mt-0.5 sm:mt-0 font-orbitron text-xs sm:text-sm font-bold text-emerald-400 tabular-nums">
@@ -937,6 +846,34 @@ export function QuickMenu() {
             </HudCard>
           </div>
         </div>
+      </motion.section>
+
+      {/* ── CENTRO DE AÇÃO DIÁRIA CONTEXTUAL & MODO RÁPIDO (Prioridade Mobile Acima da Dobra) ── */}
+      <motion.section
+        id="tour-portal-recommended"
+        aria-label={l('Centro de Ação Diária', 'Daily Action Center')}
+        {...motionProps}
+      >
+        <DailyActionCenter
+          userId={user?.id}
+          activeHabits={activeHabits}
+          completedToday={completedToday}
+          workoutMissions={workoutMissions}
+          mealMissions={mealMissions}
+          pendingTasks={pendingTasks}
+          recentMeal={recentMeal}
+          todayXp={todayXp}
+          dailyTotal={dailyStats.total}
+          dailyCompleted={dailyStats.completed}
+          onToggleHabit={toggleCompletion}
+          onToggleMealMission={toggleMealMission}
+          onCompleteTask={completeTask}
+          onOpenRepeatMeal={() => {
+            setConfirmActionType('meal');
+            setConfirmModalOpen(true);
+          }}
+          onToastSuccess={handleToastSuccess}
+        />
       </motion.section>
 
       {/* ── CARD OPCIONAL DE ORIENTAÇÃO DO CAÇADOR (Baseado no Onboarding Salvo) ── */}
@@ -1049,43 +986,6 @@ export function QuickMenu() {
             </div>
           </div>
         )}
-      </motion.section>
-
-      {/* ── SEÇÃO 4: PRÓXIMA MISSÃO RECOMENDADA ── */}
-      <motion.section
-        id="tour-portal-recommended"
-        aria-label={l('Missão Recomendada', 'Recommended Mission')}
-        {...motionProps}
-      >
-        <HudCard variant="purple" corners className="p-4 sm:px-5 sm:py-4">
-          <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3.5 min-w-0">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#A855F7]/35 bg-[#A855F7]/15 text-[#A855F7]">
-                <NextMissionIcon className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-orbitron text-[11px] font-bold uppercase tracking-[0.12em] text-[#C084FC]">
-                  {nextMission.eyebrow}
-                </p>
-                <p className="mt-0.5 text-sm sm:text-base font-bold leading-snug text-white">
-                  {nextMission.title}
-                </p>
-                <p className="mt-0.5 text-xs font-medium text-slate-300">
-                  {nextMission.reward}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate(nextMission.path)}
-              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-xl border border-[#A855F7]/45 bg-[#A855F7]/15 px-4 py-2.5 font-orbitron text-xs font-bold uppercase tracking-[0.1em] text-purple-100 transition-all hover:border-[#A855F7]/75 hover:bg-[#A855F7]/25 hover:text-white active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
-            >
-              <span>{nextMission.cta}</span>
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-        </HudCard>
       </motion.section>
 
       {/* ── SEÇÃO 5: MÓDULOS DO SISTEMA (Cards Tecnológicos Minimalistas sem Imagens de Fundo) ── */}

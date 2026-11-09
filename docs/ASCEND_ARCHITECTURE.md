@@ -13,9 +13,10 @@ Este documento descreve a organização técnica da aplicação React, gerenciam
 
 ## 2. Padrões de Gerenciamento de Estado
 
-- **`useHunterStore` (`src/stores/useHunterStore.ts`):** Centraliza os atributos (`strength`, `endurance`, `intelligence`, `discipline`, `vitality`), XP atual, nível, rank e classe escolhida.
-- **`useBossStore` (`src/stores/useBossStore.ts`):** Controla o chefe ativo da semana, dano acumulado na raid e histórico de ataques.
-- **`useHabits` / `useTasks` (`src/hooks/`):** Custom hooks para sincronização de hábitos diários e tarefas pontuais com o Supabase e cache em `localStorage`.
+- **`useHunterStore` (`src/stores/useHunterStore.ts`):** Centraliza os 7 atributos (`strength`, `endurance`, `intelligence`, `discipline`, `vitality`, `wisdom`, `balance`), XP atual, nível, rank, celebrações de evolução (`pendingLevelUp`, `pendingRankUp`) e classe escolhida.
+- **`useBossStore` (`src/stores/useBossStore.ts`):** Controla o chefe ativo da semana, dano acumulado na raid, feedback de dano recente (`recentDamage`) e histórico de ataques.
+- **`useSocialStore` (`src/stores/useSocialStore.ts`):** Controla amizades, solicitações, bloqueios, perfis públicos higienizados e leaderboards sazonais.
+- **`useHabits` / `useTasks` (`src/hooks/`):** Custom hooks para sincronização de hábitos diários e tarefas pontuais com o Supabase e cache de leitura em `localStorage` (arquitetura assistida por cache local e sessão resiliente, mas dependente de conexão para persistência definitiva de mutações no banco).
 
 ## 3. Diretrizes de Refatoração e Segurança
 

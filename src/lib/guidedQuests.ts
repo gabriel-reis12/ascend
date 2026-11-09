@@ -21,7 +21,7 @@ export interface GuidedActivityConfig {
   label: { pt: string; en: string };
   instructions: { pt: string; en: string };
   postureTips: { pt: string[]; en: string[] };
-  suggestedStat: 'strength' | 'endurance' | 'intelligence' | 'discipline' | 'vitality';
+  suggestedStat: 'strength' | 'endurance' | 'intelligence' | 'discipline' | 'vitality' | 'wisdom' | 'balance';
   statBonus: number;
   cardImage: string;
   iconName: 'dumbbell' | 'flame' | 'clock' | 'book' | 'zap' | 'shield' | 'heart' | 'sparkles';
@@ -71,7 +71,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'strength',
     statBonus: 2,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'dumbbell',
     cadenceDescription: { pt: '2s descida • 1s explosão • Expire na subida', en: '2s down • 1s up • Exhale on press' },
   },
@@ -98,7 +98,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'strength',
     statBonus: 2,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'flame',
     cadenceDescription: { pt: '2s descida • 1s subida • Joelhos firmes', en: '2s down • 1s up • Knees stable' },
   },
@@ -125,7 +125,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'endurance',
     statBonus: 2,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'zap',
     cadenceDescription: { pt: 'Subida firme • Descida controlada', en: 'Firm ascent • Controlled descent' },
   },
@@ -152,7 +152,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'strength',
     statBonus: 2,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'dumbbell',
   },
   calf_raises: {
@@ -178,7 +178,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'endurance',
     statBonus: 1,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'flame',
   },
   jumping_jacks: {
@@ -202,7 +202,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'endurance',
     statBonus: 1,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'heart',
   },
   meditation: {
@@ -228,7 +228,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'vitality',
     statBonus: 2,
-    cardImage: '/Cards/Descanso-Lazer.jpeg',
+    cardImage: '/optimized/Cards/Descanso-Lazer.jpg',
     iconName: 'sparkles',
   },
   deep_work: {
@@ -254,7 +254,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'discipline',
     statBonus: 2,
-    cardImage: '/Cards/Quadro de Missoes.jpeg',
+    cardImage: '/optimized/Cards/Quadro de Missoes.jpg',
     iconName: 'zap',
   },
   reading: {
@@ -280,7 +280,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'intelligence',
     statBonus: 2,
-    cardImage: '/Cards/Estudos-Nutricao.jpeg',
+    cardImage: '/optimized/Cards/Estudos-Nutricao.jpg',
     iconName: 'book',
   },
   mobility: {
@@ -306,7 +306,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'vitality',
     statBonus: 1,
-    cardImage: '/Cards/Descanso-Lazer.jpeg',
+    cardImage: '/optimized/Cards/Descanso-Lazer.jpg',
     iconName: 'shield',
   },
   breathwork: {
@@ -332,7 +332,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'vitality',
     statBonus: 1,
-    cardImage: '/Cards/Descanso-Lazer.jpeg',
+    cardImage: '/optimized/Cards/Descanso-Lazer.jpg',
     iconName: 'heart',
   },
   walking: {
@@ -356,7 +356,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'endurance',
     statBonus: 2,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'flame',
   },
   workout_routine: {
@@ -374,7 +374,7 @@ export const GUIDED_ACTIVITY_PRESETS: Record<string, GuidedActivityConfig> = {
     },
     suggestedStat: 'strength',
     statBonus: 2,
-    cardImage: '/Cards/Treinos.jpeg',
+    cardImage: '/optimized/Cards/Treinos.jpg',
     iconName: 'dumbbell',
   },
 };
@@ -438,7 +438,7 @@ export function detectGuidedActivity(title: string, category: string = ''): Guid
       },
       suggestedStat: 'discipline',
       statBonus: 1,
-      cardImage: '/Cards/Quadro de Missoes.jpeg',
+      cardImage: '/optimized/Cards/Quadro de Missoes.jpg',
       iconName: 'clock',
     };
   }
@@ -478,7 +478,7 @@ export function detectGuidedActivity(title: string, category: string = ''): Guid
       },
       suggestedStat: 'strength',
       statBonus: 2,
-      cardImage: '/Cards/Treinos.jpeg',
+      cardImage: '/optimized/Cards/Treinos.jpg',
       iconName: 'dumbbell',
     };
   }
@@ -587,7 +587,7 @@ export function detectGuidedActivity(title: string, category: string = ''): Guid
       },
       suggestedStat: 'strength',
       statBonus: 1,
-      cardImage: '/Cards/Treinos.jpeg',
+      cardImage: '/optimized/Cards/Treinos.jpg',
       iconName: 'dumbbell',
     };
   }
@@ -607,7 +607,7 @@ export function detectGuidedActivity(title: string, category: string = ''): Guid
     },
     suggestedStat: 'discipline',
     statBonus: 1,
-    cardImage: '/Cards/Quadro de Missoes.jpeg',
+    cardImage: '/optimized/Cards/Quadro de Missoes.jpg',
     iconName: 'clock',
   };
 }
@@ -617,9 +617,10 @@ export function detectGuidedActivity(title: string, category: string = ''): Guid
  */
 export function isGuidedEligible(
   title: string,
-  category: string = '',
+  _category: string = '',
   type: 'habit' | 'task' | 'workout' | 'meal' | 'finance' = 'habit'
 ): boolean {
+  void _category;
   if (type === 'workout') return true;
   if (type === 'meal' || type === 'finance') return false; // Redirecionam para módulos específicos
   return Boolean(title && title.trim().length > 0);

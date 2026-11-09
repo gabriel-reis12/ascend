@@ -15,7 +15,7 @@ Este arquivo define a arquitetura de operação para este projeto, baseada em 3 
   1. **ASCEND Creative Director** (Direção de arte & estética 70/30)
   2. **ASCEND Mobile Engineer** (Mobile-first, Bottom Nav & safe areas)
   3. **ASCEND Software Architect** (React 19, TypeScript, Zustand & Supabase)
-  4. **ASCEND Gameplay Guardian** (XP, Níveis, Ranks & 5 Atributos)
+  4. **ASCEND Gameplay Guardian** (XP, Níveis, Ranks & 7 Atributos)
   5. **ASCEND QA Engineer** (Testes reais, auditoria i18n & homologação)
 • Antes de implementar qualquer etapa, consultar as instruções das skills relevantes e declarar no relatório quais papéis e skills foram utilizados.
 

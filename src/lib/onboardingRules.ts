@@ -31,6 +31,7 @@ export interface HunterOnboardingSetup {
   physicalRestrictions: Array<'lombar' | 'joelho' | 'ombro' | 'punho' | 'cervical'>;
   primaryDifficulty?: string;
   dailyAvailability: '30' | '60' | '90';
+  confirmTrainingProgram?: boolean;
 }
 
 export interface HunterSetupSummary {

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useHunterStore } from '@/stores/useHunterStore';
 import { useBossStore } from '@/stores/useBossStore';
 import { normalizeActivityXp } from '@/lib/progression';
+import { triggerGameFeel } from '@/lib/gameFeel';
 
 export interface Task {
   id: string;
@@ -153,6 +154,7 @@ export function useTasks() {
       .eq('id', taskId);
 
     if (!error) {
+      triggerGameFeel('questComplete');
       const completedAt = new Date().toISOString();
       updateTasksState((prev) =>
         prev.map((t) =>

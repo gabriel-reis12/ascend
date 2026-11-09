@@ -4,8 +4,6 @@ import { calculateNutritionTargets } from './nutritionTargets';
 import { generateTrainingProtocol } from './trainingGenerator';
 import { normalizeActivityXp } from './progression';
 import {
-  type HunterClass,
-  type HunterStats,
   type HunterOnboardingSetup,
   type HunterSetupSummary,
   getCalibratedInitialStats,
@@ -113,115 +111,151 @@ export async function applyHunterInitialSetup(
     console.warn('[onboardingSetup] Falha ao criar planos alimentares:', err);
   }
 
-  // 4. Inicialização de Protocolo de Treino Personalizado (se inexistente)
+  // 4. Inicialização de Protocolo de Treino Personalizado (se confirmado pelo usuário e inexistente)
   let generatedSplitTitle = 'Protocolo Tático';
-  try {
-    const { data: existingRoutines } = await supabase
-      .from('workout_routines')
-      .select('id')
-      .eq('user_id', setup.userId)
-      .limit(1);
+  const shouldActivateTraining = setup.confirmTrainingProgram !== false;
+  const routinesSeededKey = `ascend_onboarding_routines_seeded_${setup.userId}`;
+  const alreadySeededRoutinesLocally =
+    typeof window !== 'undefined' && localStorage.getItem(routinesSeededKey) === 'true';
 
-    if (!existingRoutines || existingRoutines.length === 0) {
-      const trainingGoal = mapMainGoalToTrainingGoal(setup.mainGoal);
-      const protocol = generateTrainingProtocol({
-        goal: trainingGoal,
-        experience: setup.experienceLevel,
-        frequency: setup.workoutFrequency,
-        durationMinutes: (Number(setup.dailyAvailability) || 60) as 30 | 45 | 60 | 90,
-        environment: setup.workoutEnvironment,
-        restrictions: setup.physicalRestrictions,
-      });
+  if (shouldActivateTraining && !alreadySeededRoutinesLocally) {
+    try {
+      const { data: existingRoutines } = await supabase
+        .from('workout_routines')
+        .select('id')
+        .eq('user_id', setup.userId)
+        .limit(1);
 
-      generatedSplitTitle = protocol.splitType;
+      if (!existingRoutines || existingRoutines.length === 0) {
+        const trainingGoal = mapMainGoalToTrainingGoal(setup.mainGoal);
+        const protocol = generateTrainingProtocol({
+          goal: trainingGoal,
+          experience: setup.experienceLevel,
+          frequency: setup.workoutFrequency,
+          durationMinutes: (Number(setup.dailyAvailability) || 60) as 30 | 45 | 60 | 90,
+          environment: setup.workoutEnvironment,
+          restrictions: setup.physicalRestrictions,
+        });
 
-      // Cria rotinas e exercícios
-      for (const r of protocol.routines) {
-        const { data: newRoutine, error: routineErr } = await supabase
-          .from('workout_routines')
-          .insert({
-            user_id: setup.userId,
-            name: r.name,
-            scheduled_days: r.scheduled_days,
-          })
-          .select('id')
-          .single();
+        generatedSplitTitle = protocol.splitType;
 
-        if (!routineErr && newRoutine) {
-          for (let i = 0; i < r.exercises.length; i++) {
-            const ex = r.exercises[i];
+        // Cria rotinas e exercícios
+        for (const r of protocol.routines) {
+          const { data: newRoutine, error: routineErr } = await supabase
+            .from('workout_routines')
+            .insert({
+              user_id: setup.userId,
+              name: r.name,
+              scheduled_days: r.scheduled_days,
+            })
+            .select('id')
+            .single();
 
-            // Tenta encontrar exercício existente ou cria sob medida
-            let exId: string | null = null;
-            const { data: matchedEx } = await supabase
-              .from('exercises')
-              .select('id')
-              .ilike('name', ex.name.trim())
-              .limit(1)
-              .maybeSingle();
+          if (!routineErr && newRoutine) {
+            for (let i = 0; i < r.exercises.length; i++) {
+              const ex = r.exercises[i];
 
-            if (matchedEx?.id) {
-              exId = matchedEx.id;
-            } else {
-              const { data: createdEx } = await supabase
+              // Tenta encontrar exercício existente ou cria sob medida
+              let exId: string | null = null;
+              const { data: matchedEx } = await supabase
                 .from('exercises')
-                .insert({
-                  name: ex.name,
-                  muscle_group: ex.muscle_group,
-                  category: ex.category,
-                  is_custom: true,
-                  created_by: setup.userId,
-                })
                 .select('id')
-                .single();
-              if (createdEx) exId = createdEx.id;
-            }
+                .ilike('name', ex.name.trim())
+                .limit(1)
+                .maybeSingle();
 
-            if (exId) {
-              await supabase.from('routine_exercises').insert({
-                routine_id: newRoutine.id,
-                exercise_id: exId,
-                sets: ex.sets,
-                reps: ex.reps,
-                weight_kg: ex.weight_kg,
-                order_index: i,
-              });
+              if (matchedEx?.id) {
+                exId = matchedEx.id;
+              } else {
+                const { data: createdEx } = await supabase
+                  .from('exercises')
+                  .insert({
+                    name: ex.name,
+                    muscle_group: ex.muscle_group,
+                    category: ex.category,
+                    is_custom: true,
+                    created_by: setup.userId,
+                  })
+                  .select('id')
+                  .single();
+                if (createdEx) exId = createdEx.id;
+              }
+
+              if (exId) {
+                await supabase.from('routine_exercises').insert({
+                  routine_id: newRoutine.id,
+                  exercise_id: exId,
+                  sets: ex.sets,
+                  reps: ex.reps,
+                  weight_kg: ex.weight_kg,
+                  order_index: i,
+                });
+              }
             }
           }
         }
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(routinesSeededKey, 'true');
+        }
+      } else if (typeof window !== 'undefined') {
+        localStorage.setItem(routinesSeededKey, 'true');
       }
+    } catch (err) {
+      console.warn('[onboardingSetup] Falha ao criar rotinas de treino:', err);
     }
-  } catch (err) {
-    console.warn('[onboardingSetup] Falha ao criar rotinas de treino:', err);
   }
 
-  // 5. Inicialização de Hábitos Essenciais (se inexistentes)
+  // 5. Inicialização de Hábitos Essenciais na tabela canônica `habits` (idempotente)
   const initialHabits = getInitialHabitPresets(setup.mainGoal, setup.primaryDifficulty);
-  try {
-    const { data: existingHabits } = await supabase
-      .from('daily_habits')
-      .select('id')
-      .eq('user_id', setup.userId)
-      .limit(1);
+  const habitsSeededKey = `ascend_onboarding_habits_seeded_${setup.userId}`;
+  const alreadySeededHabitsLocally =
+    typeof window !== 'undefined' && localStorage.getItem(habitsSeededKey) === 'true';
 
-    if (!existingHabits || existingHabits.length === 0) {
-      for (const habit of initialHabits) {
-        await supabase.from('daily_habits').insert({
-          user_id: setup.userId,
-          title: habit.title,
-          category: habit.category,
-          category_color: habit.category_color,
-          xp_reward: normalizeActivityXp(habit.xp_reward),
-          stat_target: habit.stat_target,
-          stat_reward: habit.stat_reward,
-          active: true,
-          is_optional: false,
-          scheduled_days: [0, 1, 2, 3, 4, 5, 6],
-        });
+  if (!alreadySeededHabitsLocally) {
+    try {
+      const { data: existingHabits } = await supabase
+        .from('habits')
+        .select('id')
+        .eq('user_id', setup.userId)
+        .limit(1);
+
+      if (!existingHabits || existingHabits.length === 0) {
+        const createdHabits: unknown[] = [];
+        for (const habit of initialHabits) {
+          const { data: insertedHabit } = await supabase
+            .from('habits')
+            .insert({
+              user_id: setup.userId,
+              title: habit.title,
+              category: habit.category,
+              category_color: habit.category_color,
+              xp_reward: normalizeActivityXp(habit.xp_reward),
+              stat_target: habit.stat_target,
+              stat_reward: habit.stat_reward,
+              active: true,
+              is_optional: false,
+              scheduled_days: [0, 1, 2, 3, 4, 5, 6],
+            })
+            .select('*')
+            .maybeSingle();
+
+          if (insertedHabit) {
+            createdHabits.push(insertedHabit);
+          }
+        }
+        if (typeof window !== 'undefined') {
+          if (createdHabits.length > 0) {
+            localStorage.setItem(`ascend_habits_${setup.userId}`, JSON.stringify(createdHabits));
+          }
+          localStorage.setItem(habitsSeededKey, 'true');
+        }
+      } else if (typeof window !== 'undefined') {
+        localStorage.setItem(habitsSeededKey, 'true');
       }
+    } catch (err) {
+      console.warn('[onboardingSetup] Falha ao criar hábitos essenciais:', err);
     }
-  } catch (err) {
-    console.warn('[onboardingSetup] Falha ao criar hábitos essenciais:', err);
   }
 
   // 6. Atualização de Atalhos Fixados da Home no localStorage
@@ -256,7 +290,9 @@ export async function applyHunterInitialSetup(
       `ascend_hunter_setup_summary_${setup.userId}`,
       JSON.stringify(summary)
     );
-  } catch {}
+  } catch {
+    // Ignore localStorage quota/permission errors
+  }
 
   return summary;
 }

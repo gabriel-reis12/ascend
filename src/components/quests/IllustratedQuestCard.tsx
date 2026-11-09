@@ -96,6 +96,7 @@ export function IllustratedQuestCard({
             done ? 'grayscale opacity-30 contrast-125' : 'opacity-65'
           }`}
           loading="lazy"
+          decoding="async"
         />
         {/* Gradiente Tático */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/60 to-transparent" />

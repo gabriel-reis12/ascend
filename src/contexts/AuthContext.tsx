@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { clearAllAuthSessionTokens } from '../lib/authStorage';
 import { useHunterStore } from '../stores/useHunterStore';
 import { useBossStore } from '../stores/useBossStore';
@@ -206,6 +206,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfile, reset]);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    if (!isSupabaseConfigured) {
+      return {
+        error:
+          'Infraestrutura Supabase não configurada neste ambiente. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel da Vercel.',
+      };
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error?.message ?? null };
   };
@@ -215,6 +221,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     username: string
   ): Promise<{ error: string | null }> => {
+    if (!isSupabaseConfigured) {
+      return {
+        error:
+          'Infraestrutura Supabase não configurada neste ambiente. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel da Vercel.',
+      };
+    }
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -227,6 +239,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     redirectTo?: string
   ): Promise<{ error: string | null }> => {
+    if (!isSupabaseConfigured) {
+      return {
+        error:
+          'Infraestrutura Supabase não configurada neste ambiente. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no painel da Vercel.',
+      };
+    }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectTo || (typeof window !== 'undefined' ? `${window.location.origin}/settings` : undefined),
     });

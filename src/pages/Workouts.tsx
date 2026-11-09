@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -52,6 +53,7 @@ import { TrainingGeneratorModal } from '@/components/workouts/TrainingGeneratorM
 import { ActiveWorkoutSession } from '@/components/workouts/ActiveWorkoutSession';
 import { EXERCISE_ARSENAL } from '@/data/exerciseArsenal';
 import type { GeneratedProtocol } from '@/lib/trainingGenerator';
+import { triggerGameFeel } from '@/lib/gameFeel';
 
 interface Exercise {
   id: string;
@@ -146,6 +148,8 @@ export function Workouts() {
 
   const { user } = useAuth();
   const { addXp, updateStat, rank } = useHunterStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [workoutCompleteToast, setWorkoutCompleteToast] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'library' | 'routines' | 'progress' | 'presets'>('routines');
   const [selectedPreset, setSelectedPreset] = useState<WorkoutProgramPreset | null>(null);
@@ -230,9 +234,14 @@ export function Workouts() {
       }
       if (user?.id) {
         if (isRoutineSessionOpen || (sessionRoutineId && completedSessionExs.length > 0)) {
+          const matchedRoutine = routines.find((r) => r.id === sessionRoutineId);
           localStorage.setItem(
             `ascend_active_workout_${user.id}`,
-            JSON.stringify({ routineId: sessionRoutineId, updatedAt: Date.now() }),
+            JSON.stringify({
+              routineId: sessionRoutineId,
+              routineName: matchedRoutine?.name || 'Treino em Andamento',
+              updatedAt: Date.now(),
+            }),
           );
         } else {
           localStorage.removeItem(`ascend_active_workout_${user.id}`);
@@ -241,7 +250,7 @@ export function Workouts() {
     } catch (err) {
       console.error('Erro ao salvar sessão de treino no localStorage:', err);
     }
-  }, [isRoutineSessionOpen, sessionExercises, completedSessionExs, sessionRoutineId, user?.id]);
+  }, [isRoutineSessionOpen, sessionExercises, completedSessionExs, sessionRoutineId, routines, user?.id]);
 
   // Log Form State
   const [sets, setSets] = useState(3);
@@ -632,12 +641,14 @@ export function Workouts() {
       setIsResting(false);
       setRestTimer(0);
 
-      alert(
+      triggerGameFeel('questComplete');
+      setWorkoutCompleteToast(
         l(
-          `Treino concluído com sucesso! Volume total: ${sessionVolume} kg (+${xpResult.awardedXp} XP)`,
-          `Workout completed successfully! Total volume: ${sessionVolume} kg (+${xpResult.awardedXp} XP)`,
+          `Treino concluído! Volume total: ${sessionVolume} kg (+${xpResult.awardedXp} XP)`,
+          `Workout completed! Total volume: ${sessionVolume} kg (+${xpResult.awardedXp} XP)`,
         ),
       );
+      setTimeout(() => setWorkoutCompleteToast(null), 4500);
 
       await fetchData();
     } catch (err) {
@@ -1056,6 +1067,31 @@ export function Workouts() {
   const activeSessionProgress =
     sessionExercises.length > 0 ? Math.round((completedSessionExs.length / sessionExercises.length) * 100) : 0;
 
+  // Inicia ou retoma automaticamente quando acionado pela Home (?start=today ou ?resume=1)
+  useEffect(() => {
+    if (loading || routines.length === 0) return;
+    const startParam = searchParams.get('start');
+    const resumeParam = searchParams.get('resume');
+    const routineParam = searchParams.get('routine');
+
+    if (resumeParam === '1' && sessionRoutineId) {
+      setIsRoutineSessionOpen(true);
+      setSearchParams({}, { replace: true });
+      return;
+    }
+
+    if (startParam === 'today') {
+      const target =
+        (routineParam ? routines.find((r) => r.id === routineParam) : null) ||
+        scheduledTodayRoutine ||
+        featuredRoutine;
+      if (target) {
+        void handleStartRoutine(target);
+      }
+      setSearchParams({}, { replace: true });
+    }
+  }, [loading, routines, searchParams, sessionRoutineId, scheduledTodayRoutine, featuredRoutine]);
+
   const handleContextAction = () => {
     if (activeTab === 'routines') {
       setIsNewRoutineModalOpen(true);
@@ -1087,6 +1123,21 @@ export function Workouts() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-24">
+      {/* Toast de Conclusão de Treino (não bloqueante) */}
+      <AnimatePresence>
+        {workoutCompleteToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 rounded-xl border border-emerald-400/45 bg-[#0B0F19]/95 px-4 py-3 text-xs sm:text-sm font-bold text-emerald-200 shadow-2xl backdrop-blur-md"
+          >
+            <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+            <span>{workoutCompleteToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* HUD v2 Top Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
@@ -1258,8 +1309,8 @@ export function Workouts() {
                     </button>
                   </div>
 
-                  {/* Workout Progress Bar */}
-                  <div className="mt-4 space-y-2">
+                  {/* Workout Progress Bar + Above-the-Fold Primary CTA */}
+                  <div className="mt-4 space-y-3">
                     <NeonProgressBar value={featuredProgressPct} max={100} variant="cyan" size="md" />
                     <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
                       <span className="font-mono text-slate-400">
@@ -1270,6 +1321,46 @@ export function Workouts() {
                         {l('CONCLUÍDOS', 'COMPLETED')}
                       </span>
                     </div>
+
+                    {featuredTotalExercises > 0 && (
+                      <div className="pt-1">
+                        {sessionRoutineId === featuredRoutine.id && featuredCompletedCount > 0 ? (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <TacticalButton
+                              variant="secondary"
+                              fullWidth
+                              displayFont
+                              leftIcon={<Play className="size-4" />}
+                              onClick={() => handleStartRoutine(featuredRoutine)}
+                            >
+                              {l('RETOMAR TREINO GUIADO', 'RESUME GUIDED WORKOUT')}
+                            </TacticalButton>
+                            <TacticalButton
+                              variant="primary"
+                              fullWidth
+                              displayFont
+                              leftIcon={<CheckCircle2 className="size-4" />}
+                              onClick={handleFinishRoutine}
+                            >
+                              {l(
+                                `FINALIZAR (+${featuredXpReward} XP)`,
+                                `FINISH (+${featuredXpReward} XP)`,
+                              )}
+                            </TacticalButton>
+                          </div>
+                        ) : (
+                          <TacticalButton
+                            variant="primary"
+                            fullWidth
+                            displayFont
+                            leftIcon={<Play className="size-4 fill-current" />}
+                            onClick={() => handleStartRoutine(featuredRoutine)}
+                          >
+                            {l('INICIAR TREINO AGORA', 'START WORKOUT NOW')}
+                          </TacticalButton>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </HudCard>
 

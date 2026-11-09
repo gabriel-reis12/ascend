@@ -717,8 +717,9 @@ export function Quests() {
   const hunterProfile = useHunterStore();
 
   const [tab, setTab] = useState<'daily' | 'manage' | 'codex'>('daily');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('pending');
   const [typeFilter, setTypeFilter] = useState<'all' | 'habit' | 'task' | 'workout' | 'meal' | 'finance'>('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
   const [modalOpen, setModalOpen] = useState(false);
   const [questModalOpen, setQuestModalOpen] = useState(false);
@@ -1133,7 +1134,8 @@ export function Quests() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* Botões de Criação no Header (Desktop) — no Mobile ficam abaixo das missões pendentes conforme Hierarquia 6.1 */}
+            <div className="hidden sm:grid grid-cols-2 gap-2.5">
               <TacticalButton
                 variant="primary"
                 displayFont
@@ -1329,96 +1331,124 @@ export function Quests() {
                   exit={{ opacity: 0, y: -8 }}
                   className="space-y-4"
                 >
-                  {/* Barra Coesa de Filtros Rápidos (Status & Tipos) */}
-                  <div className="flex flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[#0A0C12]/90 p-2 sm:flex-row sm:items-center sm:justify-between">
-                    {/* Filtro de Status */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-                      <Filter className="mr-1 h-3.5 w-3.5 shrink-0 text-slate-400" />
-                      {[
-                        { id: 'all', label: l('Todas', 'All'), count: totalMissions },
-                        { id: 'pending', label: l('Pendentes', 'Pending'), count: pendingCount },
-                        { id: 'completed', label: l('Concluídas', 'Completed'), count: totalCompleted },
-                      ].map((f) => {
-                        const active = statusFilter === f.id;
-                        return (
-                          <button
-                            key={f.id}
-                            type="button"
-                            onClick={() => setStatusFilter(f.id as typeof statusFilter)}
-                            className={`inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider transition-all ${
-                              active
-                                ? 'border-[#00F0FF]/45 bg-[#00F0FF]/15 text-[#00F0FF] shadow-[0_0_12px_rgba(0,240,255,0.12)]'
-                                : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/20 hover:text-white'
-                            }`}
-                          >
-                            <span>{f.label}</span>
-                            <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] tabular-nums text-slate-300">
-                              {f.count}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Filtro por Tipo de Atividade e Alternador de Visão */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.05] pt-2 sm:border-t-0 sm:pt-0">
+                  {/* Barra Coesa de Filtros Rápidos (Hierarquia Mobile Simplificada: Pendentes -> Concluídas -> Filtros Avançados) */}
+                  <div className="flex flex-col gap-2 rounded-2xl border border-white/[0.08] bg-[#0A0C12]/90 p-2">
+                    {/* Linha 1: Status (Pendentes prioritário) + Botão de Filtros Avançados + Visão */}
+                    <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                        <Filter className="mr-1 h-3.5 w-3.5 shrink-0 text-slate-400 hidden xs:inline" />
                         {[
-                          { id: 'all', label: l('Todos Tipos', 'All Types') },
-                          { id: 'habit', label: l('Hábitos', 'Habits') },
-                          { id: 'task', label: l('Únicas', 'One-Time') },
-                          { id: 'workout', label: l('Treino', 'Workouts') },
-                          { id: 'meal', label: l('Nutrição', 'Meals') },
-                          { id: 'finance', label: l('Finanças', 'Finance') },
-                        ].map((tf) => {
-                          const active = typeFilter === tf.id;
+                          { id: 'pending', label: l('Pendentes', 'Pending'), count: pendingCount },
+                          { id: 'completed', label: l('Concluídas', 'Completed'), count: totalCompleted },
+                          { id: 'all', label: l('Todas', 'All'), count: totalMissions },
+                        ].map((f) => {
+                          const active = statusFilter === f.id;
                           return (
                             <button
-                              key={tf.id}
+                              key={f.id}
                               type="button"
-                              onClick={() => setTypeFilter(tf.id as typeof typeFilter)}
-                              className={`inline-flex min-h-[44px] shrink-0 items-center rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
+                              onClick={() => setStatusFilter(f.id as typeof statusFilter)}
+                              className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider transition-all ${
                                 active
-                                  ? 'border-[#A855F7]/50 bg-[#A855F7]/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.14)]'
-                                  : 'border-white/8 bg-white/[0.02] text-slate-400 hover:border-white/15 hover:text-slate-200'
+                                  ? 'border-[#00F0FF]/45 bg-[#00F0FF]/15 text-[#00F0FF] shadow-[0_0_12px_rgba(0,240,255,0.12)]'
+                                  : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/20 hover:text-white'
                               }`}
                             >
-                              {tf.label}
+                              <span>{f.label}</span>
+                              <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] tabular-nums text-slate-300">
+                                {f.count}
+                              </span>
                             </button>
                           );
                         })}
                       </div>
 
-                      {/* Botões de alternância: Lista vs Cards Ilustrados */}
-                      <div className="flex items-center gap-1 shrink-0 rounded-xl border border-white/8 bg-black/40 p-1">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
-                          onClick={() => setViewMode('list')}
-                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
-                            viewMode === 'list'
-                              ? 'border border-[#00F0FF]/40 bg-[#00F0FF]/15 text-[#00F0FF]'
-                              : 'text-slate-400 hover:text-white'
+                          onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                          aria-expanded={showAdvancedFilters}
+                          className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border px-2.5 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider transition-all ${
+                            showAdvancedFilters || typeFilter !== 'all'
+                              ? 'border-[#A855F7]/50 bg-[#A855F7]/15 text-purple-200'
+                              : 'border-white/10 bg-white/[0.03] text-slate-400 hover:text-white'
                           }`}
-                          title={l('Lista Tática', 'Tactical List')}
-                          aria-label={l('Lista Tática', 'Tactical List')}
                         >
-                          <List size={16} />
+                          <Filter className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">{l('Filtros', 'Filters')}</span>
+                          {typeFilter !== 'all' && (
+                            <span className="h-2 w-2 rounded-full bg-[#A855F7]" />
+                          )}
+                          <ChevronDown
+                            className={`h-3.5 w-3.5 transition-transform ${
+                              showAdvancedFilters ? 'rotate-180' : ''
+                            }`}
+                          />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setViewMode('cards')}
-                          className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
-                            viewMode === 'cards'
-                              ? 'border border-[#00F0FF]/40 bg-[#00F0FF]/15 text-[#00F0FF]'
-                              : 'text-slate-400 hover:text-white'
-                          }`}
-                          title={l('Cards Ilustrados', 'Illustrated Cards')}
-                          aria-label={l('Cards Ilustrados', 'Illustrated Cards')}
-                        >
-                          <LayoutGrid size={16} />
-                        </button>
+
+                        {/* Botões de alternância: Lista vs Cards Ilustrados */}
+                        <div className="flex items-center gap-1 shrink-0 rounded-xl border border-white/8 bg-black/40 p-1">
+                          <button
+                            type="button"
+                            onClick={() => setViewMode('list')}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                              viewMode === 'list'
+                                ? 'border border-[#00F0FF]/40 bg-[#00F0FF]/15 text-[#00F0FF]'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                            title={l('Lista Tática', 'Tactical List')}
+                            aria-label={l('Lista Tática', 'Tactical List')}
+                          >
+                            <List size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setViewMode('cards')}
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                              viewMode === 'cards'
+                                ? 'border border-[#00F0FF]/40 bg-[#00F0FF]/15 text-[#00F0FF]'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                            title={l('Cards Ilustrados', 'Illustrated Cards')}
+                            aria-label={l('Cards Ilustrados', 'Illustrated Cards')}
+                          >
+                            <LayoutGrid size={16} />
+                          </button>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Linha 2 (Expansível): Filtro Avançado por Tipo de Atividade */}
+                    {(showAdvancedFilters || typeFilter !== 'all') && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-2">
+                        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 w-full">
+                          {[
+                            { id: 'all', label: l('Todos Tipos', 'All Types') },
+                            { id: 'habit', label: l('Hábitos', 'Habits') },
+                            { id: 'task', label: l('Únicas', 'One-Time') },
+                            { id: 'workout', label: l('Treino', 'Workouts') },
+                            { id: 'meal', label: l('Nutrição', 'Meals') },
+                            { id: 'finance', label: l('Finanças', 'Finance') },
+                          ].map((tf) => {
+                            const active = typeFilter === tf.id;
+                            return (
+                              <button
+                                key={tf.id}
+                                type="button"
+                                onClick={() => setTypeFilter(tf.id as typeof typeFilter)}
+                                className={`inline-flex min-h-[44px] shrink-0 items-center rounded-xl border px-3 py-1 text-xs font-semibold transition-all ${
+                                  active
+                                    ? 'border-[#A855F7]/50 bg-[#A855F7]/20 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.14)]'
+                                    : 'border-white/8 bg-white/[0.02] text-slate-400 hover:border-white/15 hover:text-slate-200'
+                                }`}
+                              >
+                                {tf.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Banner Tático de Sessão Ativa de Missão Guiada */}
@@ -1546,7 +1576,9 @@ export function Quests() {
                       <h3 className="font-orbitron text-base font-black uppercase text-white">
                         {allMissions.length === 0
                           ? l('Nenhuma Quest Ativa', 'No Active Quests')
-                          : l('Nenhuma missão neste filtro', 'No quests match this filter')}
+                          : statusFilter === 'pending' && totalCompleted > 0 && typeFilter === 'all'
+                            ? l('Todas as Missões Pendentes Concluídas!', 'All Pending Quests Completed!')
+                            : l('Nenhuma missão neste filtro', 'No quests match this filter')}
                       </h3>
                       <p className="mx-auto mt-1.5 max-w-xs text-xs text-slate-400">
                         {allMissions.length === 0
@@ -1554,23 +1586,38 @@ export function Quests() {
                             'O sistema não detectou missões. Defina seus objetivos para começar.',
                             'The System detected no quests. Define your objectives to begin.'
                           )
-                          : l(
-                            'Altere o filtro acima ou registre uma nova missão para hoje.',
-                            'Change the filter above or create a new quest for today.'
-                          )}
+                          : statusFilter === 'pending' && totalCompleted > 0 && typeFilter === 'all'
+                            ? l(
+                              `Excelente disciplina! Você concluiu todas as ${totalCompleted} atividades do ciclo de hoje.`,
+                              `Outstanding discipline! You completed all ${totalCompleted} activities for today's cycle.`
+                            )
+                            : l(
+                              'Altere o filtro acima ou registre uma nova missão para hoje.',
+                              'Change the filter above or create a new quest for today.'
+                            )}
                       </p>
-                      <div className="mt-5 flex justify-center gap-2.5">
-                        {allMissions.length > 0 && (statusFilter !== 'all' || typeFilter !== 'all') ? (
+                      <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                        {allMissions.length > 0 && statusFilter === 'pending' && totalCompleted > 0 ? (
                           <TacticalButton
                             variant="secondary"
                             accent="cyan"
+                            displayFont
+                            onClick={() => setStatusFilter('completed')}
+                          >
+                            {l(`Ver Concluídas (${totalCompleted})`, `View Completed (${totalCompleted})`)}
+                          </TacticalButton>
+                        ) : null}
+                        {allMissions.length > 0 && (statusFilter !== 'all' || typeFilter !== 'all') ? (
+                          <TacticalButton
+                            variant="secondary"
+                            accent="purple"
                             displayFont
                             onClick={() => {
                               setStatusFilter('all');
                               setTypeFilter('all');
                             }}
                           >
-                            {l('Limpar Filtros', 'Clear Filters')}
+                            {l('Mostrar Todas', 'Show All')}
                           </TacticalButton>
                         ) : (
                           <TacticalButton
@@ -1834,6 +1881,55 @@ export function Quests() {
                           );
                         }
                       })}
+                    </div>
+                  )}
+
+                  {/* 3. Ação de Criar Missão (Mobile Ergonomic Thumb Zone — Hierarquia 6.1) */}
+                  <div className="grid grid-cols-2 gap-2.5 sm:hidden pt-1">
+                    <TacticalButton
+                      variant="primary"
+                      displayFont
+                      onClick={() => setQuestModalOpen(true)}
+                      leftIcon={<CalendarDays className="h-4 w-4" />}
+                      className="min-h-[48px] px-3 text-xs"
+                    >
+                      {l('Missão Única', 'One-Time Quest')}
+                    </TacticalButton>
+                    <TacticalButton
+                      variant="secondary"
+                      accent="purple"
+                      displayFont
+                      onClick={() => {
+                        setEditingHabitId(null);
+                        setPresetHabitData(null);
+                        setModalOpen(true);
+                      }}
+                      leftIcon={<RefreshCw className="h-4 w-4 text-[#A855F7]" />}
+                      className="min-h-[48px] px-3 text-xs"
+                    >
+                      {l('Quest Recorrente', 'Recurring Quest')}
+                    </TacticalButton>
+                  </div>
+
+                  {/* 4 & 6. Acesso Rápido a Missões Concluídas e Histórico do Ciclo (Hierarquia 6.1) */}
+                  {statusFilter === 'pending' && totalCompleted > 0 && (
+                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-950/15 px-4 py-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                        <span className="truncate font-orbitron text-[11px] font-bold uppercase tracking-wider text-emerald-200">
+                          {l(
+                            `${totalCompleted} concluída(s) no histórico de hoje`,
+                            `${totalCompleted} completed in today's history`
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter('completed')}
+                        className="shrink-0 rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-3 py-1.5 font-orbitron text-[10px] font-bold uppercase tracking-wider text-emerald-300 hover:bg-emerald-500/25 transition-colors"
+                      >
+                        {l('Ver Concluídas', 'View Completed')}
+                      </button>
                     </div>
                   )}
                 </motion.div>

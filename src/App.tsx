@@ -1,72 +1,140 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { RPGLayout } from './components/layout/RPGLayout';
-import { Dashboard } from './pages/Dashboard';
-import { Quests } from './pages/Quests';
-import { Workouts } from './pages/Workouts';
-import { Nutrition } from './pages/Nutrition';
 import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
-import { Onboarding } from './pages/Onboarding';
-import { Settings } from './pages/Settings';
-import { QuickMenu } from './pages/QuickMenu';
-import { Bosses } from './pages/Bosses';
-import { TrophyRoom } from './pages/TrophyRoom';
-import { Fortuna } from './pages/Fortuna';
-import { Rest } from './pages/Rest';
-import { Social } from './pages/Social';
-import { useHunterStore } from './stores/useHunterStore';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
+import { useHunterStore } from './stores/useHunterStore';
 import { LocalizationBridge } from './components/preferences/LocalizationBridge';
-import { HudPreview } from './pages/HudPreview';
 
-import { useAuth } from './contexts/AuthContext';
-import { motion } from 'framer-motion';
+// Code-Splitting por Rota (React.lazy) para reduzir o bundle inicial em dispositivos móveis
+const RegisterPage = lazy(() =>
+  import('./pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
+);
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
+);
+const DeleteAccountPage = lazy(() =>
+  import('./pages/auth/DeleteAccountPage').then((m) => ({ default: m.DeleteAccountPage }))
+);
+const Onboarding = lazy(() =>
+  import('./pages/Onboarding').then((m) => ({ default: m.Onboarding }))
+);
+const QuickMenu = lazy(() =>
+  import('./pages/QuickMenu').then((m) => ({ default: m.QuickMenu }))
+);
+const Dashboard = lazy(() =>
+  import('./pages/Dashboard').then((m) => ({ default: m.Dashboard }))
+);
+const Quests = lazy(() =>
+  import('./pages/Quests').then((m) => ({ default: m.Quests }))
+);
+const Workouts = lazy(() =>
+  import('./pages/Workouts').then((m) => ({ default: m.Workouts }))
+);
+const Nutrition = lazy(() =>
+  import('./pages/Nutrition').then((m) => ({ default: m.Nutrition }))
+);
+const Settings = lazy(() =>
+  import('./pages/Settings').then((m) => ({ default: m.Settings }))
+);
+const Fortuna = lazy(() =>
+  import('./pages/Fortuna').then((m) => ({ default: m.Fortuna }))
+);
+const Bosses = lazy(() =>
+  import('./pages/Bosses').then((m) => ({ default: m.Bosses }))
+);
+// Lazy-loaded route chunk for TrophyRoom (origin: import { TrophyRoom } from './pages/TrophyRoom')
+const TrophyRoom = lazy(() =>
+  import('./pages/TrophyRoom').then((m) => ({ default: m.TrophyRoom }))
+);
+const Social = lazy(() =>
+  import('./pages/Social').then((m) => ({ default: m.Social }))
+);
+const Rest = lazy(() =>
+  import('./pages/Rest').then((m) => ({ default: m.Rest }))
+);
+const HudPreview = lazy(() =>
+  import('./pages/HudPreview').then((m) => ({ default: m.HudPreview }))
+);
 
-function HunterGuard({ children }: { children: React.ReactNode }) {
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+      <div className="w-9 h-9 border-2 border-[#00F0FF] border-t-transparent rounded-full animate-spin mb-3 shadow-[0_0_15px_rgba(0,240,255,0.4)]" />
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 font-orbitron">
+        Sincronizando módulo...
+      </p>
+    </div>
+  );
+}
+
+// Guardião de Rotas Protegidas (exige login E classe definida no onboarding)
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading, signOut } = useAuth();
   const hunterClass = useHunterStore((s) => s.hunterClass);
   const profileUserId = useHunterStore((s) => s.profileUserId);
   const profileLoaded = useHunterStore((s) => s.profileLoaded);
   const profileLoading = useHunterStore((s) => s.profileLoading);
   const profileError = useHunterStore((s) => s.profileError);
   const loadProfile = useHunterStore((s) => s.loadProfile);
-  const { user, signOut } = useAuth();
+
+  const isDifferentUser = Boolean(user && profileUserId && profileUserId !== user.id);
+  const hasCurrentUserProfile = Boolean(user && profileLoaded && profileUserId === user.id);
+  const hasCachedUserClass = Boolean(user && profileUserId === user.id && hunterClass);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const isDifferentUser = Boolean(profileUserId && profileUserId !== user.id);
-    if ((!profileLoaded || isDifferentUser) && !profileLoading && !profileError) {
+    if (!authLoading && user && (!profileLoaded || isDifferentUser) && !profileLoading && !profileError) {
       void loadProfile(user.id);
     }
-  }, [user?.id, profileUserId, profileLoaded, profileLoading, profileError, loadProfile]);
+  }, [authLoading, user, profileLoaded, isDifferentUser, profileLoading, profileError, loadProfile]);
 
-  // Se houve falha de rede/Supabase ao buscar perfil existente, exibe tela de reconexão
-  // e NUNCA redireciona prematuramente para o onboarding
-  if (!profileLoaded && profileError) {
+  // Fase 1: Verificando sessão de autenticação
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#0B0B0F] flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full bg-[#13131A] border border-red-500/30 rounded-2xl p-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-          <h2 className="text-xl font-orbitron font-bold text-red-400 mb-2">FALHA DE SINCRONIZAÇÃO</h2>
-          <p className="text-sm text-gray-400 mb-6 font-mono">
-            {profileError}
+      <div className="min-h-screen bg-[#070709] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(124,58,237,0.5)]" />
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 animate-pulse">
+          Verificando sessão...
+        </p>
+      </div>
+    );
+  }
+
+  // Sem usuário autenticado → tela de login
+  if (!user) return <Navigate to="/login" replace />;
+
+  // Fase 2: Carregando perfil do caçador no Supabase (apenas se não houver classe em cache para este mesmo usuário)
+  if ((!hasCurrentUserProfile || profileLoading) && !hasCachedUserClass && !profileError) {
+    return (
+      <div className="min-h-screen bg-[#070709] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(6,182,212,0.5)]" />
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse">
+          Sincronizando Caçador...
+        </p>
+      </div>
+    );
+  }
+
+  // Fase 3: Erro de rede ao carregar perfil → exibir botão de tentar novamente ou encerrar sessão
+  if (profileError && !hasCachedUserClass) {
+    return (
+      <div className="min-h-screen bg-[#070709] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full rounded-2xl border border-red-500/30 bg-[#0F0F13] p-6 space-y-4">
+          <p className="text-xs font-black uppercase tracking-widest text-red-400">
+            FALHA DE SINCRONIZAÇÃO
           </p>
-          <div className="flex flex-col gap-3">
+          <p className="text-sm text-gray-400">{profileError}</p>
+          <div className="flex flex-col gap-2">
             <button
-              onClick={() => {
-                if (user) void loadProfile(user.id);
-              }}
-              className="w-full py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 rounded-xl text-red-300 font-orbitron text-xs tracking-widest uppercase transition-all"
+              onClick={() => void loadProfile(user.id)}
+              className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase tracking-widest transition-all cursor-pointer"
             >
               Tentar Reconectar ao Sistema
             </button>
             <button
-              onClick={() => {
-                void signOut();
-              }}
-              className="w-full py-2.5 bg-transparent hover:bg-white/5 border border-white/10 rounded-xl text-gray-400 font-orbitron text-[10px] tracking-widest uppercase transition-all"
+              onClick={() => void signOut()}
+              className="w-full py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 text-xs font-bold uppercase tracking-widest transition-all cursor-pointer"
             >
               Encerrar Sessão
             </button>
@@ -76,96 +144,115 @@ function HunterGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Se ainda estiver sincronizando o perfil do caçador com o Supabase (ou aguardando início da carga), exibe tela de transição segura
-  if (!profileLoaded || profileLoading) {
-    return (
-      <div className="min-h-screen bg-[#0B0B0F] flex flex-col items-center justify-center gap-10">
-        <div className="awakening-container">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <motion.div
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          className="text-violet-400 font-orbitron text-xs tracking-[0.3em] text-center text-glow-purple uppercase select-none"
-        >
-          Sincronizando Caçador...
-        </motion.div>
-      </div>
-    );
-  }
-
-  // Se o perfil foi confirmado como carregado e o usuário genuinamente não possui classe
-  if (!hunterClass) {
+  // Fase 4: Perfil carregado com sucesso do banco e realmente sem classe → novo usuário vai para Onboarding
+  if (hasCurrentUserProfile && !hunterClass) {
     return <Navigate to="/onboarding" replace />;
   }
 
   return <>{children}</>;
 }
 
-function App() {
+// Guardião da Rota de Onboarding (exige login, mas redireciona para "/" se já tiver classe)
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
+  const hunterClass = useHunterStore((s) => s.hunterClass);
+  const profileUserId = useHunterStore((s) => s.profileUserId);
+  const profileLoaded = useHunterStore((s) => s.profileLoaded);
+  const profileLoading = useHunterStore((s) => s.profileLoading);
+  const profileError = useHunterStore((s) => s.profileError);
+  const loadProfile = useHunterStore((s) => s.loadProfile);
+
+  const isDifferentUser = Boolean(user && profileUserId && profileUserId !== user.id);
+  const hasCurrentUserProfile = Boolean(user && profileLoaded && profileUserId === user.id);
+  const hasCachedUserClass = Boolean(user && profileUserId === user.id && hunterClass);
+
+  useEffect(() => {
+    if (!authLoading && user && (!profileLoaded || isDifferentUser) && !profileLoading && !profileError) {
+      void loadProfile(user.id);
+    }
+  }, [authLoading, user, profileLoaded, isDifferentUser, profileLoading, profileError, loadProfile]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#070709] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  // Aguarda verificar se o usuário já possui classe antes de exibir o quiz
+  if ((!hasCurrentUserProfile || profileLoading) && !hasCachedUserClass && !profileError) {
+    return (
+      <div className="min-h-screen bg-[#070709] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
+      </div>
+    );
+  }
+
+  // Se o caçador já despertou sua classe, não deve refazer o onboarding
+  if ((hasCurrentUserProfile || hasCachedUserClass) && hunterClass) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+export default function App() {
   return (
     <PreferencesProvider>
       <LocalizationBridge />
-      <BrowserRouter>
-        <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          {import.meta.env.DEV && <Route path="/dev/hud" element={<HudPreview />} />}
-          <Route 
-            path="/onboarding" 
-            element={
-              <ProtectedRoute>
-                <Onboarding />
-              </ProtectedRoute>
-            } 
-          />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <HunterGuard>
+      <AuthProvider>
+        <Router>
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Routes>
+              {/* Rotas Públicas */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/delete-account" element={<DeleteAccountPage />} />
+              {import.meta.env.DEV && <Route path="/dev/hud" element={<HudPreview />} />}
+              {import.meta.env.DEV && <Route path="/hud-preview" element={<HudPreview />} />}
+
+            {/* Rota de Onboarding (Protegida contra repetição se já tiver classe) */}
+            <Route
+              path="/onboarding"
+              element={
+                <OnboardingRoute>
+                  <Onboarding />
+                </OnboardingRoute>
+              }
+            />
+
+            {/* Rotas Internas Protegidas sob o Layout Principal RPG */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
                   <RPGLayout />
-                </HunterGuard>
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<QuickMenu />} />
-            <Route path="status" element={<Dashboard />} />
-            <Route path="quests" element={<Quests />} />
-            <Route path="workouts" element={<Workouts />} />
-            <Route path="nutrition" element={<Nutrition />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="fortuna" element={<Fortuna />} />
-            <Route path="bosses" element={<Bosses />} />
-            <Route path="trophies" element={<TrophyRoom />} />
-            <Route path="social" element={<Social />} />
-            <Route path="rest" element={<Rest />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<QuickMenu />} />
+              <Route path="status" element={<Dashboard />} />
+              <Route path="quests" element={<Quests />} />
+              <Route path="bosses" element={<Bosses />} />
+              <Route path="trophies" element={<TrophyRoom />} />
+              <Route path="workouts" element={<Workouts />} />
+              <Route path="nutrition" element={<Nutrition />} />
+              <Route path="fortuna" element={<Fortuna />} />
+              <Route path="rest" element={<Rest />} />
+              <Route path="social" element={<Social />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </Router>
+      </AuthProvider>
     </PreferencesProvider>
   );
 }
-
-export function ComingSoon({ title }: { title: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="text-5xl">⚙️</p>
-      <h2
-        className="mt-4 text-2xl font-black uppercase italic tracking-widest text-white font-orbitron"
-      >
-        {title}
-      </h2>
-      <p className="mt-2 text-sm text-gray-500 uppercase tracking-widest">Acesso restrito — Nível insuficiente.</p>
-    </div>
-  );
-}
-
-export default App;

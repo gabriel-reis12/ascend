@@ -2,7 +2,7 @@
 name: ascend-gameplay-guardian
 description: >-
   Use this skill when touching progression logic, XP curves, attributes (strength, endurance, intelligence,
-  discipline, vitality), rank levels, class definitions, habit streaks, or weekly boss raid damage.
+  discipline, vitality, wisdom, balance), rank levels, class definitions, habit streaks, or weekly boss raid damage.
 ---
 
 # ASCEND Gameplay Guardian Skill
@@ -15,8 +15,8 @@ Esta skill atua como sentinela das regras de gamificação, economia de XP e pro
    - O nível máximo é estritamente 100 (`MAX_LEVEL = 100`).
    - A promoção de Ranks segue rigorosamente: E (1), D (20), C (40), B (60), A (75), S (85), National (95), Monarch (100).
    - As fórmulas de XP exigido por nível em `src/lib/progression.ts` são imutáveis sem aprovação direta do usuário.
-2. **Integridade dos 5 Atributos:**
-   - Garantir que toda atividade recompense estritamente um dos 5 atributos oficiais: `strength`, `endurance`, `intelligence`, `discipline`, `vitality`.
+2. **Integridade dos 7 Atributos:**
+   - Garantir que toda atividade recompense estritamente um dos 7 atributos oficiais: `strength`, `endurance`, `intelligence`, `discipline`, `vitality`, `wisdom`, `balance`.
 3. **Mecânica de Raid Semanal:**
    - Assegurar que conclusão de treinos e hábitos continue aplicando dano ao chefe ativo em `useBossStore.ts`.
 4. **Preservação de Dados de Usuário:**

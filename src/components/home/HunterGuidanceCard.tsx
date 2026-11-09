@@ -1,6 +1,14 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Compass, X, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import {
+  Apple,
+  ArrowRight,
+  CheckSquare,
+  Compass,
+  Dumbbell,
+  ShieldCheck,
+  X,
+  Zap,
+} from 'lucide-react';
 import { HudCard } from '@/components/ui/hud-card';
 import { usePreferences } from '@/contexts/preferences';
 import { useHunterStore } from '@/stores/useHunterStore';
@@ -19,54 +27,72 @@ export function HunterGuidanceCard() {
     nutritionGoal,
     mainGoal,
     hunterClass,
-    experienceLevel,
+    level,
+    xp,
   } = useHunterStore();
 
   if (!showHunterGuidance) return null;
 
-  // Se o usuário não possui dados cadastrados no perfil ainda, não exibe
   const hasProfileData = Boolean(trainingFocus || nutritionGoal || mainGoal || hunterClass);
   if (!hasProfileData) return null;
 
+  const isDayOneHunter = level === 1 && xp < 100;
+
+  const formatGoalLabel = () => {
+    switch (mainGoal) {
+      case 'hypertrophy':
+        return l('Hipertrofia & Força', 'Hypertrophy & Strength');
+      case 'weight_loss':
+        return l('Definição & Queima Calórica', 'Fat Loss & Conditioning');
+      case 'conditioning':
+        return l('Condicionamento & Resistência', 'Endurance & Conditioning');
+      case 'discipline':
+        return l('Disciplina & Consistência', 'Discipline & Consistency');
+      case 'focus_studies':
+        return l('Foco & Sabedoria', 'Focus & Wisdom');
+      default:
+        return l('Evolução & Saúde Integral', 'Complete Health & Evolution');
+    }
+  };
+
   // Resolução determinística da orientação personalizada sem IA
   const resolveGuidance = () => {
-    if (trainingFocus === 'hypertrophy' || nutritionGoal === 'hypertrophy') {
+    if (trainingFocus === 'hypertrophy' || nutritionGoal === 'hypertrophy' || mainGoal === 'hypertrophy') {
       return {
         title: l('Diretriz do Arquiteto — Hipertrofia', 'Architect Guideline — Hypertrophy'),
         tip: l(
-          'Seu foco atual é desenvolvimento muscular. Priorize bater sua meta diária de proteínas em Nutrição e registrar a progressão de cargas no Treinamento.',
-          'Your active focus is muscle building. Prioritize hitting your daily protein target in Nutrition and recording progressive overload in Training.'
+          'Seu foco atual é desenvolvimento muscular. Priorize bater sua meta diária de proteínas em Nutrição e iniciar seu Treino A no Centro de Treinamento.',
+          'Your active focus is muscle building. Prioritize hitting your daily protein target in Nutrition and starting Workout A in the Training Center.'
         ),
-        targetPath: '/nutrition',
-        targetLabel: l('Ver Nutrição', 'Check Nutrition'),
+        targetPath: '/workouts',
+        targetLabel: l('Iniciar Programa de Treino', 'Start Training Program'),
       };
     }
 
-    if (mainGoal === 'mental' || hunterClass === 'Scholar' || hunterClass === 'Monk') {
+    if (mainGoal === 'mental' || mainGoal === 'focus_studies' || hunterClass === 'Scholar' || hunterClass === 'Monk') {
       return {
         title: l('Diretriz do Arquiteto — Foco & Equilíbrio', 'Architect Guideline — Focus & Balance'),
         tip: l(
-          'Sua jornada valoriza a disciplina mental e a sabedoria. Reserve minutos para respiração guiada no Santuário do Descanso e conclua suas missões diárias.',
-          'Your journey values mental discipline and wisdom. Dedicate minutes to guided breathing in Recovery and complete your daily quests.'
+          'Sua jornada valoriza a disciplina mental e a sabedoria. Conclua sua primeira missão prioritária de hoje e reserve minutos para respiração guiada.',
+          'Your journey values mental discipline and wisdom. Complete your first priority quest today and dedicate minutes to guided breathing.'
         ),
-        targetPath: '/rest',
-        targetLabel: l('Abrir Descanso', 'Open Recovery'),
+        targetPath: '/quests',
+        targetLabel: l('Concluir Primeira Missão', 'Complete First Quest'),
       };
     }
 
-    if (trainingFocus === 'endurance' || mainGoal === 'health') {
+    if (trainingFocus === 'endurance' || mainGoal === 'health' || mainGoal === 'weight_loss') {
       return {
         title: l('Diretriz do Arquiteto — Vitalidade & Saúde', 'Architect Guideline — Vitality & Health'),
         tip: l(
-          'Seu protocolo é sustentabilidade e condicionamento. Mantenha hidratação, sono consistente e registre suas rotinas de mobilidade ou cárdio.',
-          'Your protocol focuses on longevity and endurance. Keep hydrated, secure consistent sleep, and log your mobility or cardio routines.'
+          'Seu protocolo une condicionamento e nutrição estratégica. Confira seu plano alimentar calculado e execute sua primeira rotina no Training Center.',
+          'Your protocol combines conditioning and strategic nutrition. Check your calculated meal plan and run your first routine in the Training Center.'
         ),
         targetPath: '/workouts',
-        targetLabel: l('Ver Treinos', 'View Training'),
+        targetLabel: l('Ver Programa Inicial', 'View Starter Program'),
       };
     }
 
-    // Default guidance
     return {
       title: l('Diretriz do Arquiteto — Disciplina Diária', 'Architect Guideline — Daily Discipline'),
       tip: l(
@@ -74,7 +100,7 @@ export function HunterGuidanceCard() {
         'Continuous evolution comes from consistency. Complete today’s priority quests to sustain your streak and accumulate XP.'
       ),
       targetPath: '/quests',
-      targetLabel: l('Ver Missões', 'View Quests'),
+      targetLabel: l('Ver Missões de Hoje', 'View Today’s Quests'),
     };
   };
 
@@ -91,7 +117,7 @@ export function HunterGuidanceCard() {
         variant="purple"
         corners
         radialGlow
-        className="p-4 sm:px-5 sm:py-4 border-[#A855F7]/30 bg-[#120F1D]/80"
+        className="p-4 sm:px-5 sm:py-4 border-[#A855F7]/30 bg-[#120F1D]/85 space-y-3"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
@@ -105,25 +131,66 @@ export function HunterGuidanceCard() {
                 </span>
                 <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
                   <ShieldCheck className="h-3 w-3" />
-                  <span>{l('Orientação Opcional', 'Optional Guide')}</span>
+                  <span>
+                    {isDayOneHunter
+                      ? l('Caminho do 1º Dia', 'Day 1 Path')
+                      : l('Orientação Opcional', 'Optional Guide')}
+                  </span>
+                </span>
+                <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-orbitron text-[9px] font-bold uppercase text-slate-300">
+                  {l('Objetivo:', 'Goal:')} {formatGoalLabel()}
                 </span>
               </div>
               <p className="mt-1 text-xs sm:text-[13px] text-slate-300 leading-relaxed">
                 {guidance.tip}
               </p>
-              <div className="mt-2.5 flex flex-wrap items-center gap-3">
+
+              {/* Caminho de Entrada Rápido: Primeira Missão, Programa de Treino e Plano Alimentar */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/quests')}
+                  className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-[#00F0FF]/35 bg-[#00F0FF]/10 px-2.5 py-1 text-[11px] font-bold text-[#00F0FF] hover:bg-[#00F0FF]/20 transition-colors"
+                >
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  <span>{l('1ª Missão do Dia', '1st Daily Quest')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/workouts')}
+                  className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-purple-400/35 bg-purple-500/10 px-2.5 py-1 text-[11px] font-bold text-purple-200 hover:bg-purple-500/20 transition-colors"
+                >
+                  <Dumbbell className="h-3.5 w-3.5" />
+                  <span>{l('Programa Inicial (Treino A/B/C)', 'Starter Program (Workout A/B/C)')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/nutrition?tab=cardapios')}
+                  className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-200 hover:bg-emerald-500/20 transition-colors"
+                >
+                  <Apple className="h-3.5 w-3.5" />
+                  <span>{l('Plano Alimentar', 'Meal Plan')}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => navigate(guidance.targetPath)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-[#00F0FF] hover:underline"
+                  className="inline-flex min-h-[36px] items-center gap-1 text-[11px] font-bold text-white/90 hover:text-[#00F0FF] px-1.5"
                 >
                   <span>{guidance.targetLabel}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
-                <span className="text-[11px] text-slate-400">
+              </div>
+
+              {/* Orientação breve sobre XP */}
+              <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+                <Zap className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                <span>
                   {l(
-                    'Todos os módulos permanecem 100% disponíveis.',
-                    'All modules remain 100% available.'
+                    'Como funciona o XP: concluir missões, treinos e refeições concede XP imediato, evolui seus 7 atributos e causa dano direto ao Boss Semanal. Todos os módulos permanecem 100% disponíveis.',
+                    'How XP works: completing quests, workouts, and meals grants instant XP, upgrades your 7 attributes, and deals direct damage to the Weekly Boss. All modules remain 100% available.'
                   )}
                 </span>
               </div>
@@ -134,7 +201,7 @@ export function HunterGuidanceCard() {
             type="button"
             onClick={() => toggleHunterGuidance(false)}
             aria-label={l('Ocultar Orientação', 'Dismiss Guidance')}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition-colors hover:border-white/20 hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 text-slate-400 transition-colors hover:border-white/20 hover:text-white"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -143,4 +210,3 @@ export function HunterGuidanceCard() {
     </motion.div>
   );
 }
-
