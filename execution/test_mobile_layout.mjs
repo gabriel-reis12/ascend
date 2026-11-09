@@ -17,7 +17,7 @@ describe('ASCEND Etapa 03.2 — Global Mobile Layout & Bottom Navigation', () =>
       "{ path: '/quests', labelKey: 'nav.quests'",
       "{ path: '/workouts', labelKey: 'nav.workoutsShort'",
       "{ path: '/nutrition', labelKey: 'nav.nutrition'",
-      "{ path: '/status', labelKey: 'nav.status'",
+      "{ path: '/hub', labelKey: 'nav.hub'",
     ];
 
     for (const route of expectedRoutes) {

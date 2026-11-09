@@ -13,6 +13,48 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-09 — Redesign da Auth Experience: Minimal Dark — Premium Mobile Product (`src/components/ui/hunter-login.tsx`, `src/pages/auth/LoginPage.tsx`, `src/pages/auth/RegisterPage.tsx`, `src/pages/auth/ForgotPasswordPage.tsx`, `src/components/auth/ForgotPasswordModal.tsx`, `execution/test_the_gate_auth.mjs`, `execution/test_premium_auth_and_recovery.mjs`, `execution/qa_minimal_dark_auth.mjs`, `docs/ASCEND_AUTH_EXPERIENCE_REDESIGN.md`)
+- **Abandono do Conceito "THE GATE" & Transição para Minimal Dark:**
+  - Substituição da estética conceituada e poluída "THE GATE" por uma identidade limpa, moderna, editorial e profissional de aplicativo mobile de alto nível.
+  - Eliminação estrita de ruídos visuais associados a mockups conceituais de IA: removidos `GATE CALIBRATED`, `ENTRY PROTOCOL`, cards flutuantes sobre a ilustração, molduras ciano sem propósito, falsos medidores técnicos, grids abrasivos e gradientes multicor agressivos no botão principal.
+  - Tipografia refinada: `Orbitron` estritamente reservado para o logotipo e marcas do ASCEND; tipografia `Inter` (`font-sans`, sentence case) para títulos, subtítulos, campos de entrada, botões, links e mensagens de erro, sem gritos em caixa alta ou espaçamentos exagerados.
+- **Composição Desktop Editorial & Split-Screen:**
+  - Layout dividido com a ilustração de personagem autêntica na coluna da **ESQUERDA** (40–45% de largura, proporção harmônica de 40% em 1440×900 e 1920×1080), sobre fundo escuro `#080A10`, com gradientes suaves de fusão semitransparente nas bordas e iluminação sutil azul/violeta, livre de caixas ou badges flutuantes, apresentando apenas uma linha editorial evocativa limpa no rodapé.
+  - Formulário minimalista focado na coluna da **DIREITA** (largura centralizada de 400px), com superfície `#12151D`, inputs `#181C26`, botão CTA de alto contraste sólido em ciano `#00F0FF` com texto escuro e altura ergonômica de 52px.
+- **Ergonomia e Usabilidade Mobile First (< 1024px):**
+  - Eliminação de banners de imagem superiores que empurravam os campos para baixo da dobra em telas móveis. O formulário agora é exibido imediatamente acima da dobra, garantindo que inputs e botão principal fiquem visíveis confortavelmente no viewport inicial (`submit button bottom` a 579px em viewport de 844px).
+  - Alvos de toque $\ge 44$px para todos os seletores secundários (alternador de visibilidade de senha `Eye`/`EyeOff`, seletor de idioma, links de esqueci a senha e exclusão de conta).
+  - Preservação da compatibilidade com gerenciadores de senha e autofill (`autoComplete="email"`, `autoComplete="current-password"`, `autoComplete="new-password"`, `autoComplete="username"`).
+- **Consistência em Cadastro e Recuperação de Senha:**
+  - `RegisterPage.tsx` e `hunter-login.tsx`: validação de comprimento e correspondência de senhas em tempo real, orientação de próximo passo para o Despertar com o Arquiteto.
+  - `ForgotPasswordPage.tsx` e `ForgotPasswordModal.tsx`: redesenhados com os mesmos tokens de superfície `#12151D`, inputs `#181C26`, botões sólidos de 52px e tipografia Inter em sentence case.
+  - Preservação integral do aviso de infraestrutura Supabase pendente (`!isSupabaseConfigured`) em deployment Beta e link público para `/delete-account`.
+- **Validação e Homologação QA Completa:**
+  - Criação do script de testes em navegador real Chromium Headless via CDP Pipe (`execution/qa_minimal_dark_auth.mjs`).
+  - **17/17 testes aprovados** com zero exceções no console do navegador e captura de screenshots reais em 7 resoluções: `320×700` (Compact Mobile), `375×812` (Standard Mobile), `390×844` (Flagship Mobile), `430×932` (Pro Max Mobile), `768×1024` (Tablet), `1440×900` (Desktop), `1920×1080` (Desktop Widescreen), além de testes de interações de senha, modal e telas de cadastro/recuperação.
+  - **31/31 suítes automatizadas passando** (`node execution/run_all_tests.mjs`).
+  - Verificação de tipos TypeScript (`npm run typecheck` - 0 erros), `npm run audit:i18n` (100% aprovado) e build de produção (`npm run build`).
+
+### 2026-11-09 — BETA UX FIX: Navegação Mobile & Settings (`src/components/common/RouteErrorBoundary.tsx`, `src/pages/HunterHub.tsx`, `src/components/layout/BottomNav.tsx`, `src/components/layout/MobileMenu.tsx`, `src/components/layout/RPGLayout.tsx`, `src/App.tsx`, `src/pages/Settings.tsx`, `src/contexts/preferences.ts`, `execution/qa_beta_navigation_settings.mjs`, `execution/test_route_error_boundary.mjs`)
+- **Causa Raiz & Resolução da Rota de Ajustes (`/settings`):**
+  - Identificada a vulnerabilidade de dynamic code-splitting em SPAs (Vite/PWA/Vercel): na ausência de um `ErrorBoundary` em torno do `<Suspense>`, qualquer falha transitória de carregamento de chunk (`Failed to fetch dynamically imported module: ...`) por nova publicação de versão ou oscilação de cache/rede causava crash silencioso da árvore React em tela branca.
+  - Implementado o componente de recuperação `src/components/common/RouteErrorBoundary.tsx` com detecção de descompasso de chunks, auto-reload preventivo transparente e interface HUD v2 com botões "Tentar Novamente", "Central do Caçador", "Início" e gaveta técnica detalhada de diagnósticos.
+  - Criação da função de carregamento dinâmico resiliente `lazyWithRetry()` em `src/App.tsx`.
+  - Blindagem de montagem em `src/pages/Settings.tsx`: eliminação de disparos recursivos desnecessários de `loadProfile()` quando o perfil já está hidratado, proteção estrita contra tipos não-string no parser de Rank em `getClassConfig()` e tolerância a falhas com fallback seguro em `fetchAchievements` e `fetchTelemetry`.
+- **Nova Arquitetura de Navegação Mobile (5 Destinos Canônicos):**
+  - Reorganização da `BottomNav.tsx` para os 5 destinos oficiais: `Início` (`/`), `Missões` (`/quests`), `Treinos` (`/workouts`), `Nutrição` (`/nutrition`) e `Central` (`/hub`).
+  - Criação da **Central do Caçador** (`src/pages/HunterHub.tsx`):
+    - Topo de identidade do caçador com avatar de classe, RankBadge, nível e XP.
+    - Card destacado com CTA prioritário para a ficha de atributos completa (`Player Status` em `/status`).
+    - Organização em 3 grupos funcionais: Desafios & Conquistas (`Boss Raids` `/bosses` e `Trophy Room` `/trophies`), Vida & Equilíbrio (`Fortuna` `/fortuna`, `Descanso` `/rest` e `Social` `/social`), e Sistema (`Ajustes` `/settings`).
+    - Alvos de toque $\ge 44$px/48px, zero cards fictícios e suporte bilingue integral (PT-BR / EN-US).
+  - Preservação do acesso ao `Player Status` via avatar/perfil da Home (`QuickMenu.tsx`) e via header compacto das telas internas.
+  - Sincronização do estado ativo da `BottomNav`: ao navegar para submódulos da Central (`/hub`, `/status`, `/bosses`, `/trophies`, `/fortuna`, `/rest`, `/social`, `/settings`), a aba Central permanece coerentemente iluminada.
+  - Atualização harmônica do menu lateral desktop em `RPGLayout.tsx` e drawer mobile em `MobileMenu.tsx`.
+- **Validação e Homologação QA:**
+  - Execução de 16/16 testes em navegador real Chromium Headless via CDP Pipe (`execution/qa_beta_navigation_settings.mjs`), com screenshots em `.tmp/screenshots/beta_ux_fix/` cobrindo 320px, 375px, 390px, 430px, desktop 1280px, reload direto, bilinguismo e navegação cruzada.
+  - Aprovação em 100% das 31 suítes de testes automatizados (`node execution/run_all_tests.mjs`), `npm run typecheck` (0 erros), `npm run audit:i18n` e `npm run build`.
+
 ### 2026-11-09 — Etapa 04.8: Mobile Experience & Player Journey (`docs/ASCEND_MOBILE_EXPERIENCE_048.md`, `src/components/home/DailyActionCenter.tsx`, `src/pages/QuickMenu.tsx`, `src/pages/Workouts.tsx`, `src/components/workouts/ActiveWorkoutSession.tsx`, `src/lib/accountDeletion.ts`, `src/lib/supabase.ts`, `supabase/migrations/20261109_account_deletion_and_security.sql`, `execution/test_mobile_experience_048.mjs`, `execution/audit_mobile_experience_048.mjs`)
 - **Centro de Ação Diária Contextual & Modo Rápido (`src/components/home/DailyActionCenter.tsx` + `src/pages/QuickMenu.tsx`):**
   - Transformação da Home (`QuickMenu.tsx`) em um centro de ações diárias reais acima da dobra (`#tour-portal-recommended` posicionado em `y = 572px–604px` nos viewports mobile `320×700`, `375×812`, `390×844` e `430×932`), preservando integralmente a estética **ASCEND HUD v2**.

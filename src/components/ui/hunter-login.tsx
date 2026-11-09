@@ -11,12 +11,10 @@ import {
   KeyRound,
   Check,
   ArrowRight,
-  ShieldCheck,
 } from 'lucide-react';
 import { usePreferences } from '@/contexts/preferences';
 import { LanguageSwitcher } from '@/components/preferences/LanguageSwitcher';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
-import { HudCard } from '@/components/ui/hud-card';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 interface AppInputProps {
@@ -56,9 +54,8 @@ const AppInput = ({
         <div className="flex items-center justify-between">
           <label
             htmlFor={inputId}
-            className={`block text-xs font-semibold font-sans uppercase tracking-wider transition-colors duration-200 ${
-              isFocused ? 'text-[#00F0FF]' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-medium font-sans transition-colors duration-200 ${isFocused ? 'text-[#00F0FF]' : 'text-slate-300'
+              }`}
           >
             {label}
           </label>
@@ -72,17 +69,15 @@ const AppInput = ({
 
       <div className="group relative">
         <div
-          className={`relative flex h-[52px] items-center rounded-xl border bg-[#0B0E17]/85 backdrop-blur-md transition-all duration-200 ${
-            isFocused
-              ? 'border-[#00F0FF]/70 bg-[#0F1424] ring-2 ring-[#00F0FF]/15 shadow-[0_0_24px_rgba(0,240,255,0.18)]'
-              : 'border-white/10 hover:border-white/20 hover:bg-[#0D111D]'
-          }`}
+          className={`relative flex h-[52px] items-center rounded-xl border bg-[#181C26] transition-all duration-200 ${isFocused
+              ? 'border-[#00F0FF] bg-[#1A1F2C] ring-1 ring-[#00F0FF]/30 shadow-[0_0_20px_rgba(0,240,255,0.12)]'
+              : 'border-white/10 hover:border-white/20 hover:bg-[#1C212E]'
+            }`}
         >
           {icon && (
             <div
-              className={`ml-3.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 ${
-                isFocused ? 'text-[#00F0FF]' : 'text-slate-500'
-              }`}
+              className={`ml-3.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 ${isFocused ? 'text-[#00F0FF]' : 'text-slate-400'
+                }`}
             >
               {icon}
             </div>
@@ -93,7 +88,7 @@ const AppInput = ({
             name={name}
             value={value}
             onChange={onChange}
-            className="h-full min-w-0 flex-1 bg-transparent px-3.5 text-sm sm:text-base font-sans font-medium text-white outline-none placeholder:text-slate-600 placeholder:font-normal"
+            className="h-full min-w-0 flex-1 bg-transparent px-3.5 text-sm sm:text-base font-sans font-normal text-[#F8FAFC] outline-none placeholder:text-slate-500 placeholder:font-normal"
             placeholder={placeholder}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
@@ -151,52 +146,74 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
   };
 
   const title = isSignUp
-    ? l('Comece sua Jornada', 'Begin Your Journey')
-    : l('Bem-vindo ao ASCEND', 'Welcome to ASCEND');
+    ? l('Comece sua jornada', 'Begin your journey')
+    : l('Bem-vindo de volta', 'Welcome back');
 
   const subtitle = isSignUp
     ? l(
-        'Crie sua identidade e inicie sua evolução pessoal no Sistema.',
-        'Create your identity and begin personal evolution in the System.'
-      )
+      'Crie sua conta para iniciar sua evolução pessoal.',
+      'Create your account to start your personal evolution.'
+    )
     : l(
-        'Continue sua jornada de evolução diária.',
-        'Continue your daily ascension journey.'
-      );
+      'Continue sua jornada de evolução diária.',
+      'Continue your daily ascension journey.'
+    );
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-[#030408] text-white selection:bg-[#00F0FF]/25">
-      {/* Background Dimensional Ambient Glow */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(124,58,237,0.18),transparent_45%),radial-gradient(circle_at_85%_60%,rgba(0,240,255,0.14),transparent_50%),linear-gradient(180deg,#030408_0%,#060812_50%,#030408_100%)]" />
+    <main className="relative min-h-screen w-full overflow-hidden bg-[#080A10] text-[#F8FAFC] selection:bg-[#00F0FF]/25">
+      {/* Luz ambiente sutil */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_25%,rgba(124,58,237,0.08),transparent_50%),radial-gradient(circle_at_85%_75%,rgba(0,240,255,0.06),transparent_50%)]" />
 
-      {/* Grid Subtilíssimo HUD */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:80px_80px] opacity-40" />
-
-      {/* Grid Principal Responsivo */}
+      {/* Grid split-screen responsivo: Ilustração Editorial à Esquerda no Desktop, Formulário à Direita */}
       <div
-        className={`relative z-10 mx-auto grid min-h-screen w-full max-w-[1440px] grid-cols-1 transition-opacity duration-500 lg:grid-cols-[minmax(420px,0.95fr)_minmax(540px,1.05fr)] ${
-          mounted ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`relative z-10 flex min-h-screen w-full transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'
+          }`}
       >
         {/* ========================================================= */}
-        {/* PAINEL ESQUERDO: AUTHENTICATION (MINIMALISMO EDITORIAL) */}
+        {/* PAINEL ESQUERDO: ILUSTRAÇÃO EDITORIAL (DESKTOP >= 1024px) */}
         {/* ========================================================= */}
-        <div className="relative flex min-h-screen flex-col justify-between px-5 py-6 sm:px-10 lg:px-14 xl:px-18">
-          {/* Header Superior Esquerdo: Logo ASCEND + LanguageSwitcher */}
-          <header className="relative z-10 flex items-center justify-between pb-6 sm:pb-8">
-            <div className="flex items-center gap-3">
-              <div className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-[#00F0FF]/30 bg-[#00F0FF]/10 shadow-[0_0_24px_rgba(0,240,255,0.2)]">
-                <Sparkles className="h-5 w-5 text-[#00F0FF]" />
-                <div className="absolute inset-1 rounded-xl border border-violet-400/20 pointer-events-none" />
+        <aside className="relative hidden w-[42%] xl:w-[40%] 2xl:w-[38%] shrink-0 overflow-hidden bg-[#080A10] lg:block">
+          {/* Imagem de Personagem Vertical */}
+          <img
+            src="/optimized/Login Screen.jpg"
+            alt="ASCEND"
+            decoding="async"
+            fetchPriority="high"
+            className="absolute inset-0 h-full w-full object-cover object-[center_28%]"
+          />
+
+          {/* Gradients de Fusão Minimalista (Sem caixas ou molduras) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#080A10]/20 to-[#080A10]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#080A10] via-transparent to-[#080A10]/40" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_40%,rgba(0,240,255,0.08),transparent_65%)]" />
+
+          {/* Linha Editorial Evocativa no Rodapé Esquerdo */}
+          <div className="absolute bottom-12 left-10 right-12 z-10">
+            <p className="font-sans text-xl font-semibold text-white tracking-tight leading-snug">
+              {l('Sua evolução começa aqui.', 'Your evolution starts here.')}
+            </p>
+            <p className="mt-2 font-sans text-xs text-slate-400 leading-relaxed max-w-sm">
+              {l(
+                'Transforme disciplina diária em poder real, consistência e clareza mental.',
+                'Transform daily discipline into real power, consistency, and mental clarity.'
+              )}
+            </p>
+          </div>
+        </aside>
+
+        {/* ========================================================= */}
+        {/* PAINEL DIREITO: FORMULÁRIO MINIMAL DARK (MOBILE & DESKTOP) */}
+        {/* ========================================================= */}
+        <div className="relative flex flex-1 flex-col justify-between px-5 py-5 sm:px-10 lg:px-14 xl:px-20 bg-[#080A10]">
+          {/* Header Superior: Logo ASCEND + Seletor de Idioma */}
+          <header className="relative z-10 flex items-center justify-between pb-3 sm:pb-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#00F0FF]/30 bg-[#00F0FF]/10 text-[#00F0FF] shadow-[0_0_16px_rgba(0,240,255,0.15)]">
+                <Sparkles className="h-4 w-4" />
               </div>
-              <div>
-                <span className="block font-orbitron text-xl sm:text-2xl font-black uppercase tracking-[0.24em] text-white leading-none">
-                  ASCEND
-                </span>
-                <span className="mt-1 block font-orbitron text-[9px] font-bold uppercase tracking-[0.26em] text-[#00F0FF]/80">
-                  THE GATE
-                </span>
-              </div>
+              <span className="font-orbitron text-xl font-black uppercase tracking-[0.2em] text-white">
+                ASCEND
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -204,39 +221,15 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
             </div>
           </header>
 
-          {/* Banner Compacto de Arte Mobile (Visível apenas em telas móveis < lg) */}
-          <div className="relative -mx-5 -mt-2 mb-6 block overflow-hidden sm:-mx-10 lg:hidden">
-            <div className="relative h-44 sm:h-52 w-full">
-              <img
-                src="/optimized/Login Screen.jpg"
-                alt="ASCEND — The Gate"
-                className="h-full w-full object-cover object-[center_35%]"
-              />
-              {/* Gradientes de Fusão com o Fundo Escuro */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#030408] via-[#030408]/60 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#030408]/50 via-transparent to-transparent" />
-
-              {/* Mensagem Narrativa Mobile */}
-              <div className="absolute bottom-3 left-6 right-6 flex items-center justify-between">
-                <span className="rounded-full border border-[#00F0FF]/30 bg-black/60 px-3 py-1 font-orbitron text-[9px] font-black uppercase tracking-[0.22em] text-[#00F0FF] backdrop-blur-md">
-                  THE GATE &bull; ASCEND
-                </span>
-                <span className="text-[11px] font-sans font-medium text-slate-300">
-                  {l('Sua evolução começa aqui', 'Your evolution starts here')}
-                </span>
-              </div>
-            </div>
-          </div>
-
           {/* Área Central: Formulário Minimalista */}
-          <div className="relative z-10 flex flex-1 flex-col justify-center py-4 sm:py-6">
-            <div className="mx-auto w-full max-w-[420px] lg:mx-0">
-              {/* Headline & Subtítulo */}
-              <div className="mb-6 sm:mb-8">
-                <h1 className="font-orbitron text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+          <div className="relative z-10 flex flex-1 flex-col justify-start lg:justify-center py-2 sm:py-6">
+            <div className="mx-auto w-full max-w-[400px]">
+              {/* Título & Subtítulo Editorial */}
+              <div className="mb-4 sm:mb-8">
+                <h1 className="font-sans text-2xl sm:text-3xl font-semibold text-white tracking-tight">
                   {title}
                 </h1>
-                <p className="mt-2 text-sm text-slate-400 font-sans leading-relaxed">
+                <p className="mt-1 sm:mt-2 font-sans text-xs sm:text-sm text-slate-400 leading-relaxed">
                   {subtitle}
                 </p>
               </div>
@@ -245,17 +238,17 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
               {!isSupabaseConfigured && (
                 <div
                   role="alert"
-                  className="mb-5 flex items-start gap-3 rounded-xl border border-amber-500/50 bg-amber-500/15 p-3.5 text-xs text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                  className="mb-5 flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-xs text-amber-200"
                 >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                   <div className="space-y-1">
-                    <p className="font-orbitron font-bold uppercase tracking-wider text-amber-300">
-                      {l('Ambiente Desconectado // Supabase Pendente', 'Disconnected Environment // Supabase Pending')}
+                    <p className="font-sans font-semibold text-amber-300">
+                      {l('Ambiente Desconectado — Supabase Pendente', 'Disconnected Environment — Supabase Pending')}
                     </p>
                     <p className="leading-relaxed font-sans text-[11px] text-amber-200/90">
                       {l(
-                        'As variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não foram configuradas neste deployment. A autenticação online está inativa até que as chaves sejam adicionadas em Environment Variables.',
-                        'The VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY variables are not configured in this deployment. Online authentication is disabled until keys are set in Environment Variables.'
+                        'As chaves VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY não foram detectadas. Configure as variáveis de ambiente para autenticação online.',
+                        'VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY were not detected. Configure environment variables for online authentication.'
                       )}
                     </p>
                   </div>
@@ -278,7 +271,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 {/* Campo Codinome (Apenas no Cadastro) */}
                 {isSignUp && (
                   <AppInput
-                    label={l('Codinome do Caçador', 'Hunter Codename')}
+                    label={l('Codinome', 'Codename')}
                     name="username"
                     type="text"
                     placeholder="Ex: Sung Jin-Woo"
@@ -286,7 +279,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                     minLength={2}
                     autoComplete="username"
                     icon={<User className="h-4 w-4" />}
-                    helperText={l('Mínimo 2 caracteres', 'Min 2 chars')}
+                    helperText={l('Mínimo 2 caracteres', 'Min 2 characters')}
                   />
                 )}
 
@@ -295,7 +288,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                   label={l('E-mail', 'Email')}
                   name="email"
                   type="email"
-                  placeholder="cacador@ascend.system"
+                  placeholder="cacador@ascend.app"
                   required
                   autoComplete="email"
                   value={enteredEmail}
@@ -351,7 +344,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                 {isSignUp && (
                   <div className="space-y-1.5">
                     <AppInput
-                      label={l('Confirmar Senha', 'Confirm Password')}
+                      label={l('Confirmar senha', 'Confirm password')}
                       name="confirmPassword"
                       type={showConfirm ? 'text' : 'password'}
                       placeholder="••••••••"
@@ -381,20 +374,18 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                     {passwordValue.length > 0 && (
                       <div className="flex flex-col gap-1 px-1 pt-1 text-xs font-sans">
                         <div
-                          className={`flex items-center gap-1.5 ${
-                            passwordValue.length >= 6 ? 'text-emerald-400' : 'text-slate-500'
-                          }`}
+                          className={`flex items-center gap-1.5 ${passwordValue.length >= 6 ? 'text-emerald-400' : 'text-slate-500'
+                            }`}
                         >
                           <Check size={12} />
                           <span>{l('Mínimo de 6 caracteres', 'At least 6 characters')}</span>
                         </div>
                         {confirmValue.length > 0 && (
                           <div
-                            className={`flex items-center gap-1.5 ${
-                              passwordValue === confirmValue
+                            className={`flex items-center gap-1.5 ${passwordValue === confirmValue
                                 ? 'text-emerald-400'
                                 : 'text-rose-400'
-                            }`}
+                              }`}
                           >
                             <Check size={12} />
                             <span>
@@ -408,7 +399,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                     )}
 
                     {/* Orientação sobre o Despertar */}
-                    <div className="mt-2 rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/5 p-3 text-xs text-slate-300 font-sans leading-relaxed">
+                    <div className="mt-2 rounded-xl border border-white/5 bg-[#12151D] p-3 text-xs text-slate-400 font-sans leading-relaxed">
                       <p>
                         {l(
                           'Após criar sua conta, você será direcionado ao Despertar com o Arquiteto para configurar sua classe e metas.',
@@ -419,15 +410,15 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                   </div>
                 )}
 
-                {/* Botão Principal CTA (min-h 52px) */}
+                {/* Botão Principal CTA (Sólido de Alto Contraste, min-h 52px) */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="group relative mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-[#00F0FF]/40 bg-gradient-to-r from-[#00F0FF] via-[#0284C7] to-[#7C3AED] font-orbitron text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white shadow-[0_12px_36px_rgba(0,240,255,0.22)] transition-all hover:brightness-110 hover:shadow-[0_16px_45px_rgba(0,240,255,0.32)] active:scale-[0.985] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+                  className="group relative mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[#00F0FF] font-sans text-sm sm:text-base font-semibold text-[#080A10] shadow-[0_4px_20px_rgba(0,240,255,0.25)] transition-all duration-200 hover:bg-[#38bdf8] hover:shadow-[0_6px_28px_rgba(0,240,255,0.35)] active:scale-[0.985] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
                 >
                   {loading ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" />
+                      <Loader2 size={18} className="animate-spin" />
                       <span>{l('Autenticando...', 'Authenticating...')}</span>
                     </>
                   ) : (
@@ -437,7 +428,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                           ? l('Começar Minha Jornada', 'Begin My Journey')
                           : l('Entrar no ASCEND', 'Enter ASCEND')}
                       </span>
-                      <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                      <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                     </>
                   )}
                 </button>
@@ -452,7 +443,7 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
                   <button
                     type="button"
                     onClick={onToggleMode}
-                    className="ml-2 inline-flex min-h-[44px] items-center font-bold font-sans text-xs sm:text-sm text-[#00F0FF] hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF] rounded px-1"
+                    className="ml-2 inline-flex min-h-[44px] items-center font-medium font-sans text-xs sm:text-sm text-[#00F0FF] hover:text-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF] rounded px-1"
                   >
                     {isSignUp
                       ? l('Entre aqui', 'Sign in here')
@@ -466,70 +457,17 @@ export const HunterLogin: React.FC<HunterLoginProps> = ({
             </div>
           </div>
 
-          {/* Rodapé Esquerdo Minimalista */}
-          <footer className="relative z-10 pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center lg:text-left text-[10px] font-orbitron tracking-widest text-slate-600 uppercase">
-            <span>ASCEND &bull; THE GATE &bull; 2026</span>
+          {/* Rodapé Direito Minimalista */}
+          <footer className="relative z-10 pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center text-xs font-sans text-slate-500">
+            <span>ASCEND &copy; 2026</span>
             <a
               href="/delete-account"
-              className="text-[10px] font-sans font-medium tracking-normal normal-case text-slate-500 hover:text-rose-400 transition-colors"
+              className="min-h-[44px] inline-flex items-center text-xs font-sans text-slate-500 hover:text-rose-400 transition-colors"
             >
               {l('Solicitar exclusão de conta', 'Request account deletion')}
             </a>
           </footer>
         </div>
-
-        {/* ========================================================= */}
-        {/* PAINEL DIREITO: THE GATE (CINEMATIC COMPOSITION DESKTOP)  */}
-        {/* ========================================================= */}
-        <aside className="relative hidden min-h-screen overflow-hidden lg:block">
-          {/* Arte Autêntica Original */}
-          <img
-            src="/optimized/Login Screen.jpg"
-            alt="The Gate — Portal do ASCEND"
-            decoding="async"
-            fetchPriority="high"
-            className="absolute inset-0 h-full w-full object-cover object-[center_35%] scale-[1.03] transition-transform duration-1000"
-          />
-
-          {/* Gradients de Fusão Cinematográfica e Iluminação */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#030408] via-[#030408]/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#030408] via-[#030408]/30 to-transparent" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_45%,rgba(0,240,255,0.12),transparent_55%)]" />
-
-          {/* Badge Superior Cinematográfico */}
-          <div className="absolute top-10 right-10 flex items-center gap-2 rounded-full border border-[#00F0FF]/30 bg-black/60 px-4 py-2 text-[10px] font-black font-orbitron uppercase tracking-[0.24em] text-[#00F0FF] shadow-[0_0_24px_rgba(0,240,255,0.2)] backdrop-blur-xl">
-            <span className="h-2 w-2 rounded-full bg-[#00F0FF] animate-pulse" />
-            <span>{l('Gate Calibrado', 'Gate Calibrated')}</span>
-          </div>
-
-          {/* Card Narrativo Inferior (Discreto, Sem Números Falsos) */}
-          <div className="absolute bottom-10 left-10 right-10 max-w-lg">
-            <HudCard
-              variant="cyan"
-              corners
-              radialGlow
-              className="p-6 border border-[#00F0FF]/30 bg-black/60 shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-2xl"
-            >
-              <div className="flex items-center gap-2 mb-2 text-[#00F0FF]">
-                <ShieldCheck size={14} />
-                <span className="font-orbitron text-[10px] font-black uppercase tracking-[0.24em]">
-                  {l('THE GATE &bull; Protocolo de Entrada', 'THE GATE &bull; Entry Protocol')}
-                </span>
-              </div>
-
-              <h2 className="font-orbitron text-xl sm:text-2xl font-black text-white uppercase leading-snug">
-                {l('Sua evolução começa aqui.', 'Your evolution starts here.')}
-              </h2>
-
-              <p className="mt-2 text-xs sm:text-sm text-slate-300 font-sans leading-relaxed">
-                {l(
-                  'Atravesse o portal e transforme rotina diária em poder, disciplina e clareza real.',
-                  'Step through the gate and transform daily routine into real power, discipline, and clarity.'
-                )}
-              </p>
-            </HudCard>
-          </div>
-        </aside>
       </div>
 
       {/* Modal Integrado de Recuperação de Senha */}

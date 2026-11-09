@@ -272,10 +272,10 @@ export function Settings() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (user) {
+    if (user?.id && (!hunterStore.profileLoaded || hunterStore.profileUserId !== user.id)) {
       void hunterStore.loadProfile(user.id);
     }
-  }, [user]);
+  }, [user?.id, hunterStore.profileLoaded, hunterStore.profileUserId]);
 
   // Atualizar inputs locais caso mudem no Zustand
   useEffect(() => {
@@ -304,8 +304,8 @@ export function Settings() {
 
   // Configuração visual por classe
   const getClassConfig = (hClass: HunterClass | null, rank: string | null | undefined) => {
-    const getRankImageName = (r: string | null | undefined): string => {
-      if (!r) return 'Rank E';
+    const getRankImageName = (r: unknown): string => {
+      if (!r || typeof r !== 'string') return 'Rank E';
       const upperRank = r.toUpperCase();
       if (['E', 'D', 'C', 'B', 'A', 'S'].includes(upperRank)) {
         return `Rank ${upperRank}`;
@@ -1183,7 +1183,8 @@ export function Settings() {
                 <div className="flex flex-wrap gap-2 pt-1">
                   {(() => {
                     const unlockedList = ['Iniciante'];
-                    achievements.forEach(a => {
+                    (achievements || []).forEach(a => {
+                      if (!a?.title) return;
                       const match = ALL_POSSIBLE_ACHIEVEMENTS.find(p => p.title === a.title);
                       if (match && match.titleReward && !unlockedList.includes(match.titleReward)) {
                         unlockedList.push(match.titleReward);

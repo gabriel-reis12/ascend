@@ -134,22 +134,20 @@ test('ASCEND — Etapa 04.0: Refinamento Premium de Login, Registro e Recuperaç
     );
   });
 
-  await t.test('7. Painel de Apoio Visual refinado com HudCard e Universo ASCEND', () => {
+  await t.test('7. Painel de Apoio Visual refinado Minimal Dark e Universo ASCEND', () => {
     assert.ok(
-      hunterLogin.includes('HudCard') &&
-      hunterLogin.includes('corners') &&
-      hunterLogin.includes('radialGlow'),
-      'O painel visual deve usar HudCard com cantoneiras e radialGlow'
+      hunterLogin.includes('/optimized/Login Screen.jpg') &&
+      hunterLogin.includes('lg:block'),
+      'O painel visual desktop deve exibir a arte de personagem autêntica em split-screen'
     );
     assert.ok(
-      hunterLogin.includes('Gate Calibrado') || hunterLogin.includes('Gate Calibrated'),
-      'O painel visual deve exibir o indicador tático Gate Calibrado'
+      !hunterLogin.includes('Gate Calibrado') && !hunterLogin.includes('Gate Calibrated'),
+      'O painel visual não deve exibir o indicador tático obsoleto Gate Calibrado'
     );
     assert.ok(
-      hunterLogin.includes('THE GATE') ||
-      hunterLogin.includes('Protocolo de Entrada') ||
-      hunterLogin.includes('Prévia de Status'),
-      'O painel visual deve exibir o conceito narrativo do Portal/Gate'
+      hunterLogin.includes('Sua evolução começa aqui') ||
+      hunterLogin.includes('Your evolution starts here'),
+      'O painel visual deve exibir a linha editorial evocativa'
     );
   });
 

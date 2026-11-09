@@ -14,6 +14,7 @@ import {
   Moon,
   Trophy,
   Users,
+  Compass,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ interface MobileMenuProps {
 
 const navItems = [
   { path: '/', labelKey: 'nav.portal' as const, icon: LayoutGrid },
+  { path: '/hub', labelKey: 'nav.hub' as const, icon: Compass },
   { path: '/status', labelKey: 'nav.status' as const, icon: LayoutDashboard },
   { path: '/quests', labelKey: 'nav.quests' as const, icon: CheckSquare },
   { path: '/bosses', labelKey: 'nav.bosses' as const, icon: Skull },

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, CheckSquare, Dumbbell, Apple, User } from 'lucide-react';
+import { Home, CheckSquare, Dumbbell, Apple, Compass } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ export interface BottomNavItem {
   labelKey: TranslationKey;
   icon: LucideIcon;
   tourId?: string;
+  subPaths?: string[];
 }
 
 export const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
@@ -19,13 +20,24 @@ export const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
   { path: '/quests', labelKey: 'nav.quests', icon: CheckSquare },
   { path: '/workouts', labelKey: 'nav.workoutsShort', icon: Dumbbell, tourId: 'tour-mobile-nav-workouts' },
   { path: '/nutrition', labelKey: 'nav.nutrition', icon: Apple, tourId: 'tour-mobile-nav-nutrition' },
-  { path: '/status', labelKey: 'nav.status', icon: User },
+  { path: '/hub', labelKey: 'nav.hub', icon: Compass, tourId: 'tour-mobile-nav-hub', subPaths: ['/hub', '/status', '/bosses', '/trophies', '/fortuna', '/rest', '/social', '/settings'] },
 ];
 
 export function BottomNav() {
   const location = useLocation();
   const { t } = usePreferences();
   const prefersReducedMotion = useReducedMotion();
+
+  const isItemActive = (item: BottomNavItem): boolean => {
+    const pathname = location.pathname;
+    if (item.path === '/') {
+      return pathname === '/';
+    }
+    if (item.subPaths && item.subPaths.length > 0) {
+      return item.subPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    }
+    return pathname === item.path || pathname.startsWith(`${item.path}/`);
+  };
 
   return (
     <nav
@@ -37,10 +49,7 @@ export function BottomNav() {
     >
       <div className="mx-auto grid h-[66px] max-w-lg grid-cols-5 items-stretch px-1 sm:px-2">
         {BOTTOM_NAV_ITEMS.map((item) => {
-          const isActive =
-            item.path === '/'
-              ? location.pathname === '/'
-              : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+          const isActive = isItemActive(item);
           const Icon = item.icon;
           const label = t(item.labelKey);
 
@@ -59,7 +68,7 @@ export function BottomNav() {
                   : 'text-[var(--hud-text-muted,#64748B)] hover:text-[var(--text-primary)]'
               )}
             >
-              {/* Indicador Luminoso Superior Ciano da Aba Ativa (Fiel às referências Nano Banana) */}
+              {/* Indicador Luminoso Superior Ciano da Aba Ativa */}
               {isActive && (
                 <motion.span
                   layoutId={prefersReducedMotion ? undefined : 'ascend-bottom-nav-indicator'}
@@ -108,4 +117,3 @@ export function BottomNav() {
     </nav>
   );
 }
-

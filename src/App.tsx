@@ -6,55 +6,82 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PreferencesProvider } from './contexts/PreferencesContext';
 import { useHunterStore } from './stores/useHunterStore';
 import { LocalizationBridge } from './components/preferences/LocalizationBridge';
+import { RouteErrorBoundary } from './components/common/RouteErrorBoundary';
+
+// Helper de importação resiliente de chunks para SPAs/PWA (previne quebras por atualizações no Vercel)
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  importer: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      return await importer();
+    } catch (err: unknown) {
+      const errStr = err instanceof Error ? err.message : String(err);
+      const isChunkError = /dynamically imported module|Loading chunk|Importing a module/i.test(errStr);
+      const reloadKey = 'ascend_chunk_reload_attempt';
+      const hasRetried = typeof window !== 'undefined' ? window.sessionStorage.getItem(reloadKey) : 'true';
+
+      if (isChunkError && !hasRetried && typeof window !== 'undefined') {
+        window.sessionStorage.setItem(reloadKey, 'true');
+        console.warn('[Vite Chunk Retry] Atualizando bundle desatualizado do módulo...');
+        window.location.reload();
+      }
+      throw err;
+    }
+  });
+}
 
 // Code-Splitting por Rota (React.lazy) para reduzir o bundle inicial em dispositivos móveis
-const RegisterPage = lazy(() =>
+const RegisterPage = lazyWithRetry(() =>
   import('./pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage }))
 );
-const ForgotPasswordPage = lazy(() =>
+const ForgotPasswordPage = lazyWithRetry(() =>
   import('./pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage }))
 );
-const DeleteAccountPage = lazy(() =>
+const DeleteAccountPage = lazyWithRetry(() =>
   import('./pages/auth/DeleteAccountPage').then((m) => ({ default: m.DeleteAccountPage }))
 );
-const Onboarding = lazy(() =>
+const Onboarding = lazyWithRetry(() =>
   import('./pages/Onboarding').then((m) => ({ default: m.Onboarding }))
 );
-const QuickMenu = lazy(() =>
+const QuickMenu = lazyWithRetry(() =>
   import('./pages/QuickMenu').then((m) => ({ default: m.QuickMenu }))
 );
-const Dashboard = lazy(() =>
+const HunterHub = lazyWithRetry(() =>
+  import('./pages/HunterHub').then((m) => ({ default: m.HunterHub }))
+);
+const Dashboard = lazyWithRetry(() =>
   import('./pages/Dashboard').then((m) => ({ default: m.Dashboard }))
 );
-const Quests = lazy(() =>
+const Quests = lazyWithRetry(() =>
   import('./pages/Quests').then((m) => ({ default: m.Quests }))
 );
-const Workouts = lazy(() =>
+const Workouts = lazyWithRetry(() =>
   import('./pages/Workouts').then((m) => ({ default: m.Workouts }))
 );
-const Nutrition = lazy(() =>
+const Nutrition = lazyWithRetry(() =>
   import('./pages/Nutrition').then((m) => ({ default: m.Nutrition }))
 );
-const Settings = lazy(() =>
+const Settings = lazyWithRetry(() =>
   import('./pages/Settings').then((m) => ({ default: m.Settings }))
 );
-const Fortuna = lazy(() =>
+const Fortuna = lazyWithRetry(() =>
   import('./pages/Fortuna').then((m) => ({ default: m.Fortuna }))
 );
-const Bosses = lazy(() =>
+const Bosses = lazyWithRetry(() =>
   import('./pages/Bosses').then((m) => ({ default: m.Bosses }))
 );
 // Lazy-loaded route chunk for TrophyRoom (origin: import { TrophyRoom } from './pages/TrophyRoom')
-const TrophyRoom = lazy(() =>
+const TrophyRoom = lazyWithRetry(() =>
   import('./pages/TrophyRoom').then((m) => ({ default: m.TrophyRoom }))
 );
-const Social = lazy(() =>
+const Social = lazyWithRetry(() =>
   import('./pages/Social').then((m) => ({ default: m.Social }))
 );
-const Rest = lazy(() =>
+const Rest = lazyWithRetry(() =>
   import('./pages/Rest').then((m) => ({ default: m.Rest }))
 );
-const HudPreview = lazy(() =>
+const HudPreview = lazyWithRetry(() =>
   import('./pages/HudPreview').then((m) => ({ default: m.HudPreview }))
 );
 
@@ -205,52 +232,56 @@ export default function App() {
       <LocalizationBridge />
       <AuthProvider>
         <Router>
-          <Suspense fallback={<RouteLoadingFallback />}>
-            <Routes>
-              {/* Rotas Públicas */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/delete-account" element={<DeleteAccountPage />} />
-              {import.meta.env.DEV && <Route path="/dev/hud" element={<HudPreview />} />}
-              {import.meta.env.DEV && <Route path="/hud-preview" element={<HudPreview />} />}
+          <RouteErrorBoundary>
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Routes>
+                {/* Rotas Públicas */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/delete-account" element={<DeleteAccountPage />} />
+                {import.meta.env.DEV && <Route path="/dev/hud" element={<HudPreview />} />}
+                {import.meta.env.DEV && <Route path="/hud-preview" element={<HudPreview />} />}
 
-            {/* Rota de Onboarding (Protegida contra repetição se já tiver classe) */}
-            <Route
-              path="/onboarding"
-              element={
-                <OnboardingRoute>
-                  <Onboarding />
-                </OnboardingRoute>
-              }
-            />
+                {/* Rota de Onboarding (Protegida contra repetição se já tiver classe) */}
+                <Route
+                  path="/onboarding"
+                  element={
+                    <OnboardingRoute>
+                      <Onboarding />
+                    </OnboardingRoute>
+                  }
+                />
 
-            {/* Rotas Internas Protegidas sob o Layout Principal RPG */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <RPGLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<QuickMenu />} />
-              <Route path="status" element={<Dashboard />} />
-              <Route path="quests" element={<Quests />} />
-              <Route path="bosses" element={<Bosses />} />
-              <Route path="trophies" element={<TrophyRoom />} />
-              <Route path="workouts" element={<Workouts />} />
-              <Route path="nutrition" element={<Nutrition />} />
-              <Route path="fortuna" element={<Fortuna />} />
-              <Route path="rest" element={<Rest />} />
-              <Route path="social" element={<Social />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
+                {/* Rotas Internas Protegidas sob o Layout Principal RPG */}
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <RPGLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<QuickMenu />} />
+                  <Route path="hub" element={<HunterHub />} />
+                  <Route path="central" element={<Navigate to="/hub" replace />} />
+                  <Route path="status" element={<Dashboard />} />
+                  <Route path="quests" element={<Quests />} />
+                  <Route path="bosses" element={<Bosses />} />
+                  <Route path="trophies" element={<TrophyRoom />} />
+                  <Route path="workouts" element={<Workouts />} />
+                  <Route path="nutrition" element={<Nutrition />} />
+                  <Route path="fortuna" element={<Fortuna />} />
+                  <Route path="rest" element={<Rest />} />
+                  <Route path="social" element={<Social />} />
+                  <Route path="settings" element={<Settings />} />
+                </Route>
 
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </RouteErrorBoundary>
         </Router>
       </AuthProvider>
     </PreferencesProvider>

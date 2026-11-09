@@ -20,6 +20,8 @@ export const translations = {
   'nav.trophies': { 'pt-BR': 'Conquistas', 'en-US': 'Trophies' },
   'nav.social': { 'pt-BR': 'Social', 'en-US': 'Social' },
   'nav.settings': { 'pt-BR': 'Ajustes', 'en-US': 'Settings' },
+  'nav.hub': { 'pt-BR': 'Central', 'en-US': 'Hub' },
+  'nav.central': { 'pt-BR': 'Central', 'en-US': 'Hub' },
   'common.active': { 'pt-BR': 'Ativo', 'en-US': 'Active' },
   'common.status': { 'pt-BR': 'Status', 'en-US': 'Status' },
   'common.warning': { 'pt-BR': 'Aviso', 'en-US': 'Warning' },
