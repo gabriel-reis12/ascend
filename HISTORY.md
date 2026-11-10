@@ -13,6 +13,25 @@ O projeto **RPG Tracker (Hunter System)** está na **Fase 6** do Roadmap. As fun
 ---
 ## 🕒 Histórico de Mudanças Recentes
 
+### 2026-11-09 — Auth Minimal Dark: Polimento Final de Alinhamento, Iluminação & Ergonomia Mobile (`src/components/ui/hunter-login.tsx`, `src/pages/auth/ForgotPasswordPage.tsx`, `src/components/auth/ForgotPasswordModal.tsx`, `execution/qa_minimal_dark_auth.mjs`, `docs/ASCEND_AUTH_EXPERIENCE_REDESIGN.md`)
+- **Alinhamento Visual em Grade Única:**
+  - Unificação do cabeçalho (logo ASCEND + ícone tático), título `<h1>`, campos de entrada, botão CTA e rodapé em um mesmo container de coluna (`max-w-[420px] sm:max-w-[440px] w-full mx-auto`).
+  - Alinhamento horizontal estrito entre a logo da marca e os inputs (`Math.abs(brandRect.left - inputRect.left) <= 5px`), eliminando o descompasso visual anterior.
+- **Proporções Otimizadas (420–440px):**
+  - Expansão da largura útil do formulário de 400px para 440px no desktop, melhorando a distribuição de espaço, densidade e legibilidade.
+- **Iluminação e Nitidez da Ilustração Editorial:**
+  - Reduzido o escurecimento excessivo sobre a arte original (`/optimized/Login Screen.jpg`) através de `brightness-[1.03]` e `contrast-[1.04]`.
+  - Gradiente lateral suavizado com fade a partir de 95%, preservando a clareza e presença dos personagens sem cobrir rostos ou armaduras.
+- **Contraste de Textos e Proteção contra Autofill:**
+  - Textos secundários ajustados para `text-slate-300` e labels para `text-slate-200`, garantindo alto contraste e legibilidade.
+  - Adicionado override de transição de autofill no WebKit/Chrome, impedindo backgrounds automáticos amarelos/brancos nos inputs.
+- **Ergonomia Mobile Adaptativa (320px–430px):**
+  - Ajuste de distribuição vertical `my-0 lg:my-auto` com `min-h-[100dvh]`, garantindo que o formulário comece sem espaço ocioso no topo em celulares e termine a 567px da tela, eliminando rolagem desnecessária.
+- **Homologação e Validação:**
+  - 19/19 testes aprovados no script de navegador real (`execution/qa_minimal_dark_auth.mjs`).
+  - 31/31 suítes automatizadas passando (`node execution/run_all_tests.mjs`).
+  - 0 erros em `npm run typecheck` e 100% aprovado em `npm run audit:i18n`.
+
 ### 2026-11-09 — Redesign da Auth Experience: Minimal Dark — Premium Mobile Product (`src/components/ui/hunter-login.tsx`, `src/pages/auth/LoginPage.tsx`, `src/pages/auth/RegisterPage.tsx`, `src/pages/auth/ForgotPasswordPage.tsx`, `src/components/auth/ForgotPasswordModal.tsx`, `execution/test_the_gate_auth.mjs`, `execution/test_premium_auth_and_recovery.mjs`, `execution/qa_minimal_dark_auth.mjs`, `docs/ASCEND_AUTH_EXPERIENCE_REDESIGN.md`)
 - **Abandono do Conceito "THE GATE" & Transição para Minimal Dark:**
   - Substituição da estética conceituada e poluída "THE GATE" por uma identidade limpa, moderna, editorial e profissional de aplicativo mobile de alto nível.

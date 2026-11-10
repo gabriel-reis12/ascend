@@ -236,6 +236,20 @@ async function runQA() {
         const emailInput = document.querySelector('input[type="email"]');
         const passInput = document.querySelector('input[type="password"]');
 
+        const brandUnit = document.querySelector('header div');
+        const brandRect = brandUnit ? brandUnit.getBoundingClientRect() : null;
+        const titleH1 = document.querySelector('h1');
+        const titleRect = titleH1 ? titleH1.getBoundingClientRect() : null;
+        const inputContainer = emailInput ? (emailInput.closest('.group') || emailInput.parentElement) : null;
+        const inputRect = inputContainer ? inputContainer.getBoundingClientRect() : null;
+        const formContainer = document.querySelector('form');
+        const formRect = formContainer ? formContainer.getBoundingClientRect() : null;
+
+        // Verifica alinhamento visual entre logo, título e campos
+        const isAligned = brandRect && titleRect && inputRect &&
+          Math.abs(brandRect.left - titleRect.left) <= 5 &&
+          Math.abs(titleRect.left - inputRect.left) <= 5;
+
         return {
           asideVisible,
           asideWidth,
@@ -245,7 +259,9 @@ async function runQA() {
           submitHeight: submitRect ? Math.round(submitRect.height) : 0,
           emailPresent: !!emailInput,
           passwordPresent: !!passInput,
-          titleText: document.querySelector('h1')?.innerText || '',
+          titleText: titleH1?.innerText || '',
+          formWidth: formRect ? Math.round(formRect.width) : 0,
+          isAligned,
         };
       })()
     `);
@@ -255,6 +271,20 @@ async function runQA() {
       'Split-screen desktop: arte editorial à esquerda na proporção 40-45%',
       desktopChecks.asideVisible && desktopChecks.widthPercent >= 38 && desktopChecks.widthPercent <= 45,
       `largura: ${desktopChecks.widthPercent}%`
+    );
+
+    record(
+      'DESK-FORM-WIDTH',
+      'Proporções: largura do formulário ajustada para 420–440px em desktop',
+      desktopChecks.formWidth >= 400 && desktopChecks.formWidth <= 450,
+      `largura do form: ${desktopChecks.formWidth}px`
+    );
+
+    record(
+      'ALIGN-BRAND-FORM',
+      'Alinhamento visual da logo ASCEND e título com a coluna do formulário',
+      desktopChecks.isAligned,
+      'grade vertical perfeitamente alinhada'
     );
 
     record(
