@@ -156,3 +156,4 @@ Todos os testes foram executados contra a aplicação compilada em modo de produ
 > [!IMPORTANT]
 > **VEREDITO: GO (APROVADO PARA O BETA)**  
 > A experiência de autenticação do ASCEND foi completamente modernizada para o padrão **MINIMAL DARK**, superando os ruídos do conceito antigo e estabelecendo uma primeira impressão profissional, ergonômica e sofisticada tanto em smartphones quanto em desktops. Todos os critérios de homologação técnica foram estritamente cumpridos.
+
